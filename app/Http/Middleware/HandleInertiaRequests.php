@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Modules\Authorization\Support\WorkspaceAbilities;
+use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Support\Hosts\HostType;
 use App\Support\Hosts\PlatformHosts;
 use App\Support\Tenancy\TenantContext;
@@ -46,6 +48,10 @@ class HandleInertiaRequests extends Middleware
             ],
             'platform' => $this->platformLinks($request),
             // Set on workspace hosts (and on app. once an organization is current).
+            // Workspace hosts only: which administration links to show.
+            'abilities' => fn () => ($membership = $request->attributes->get('membership')) instanceof OrganizationMembership
+                ? app(WorkspaceAbilities::class)->for($membership)
+                : null,
             'tenant' => fn () => ($organization = app(TenantContext::class)->organization()) === null ? null : [
                 'displayName' => $organization->display_name,
             ],

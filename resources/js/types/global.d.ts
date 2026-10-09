@@ -18,6 +18,10 @@ declare module '@inertiajs/core' {
                 logoutUrl: string;
             };
             tenant: { displayName: string } | null;
+            abilities: {
+                manageStructure: boolean;
+                manageAccess: boolean;
+            } | null;
             sidebarOpen: boolean;
             [key: string]: unknown;
         };

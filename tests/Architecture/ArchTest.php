@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Authorization\Models\RoleAssignment;
+use App\Modules\Entitlements\Models\Entitlement;
 use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Structure\Models\Branch;
 use App\Modules\Structure\Models\Department;
@@ -35,6 +36,7 @@ arch('tenant-owned models use the tenant guard', function () {
         Position::class,
         OrganizationMembership::class,
         RoleAssignment::class,
+        Entitlement::class,
     ];
 
     foreach ($tenantOwned as $model) {

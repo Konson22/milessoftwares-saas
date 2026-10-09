@@ -1,0 +1,62 @@
+{
+    "application": {
+        "code": "platform",
+        "name": "Miles Softwares platform",
+        "category": "platform",
+        "kind": "platform",
+        "status": "available"
+    },
+    "version": "1.0.0",
+    "permissions": [
+        {
+            "key": "platform.access.manage",
+            "name": "Manage access",
+            "description": "Assign and revoke roles within the scope the permission is held at.",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch", "department"]
+        },
+        {
+            "key": "platform.structure.manage",
+            "name": "Manage organization structure",
+            "description": "Create and change branches, departments and positions.",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "platform.members.view",
+            "name": "View members",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch", "department"]
+        }
+    ],
+    "roles": [
+        {
+            "key": "access_administrator",
+            "name": "Access administrator",
+            "description": "Grants and revokes roles for the scope it is assigned at.",
+            "sensitivity": 3,
+            "delegable": true,
+            "scopes": ["organization", "branch", "department"],
+            "permissions": ["platform.access.manage", "platform.members.view"]
+        },
+        {
+            "key": "structure_administrator",
+            "name": "Structure administrator",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "platform.structure.manage",
+                "platform.members.view"
+            ]
+        },
+        {
+            "key": "member_viewer",
+            "name": "Member directory viewer",
+            "sensitivity": 1,
+            "delegable": true,
+            "scopes": ["organization", "branch", "department"],
+            "permissions": ["platform.members.view"]
+        }
+    ]
+}

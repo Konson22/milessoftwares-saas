@@ -1,0 +1,107 @@
+{
+    "application": {
+        "code": "retail",
+        "name": "Retail",
+        "category": "operations",
+        "kind": "standalone",
+        "status": "available"
+    },
+    "version": "1.0.0",
+    "permissions": [
+        {
+            "key": "retail.sales.create",
+            "name": "Record sales",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "retail.payments.create",
+            "name": "Create payments",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "retail.payments.approve",
+            "name": "Approve payments",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "retail.reports.view",
+            "name": "View reports",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch", "department"]
+        },
+        {
+            "key": "retail.settings.manage",
+            "name": "Manage settings",
+            "sensitivity": 4,
+            "scopes": ["organization"]
+        }
+    ],
+    "roles": [
+        {
+            "key": "cashier",
+            "name": "Cashier",
+            "sensitivity": 1,
+            "delegable": true,
+            "scopes": ["branch"],
+            "permissions": ["retail.sales.create"]
+        },
+        {
+            "key": "payments_clerk",
+            "name": "Payments clerk",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization", "branch"],
+            "permissions": ["retail.payments.create", "retail.reports.view"]
+        },
+        {
+            "key": "payments_approver",
+            "name": "Payments approver",
+            "sensitivity": 3,
+            "delegable": true,
+            "scopes": ["organization", "branch"],
+            "permissions": ["retail.payments.approve", "retail.reports.view"]
+        },
+        {
+            "key": "store_manager",
+            "name": "Store manager",
+            "sensitivity": 3,
+            "delegable": true,
+            "scopes": ["branch"],
+            "permissions": ["retail.sales.create", "retail.reports.view"]
+        },
+        {
+            "key": "auditor",
+            "name": "Auditor",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization", "branch", "department"],
+            "permissions": ["retail.reports.view"]
+        },
+        {
+            "key": "retail_owner",
+            "name": "Retail owner",
+            "sensitivity": 4,
+            "delegable": false,
+            "scopes": ["organization"],
+            "permissions": ["retail.settings.manage", "retail.reports.view"]
+        }
+    ],
+    "separation_of_duties": [
+        {
+            "permissions": [
+                "retail.payments.create",
+                "retail.payments.approve"
+            ],
+            "mode": "block",
+            "description": "The person who creates a payment must not approve it."
+        },
+        {
+            "permissions": ["retail.sales.create", "retail.payments.approve"],
+            "mode": "warn",
+            "description": "Cashiers approving payments needs a second look."
+        }
+    ]
+}

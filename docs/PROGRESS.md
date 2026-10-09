@@ -26,13 +26,14 @@
 
 ## Phase status
 
-| Phase                 | Status                                                      |
-| --------------------- | ----------------------------------------------------------- |
-| 0 Architecture & plan | Done — `docs/architecture.md`                               |
-| 1 Foundation          | Done (2026-10-09) — pending initial git commit              |
-| 2 Central Auth        | Done (2026-10-10) — workspace-host sign-in moves to Phase 3 |
-| 3 Orgs & tenancy      | Done (2026-10-10)                                           |
-| 4–10                  | Not started                                                 |
+| Phase                 | Status                                                           |
+| --------------------- | ---------------------------------------------------------------- |
+| 0 Architecture & plan | Done — `docs/architecture.md`                                    |
+| 1 Foundation          | Done (2026-10-09) — committed `09f7c45`                          |
+| 2 Central Auth        | Done (2026-10-10) — committed `09f7c45`                          |
+| 3 Orgs & tenancy      | Done (2026-10-10) — committed `09f7c45`                          |
+| 4 Structure & RBAC    | Done (2026-10-10) — branch `phase-4-structure-rbac`, uncommitted |
+| 5–10                  | Not started                                                      |
 
 ## Verification log
 
@@ -89,3 +90,23 @@ _(test, migration and build results are recorded here per phase — actual outpu
   Mutation check: removing the active-membership filter fails the switching tests.
 - Live smoke on :8100 with curl: app sign-in → create `smoke-shop` → workspace SSO → home/members 200.
   Smoke org and user deleted afterwards; its `organization.created` audit row remains (append-only).
+
+### Phase 4 — 2026-10-10 (local, Windows)
+
+- Catalog import (`platform:catalog-import`, `database/catalogs/*.json`): immutable versions with a
+  content checksum; identical re-import is a no-op, changed content is refused, a new version retires
+  the previous one. The platform itself is a catalogued application (`platform.access.manage`,
+  `platform.structure.manage`, `platform.members.view`).
+- Scope engine: organization ⊇ branch ⊇ its departments ⊇ sub-departments; a resource contains only
+  itself; department cycles cannot loop.
+- AssignRole / RevokeRole enforce delegation (access.manage at a containing scope, delegable role,
+  sensitivity no higher than the grantor's own in that application, entitlement, no self-elevation;
+  owners bounded by entitlement only) and separation of duties (block / warn at overlapping scopes;
+  warn needs acknowledgement). Every change is audited.
+- Workspace pages: structure (branches, departments, positions; archive instead of delete) and access.
+  Navigation shows them only to members who can use them.
+- `composer ci:check`: all pass; Pest 315 passed (977 assertions); PHPStan 0 errors; build OK.
+  Mutation checks: removing the sensitivity, self-elevation or grantor-scope check each fails the
+  matching delegation tests.
+- Live smoke on :8100: org created, workspace SSO, structure page 200, branch POST redirects back,
+  access page 200. Smoke org and user deleted.

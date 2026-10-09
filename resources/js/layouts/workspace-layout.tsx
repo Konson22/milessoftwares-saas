@@ -6,13 +6,22 @@ import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn } from '@/lib/utils';
 
 // Relative paths: every workspace page is served on its own tenant host.
-const navItems = [
+const baseNavItems = [
     { title: 'Home', href: '/' },
     { title: 'Members', href: '/members' },
 ];
 
 export default function WorkspaceLayout({ children }: PropsWithChildren) {
-    const { tenant, platform, auth } = usePage().props;
+    const { tenant, platform, auth, abilities } = usePage().props;
+    const navItems = [
+        ...baseNavItems,
+        ...(abilities?.manageStructure
+            ? [{ title: 'Structure', href: '/manage/structure' }]
+            : []),
+        ...(abilities?.manageAccess
+            ? [{ title: 'Access', href: '/manage/access' }]
+            : []),
+    ];
     const { isCurrentUrl, isCurrentOrParentUrl } = useCurrentUrl();
 
     return (

@@ -3,7 +3,9 @@
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\OrganizationController;
 use App\Http\Controllers\Dashboard\OrganizationSettingsController;
+use App\Http\Controllers\Workspace\AccessController;
 use App\Http\Controllers\Workspace\MemberController;
+use App\Http\Controllers\Workspace\StructureController;
 use App\Http\Controllers\Workspace\WorkspaceHomeController;
 use App\Http\Controllers\WwwRedirectController;
 use App\Modules\Identity\Http\Controllers\FirstPartySignInController;
@@ -100,5 +102,21 @@ Route::domain('{tenant}.'.PlatformHosts::root())
             Route::get('members/{membership}', [MemberController::class, 'show'])
                 ->whereUuid('membership')
                 ->name('members.show');
+
+            // Administration. Bound models resolve through the tenant scope, so
+            // ids from another organization 404.
+            Route::prefix('manage')->name('manage.')->group(function () {
+                Route::get('structure', [StructureController::class, 'index'])->name('structure');
+                Route::post('branches', [StructureController::class, 'storeBranch'])->name('branches.store');
+                Route::put('branches/{branch}', [StructureController::class, 'updateBranch'])->whereUuid('branch')->name('branches.update');
+                Route::post('departments', [StructureController::class, 'storeDepartment'])->name('departments.store');
+                Route::put('departments/{department}', [StructureController::class, 'updateDepartment'])->whereUuid('department')->name('departments.update');
+                Route::post('positions', [StructureController::class, 'storePosition'])->name('positions.store');
+                Route::put('positions/{position}', [StructureController::class, 'updatePosition'])->whereUuid('position')->name('positions.update');
+
+                Route::get('access', [AccessController::class, 'index'])->name('access');
+                Route::post('access', [AccessController::class, 'store'])->middleware('throttle:30,1')->name('access.store');
+                Route::delete('access/{assignment}', [AccessController::class, 'destroy'])->whereUuid('assignment')->name('access.destroy');
+            });
         });
     });
