@@ -6,6 +6,7 @@ use App\Modules\Audit\AuditLogger;
 use App\Modules\Authorization\Models\RoleAssignment;
 use App\Modules\Authorization\Support\AccessResolver;
 use App\Modules\Authorization\Support\Scope;
+use App\Modules\Integration\Support\IntegrationEvents;
 use App\Modules\Memberships\Enums\MembershipStatus;
 use App\Modules\Memberships\Models\OrganizationMembership;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,7 @@ final class ManageMembers
     public function __construct(
         private readonly AccessResolver $access,
         private readonly AuditLogger $audit,
+        private readonly IntegrationEvents $events,
     ) {}
 
     public function setStatus(OrganizationMembership $actor, OrganizationMembership $member, MembershipStatus $status): void
@@ -44,6 +46,8 @@ final class ManageMembers
                     ->update(['status' => 'revoked', 'revoked_at' => now(), 'updated_at' => now()]);
             }
         });
+
+        $this->events->membershipStatusChanged($member->organization_id, $member->id, $member->user_id, $status->value);
 
         $this->audit->record('membership.'.$status->value, $member, [
             'membership_id' => $member->getKey(),

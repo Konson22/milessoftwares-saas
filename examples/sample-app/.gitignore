@@ -1,0 +1,3 @@
+# Written by `php artisan platform:sample-app`; holds client secrets.
+config.local.php
+storage/

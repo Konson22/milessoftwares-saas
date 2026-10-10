@@ -3,7 +3,7 @@
 namespace App\Modules\Organizations\Actions;
 
 use App\Models\User;
-use App\Modules\Applications\Support\WorkspaceShell;
+use App\Modules\Applications\Support\TenantRedirectUris;
 use App\Modules\Audit\AuditLogger;
 use App\Modules\Memberships\Enums\MembershipStatus;
 use App\Modules\Memberships\Models\OrganizationMembership;
@@ -75,7 +75,7 @@ final class CreateOrganization
                     return $membership;
                 });
 
-                WorkspaceShell::syncRedirectUri($organization);
+                TenantRedirectUris::sync($organization);
 
                 $organization->forceFill([
                     'owner_membership_id' => $owner->getKey(),

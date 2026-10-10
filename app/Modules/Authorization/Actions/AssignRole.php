@@ -11,6 +11,7 @@ use App\Modules\Authorization\Models\RoleAssignment;
 use App\Modules\Authorization\Support\AccessResolver;
 use App\Modules\Authorization\Support\Scope;
 use App\Modules\Entitlements\Models\Entitlement;
+use App\Modules\Integration\Support\IntegrationEvents;
 use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Structure\Models\Branch;
 use App\Modules\Structure\Models\Department;
@@ -45,6 +46,7 @@ final class AssignRole
     public function __construct(
         private readonly AccessResolver $access,
         private readonly AuditLogger $audit,
+        private readonly IntegrationEvents $events,
     ) {}
 
     /**
@@ -95,6 +97,8 @@ final class AssignRole
 
             throw $e;
         }
+
+        $this->events->accessChanged($grantee->organization_id, $role->application_id, $grantee->id, $grantee->user_id);
 
         $this->audit->record('role.assigned', $assignment, [
             'membership_id' => $grantee->getKey(),

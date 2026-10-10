@@ -1,4 +1,4 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, Link } from '@inertiajs/react';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -87,6 +87,14 @@ export default function ApplicationsIndex({ applications }: Props) {
                             <Badge variant="secondary">
                                 {application.status}
                             </Badge>
+                            {application.kind !== 'platform' && (
+                                <Link
+                                    href={`/applications/${application.id}/integration`}
+                                    className="ml-auto text-sm text-primary hover:underline"
+                                >
+                                    Integration
+                                </Link>
+                            )}
                         </div>
 
                         {application.kind !== 'platform' && (

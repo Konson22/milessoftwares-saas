@@ -9,6 +9,7 @@ use App\Http\Middleware\RequirePlatformPermission;
 use App\Http\Middleware\ResolveCurrentOrganization;
 use App\Http\Middleware\ResolveTenant;
 use App\Modules\Identity\Http\Middleware\EnforceSessionState;
+use App\Modules\Integration\Http\AuthenticateApplicationClient;
 use App\Support\Hosts\HostType;
 use App\Support\Hosts\PlatformHosts;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
@@ -26,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function () {
             Route::domain(PlatformHosts::auth())->group(base_path('routes/oauth.php'));
+            Route::domain(PlatformHosts::auth())->group(base_path('routes/api.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -52,6 +54,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'platform.staff' => EnsurePlatformStaff::class,
             'staff.can' => RequirePlatformPermission::class,
             'admin.idle' => AdminIdleTimeout::class,
+            'api.client' => AuthenticateApplicationClient::class,
         ]);
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);

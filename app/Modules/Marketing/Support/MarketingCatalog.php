@@ -11,7 +11,8 @@ use App\Modules\Subscriptions\Models\Plan;
  * What the public site shows, read straight from the application registry
  * and the plan catalog, so marketing never drifts from what is sold.
  * Marketing copy lives in applications.capabilities.marketing:
- * { "tagline": "...", "features": ["...", "..."] }.
+ * { "tagline": "...", "features": ["...", "..."], "unlisted": false }.
+ * Unlisted applications (e.g. the bundled sample product) never appear.
  */
 final class MarketingCatalog
 {
@@ -28,6 +29,7 @@ final class MarketingCatalog
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get()
+            ->reject(fn (Application $application) => $this->unlisted($application))
             ->map(fn (Application $application) => $this->present($application))
             ->all());
     }
@@ -43,7 +45,7 @@ final class MarketingCatalog
             ->whereIn('status', array_map(fn (ApplicationStatus $status) => $status->value, self::LISTED))
             ->first();
 
-        return $application === null ? null : $this->present($application);
+        return $application === null || $this->unlisted($application) ? null : $this->present($application);
     }
 
     /**
@@ -71,6 +73,11 @@ final class MarketingCatalog
                 'applications' => array_values($plan->applications->pluck('name')->all()),
             ])
             ->all());
+    }
+
+    private function unlisted(Application $application): bool
+    {
+        return (($application->capabilities ?? [])['marketing']['unlisted'] ?? false) === true;
     }
 
     /**

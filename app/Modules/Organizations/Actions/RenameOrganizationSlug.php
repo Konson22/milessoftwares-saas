@@ -3,7 +3,7 @@
 namespace App\Modules\Organizations\Actions;
 
 use App\Models\User;
-use App\Modules\Applications\Support\WorkspaceShell;
+use App\Modules\Applications\Support\TenantRedirectUris;
 use App\Modules\Audit\AuditLogger;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationSlug;
@@ -67,7 +67,7 @@ final class RenameOrganizationSlug
                     'is_primary' => true,
                 ])->save();
 
-                WorkspaceShell::syncRedirectUri($organization);
+                TenantRedirectUris::sync($organization);
 
                 return $primary;
             });

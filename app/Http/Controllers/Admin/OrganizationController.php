@@ -8,6 +8,7 @@ use App\Modules\Administration\Enums\PlatformPermission;
 use App\Modules\Administration\Models\PlatformStaff;
 use App\Modules\Administration\Models\SupportAccessGrant;
 use App\Modules\Audit\AuditLogger;
+use App\Modules\Integration\Support\IntegrationEvents;
 use App\Modules\Organizations\Enums\OrganizationStatus;
 use App\Modules\Organizations\Models\Organization;
 use Illuminate\Http\RedirectResponse;
@@ -135,6 +136,8 @@ class OrganizationController extends Controller
             'status' => $validated['status'],
             'suspended_at' => $suspend ? now() : null,
         ])->save();
+
+        app(IntegrationEvents::class)->organizationStatusChanged($organization->id, $validated['status']);
 
         $audit->record(
             $suspend ? 'organization.suspended' : 'organization.reactivated',

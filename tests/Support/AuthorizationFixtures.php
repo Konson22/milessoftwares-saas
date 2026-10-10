@@ -19,6 +19,10 @@ use App\Support\Tenancy\TenantContext;
  * An organization with an owner, two branches, a department tree, the
  * platform and retail catalogs imported, and helpers to grant roles directly
  * (bypassing delegation) to set up a scenario.
+ *
+ * Call prepareAuthorizationFixtures() explicitly. (A method named
+ * setUpAuthorizationFixtures would also be run automatically by Laravel,
+ * building everything twice.)
  */
 trait AuthorizationFixtures
 {
@@ -36,7 +40,7 @@ trait AuthorizationFixtures
 
     public Department $headOffice;
 
-    protected function setUpAuthorizationFixtures(bool $entitleRetail = true): void
+    protected function prepareAuthorizationFixtures(bool $entitleRetail = true): void
     {
         $importer = app(CatalogImporter::class);
         $importer->import(json_decode((string) file_get_contents(database_path('catalogs/platform.json')), true));

@@ -6,6 +6,7 @@ use App\Modules\Audit\AuditLogger;
 use App\Modules\Authorization\Models\RoleAssignment;
 use App\Modules\Authorization\Support\AccessResolver;
 use App\Modules\Authorization\Support\Scope;
+use App\Modules\Integration\Support\IntegrationEvents;
 use App\Modules\Memberships\Models\OrganizationMembership;
 
 /**
@@ -19,6 +20,7 @@ final class RevokeRole
     public function __construct(
         private readonly AccessResolver $access,
         private readonly AuditLogger $audit,
+        private readonly IntegrationEvents $events,
     ) {}
 
     /**
@@ -46,6 +48,8 @@ final class RevokeRole
             'revoked_at' => now(),
             'revoked_by_membership_id' => $revoker->getKey(),
         ])->save();
+
+        $this->events->accessChanged($assignment->organization_id, $assignment->application_id, $assignment->membership_id, $assignment->membership->user_id);
 
         $this->audit->record('role.revoked', $assignment, [
             'membership_id' => $assignment->membership_id,

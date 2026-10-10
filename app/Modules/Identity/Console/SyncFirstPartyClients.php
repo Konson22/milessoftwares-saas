@@ -2,6 +2,7 @@
 
 namespace App\Modules\Identity\Console;
 
+use App\Modules\Applications\Support\TenantRedirectUris;
 use App\Modules\Applications\Support\WorkspaceShell;
 use App\Modules\Identity\Models\OAuthClient;
 use App\Modules\Identity\RelyingParty\FirstPartyClient;
@@ -104,7 +105,7 @@ class SyncFirstPartyClients extends Command
         $count = 0;
         Organization::query()->with('primarySlug')->chunkById(200, function ($organizations) use (&$count): void {
             foreach ($organizations as $organization) {
-                WorkspaceShell::syncRedirectUri($organization);
+                TenantRedirectUris::sync($organization);
                 $count++;
             }
         });

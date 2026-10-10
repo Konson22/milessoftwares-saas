@@ -145,6 +145,19 @@ Route::domain(PlatformHosts::admin())
             Route::get('applications', [Admin\ApplicationController::class, 'index'])->name('applications.index');
             Route::put('applications/{application}', [Admin\ApplicationController::class, 'update'])->whereUuid('application')->name('applications.update');
             Route::post('applications/catalogs', [Admin\ApplicationController::class, 'importCatalog'])->name('applications.catalogs.store');
+
+            // Integration: clients, webhooks, provisioning.
+            Route::prefix('applications/{application}/integration')->whereUuid('application')->name('integration.')->group(function () {
+                Route::get('/', [Admin\IntegrationController::class, 'show'])->name('show');
+                Route::post('sign-in-clients', [Admin\IntegrationController::class, 'storeSignInClient'])->name('sign-in-clients.store');
+                Route::post('service-clients', [Admin\IntegrationController::class, 'storeServiceClient'])->name('service-clients.store');
+                Route::post('clients/{client}/rotate', [Admin\IntegrationController::class, 'rotateSecret'])->whereUuid('client')->name('clients.rotate');
+                Route::post('clients/{client}/disable', [Admin\IntegrationController::class, 'disableClient'])->whereUuid('client')->name('clients.disable');
+                Route::put('webhook', [Admin\IntegrationController::class, 'updateWebhook'])->name('webhook.update');
+                Route::post('deliveries/{delivery}/redeliver', [Admin\IntegrationController::class, 'redeliver'])->whereUuid('delivery')->name('deliveries.redeliver');
+                Route::put('provisioning', [Admin\IntegrationController::class, 'updateProvisioning'])->name('provisioning.update');
+                Route::post('provisioning/{step}/retry', [Admin\IntegrationController::class, 'retryProvisioning'])->whereUuid('step')->name('provisioning.retry');
+            });
         });
 
         Route::middleware('staff.can:plans.manage')->group(function () {

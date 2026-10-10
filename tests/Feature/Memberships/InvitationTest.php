@@ -24,7 +24,7 @@ uses(AuthorizationFixtures::class);
 
 beforeEach(function () {
     Notification::fake();
-    $this->setUpAuthorizationFixtures();
+    $this->prepareAuthorizationFixtures();
     $this->slug = $this->organization->primarySlug->slug;
     app(TenantContext::class)->clear();
 

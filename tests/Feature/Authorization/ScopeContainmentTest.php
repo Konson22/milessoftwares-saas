@@ -8,7 +8,7 @@ use Tests\Support\AuthorizationFixtures;
 
 uses(AuthorizationFixtures::class);
 
-beforeEach(fn () => $this->setUpAuthorizationFixtures());
+beforeEach(fn () => $this->prepareAuthorizationFixtures());
 
 it('lets the organization scope contain everything', function () {
     $tree = new ScopeTree;

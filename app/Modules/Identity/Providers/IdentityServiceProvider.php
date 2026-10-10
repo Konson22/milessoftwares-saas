@@ -44,7 +44,12 @@ class IdentityServiceProvider extends ServiceProvider
     private function configureOpenIdProvider(): void
     {
         Passport::useClientModel(OAuthClient::class);
-        Passport::tokensCan((array) config('openid.passport.tokens_can'));
+        Passport::tokensCan([
+            ...(array) config('openid.passport.tokens_can'),
+            // Service-to-service scopes for product backends (client credentials).
+            'access.read' => 'Read effective access for the calling application',
+            'provisioning.write' => 'Report provisioning progress',
+        ]);
 
         // Access tokens are short-lived and held server-side by each product (BFF).
         Passport::tokensExpireIn(CarbonInterval::minutes(10));

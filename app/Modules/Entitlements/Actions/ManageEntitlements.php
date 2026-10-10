@@ -4,9 +4,12 @@ namespace App\Modules\Entitlements\Actions;
 
 use App\Modules\Administration\Models\PlatformStaff;
 use App\Modules\Applications\Models\Application;
+use App\Modules\Applications\Support\TenantRedirectUris;
 use App\Modules\Audit\AuditLogger;
 use App\Modules\Entitlements\Models\Entitlement;
+use App\Modules\Integration\Support\IntegrationEvents;
 use App\Modules\Organizations\Models\Organization;
+use App\Modules\Provisioning\Support\Provisioner;
 use App\Modules\Subscriptions\Models\Plan;
 use App\Modules\Subscriptions\Models\Subscription;
 use App\Modules\Subscriptions\Models\SubscriptionItem;
@@ -26,9 +29,11 @@ final class ManageEntitlements
     public function __construct(
         private readonly TenantContext $tenant,
         private readonly AuditLogger $audit,
+        private readonly IntegrationEvents $events,
+        private readonly Provisioner $provisioner,
     ) {}
 
-    public function assignPlan(Organization $organization, Plan $plan, PlatformStaff $actor, bool $startTrial = false): Subscription
+    public function assignPlan(Organization $organization, Plan $plan, ?PlatformStaff $actor, bool $startTrial = false): Subscription
     {
         if ($plan->status !== 'active') {
             throw new RuntimeException('Only active plans can be assigned.');
@@ -66,12 +71,13 @@ final class ManageEntitlements
             return $subscription;
         }));
 
+        $this->afterEntitlementChange($organization, $plan->applications->pluck('id')->all(), provision: true);
         $this->record('subscription.started', $subscription, $organization, $actor, ['plan' => $plan->code, 'trial_ends_at' => $trialEndsAt?->toIso8601String()]);
 
         return $subscription;
     }
 
-    public function cancel(Organization $organization, Subscription $subscription, PlatformStaff $actor, string $reason): void
+    public function cancel(Organization $organization, Subscription $subscription, ?PlatformStaff $actor, string $reason): void
     {
         $this->tenant->run($organization, fn () => DB::transaction(function () use ($subscription): void {
             $subscription->forceFill(['status' => 'cancelled', 'cancelled_at' => now()])->save();
@@ -81,13 +87,15 @@ final class ManageEntitlements
             Entitlement::query()->whereIn('subscription_item_id', $itemIds)->whereNull('revoked_at')->update(['revoked_at' => now()]);
         }));
 
+        $this->afterEntitlementChange($organization, $this->tenant->run($organization, fn () => Entitlement::query()->whereIn('subscription_item_id', $subscription->items()->pluck('id'))->pluck('application_id')->unique()->all()));
         $this->record('subscription.cancelled', $subscription, $organization, $actor, ['reason' => $reason]);
     }
 
-    public function grantManual(Organization $organization, Application $application, PlatformStaff $actor, string $reason, ?CarbonInterface $validUntil = null): Entitlement
+    public function grantManual(Organization $organization, Application $application, ?PlatformStaff $actor, string $reason, ?CarbonInterface $validUntil = null): Entitlement
     {
         $entitlement = $this->tenant->run($organization, fn () => $this->writeEntitlement($application->id, null, null, 'manual', $validUntil, null));
 
+        $this->afterEntitlementChange($organization, [$application->id], provision: true);
         $this->record('entitlement.granted', $entitlement, $organization, $actor, [
             'application' => $application->code,
             'valid_until' => $validUntil?->toIso8601String(),
@@ -97,11 +105,35 @@ final class ManageEntitlements
         return $entitlement;
     }
 
-    public function revoke(Organization $organization, Entitlement $entitlement, PlatformStaff $actor, string $reason): void
+    public function revoke(Organization $organization, Entitlement $entitlement, ?PlatformStaff $actor, string $reason): void
     {
         $this->tenant->run($organization, fn () => $entitlement->forceFill(['revoked_at' => now()])->save());
 
+        $this->afterEntitlementChange($organization, [$entitlement->application_id]);
         $this->record('entitlement.revoked', $entitlement, $organization, $actor, ['reason' => $reason]);
+    }
+
+    /**
+     * Products are told, and per-tenant sign-in callbacks follow what the
+     * organization may now use.
+     *
+     * @param  array<int, mixed>  $applicationIds
+     */
+    private function afterEntitlementChange(Organization $organization, array $applicationIds, bool $provision = false): void
+    {
+        TenantRedirectUris::sync($organization);
+
+        foreach (array_unique(array_map('strval', $applicationIds)) as $applicationId) {
+            $this->events->entitlementChanged($organization->id, $applicationId);
+
+            if ($provision) {
+                $application = Application::query()->find($applicationId);
+
+                if ($application !== null) {
+                    $this->provisioner->ensureTenant($organization, $application);
+                }
+            }
+        }
     }
 
     private function writeEntitlement(string $applicationId, ?string $featureKey, ?int $limit, string $source, ?CarbonInterface $validUntil, ?string $itemId): Entitlement
@@ -123,8 +155,9 @@ final class ManageEntitlements
     /**
      * @param  array<string, mixed>  $context
      */
-    private function record(string $action, Subscription|Entitlement $subject, Organization $organization, PlatformStaff $actor, array $context): void
+    private function record(string $action, Subscription|Entitlement $subject, Organization $organization, ?PlatformStaff $actor, array $context): void
     {
-        $this->audit->record($action, $subject, $context, actor: $actor->user, organizationId: $organization->id, actorType: 'staff');
+        // Without a staff actor (console), the audit log records a system action.
+        $this->audit->record($action, $subject, $context, actor: $actor?->user, organizationId: $organization->id, actorType: 'staff');
     }
 }

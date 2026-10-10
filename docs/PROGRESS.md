@@ -26,17 +26,18 @@
 
 ## Phase status
 
-| Phase                 | Status                                         |
-| --------------------- | ---------------------------------------------- |
-| 0 Architecture & plan | Done — `docs/architecture.md`                  |
-| 1 Foundation          | Done (2026-10-09) — committed `09f7c45`        |
-| 2 Central Auth        | Done (2026-10-10) — committed `09f7c45`        |
-| 3 Orgs & tenancy      | Done (2026-10-10) — committed `09f7c45`        |
-| 4 Structure & RBAC    | Done (2026-10-10) — committed `1b85303`        |
-| 5 Admin               | Done (2026-10-10) — committed `9e96749`        |
-| 6 Dashboard           | Done (2026-10-10) — committed `5487610`        |
-| 7 Marketing           | Done (2026-10-10) — branch `phase-7-marketing` |
-| 8–10                  | Not started                                    |
+| Phase                 | Status                                           |
+| --------------------- | ------------------------------------------------ |
+| 0 Architecture & plan | Done — `docs/architecture.md`                    |
+| 1 Foundation          | Done (2026-10-09) — committed `09f7c45`          |
+| 2 Central Auth        | Done (2026-10-10) — committed `09f7c45`          |
+| 3 Orgs & tenancy      | Done (2026-10-10) — committed `09f7c45`          |
+| 4 Structure & RBAC    | Done (2026-10-10) — committed `1b85303`          |
+| 5 Admin               | Done (2026-10-10) — committed `9e96749`          |
+| 6 Dashboard           | Done (2026-10-10) — committed `5487610`          |
+| 7 Marketing           | Done (2026-10-10) — committed `014ac28`          |
+| 8 Integration         | Done (2026-10-10) — branch `phase-8-integration` |
+| 9–10                  | Not started                                      |
 
 ## Verification log
 
@@ -180,3 +181,33 @@ _(test, migration and build results are recorded here per phase — actual outpu
   requires a breaking `vite-plus` upgrade — not done here, track for Phase 10.
 - `composer ci:check`: all pass; Pest 412 passed; Vitest 27 passed; PHPStan 0 errors; build OK.
   Mutation checks: ignoring the honeypot or the speed check fails the matching spam tests.
+
+### Phase 8 — 2026-10-10 (local, Windows)
+
+- Contracts for product teams: `docs/integration.md`.
+- Client registration in admin (Applications → Integration): confidential/public sign-in clients
+  with fixed or per-tenant callbacks (`tenant_redirect_path`; one exact row per entitled
+  organization, maintained by `TenantRedirectUris`), service clients, secret rotation, disabling
+  (revokes tokens). Secrets shown once.
+- Product API on the auth host: `/api/v1/organizations/{slug|id}` and
+  `/api/v1/organizations/{id}/members/{sub}/effective-access`, client-credentials tokens with
+  `access.read`, limited to the calling application (others 404). Cached ≤60 s per organization
+  cache version; every access/entitlement/membership/organization change bumps it.
+- Webhooks: `entitlement.changed`, `access.changed`, `membership.revoked|reactivated`,
+  `organization.suspended|reactivated`; HMAC-SHA256 `Miles-Signature` with timestamp, event_id
+  idempotency, backoff 1 m/5 m/30 m/2 h/6 h then failed, admin redelivery,
+  `platform:retry-webhooks` every 5 minutes.
+- Provisioning: entitlement triggers `POST {endpoint}/tenants` (signed, `Idempotency-Key`), sync
+  2xx or async 202 + `/api/v1/provisioning/steps/{id}/complete` (`provisioning.write`, owner app
+  only); retries, admin retry.
+- Sample product `examples/sample-app` + `php artisan platform:sample-app --entitle=<slug>`
+  (local only; unlisted on the public site).
+- Fixed: test fixture traits named `setUp<Trait>` were run twice by Laravel since Phase 4
+  (renamed to `prepare…`).
+- `composer ci:check`: all pass; Pest 436 passed (1621 assertions); Vitest 27; PHPStan 0; build OK.
+  Mutation check: dropping the API scope check fails the matching test.
+- Live end to end on :8100 with the sample on :8200: org created → `platform:sample-app --entitle`
+  → queue: provisioning call succeeded and webhook delivered (signature verified by the sample) →
+  sample sign-in via OIDC (id_token verified against JWKS) → effective access `allowed: true` →
+  role assigned → `access.changed` delivered → API showed the editor role. Smoke data deleted; the
+  sample product stays registered locally.

@@ -9,7 +9,7 @@ use Tests\Support\AuthorizationFixtures;
 uses(AuthorizationFixtures::class);
 
 beforeEach(function () {
-    $this->setUpAuthorizationFixtures();
+    $this->prepareAuthorizationFixtures();
     $this->slug = $this->organization->primarySlug->slug;
     $this->member = $this->member();
     $this->grant($this->member, 'retail', 'cashier', Scope::branch($this->juba->id));

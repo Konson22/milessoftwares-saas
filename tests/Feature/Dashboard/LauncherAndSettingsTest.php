@@ -13,7 +13,7 @@ use Tests\Support\AuthorizationFixtures;
 uses(AuthorizationFixtures::class);
 
 beforeEach(function () {
-    $this->setUpAuthorizationFixtures();
+    $this->prepareAuthorizationFixtures();
     Application::query()->where('code', 'retail')->update(['route_prefix' => 'retail', 'status' => 'available']);
 
     $this->slug = $this->organization->primarySlug->slug;

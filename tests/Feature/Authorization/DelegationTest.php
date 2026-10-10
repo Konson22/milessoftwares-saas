@@ -15,7 +15,7 @@ use Tests\Support\AuthorizationFixtures;
 
 uses(AuthorizationFixtures::class);
 
-beforeEach(fn () => $this->setUpAuthorizationFixtures());
+beforeEach(fn () => $this->prepareAuthorizationFixtures());
 
 /**
  * @param  Closure(): mixed  $attempt
