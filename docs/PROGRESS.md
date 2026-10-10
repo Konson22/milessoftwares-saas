@@ -26,18 +26,19 @@
 
 ## Phase status
 
-| Phase                 | Status                                           |
-| --------------------- | ------------------------------------------------ |
-| 0 Architecture & plan | Done — `docs/architecture.md`                    |
-| 1 Foundation          | Done (2026-10-09) — committed `09f7c45`          |
-| 2 Central Auth        | Done (2026-10-10) — committed `09f7c45`          |
-| 3 Orgs & tenancy      | Done (2026-10-10) — committed `09f7c45`          |
-| 4 Structure & RBAC    | Done (2026-10-10) — committed `1b85303`          |
-| 5 Admin               | Done (2026-10-10) — committed `9e96749`          |
-| 6 Dashboard           | Done (2026-10-10) — committed `5487610`          |
-| 7 Marketing           | Done (2026-10-10) — committed `014ac28`          |
-| 8 Integration         | Done (2026-10-10) — branch `phase-8-integration` |
-| 9–10                  | Not started                                      |
+| Phase                 | Status                                              |
+| --------------------- | --------------------------------------------------- |
+| 0 Architecture & plan | Done — `docs/architecture.md`                       |
+| 1 Foundation          | Done (2026-10-09) — committed `09f7c45`             |
+| 2 Central Auth        | Done (2026-10-10) — committed `09f7c45`             |
+| 3 Orgs & tenancy      | Done (2026-10-10) — committed `09f7c45`             |
+| 4 Structure & RBAC    | Done (2026-10-10) — committed `1b85303`             |
+| 5 Admin               | Done (2026-10-10) — committed `9e96749`             |
+| 6 Dashboard           | Done (2026-10-10) — committed `5487610`             |
+| 7 Marketing           | Done (2026-10-10) — committed `014ac28`             |
+| 8 Integration         | Done (2026-10-10) — committed `b736922`             |
+| 9 Shared modules      | Done (2026-10-10) — branch `phase-9-shared-modules` |
+| 10 Production         | Not started                                         |
 
 ## Verification log
 
@@ -211,3 +212,23 @@ _(test, migration and build results are recorded here per phase — actual outpu
   sample sign-in via OIDC (id_token verified against JWKS) → effective access `allowed: true` →
   role assigned → `access.changed` delivered → API showed the editor role. Smoke data deleted; the
   sample product stays registered locally.
+
+### Phase 9 — 2026-10-10 (local, Windows)
+
+- Contracts: `contracts/events/` (envelope + finance.invoice.issued, finance.payment.received,
+  hr.employee.joined, payroll.timesheet.submitted, all v1); `docs/shared-modules.md`.
+- `miles/shared-module-kit` (path package): envelope validation (sensitive HR/payroll keys rejected
+  at any depth), event-token verification (RS256 via JWKS, audience = module, 5-minute TTL,
+  `events.write`, org claim must match), idempotent inbox keyed on
+  (source_app, organization_id, source_transaction_id): accepted 201 / duplicate 200 / conflict 409,
+  failed processing rolls back so a retry can succeed; health reporter.
+- Platform: `POST /api/v1/event-tokens` (`events.issue`; both apps must be entitled, target must be
+  a shared module), `POST /api/v1/health` (`health.write`); admin overview shows service health,
+  stale >5 min → unknown.
+- Reference Finance module `examples/finance-module` (SQLite inbox + ledger) and sample-app
+  `/send-payment`; `platform:sample-app --finance-url` registers it locally.
+- `composer ci:check`: all pass; Pest 468 passed (1732 assertions); Vitest 27; PHPStan 0 (now also
+  covers the kit); build OK. Mutation check: disabling duplicate detection fails 4 tests.
+- Live end to end (:8100 platform, :8200 sample, :8300 finance): same payment sent twice with fresh
+  tokens and event ids → attempt 1 201 accepted, attempt 2 200 duplicate (original_event_id) →
+  ledger has 1 entry; finance health report recorded `ok`. Smoke data deleted.

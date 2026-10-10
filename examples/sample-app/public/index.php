@@ -13,6 +13,8 @@
 |   GET  /                  effective access via a client-credentials token
 |   POST /webhooks          signed platform webhooks, deduplicated by event_id
 |   POST /platform/tenants  signed, idempotent tenant provisioning
+|   POST /send-payment      a business event to the Finance module, sent twice
+|                           to show it is applied once
 |
 | Run:  php artisan platform:sample-app        (registers it, writes config)
 |       php -S 127.0.0.1:8200 -t examples/sample-app/public
@@ -45,6 +47,7 @@ try {
         $method === 'GET' && $path === '/login' => $platform->startLogin((string) ($_GET['org'] ?? '')),
         $method === 'GET' && $path === '/callback' => $platform->completeLogin($_GET),
         $method === 'GET' && $path === '/logout' => $platform->logout(),
+        $method === 'POST' && $path === '/send-payment' => $platform->sendPayment((string) ($_GET['reference'] ?? '')),
         $method === 'POST' && $path === '/webhooks' => $platform->receiveWebhook(),
         $method === 'POST' && $path === '/platform/tenants' => $platform->provisionTenant(),
         $method === 'GET' && $path === '/' => $platform->home(),

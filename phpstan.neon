@@ -9,5 +9,6 @@ parameters:
         - config/
         - database/
         - routes/
+        - packages/shared-module-kit/src/
 
     level: 7

@@ -15,7 +15,25 @@ class OverviewController extends Controller
 {
     public function __invoke(): Response
     {
+        // Reports older than five minutes mean the service stopped reporting.
+        $stale = now()->subMinutes(5);
+
         return Inertia::render('admin/overview', [
+            'services' => DB::table('applications')
+                ->leftJoin('application_health', 'application_health.application_id', '=', 'applications.id')
+                ->where('applications.kind', '!=', 'platform')
+                ->orderBy('applications.name')
+                ->get(['applications.code', 'applications.name', 'application_health.status', 'application_health.version', 'application_health.message', 'application_health.reported_at', 'application_health.status_since'])
+                ->map(fn (object $row) => [
+                    'code' => $row->code,
+                    'name' => $row->name,
+                    'status' => $row->reported_at === null || now()->parse($row->reported_at)->lt($stale) ? 'unknown' : $row->status,
+                    'version' => $row->version,
+                    'message' => $row->message,
+                    'reportedAt' => $row->reported_at,
+                    'statusSince' => $row->status_since,
+                ])
+                ->all(),
             'organizations' => Organization::query()
                 ->selectRaw('status, count(*) as total')
                 ->groupBy('status')

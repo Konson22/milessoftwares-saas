@@ -1,0 +1,33 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milessoftwares.com/contracts/events/hr.employee.joined.v1.schema.json",
+    "title": "hr.employee.joined, schema_version 1",
+    "description": "A product added a person who works for the organization (e.g. a school added a teacher). Only organizational facts: pay, bank details, identity numbers and health data are entered in the HR module itself, never sent in events.",
+    "type": "object",
+    "required": ["employee_reference", "display_name", "started_on"],
+    "additionalProperties": false,
+    "properties": {
+        "employee_reference": { "type": "string", "maxLength": 64 },
+        "display_name": { "type": "string", "maxLength": 255 },
+        "work_email": { "type": ["string", "null"], "format": "email" },
+        "membership_id": {
+            "type": ["string", "null"],
+            "format": "uuid",
+            "description": "Platform membership, when the person also has an account."
+        },
+        "position_id": { "type": ["string", "null"], "format": "uuid" },
+        "department_id": { "type": ["string", "null"], "format": "uuid" },
+        "branch_id": { "type": ["string", "null"], "format": "uuid" },
+        "started_on": { "type": "string", "format": "date" }
+    },
+    "not": {
+        "anyOf": [
+            { "required": ["salary"] },
+            { "required": ["bank_account"] },
+            { "required": ["national_id"] },
+            { "required": ["tax_id"] },
+            { "required": ["date_of_birth"] },
+            { "required": ["medical"] }
+        ]
+    }
+}

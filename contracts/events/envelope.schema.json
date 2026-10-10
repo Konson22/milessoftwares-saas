@@ -1,0 +1,48 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milessoftwares.com/contracts/events/envelope.schema.json",
+    "title": "Business event envelope",
+    "description": "Every event a product sends to a shared module (Finance, HR, Payroll). The receiver keeps a unique key on (source_app, organization_id, source_transaction_id), so a retried event is never applied twice. organization_id must equal the 'org' claim of the event token. Sensitive HR and payroll fields (pay, bank details, identity numbers, health) are never allowed in payloads.",
+    "type": "object",
+    "required": [
+        "event_id",
+        "event_type",
+        "schema_version",
+        "organization_id",
+        "source_app",
+        "source_transaction_id",
+        "occurred_at",
+        "payload"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "event_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique per delivery attempt is allowed; idempotency is on source_transaction_id."
+        },
+        "event_type": {
+            "type": "string",
+            "pattern": "^(finance|hr|payroll)(\\.[a-z][a-z0-9_]*){2}$",
+            "examples": ["finance.invoice.issued"]
+        },
+        "schema_version": { "type": "integer", "minimum": 1 },
+        "organization_id": { "type": "string", "format": "uuid" },
+        "source_app": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,31}$",
+            "examples": ["retail"]
+        },
+        "source_transaction_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "The product's own id for the business transaction, e.g. the sale number. Stable across retries."
+        },
+        "occurred_at": { "type": "string", "format": "date-time" },
+        "payload": {
+            "type": "object",
+            "description": "Validated against the schema for event_type and schema_version."
+        }
+    }
+}

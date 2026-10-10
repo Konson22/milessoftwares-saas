@@ -1,0 +1,20 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milessoftwares.com/contracts/events/finance.payment.received.v1.schema.json",
+    "title": "finance.payment.received, schema_version 1",
+    "description": "A product took a payment (cash, mobile money, card). No card or account numbers: only the method and the processor's reference.",
+    "type": "object",
+    "required": ["payment_reference", "currency", "amount_minor", "method"],
+    "additionalProperties": false,
+    "properties": {
+        "payment_reference": { "type": "string", "maxLength": 64 },
+        "invoice_number": { "type": ["string", "null"], "maxLength": 64 },
+        "branch_id": { "type": ["string", "null"], "format": "uuid" },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "amount_minor": { "type": "integer", "minimum": 1 },
+        "method": {
+            "enum": ["cash", "mobile_money", "card", "bank_transfer", "other"]
+        },
+        "processor_reference": { "type": ["string", "null"], "maxLength": 128 }
+    }
+}

@@ -1,7 +1,9 @@
 # Integrating a product with the Miles Softwares platform
 
 This is the contract every product (Retail, Pharmacy, School, …) implements. A working
-reference lives in `examples/sample-app` (see the end of this page).
+reference lives in `examples/sample-app` (see the end of this page). Sending business events to
+Finance, HR or Payroll, and health reporting (scopes `events.issue`, `health.write`), are in
+`docs/shared-modules.md`.
 
 All platform endpoints are on the **auth host**, `https://auth.milessoftwares.com`
 (`http://auth.milessoftwares.local:8100` locally). Discovery:

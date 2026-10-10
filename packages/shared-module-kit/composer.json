@@ -1,0 +1,19 @@
+{
+    "name": "miles/shared-module-kit",
+    "version": "0.1.0",
+    "description": "What a Miles Softwares shared module (Finance, HR, Payroll) needs to receive business events: envelope validation, event-token verification and an idempotent inbox, plus health reporting.",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.3",
+        "ext-json": "*",
+        "ext-openssl": "*",
+        "ext-pdo": "*",
+        "lcobucci/jwt": "^5.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "Miles\\SharedModuleKit\\": "src/"
+        }
+    }
+}

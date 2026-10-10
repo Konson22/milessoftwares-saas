@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\IntegrationController;
 use App\Http\Controllers\Api\ProvisioningCallbackController;
+use App\Http\Controllers\Api\SharedModulesController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -24,6 +25,14 @@ Route::prefix('api/v1')->middleware('throttle:600,1')->name('api.')->group(funct
             ->whereUuid('organization')
             ->name('effective-access');
     });
+
+    // Shared modules: organization-bound event tokens, and health reports.
+    Route::post('event-tokens', [SharedModulesController::class, 'eventToken'])
+        ->middleware('api.client:events.issue')
+        ->name('event-tokens.store');
+    Route::post('health', [SharedModulesController::class, 'health'])
+        ->middleware('api.client:health.write')
+        ->name('health.store');
 
     Route::post('provisioning/steps/{step}/complete', [ProvisioningCallbackController::class, 'complete'])
         ->whereUuid('step')

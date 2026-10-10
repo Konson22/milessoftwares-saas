@@ -1,0 +1,28 @@
+{
+    "application": {
+        "code": "finance",
+        "name": "Finance (reference module)",
+        "category": "shared",
+        "kind": "shared_module",
+        "status": "beta"
+    },
+    "version": "0.1.0",
+    "permissions": [
+        {
+            "key": "finance.ledger.view",
+            "name": "View the ledger",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        }
+    ],
+    "roles": [
+        {
+            "key": "accountant",
+            "name": "Accountant",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization", "branch"],
+            "permissions": ["finance.ledger.view"]
+        }
+    ]
+}

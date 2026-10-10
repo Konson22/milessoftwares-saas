@@ -49,6 +49,8 @@ class IdentityServiceProvider extends ServiceProvider
             // Service-to-service scopes for product backends (client credentials).
             'access.read' => 'Read effective access for the calling application',
             'provisioning.write' => 'Report provisioning progress',
+            'events.issue' => 'Obtain organization-bound tokens for sending events to shared modules',
+            'health.write' => 'Report service health',
         ]);
 
         // Access tokens are short-lived and held server-side by each product (BFF).

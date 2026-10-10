@@ -127,6 +127,65 @@ final class Platform
         ]);
     }
 
+    // ---- 5. Business events to a shared module ---------------------------
+
+    /**
+     * Sends one payment to Finance, then retries it, as a product would after
+     * a timeout. Each attempt gets a fresh token and event id; the stable
+     * source_transaction_id is what makes the retry harmless.
+     */
+    public function sendPayment(string $reference): never
+    {
+        $user = $_SESSION['user'] ?? null;
+        if (! is_array($user)) {
+            $this->respond(401, ['error' => 'sign in first']);
+        }
+
+        $reference = preg_replace('/[^A-Za-z0-9-]/', '', $reference) ?: 'PAY-'.date('YmdHis');
+        $organization = $this->get('/api/v1/organizations/'.$user['org'], $this->serviceToken('access.read'));
+        $attempts = [];
+
+        foreach ([1, 2] as $attempt) {
+            $eventToken = $this->http('POST', '/api/v1/event-tokens', json_encode([
+                'organization_id' => $organization['id'],
+                'audience' => 'finance',
+            ], JSON_THROW_ON_ERROR), ['Content-Type: application/json', 'Authorization: Bearer '.$this->serviceToken('events.issue')])['token'];
+
+            $event = json_encode([
+                'event_id' => self::uuid(),
+                'event_type' => 'finance.payment.received',
+                'schema_version' => 1,
+                'organization_id' => $organization['id'],
+                'source_app' => 'sample',
+                'source_transaction_id' => $reference,
+                'occurred_at' => date(DATE_ATOM),
+                'payload' => ['payment_reference' => $reference, 'currency' => 'SSP', 'amount_minor' => 50000, 'method' => 'mobile_money'],
+            ], JSON_THROW_ON_ERROR);
+
+            $context = stream_context_create(['http' => [
+                'method' => 'POST',
+                'header' => "Content-Type: application/json
+Authorization: Bearer {$eventToken}",
+                'content' => $event,
+                'ignore_errors' => true,
+                'timeout' => 10,
+            ]]);
+            $response = file_get_contents($this->config['finance_url'].'/events', false, $context);
+            $attempts[] = ['attempt' => $attempt, 'http' => $http_response_header[0] ?? null, 'finance' => json_decode((string) $response, true)];
+        }
+
+        $this->respond(200, ['reference' => $reference, 'attempts' => $attempts]);
+    }
+
+    private static function uuid(): string
+    {
+        $bytes = random_bytes(16);
+        $bytes[6] = chr(ord($bytes[6]) & 0x0F | 0x40);
+        $bytes[8] = chr(ord($bytes[8]) & 0x3F | 0x80);
+
+        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($bytes), 4));
+    }
+
     // ---- 3. Webhooks --------------------------------------------------------
 
     public function receiveWebhook(): never

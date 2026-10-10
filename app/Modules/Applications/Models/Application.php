@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Model;
  * for catalog status, workspace routing and integration settings.
  *
  * @property string $id
- * @property string $code
+ * @property non-empty-string $code enforced by applications_code_check
  * @property string $name
  * @property string|null $description
  * @property string $category

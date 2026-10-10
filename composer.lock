@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ca97529c4fa2331f7eb20d5b5f31745f",
+    "content-hash": "91183d903f2a8840e0aaaea600b51308",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -3033,6 +3033,35 @@
                 }
             ],
             "time": "2026-03-08T20:05:35+00:00"
+        },
+        {
+            "name": "miles/shared-module-kit",
+            "version": "0.1.0",
+            "dist": {
+                "type": "path",
+                "url": "packages/shared-module-kit",
+                "reference": "558c1c0b9bb7156f16285da3058721727403195b"
+            },
+            "require": {
+                "ext-json": "*",
+                "ext-openssl": "*",
+                "ext-pdo": "*",
+                "lcobucci/jwt": "^5.6",
+                "php": "^8.3"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Miles\\SharedModuleKit\\": "src/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "description": "What a Miles Softwares shared module (Finance, HR, Payroll) needs to receive business events: envelope validation, event-token verification and an idempotent inbox, plus health reporting.",
+            "transport-options": {
+                "relative": true
+            }
         },
         {
             "name": "monolog/monolog",
