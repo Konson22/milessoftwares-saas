@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Modules\Administration\Enums\PlatformPermission;
+use App\Modules\Administration\Models\PlatformStaff;
 use App\Modules\Authorization\Support\WorkspaceAbilities;
 use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Support\Hosts\HostType;
@@ -48,6 +50,10 @@ class HandleInertiaRequests extends Middleware
             ],
             'platform' => $this->platformLinks($request),
             // Set on workspace hosts (and on app. once an organization is current).
+            // Admin host only: the signed-in staff member and their permissions.
+            'staff' => fn () => ($staff = $request->attributes->get('staff')) instanceof PlatformStaff
+                ? ['permissions' => array_map(fn (PlatformPermission $permission) => $permission->value, $staff->permissions())]
+                : null,
             // Workspace hosts only: which administration links to show.
             'abilities' => fn () => ($membership = $request->attributes->get('membership')) instanceof OrganizationMembership
                 ? app(WorkspaceAbilities::class)->for($membership)

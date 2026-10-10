@@ -26,14 +26,15 @@
 
 ## Phase status
 
-| Phase                 | Status                                                           |
-| --------------------- | ---------------------------------------------------------------- |
-| 0 Architecture & plan | Done — `docs/architecture.md`                                    |
-| 1 Foundation          | Done (2026-10-09) — committed `09f7c45`                          |
-| 2 Central Auth        | Done (2026-10-10) — committed `09f7c45`                          |
-| 3 Orgs & tenancy      | Done (2026-10-10) — committed `09f7c45`                          |
-| 4 Structure & RBAC    | Done (2026-10-10) — branch `phase-4-structure-rbac`, uncommitted |
-| 5–10                  | Not started                                                      |
+| Phase                 | Status                                     |
+| --------------------- | ------------------------------------------ |
+| 0 Architecture & plan | Done — `docs/architecture.md`              |
+| 1 Foundation          | Done (2026-10-09) — committed `09f7c45`    |
+| 2 Central Auth        | Done (2026-10-10) — committed `09f7c45`    |
+| 3 Orgs & tenancy      | Done (2026-10-10) — committed `09f7c45`    |
+| 4 Structure & RBAC    | Done (2026-10-10) — committed `1b85303`    |
+| 5 Admin               | Done (2026-10-10) — branch `phase-5-admin` |
+| 6–10                  | Not started                                |
 
 ## Verification log
 
@@ -110,3 +111,25 @@ _(test, migration and build results are recorded here per phase — actual outpu
   matching delegation tests.
 - Live smoke on :8100: org created, workspace SSO, structure page 200, branch POST redirects back,
   access page 200. Smoke org and user deleted.
+
+### Phase 5 — 2026-10-10 (local, Windows)
+
+- Platform roles defined in code (`PlatformRoleCatalog`: super admin, support agent/manager, billing,
+  catalog, security auditor) with per-area `staff.can:*` middleware. Admin requires active staff with
+  MFA, a fresh sign-in per admin session (`prompt=login`) and a 30-minute idle timeout.
+  `php artisan platform:staff <email> --role=super_admin` bootstraps the first super admin.
+- Staff management: nobody changes their own roles or status; the last active super admin cannot be
+  demoted or suspended.
+- Organization directory with platform metadata only; suspension and reactivation need a reason.
+- Support access: requested with a reason (max 72 h), approved by a different support manager, owner
+  emailed on approval, revocable; customer members/structure views only under the viewer's own grant
+  in effect, each view audited against the organization.
+- Registry editing and catalog upload; plans; manual subscriptions that derive entitlements (trial
+  entitlements end with the trial, cancellation revokes); manual entitlement grant/revoke with reason.
+- Security page: sign-in events, audit log, on-demand audit-chain verification.
+- Fixed a Phase 3 regression: workspace pages had no layout (the layout change never applied). Layout
+  choice now lives in `resources/js/lib/layouts.ts` with a Vitest regression test.
+- `composer ci:check`: all pass; Pest 363 passed (1172 assertions); Vitest 13 passed; PHPStan 0
+  errors; build OK. Mutation checks: dropping the grant's approval or expiry condition fails the
+  matching support-access tests.
+- Live check on :8100: admin guests are sent to an OIDC sign-in with `prompt=login`.

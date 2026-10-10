@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\OrganizationController;
 use App\Http\Controllers\Dashboard\OrganizationSettingsController;
@@ -80,10 +81,72 @@ Route::domain(PlatformHosts::app())->middleware(['auth', 'verified', 'current.or
         ->name('organization.slug.update');
 });
 
-// admin.milessoftwares.com — internal staff only (MFA enforced)
-Route::domain(PlatformHosts::admin())->middleware(['auth', 'platform.staff'])->group(function () {
-    Route::inertia('/', 'admin/overview')->name('admin.overview');
-});
+// admin.milessoftwares.com — internal staff only: MFA, fresh sign-in per
+// session, short idle timeout, and a platform permission per area.
+Route::domain(PlatformHosts::admin())
+    ->middleware(['auth', 'platform.staff', 'admin.idle'])
+    ->name('admin.')
+    ->group(function () {
+        Route::get('/', Admin\OverviewController::class)->name('overview');
+
+        Route::middleware('staff.can:organizations.view')->group(function () {
+            Route::get('organizations', [Admin\OrganizationController::class, 'index'])->name('organizations.index');
+            Route::get('organizations/{organization}', [Admin\OrganizationController::class, 'show'])->whereUuid('organization')->name('organizations.show');
+        });
+        Route::put('organizations/{organization}/status', [Admin\OrganizationController::class, 'updateStatus'])
+            ->whereUuid('organization')
+            ->middleware('staff.can:organizations.suspend')
+            ->name('organizations.status');
+
+        // Support access: request, approve (by someone else), revoke, and the
+        // customer data views that need a grant in effect.
+        Route::middleware('staff.can:support.request')->group(function () {
+            Route::get('support-access', [Admin\SupportAccessController::class, 'index'])->name('support.index');
+            Route::post('organizations/{organization}/support-access', [Admin\SupportAccessController::class, 'store'])
+                ->whereUuid('organization')->middleware('throttle:20,60')->name('support.store');
+            Route::post('support-access/{grant}/revoke', [Admin\SupportAccessController::class, 'revoke'])->whereUuid('grant')->name('support.revoke');
+            Route::get('organizations/{organization}/customer/members', [Admin\CustomerDataController::class, 'members'])
+                ->whereUuid('organization')->name('customer.members');
+            Route::get('organizations/{organization}/customer/structure', [Admin\CustomerDataController::class, 'structure'])
+                ->whereUuid('organization')->name('customer.structure');
+        });
+        Route::post('support-access/{grant}/approve', [Admin\SupportAccessController::class, 'approve'])
+            ->whereUuid('grant')
+            ->middleware('staff.can:support.approve')
+            ->name('support.approve');
+
+        Route::middleware('staff.can:registry.manage')->group(function () {
+            Route::get('applications', [Admin\ApplicationController::class, 'index'])->name('applications.index');
+            Route::put('applications/{application}', [Admin\ApplicationController::class, 'update'])->whereUuid('application')->name('applications.update');
+            Route::post('applications/catalogs', [Admin\ApplicationController::class, 'importCatalog'])->name('applications.catalogs.store');
+        });
+
+        Route::middleware('staff.can:plans.manage')->group(function () {
+            Route::get('plans', [Admin\PlanController::class, 'index'])->name('plans.index');
+            Route::post('plans', [Admin\PlanController::class, 'store'])->name('plans.store');
+            Route::put('plans/{plan}', [Admin\PlanController::class, 'update'])->whereUuid('plan')->name('plans.update');
+        });
+
+        Route::middleware('staff.can:entitlements.manage')->prefix('organizations/{organization}')->whereUuid('organization')->group(function () {
+            Route::post('subscriptions', [Admin\EntitlementController::class, 'assignPlan'])->name('subscriptions.store');
+            Route::post('subscriptions/{subscription}/cancel', [Admin\EntitlementController::class, 'cancelSubscription'])->whereUuid('subscription')->name('subscriptions.cancel');
+            Route::post('entitlements', [Admin\EntitlementController::class, 'grant'])->name('entitlements.store');
+            Route::post('entitlements/{entitlement}/revoke', [Admin\EntitlementController::class, 'revoke'])->whereUuid('entitlement')->name('entitlements.revoke');
+        });
+
+        Route::middleware('staff.can:security.view')->group(function () {
+            Route::get('security', [Admin\SecurityController::class, 'index'])->name('security.index');
+            Route::post('security/verify-chain', [Admin\SecurityController::class, 'verifyChain'])->middleware('throttle:6,1')->name('security.verify-chain');
+        });
+
+        Route::middleware('staff.can:staff.manage')->prefix('staff')->name('staff.')->group(function () {
+            Route::get('/', [Admin\StaffController::class, 'index'])->name('index');
+            Route::post('/', [Admin\StaffController::class, 'store'])->name('store');
+            Route::post('{staff}/roles', [Admin\StaffController::class, 'grantRole'])->whereUuid('staff')->name('roles.store');
+            Route::delete('{staff}/roles/{role}', [Admin\StaffController::class, 'revokeRole'])->whereUuid('staff')->name('roles.destroy');
+            Route::put('{staff}/status', [Admin\StaffController::class, 'updateStatus'])->whereUuid('staff')->name('status');
+        });
+    });
 
 // {business}.milessoftwares.com — tenant workspace shell. Signs in through
 // the auth host with the shared workspace client and keeps a host-only session.

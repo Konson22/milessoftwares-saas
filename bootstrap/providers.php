@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Administration\Providers\AdministrationServiceProvider;
 use App\Modules\Applications\Providers\ApplicationsServiceProvider;
 use App\Modules\Identity\Providers\IdentityServiceProvider;
 use App\Providers\AppServiceProvider;
@@ -11,6 +12,7 @@ return [
     FortifyServiceProvider::class,
     IdentityServiceProvider::class,
     ApplicationsServiceProvider::class,
+    AdministrationServiceProvider::class,
     // Passport with OpenID Connect (id_token, nonce); Passport itself is not auto-discovered.
     PassportServiceProvider::class,
 ];

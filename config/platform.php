@@ -77,6 +77,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Platform administration (admin.<root>)
+    |--------------------------------------------------------------------------
+    |
+    | Staff sign in afresh for every admin session (prompt=login) and are
+    | signed out after this many idle minutes.
+    |
+    */
+
+    'admin' => [
+        'idle_minutes' => (int) env('PLATFORM_ADMIN_IDLE_MINUTES', 30),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | First-party OpenID Connect clients
     |--------------------------------------------------------------------------
     |

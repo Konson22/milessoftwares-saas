@@ -57,6 +57,8 @@ final class OidcRelyingParty
             'nonce' => $pending['nonce'],
             'code_challenge' => self::base64Url(hash('sha256', $pending['verifier'], true)),
             'code_challenge_method' => 'S256',
+            // Staff prove their credentials and MFA again for every admin session.
+            ...($client->key === 'admin' ? ['prompt' => 'login'] : []),
         ]);
     }
 

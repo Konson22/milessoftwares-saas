@@ -1,24 +1,49 @@
 import { Head } from '@inertiajs/react';
 
-// Phase 1 placeholder. Admin modules arrive in Phase 5. This layout is
-// deliberately separate from the customer dashboard navigation.
-export default function AdminOverview() {
+type Props = {
+    organizations: Partial<
+        Record<'pending' | 'active' | 'suspended' | 'archived', number>
+    >;
+    pendingSupportRequests: number;
+    activeSupportGrants: number;
+};
+
+export default function AdminOverview({
+    organizations,
+    pendingSupportRequests,
+    activeSupportGrants,
+}: Props) {
+    const tiles = [
+        { label: 'Active organizations', value: organizations.active ?? 0 },
+        {
+            label: 'Suspended organizations',
+            value: organizations.suspended ?? 0,
+        },
+        {
+            label: 'Support requests awaiting approval',
+            value: pendingSupportRequests,
+        },
+        { label: 'Support grants in effect', value: activeSupportGrants },
+    ];
+
     return (
         <>
             <Head title="System Administration" />
-            <div className="min-h-screen bg-background text-foreground">
-                <header className="border-b bg-primary text-primary-foreground">
-                    <div className="mx-auto max-w-6xl px-4 py-4 font-semibold">
-                        Miles Global Softwares · System Administration
+
+            <h1 className="text-2xl font-semibold">Overview</h1>
+
+            <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {tiles.map((tile) => (
+                    <div key={tile.label} className="rounded-lg border p-4">
+                        <dt className="text-sm text-muted-foreground">
+                            {tile.label}
+                        </dt>
+                        <dd className="mt-1 text-2xl font-semibold tabular-nums">
+                            {tile.value}
+                        </dd>
                     </div>
-                </header>
-                <main className="mx-auto max-w-6xl px-4 py-10">
-                    <h1 className="text-2xl font-semibold">Overview</h1>
-                    <p className="mt-2 text-muted-foreground">
-                        Administration modules are not yet available.
-                    </p>
-                </main>
-            </div>
+                ))}
+            </dl>
         </>
     );
 }

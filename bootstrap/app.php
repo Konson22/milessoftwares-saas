@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Middleware\AdminIdleTimeout;
 use App\Http\Middleware\EnsurePlatformStaff;
 use App\Http\Middleware\EnsureWorkspaceAccess;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\RequirePlatformPermission;
 use App\Http\Middleware\ResolveCurrentOrganization;
 use App\Http\Middleware\ResolveTenant;
 use App\Modules\Identity\Http\Middleware\EnforceSessionState;
@@ -48,6 +50,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'workspace.access' => EnsureWorkspaceAccess::class,
             'current.organization' => ResolveCurrentOrganization::class,
             'platform.staff' => EnsurePlatformStaff::class,
+            'staff.can' => RequirePlatformPermission::class,
+            'admin.idle' => AdminIdleTimeout::class,
         ]);
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);

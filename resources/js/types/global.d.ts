@@ -22,6 +22,7 @@ declare module '@inertiajs/core' {
                 manageStructure: boolean;
                 manageAccess: boolean;
             } | null;
+            staff: { permissions: string[] } | null;
             sidebarOpen: boolean;
             [key: string]: unknown;
         };
