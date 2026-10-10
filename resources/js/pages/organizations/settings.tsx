@@ -8,7 +8,35 @@ import { Label } from '@/components/ui/label';
 import { dashboard } from '@/routes';
 import { settings as organizationSettings } from '@/routes/organization';
 
+type Details = {
+    display_name: string;
+    legal_name: string;
+    business_type: string | null;
+    contact_email: string | null;
+    contact_phone: string | null;
+    address: string | null;
+    timezone: string;
+    default_currency: string;
+};
+
+const detailFields: {
+    name: keyof Details;
+    label: string;
+    type?: string;
+    required?: boolean;
+}[] = [
+    { name: 'display_name', label: 'Business name', required: true },
+    { name: 'legal_name', label: 'Registered legal name', required: true },
+    { name: 'business_type', label: 'Business type' },
+    { name: 'contact_email', label: 'Contact email', type: 'email' },
+    { name: 'contact_phone', label: 'Contact phone', type: 'tel' },
+    { name: 'address', label: 'Address' },
+    { name: 'timezone', label: 'Time zone', required: true },
+    { name: 'default_currency', label: 'Currency', required: true },
+];
+
 type Props = {
+    details: Details;
     organization: {
         displayName: string;
         slug: string | null;
@@ -20,6 +48,7 @@ type Props = {
 };
 
 export default function OrganizationSettings({
+    details,
     organization,
     rootDomain,
     redirectGraceDays,
@@ -34,6 +63,50 @@ export default function OrganizationSettings({
                     title={organization.displayName}
                     description="Organization settings"
                 />
+
+                <section className="space-y-4">
+                    <Heading
+                        variant="small"
+                        title="Details"
+                        description="How your organization appears to members and on documents."
+                    />
+                    <Form
+                        action="/organization/details"
+                        method="put"
+                        options={{ preserveScroll: true }}
+                        className="space-y-4"
+                    >
+                        {({ processing, errors }) => (
+                            <>
+                                {detailFields.map((field) => (
+                                    <div
+                                        key={field.name}
+                                        className="grid gap-2"
+                                    >
+                                        <Label htmlFor={field.name}>
+                                            {field.label}
+                                        </Label>
+                                        <Input
+                                            id={field.name}
+                                            name={field.name}
+                                            type={field.type ?? 'text'}
+                                            required={field.required}
+                                            defaultValue={
+                                                details[field.name] ?? ''
+                                            }
+                                        />
+                                        <InputError
+                                            message={errors[field.name]}
+                                        />
+                                    </div>
+                                ))}
+                                <Button type="submit" disabled={processing}>
+                                    Save details
+                                </Button>
+                            </>
+                        )}
+                    </Form>
+                </section>
 
                 <section className="space-y-4">
                     <Heading

@@ -26,15 +26,16 @@
 
 ## Phase status
 
-| Phase                 | Status                                     |
-| --------------------- | ------------------------------------------ |
-| 0 Architecture & plan | Done — `docs/architecture.md`              |
-| 1 Foundation          | Done (2026-10-09) — committed `09f7c45`    |
-| 2 Central Auth        | Done (2026-10-10) — committed `09f7c45`    |
-| 3 Orgs & tenancy      | Done (2026-10-10) — committed `09f7c45`    |
-| 4 Structure & RBAC    | Done (2026-10-10) — committed `1b85303`    |
-| 5 Admin               | Done (2026-10-10) — branch `phase-5-admin` |
-| 6–10                  | Not started                                |
+| Phase                 | Status                                         |
+| --------------------- | ---------------------------------------------- |
+| 0 Architecture & plan | Done — `docs/architecture.md`                  |
+| 1 Foundation          | Done (2026-10-09) — committed `09f7c45`        |
+| 2 Central Auth        | Done (2026-10-10) — committed `09f7c45`        |
+| 3 Orgs & tenancy      | Done (2026-10-10) — committed `09f7c45`        |
+| 4 Structure & RBAC    | Done (2026-10-10) — committed `1b85303`        |
+| 5 Admin               | Done (2026-10-10) — committed `9e96749`        |
+| 6 Dashboard           | Done (2026-10-10) — branch `phase-6-dashboard` |
+| 7–10                  | Not started                                    |
 
 ## Verification log
 
@@ -133,3 +134,23 @@ _(test, migration and build results are recorded here per phase — actual outpu
   errors; build OK. Mutation checks: dropping the grant's approval or expiry condition fails the
   matching support-access tests.
 - Live check on :8100: admin guests are sent to an OIDC sign-in with `prompt=login`.
+
+### Phase 6 — 2026-10-10 (local, Windows)
+
+- Invitations from the workspace (owner or access administrators), optionally with a role. Token
+  stored only as a SHA-256 hash; link on the app host; valid 7 days; resend issues a new token.
+  Acceptance locks the row (single use), requires the invited, verified account (email compared
+  case-insensitively), an active organization and an inviter who still may invite; a proposed role
+  goes through AssignRole as the inviter and is skipped (and audited) if no longer allowed.
+  `platform:expire-invitations` runs hourly.
+- Member management: suspend, reactivate, remove (revokes roles and application access). Never the
+  owner or oneself; needs the owner or organization-wide access management.
+- Launcher on the workspace home and the dashboard: entitled, released applications with a workspace
+  path in which the member holds a role (owners see all entitled ones).
+- Dashboard panel for the current organization (counts, shortcuts); owner-only organization details
+  and a read-only subscription view.
+- `composer ci:check`: all pass; Pest 393 passed (1395 assertions); Vitest 13 passed; PHPStan 0
+  errors; build OK. Mutation checks: removing the single-use or expiry check fails the matching
+  invitation tests.
+- Live smoke on :8100: org created; dashboard, settings and subscription pages 200; workspace home and
+  invitations page 200; invitation sent and stored. Smoke data deleted.

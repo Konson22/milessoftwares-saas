@@ -1,4 +1,6 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import InputError from '@/components/input-error';
+import { Button } from '@/components/ui/button';
 import type { Member } from './index';
 
 type Props = {
@@ -6,6 +8,18 @@ type Props = {
 };
 
 export default function MemberDetail({ member }: Props) {
+    const { abilities, errors } = usePage().props as {
+        abilities: { manageAccess: boolean } | null;
+        errors: Record<string, string>;
+    };
+
+    const setStatus = (status: Member['status']) =>
+        router.put(
+            `/manage/members/${member.id}/status`,
+            { status },
+            { preserveScroll: true },
+        );
+
     return (
         <>
             <Head title={member.name} />
@@ -27,6 +41,33 @@ export default function MemberDetail({ member }: Props) {
                 <dt className="text-muted-foreground">Joined</dt>
                 <dd>{member.joinedAt ?? '—'}</dd>
             </dl>
+
+            {abilities?.manageAccess && member.status !== 'removed' && (
+                <div className="mt-8 flex flex-wrap gap-2">
+                    {member.status === 'active' ? (
+                        <Button
+                            variant="outline"
+                            onClick={() => setStatus('suspended')}
+                        >
+                            Suspend
+                        </Button>
+                    ) : (
+                        <Button
+                            variant="outline"
+                            onClick={() => setStatus('active')}
+                        >
+                            Reactivate
+                        </Button>
+                    )}
+                    <Button
+                        variant="destructive"
+                        onClick={() => setStatus('removed')}
+                    >
+                        Remove from organization
+                    </Button>
+                </div>
+            )}
+            <InputError message={errors.status} className="mt-2" />
         </>
     );
 }

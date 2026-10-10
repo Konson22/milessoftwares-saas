@@ -3,7 +3,14 @@
 namespace App\Http\Controllers\Workspace;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Memberships\Actions\ManageMembers;
+use App\Modules\Memberships\Actions\MembershipActionDenied;
+use App\Modules\Memberships\Enums\MembershipStatus;
 use App\Modules\Memberships\Models\OrganizationMembership;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -31,6 +38,23 @@ class MemberController extends Controller
         return Inertia::render('workspace/members/show', [
             'member' => $this->present($membership->load('user:id,name,email')),
         ]);
+    }
+
+    public function updateStatus(Request $request, OrganizationMembership $membership, ManageMembers $members): RedirectResponse
+    {
+        $validated = $request->validate(['status' => ['required', Rule::in(['active', 'suspended', 'removed'])]]);
+        $actor = $request->attributes->get('membership');
+        abort_unless($actor instanceof OrganizationMembership, 403);
+
+        try {
+            $members->setStatus($actor, $membership, MembershipStatus::from($validated['status']));
+        } catch (MembershipActionDenied $e) {
+            throw ValidationException::withMessages(['status' => $e->getMessage()]);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Member updated.')]);
+
+        return back();
     }
 
     /**

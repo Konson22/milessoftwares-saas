@@ -19,7 +19,10 @@ export default function WorkspaceLayout({ children }: PropsWithChildren) {
             ? [{ title: 'Structure', href: '/manage/structure' }]
             : []),
         ...(abilities?.manageAccess
-            ? [{ title: 'Access', href: '/manage/access' }]
+            ? [
+                  { title: 'Access', href: '/manage/access' },
+                  { title: 'Invitations', href: '/manage/invitations' },
+              ]
             : []),
     ];
     const { isCurrentUrl, isCurrentOrParentUrl } = useCurrentUrl();

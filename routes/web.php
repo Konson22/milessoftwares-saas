@@ -2,9 +2,11 @@
 
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\Dashboard\DashboardController;
+use App\Http\Controllers\Dashboard\InvitationAcceptanceController;
 use App\Http\Controllers\Dashboard\OrganizationController;
 use App\Http\Controllers\Dashboard\OrganizationSettingsController;
 use App\Http\Controllers\Workspace\AccessController;
+use App\Http\Controllers\Workspace\InvitationController;
 use App\Http\Controllers\Workspace\MemberController;
 use App\Http\Controllers\Workspace\StructureController;
 use App\Http\Controllers\Workspace\WorkspaceHomeController;
@@ -75,7 +77,15 @@ Route::domain(PlatformHosts::app())->middleware(['auth', 'verified', 'current.or
         ->whereUuid('organization')
         ->name('organizations.switch');
 
+    // Invitation links: the token is the credential, so it is rate limited.
+    Route::get('invitations/{token}', [InvitationAcceptanceController::class, 'show'])
+        ->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:30,1')->name('invitations.show');
+    Route::post('invitations/{token}/accept', [InvitationAcceptanceController::class, 'accept'])
+        ->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:10,1')->name('invitations.accept');
+
     Route::get('organization/settings', [OrganizationSettingsController::class, 'edit'])->name('organization.settings');
+    Route::put('organization/details', [OrganizationSettingsController::class, 'updateDetails'])->name('organization.details.update');
+    Route::get('organization/subscription', [OrganizationSettingsController::class, 'subscription'])->name('organization.subscription');
     Route::put('organization/slug', [OrganizationSettingsController::class, 'updateSlug'])
         ->middleware('throttle:10,60')
         ->name('organization.slug.update');
@@ -176,6 +186,13 @@ Route::domain('{tenant}.'.PlatformHosts::root())
                 Route::put('departments/{department}', [StructureController::class, 'updateDepartment'])->whereUuid('department')->name('departments.update');
                 Route::post('positions', [StructureController::class, 'storePosition'])->name('positions.store');
                 Route::put('positions/{position}', [StructureController::class, 'updatePosition'])->whereUuid('position')->name('positions.update');
+
+                Route::put('members/{membership}/status', [MemberController::class, 'updateStatus'])->whereUuid('membership')->name('members.status');
+
+                Route::get('invitations', [InvitationController::class, 'index'])->name('invitations');
+                Route::post('invitations', [InvitationController::class, 'store'])->middleware('throttle:30,60')->name('invitations.store');
+                Route::post('invitations/{invitation}/resend', [InvitationController::class, 'resend'])->whereUuid('invitation')->middleware('throttle:10,60')->name('invitations.resend');
+                Route::delete('invitations/{invitation}', [InvitationController::class, 'destroy'])->whereUuid('invitation')->name('invitations.destroy');
 
                 Route::get('access', [AccessController::class, 'index'])->name('access');
                 Route::post('access', [AccessController::class, 'store'])->middleware('throttle:30,1')->name('access.store');

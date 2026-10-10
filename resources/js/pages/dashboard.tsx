@@ -5,6 +5,8 @@ import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
+import { CurrentOrganizationPanel } from '@/components/dashboard/current-organization-panel';
+import type { CurrentOrganization } from '@/components/dashboard/current-organization-panel';
 import { settings as organizationSettings } from '@/routes/organization';
 import { create as createOrganization } from '@/routes/organizations';
 
@@ -19,14 +21,17 @@ type Organization = {
 
 type Props = {
     organizations: Organization[];
+    current: CurrentOrganization | null;
 };
 
-export default function Dashboard({ organizations }: Props) {
+export default function Dashboard({ organizations, current }: Props) {
     return (
         <>
             <Head title="Dashboard" />
 
             <div className="flex flex-col gap-6 p-4">
+                {current && <CurrentOrganizationPanel current={current} />}
+
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <Heading
                         title="Your organizations"
