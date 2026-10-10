@@ -34,8 +34,9 @@
 | 3 Orgs & tenancy      | Done (2026-10-10) — committed `09f7c45`        |
 | 4 Structure & RBAC    | Done (2026-10-10) — committed `1b85303`        |
 | 5 Admin               | Done (2026-10-10) — committed `9e96749`        |
-| 6 Dashboard           | Done (2026-10-10) — branch `phase-6-dashboard` |
-| 7–10                  | Not started                                    |
+| 6 Dashboard           | Done (2026-10-10) — committed `5487610`        |
+| 7 Marketing           | Done (2026-10-10) — branch `phase-7-marketing` |
+| 8–10                  | Not started                                    |
 
 ## Verification log
 
@@ -154,3 +155,28 @@ _(test, migration and build results are recorded here per phase — actual outpu
   invitation tests.
 - Live smoke on :8100: org created; dashboard, settings and subscription pages 200; workspace home and
   invitations page 200; invitation sent and stored. Smoke data deleted.
+
+### Phase 7 — 2026-10-10 (local, Windows)
+
+- Public site on the apex host, driven by the registry and plans: home (products from
+  `applications`, marketing copy in `capabilities.marketing`, edited in admin), product pages,
+  pricing (public active plans only), demo request and contact forms, thank-you page.
+- Spam protection: honeypot, encrypted form-issued-at token (under 3 s or over 24 h is automated),
+  link-count check, and 5 submissions per IP per hour. Spam is stored as `spam` without notifying
+  anyone and gets the same thank-you response. Real leads notify `PLATFORM_SALES_EMAIL`.
+- Admin Leads area (new `sales` staff role, `leads.manage`): open/closed/spam, status changes audited.
+- SEO: per-page title, description, canonical, Open Graph, JSON-LD; `sitemap.xml`; `robots.txt` that
+  allows the apex and disallows every signed-in host (static `public/robots.txt` removed).
+- SSR verified: in dev the Vite plugin renders; in production `npm run build:ssr` +
+  `php artisan inertia:start-ssr` (bundle auto-detected at `bootstrap/ssr/app.js`), page HTML has
+  `data-server-rendered="true"` and the hero text.
+- Accessibility: axe-core over every marketing page in Vitest/jsdom (colour contrast excluded there),
+  plus one-h1 checks. It found a skipped heading level on pricing, now fixed.
+- Lighthouse 12 (headless Chrome, local, production build with SSR): accessibility 100 and SEO 100 on
+  home, pricing and contact. Performance 44–49 and best practices 79 are NOT representative: the
+  machine's security software injects ~840 KB of render-blocking script/CSS into plain-HTTP pages,
+  `php artisan serve` sends no compression, and there is no HTTPS. Re-measure on staging (Phase 10).
+- `npm audit`: 3 critical advisories in dev tooling (`tinypool` via `oxfmt` via `vite-plus`); fix
+  requires a breaking `vite-plus` upgrade — not done here, track for Phase 10.
+- `composer ci:check`: all pass; Pest 412 passed; Vitest 27 passed; PHPStan 0 errors; build OK.
+  Mutation checks: ignoring the honeypot or the speed check fails the matching spam tests.

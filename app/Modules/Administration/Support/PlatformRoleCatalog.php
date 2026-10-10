@@ -43,6 +43,11 @@ final class PlatformRoleCatalog
                 'description' => 'Manages the application registry and role catalogs.',
                 'permissions' => [P::RegistryManage],
             ],
+            'sales' => [
+                'name' => 'Sales',
+                'description' => 'Handles demo requests and contact messages from the public site.',
+                'permissions' => [P::LeadsManage],
+            ],
             'security_auditor' => [
                 'name' => 'Security auditor',
                 'description' => 'Reads sign-in events and the audit log, and verifies the audit chain.',

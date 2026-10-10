@@ -5,6 +5,7 @@ use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\InvitationAcceptanceController;
 use App\Http\Controllers\Dashboard\OrganizationController;
 use App\Http\Controllers\Dashboard\OrganizationSettingsController;
+use App\Http\Controllers\Marketing;
 use App\Http\Controllers\Workspace\AccessController;
 use App\Http\Controllers\Workspace\InvitationController;
 use App\Http\Controllers\Workspace\MemberController;
@@ -32,7 +33,22 @@ use Illuminate\Support\Facades\Route;
 
 // milessoftwares.com — public marketing site
 Route::domain(PlatformHosts::root())->group(function () {
-    Route::inertia('/', 'marketing/home')->name('home');
+    Route::get('/', [Marketing\PageController::class, 'home'])->name('home');
+
+    Route::name('marketing.')->group(function () {
+        Route::get('products/{code}', [Marketing\PageController::class, 'product'])->where('code', '[a-z][a-z0-9_]*')->name('product');
+        Route::get('pricing', [Marketing\PageController::class, 'pricing'])->name('pricing');
+
+        // Public forms: rate limited per IP in front of the spam checks.
+        Route::get('demo', [Marketing\LeadController::class, 'demoForm'])->name('demo');
+        Route::post('demo', [Marketing\LeadController::class, 'storeDemo'])->middleware('throttle:5,60')->name('demo.store');
+        Route::get('contact', [Marketing\LeadController::class, 'contactForm'])->name('contact');
+        Route::post('contact', [Marketing\LeadController::class, 'storeContact'])->middleware('throttle:5,60')->name('contact.store');
+        Route::inertia('thanks', 'marketing/thanks')->name('thanks');
+
+        Route::get('sitemap.xml', [Marketing\SeoController::class, 'sitemap'])->name('sitemap');
+        Route::get('robots.txt', [Marketing\SeoController::class, 'robots'])->name('robots');
+    });
 });
 
 // www.milessoftwares.com — permanent redirect to the apex, path preserved
@@ -149,6 +165,12 @@ Route::domain(PlatformHosts::admin())
             Route::post('security/verify-chain', [Admin\SecurityController::class, 'verifyChain'])->middleware('throttle:6,1')->name('security.verify-chain');
         });
 
+        Route::middleware('staff.can:leads.manage')->group(function () {
+            Route::get('leads', [Admin\LeadController::class, 'index'])->name('leads.index');
+            Route::put('leads/{type}/{lead}', [Admin\LeadController::class, 'update'])
+                ->whereIn('type', ['demo', 'contact'])->whereUuid('lead')->name('leads.update');
+        });
+
         Route::middleware('staff.can:staff.manage')->prefix('staff')->name('staff.')->group(function () {
             Route::get('/', [Admin\StaffController::class, 'index'])->name('index');
             Route::post('/', [Admin\StaffController::class, 'store'])->name('store');
@@ -158,6 +180,11 @@ Route::domain(PlatformHosts::admin())
         });
     });
 
+// Signed-in hosts are never indexed.
+foreach ([PlatformHosts::auth(), PlatformHosts::app(), PlatformHosts::admin()] as $host) {
+    Route::domain($host)->get('robots.txt', [Marketing\SeoController::class, 'disallowAll']);
+}
+
 // {business}.milessoftwares.com — tenant workspace shell. Signs in through
 // the auth host with the shared workspace client and keeps a host-only session.
 Route::domain('{tenant}.'.PlatformHosts::root())
@@ -165,6 +192,7 @@ Route::domain('{tenant}.'.PlatformHosts::root())
     ->middleware('tenant')
     ->name('workspace.')
     ->group(function () {
+        Route::get('robots.txt', [Marketing\SeoController::class, 'disallowAll']);
         Route::get('auth/login', [FirstPartySignInController::class, 'login'])->defaults('client', 'workspace')->name('auth.login');
         Route::get('auth/callback', [FirstPartySignInController::class, 'callback'])->defaults('client', 'workspace')->name('auth.callback');
         Route::post('logout', [FirstPartySignInController::class, 'logout'])->middleware('auth')->name('logout');

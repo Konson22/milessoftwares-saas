@@ -40,6 +40,8 @@ class ApplicationController extends Controller
                     'status' => $application->status->value,
                     'routePrefix' => $application->route_prefix,
                     'sortOrder' => $application->sort_order,
+                    'tagline' => $application->capabilities['marketing']['tagline'] ?? null,
+                    'features' => implode("\n", (array) ($application->capabilities['marketing']['features'] ?? [])),
                     'catalogVersions' => ApplicationCatalogVersion::query()
                         ->where('application_id', $application->id)
                         ->latest('published_at')
@@ -64,9 +66,17 @@ class ApplicationController extends Controller
             'status' => ['required', Rule::in(['planned', 'beta', 'available', 'deprecated', 'retired'])],
             'route_prefix' => ['nullable', 'string', 'max:32', 'regex:/^[a-z][a-z0-9-]*$/', Rule::unique('applications', 'route_prefix')->ignore($application->id)],
             'sort_order' => ['required', 'integer', 'between:0,65535'],
+            'tagline' => ['nullable', 'string', 'max:200'],
+            'features' => ['nullable', 'string', 'max:4000'],
         ]);
 
-        $application->update($validated);
+        // Marketing copy for the public site lives under capabilities.marketing.
+        $features = array_values(array_filter(array_map('trim', explode("\n", (string) ($validated['features'] ?? '')))));
+        $capabilities = (array) ($application->capabilities ?? []);
+        $capabilities['marketing'] = ['tagline' => $validated['tagline'] ?? null, 'features' => $features];
+        unset($validated['tagline'], $validated['features']);
+
+        $application->update([...$validated, 'capabilities' => $capabilities]);
         $this->record('application.updated', $application, $request, ['changes' => $application->getChanges()]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Application updated.')]);

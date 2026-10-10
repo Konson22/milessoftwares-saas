@@ -77,6 +77,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Public site
+    |--------------------------------------------------------------------------
+    |
+    | Demo requests and contact messages notify this address (falls back to
+    | the mail from-address).
+    |
+    */
+
+    'marketing' => [
+        'sales_email' => env('PLATFORM_SALES_EMAIL'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Platform administration (admin.<root>)
     |--------------------------------------------------------------------------
     |

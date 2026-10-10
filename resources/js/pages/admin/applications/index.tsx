@@ -13,6 +13,8 @@ type Application = {
     kind: string;
     status: string;
     routePrefix: string | null;
+    tagline: string | null;
+    features: string;
     sortOrder: number;
     catalogVersions: {
         version: string;
@@ -162,6 +164,38 @@ export default function ApplicationsIndex({ applications }: Props) {
                                                     application.description ??
                                                     ''
                                                 }
+                                            />
+                                        </div>
+                                        <div className="grid gap-1.5 sm:col-span-4">
+                                            <Label
+                                                htmlFor={`tagline-${application.id}`}
+                                            >
+                                                Public tagline
+                                            </Label>
+                                            <Input
+                                                id={`tagline-${application.id}`}
+                                                name="tagline"
+                                                maxLength={200}
+                                                defaultValue={
+                                                    application.tagline ?? ''
+                                                }
+                                            />
+                                        </div>
+                                        <div className="grid gap-1.5 sm:col-span-4">
+                                            <Label
+                                                htmlFor={`features-${application.id}`}
+                                            >
+                                                Public feature list (one per
+                                                line)
+                                            </Label>
+                                            <textarea
+                                                id={`features-${application.id}`}
+                                                name="features"
+                                                rows={4}
+                                                defaultValue={
+                                                    application.features
+                                                }
+                                                className="rounded-md border border-input bg-transparent px-3 py-2 text-sm"
                                             />
                                         </div>
                                         <div className="grid gap-1.5">
