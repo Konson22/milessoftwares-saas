@@ -1,0 +1,13 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - src/
+        - routes/
+        - database/
+        # Models using the tenancy trait, so PHPStan analyses it.
+        - tests/Fixtures/Prescription.php
+        - tests/Fixtures/User.php
+
+    level: 7

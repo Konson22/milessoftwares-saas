@@ -1,6 +1,7 @@
 # Integrating a product with the Miles Softwares platform
 
-This is the contract every product (Retail, Pharmacy, School, …) implements. A working
+This is the contract every product (Retail, Pharmacy, School, …) implements. Laravel products get
+all of it from [`packages/platform-client`](../packages/platform-client/README.md); a plain-PHP
 reference lives in `examples/sample-app` (see the end of this page). Sending business events to
 Finance, HR or Payroll, and health reporting (scopes `events.issue`, `health.write`), are in
 `docs/shared-modules.md`.

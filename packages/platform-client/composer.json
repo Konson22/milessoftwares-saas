@@ -1,0 +1,63 @@
+{
+    "name": "miles/platform-client",
+    "version": "0.1.0",
+    "description": "Connects a Laravel product (Pharmacy, Retail, ...) to the Miles Softwares platform: sign-in, tenant resolution, effective access, webhooks, provisioning and event tokens.",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.4",
+        "ext-json": "*",
+        "ext-openssl": "*",
+        "laravel/framework": "^13.0",
+        "lcobucci/jwt": "^5.6",
+        "miles/shared-module-kit": "^0.1"
+    },
+    "require-dev": {
+        "larastan/larastan": "^3.0",
+        "laravel/pint": "^1.32",
+        "orchestra/testbench": "^11.0",
+        "pestphp/pest": "^5.3",
+        "pestphp/pest-plugin-laravel": "^5.0"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../shared-module-kit"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Miles\\PlatformClient\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Miles\\PlatformClient\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Miles\\PlatformClient\\PlatformClientServiceProvider"
+            ]
+        }
+    },
+    "scripts": {
+        "test": "pest",
+        "analyse": "phpstan analyse --memory-limit=1G",
+        "lint": "pint",
+        "ci": [
+            "pint --test",
+            "@analyse",
+            "@test"
+        ]
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
