@@ -1,0 +1,18 @@
+# Inertia server-side rendering for the public site, on 127.0.0.1:13714 only.
+[Unit]
+Description=Miles platform SSR server
+After=network-online.target
+
+[Service]
+User=miles
+Group=miles
+WorkingDirectory=/srv/miles/current
+ExecStart=/usr/bin/php /srv/miles/current/artisan inertia:start-ssr
+Restart=always
+RestartSec=2
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

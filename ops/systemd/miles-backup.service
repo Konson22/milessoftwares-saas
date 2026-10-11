@@ -1,0 +1,13 @@
+# Nightly encrypted database dump (ops/backup/backup.sh), via miles-backup.timer.
+# /etc/miles/backup.env holds PG* settings, BACKUP_GPG_RECIPIENT and BACKUP_UPLOAD_CMD.
+[Unit]
+Description=Miles platform database backup
+
+[Service]
+Type=oneshot
+User=miles-backup
+EnvironmentFile=/etc/miles/backup.env
+Environment=APP_ENV=production
+ExecStart=/bin/bash /srv/miles/current/ops/backup/backup.sh
+NoNewPrivileges=true
+PrivateTmp=true

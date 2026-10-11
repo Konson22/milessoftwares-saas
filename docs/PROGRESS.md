@@ -26,19 +26,19 @@
 
 ## Phase status
 
-| Phase                 | Status                                              |
-| --------------------- | --------------------------------------------------- |
-| 0 Architecture & plan | Done — `docs/architecture.md`                       |
-| 1 Foundation          | Done (2026-10-09) — committed `09f7c45`             |
-| 2 Central Auth        | Done (2026-10-10) — committed `09f7c45`             |
-| 3 Orgs & tenancy      | Done (2026-10-10) — committed `09f7c45`             |
-| 4 Structure & RBAC    | Done (2026-10-10) — committed `1b85303`             |
-| 5 Admin               | Done (2026-10-10) — committed `9e96749`             |
-| 6 Dashboard           | Done (2026-10-10) — committed `5487610`             |
-| 7 Marketing           | Done (2026-10-10) — committed `014ac28`             |
-| 8 Integration         | Done (2026-10-10) — committed `b736922`             |
-| 9 Shared modules      | Done (2026-10-10) — branch `phase-9-shared-modules` |
-| 10 Production         | Not started                                         |
+| Phase                 | Status                                          |
+| --------------------- | ----------------------------------------------- |
+| 0 Architecture & plan | Done — `docs/architecture.md`                   |
+| 1 Foundation          | Done (2026-10-09) — committed `09f7c45`         |
+| 2 Central Auth        | Done (2026-10-10) — committed `09f7c45`         |
+| 3 Orgs & tenancy      | Done (2026-10-10) — committed `09f7c45`         |
+| 4 Structure & RBAC    | Done (2026-10-10) — committed `1b85303`         |
+| 5 Admin               | Done (2026-10-10) — committed `9e96749`         |
+| 6 Dashboard           | Done (2026-10-10) — committed `5487610`         |
+| 7 Marketing           | Done (2026-10-10) — committed `014ac28`         |
+| 8 Integration         | Done (2026-10-10) — committed `b736922`         |
+| 9 Shared modules      | Done (2026-10-10) — committed `291acce`         |
+| 10 Production         | Built (2026-10-10) — sign-off pending (staging) |
 
 ## Verification log
 
@@ -232,3 +232,40 @@ _(test, migration and build results are recorded here per phase — actual outpu
 - Live end to end (:8100 platform, :8200 sample, :8300 finance): same payment sent twice with fresh
   tokens and event ids → attempt 1 201 accepted, attempt 2 200 duplicate (original_event_id) →
   ledger has 1 entry; finance health report recorded `ok`. Smoke data deleted.
+
+### Phase 10 — 2026-10-10 (local, Windows)
+
+- Security headers on every response: nonce-based CSP (no inline/eval scripts), frame denial, nosniff,
+  referrer and permissions policies, COOP; HSTS behind `PLATFORM_HSTS`, HTTPS only. CORS disabled on
+  every path (framework default allowed any origin on `api/*`). `TRUSTED_PROXIES` for the balancer.
+- Audit: hourly `platform:audit-export` (NDJSON with hashes, resumable, upload-then-record) to the
+  `audit` disk (S3 adapter installed for write-once storage); daily `platform:audit-verify` logs a
+  critical line on a broken chain.
+- `platform:preflight` release gate (config, sessions, infrastructure, identity, headers, DB role
+  not superuser and append-only on `audit_logs`, chain intact); `deploy.sh` runs it before migrating
+  (config) and after grants (database).
+- `platform:user-status` suspends/reactivates an account: sessions plus product access and refresh
+  tokens revoked, audited.
+- Monitoring: `/up` checks PostgreSQL and cache; `queue:monitor` every minute (critical on backlog);
+  failed jobs logged as errors.
+- Ops: deploy/rollback, backup/restore, nginx (wildcard TLS), systemd units, PostgreSQL roles
+  (`miles_owner`/`miles_app`/`miles_backup`) and grants, k6 load script. Docs: production checklist,
+  runbooks (deploy, backup-restore, dns-tls, monitoring, incidents), security review.
+- Tenant isolation: `Tenancy/RouteSweepTest` checks guards on every workspace/admin/API route and
+  calls every workspace route with another organization's real record ids (all 404, nothing changed).
+- Fixed: `backup.sh` left a plaintext dump when encryption failed (reproduced, fixed, re-verified);
+  `deploy.sh` preflight ordering; OCSP stapling removed (Let's Encrypt dropped OCSP).
+- `composer ci:check`: all pass; Pest 513 (512 passed, 1 skipped locally: needs CREATEROLE, runs in
+  CI as the container superuser); Vitest 27; PHPStan 0. `composer audit`: no advisories.
+- Mutation checks: export `>`→`>=` fails 2 tests; HSTS without the HTTPS condition fails 1; an
+  unscoped `Position` route binding fails the route sweep (`PUT manage/positions/{position}` 302);
+  removing `config/cors.php` fails the CORS test.
+- Backup/restore drill against local PostgreSQL 17: dump of `miles_platform` → `restore.sh` into a new
+  database in 5.4 s: checksum ok, migrations current, audit chain intact (20 rows). Refuses an existing
+  target and a tampered dump. GPG success path not run locally (gpg-agent socket path too long).
+  Scratch database dropped afterwards.
+- Live on :8100: `/up` 200; all headers present; every executable `<script>` carries the header's
+  nonce on apex, pricing and sign-in; CORS preflight from a foreign origin gets no allow headers;
+  unknown workspace 404. Preflight on the dev environment fails as expected (9 failures, 3 warnings).
+- Not done here (needs staging): k6 load run, Lighthouse over HTTPS, DNS/TLS verification, GPG
+  backup drill, external penetration test, checklist sign-off.

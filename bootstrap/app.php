@@ -8,6 +8,7 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RequirePlatformPermission;
 use App\Http\Middleware\ResolveCurrentOrganization;
 use App\Http\Middleware\ResolveTenant;
+use App\Http\Middleware\SecurityHeaders;
 use App\Modules\Identity\Http\Middleware\EnforceSessionState;
 use App\Modules\Integration\Http\AuthenticateApplicationClient;
 use App\Support\Hosts\HostType;
@@ -56,6 +57,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.idle' => AdminIdleTimeout::class,
             'api.client' => AuthenticateApplicationClient::class,
         ]);
+
+        $middleware->append(SecurityHeaders::class);
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 

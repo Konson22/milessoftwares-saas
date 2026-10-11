@@ -136,4 +136,41 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Response Security Headers
+    |--------------------------------------------------------------------------
+    |
+    | Applied to every response by App\Http\Middleware\SecurityHeaders.
+    | Scripts need the per-request nonce; styles allow inline because the UI
+    | components set style attributes. form-action is deliberately absent:
+    | browsers apply it to the redirect after a form post, and sign-in ends
+    | with a redirect to each product's own callback host.
+    |
+    | hsts: only sent on HTTPS requests. Turn on once every host has a valid
+    | certificate; browsers then refuse plain HTTP for max_age seconds.
+    |
+    */
+
+    'security_headers' => [
+        'csp' => env('PLATFORM_CSP', true),
+        'csp_report_only' => env('PLATFORM_CSP_REPORT_ONLY', false),
+        'csp_report_uri' => env('PLATFORM_CSP_REPORT_URI'),
+        'hsts' => env('PLATFORM_HSTS', false),
+        'hsts_max_age' => (int) env('PLATFORM_HSTS_MAX_AGE', 63072000),
+        'hsts_include_subdomains' => env('PLATFORM_HSTS_INCLUDE_SUBDOMAINS', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Queue Backlog Alert
+    |--------------------------------------------------------------------------
+    |
+    | queue:monitor runs every minute and logs a critical line when the
+    | default Redis queue holds more jobs than this.
+    |
+    */
+
+    'queue_monitor_max' => (int) env('QUEUE_MONITOR_MAX', 500),
+
 ];

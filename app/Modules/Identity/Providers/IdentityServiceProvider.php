@@ -2,6 +2,7 @@
 
 namespace App\Modules\Identity\Providers;
 
+use App\Modules\Identity\Console\SetUserStatus;
 use App\Modules\Identity\Console\SyncFirstPartyClients;
 use App\Modules\Identity\Http\Responses\LogoutResponse;
 use App\Modules\Identity\Listeners\AuthenticationEventSubscriber;
@@ -35,7 +36,7 @@ class IdentityServiceProvider extends ServiceProvider
         Event::subscribe(AuthenticationEventSubscriber::class);
 
         if ($this->app->runningInConsole()) {
-            $this->commands([SyncFirstPartyClients::class]);
+            $this->commands([SyncFirstPartyClients::class, SetUserStatus::class]);
         }
 
         $this->configureOpenIdProvider();

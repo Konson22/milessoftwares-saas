@@ -30,6 +30,20 @@ return [
 
     'disks' => [
 
+        // Off-site copy of the audit trail (platform:audit-export). In production
+        // point this at write-once object storage, e.g. S3 with Object Lock.
+        'audit' => [
+            'driver' => env('AUDIT_EXPORT_DRIVER', 'local'),
+            'root' => storage_path('app/audit-export'),
+            'key' => env('AUDIT_EXPORT_KEY'),
+            'secret' => env('AUDIT_EXPORT_SECRET'),
+            'region' => env('AUDIT_EXPORT_REGION'),
+            'bucket' => env('AUDIT_EXPORT_BUCKET'),
+            'endpoint' => env('AUDIT_EXPORT_ENDPOINT'),
+            'throw' => true,
+            'report' => true,
+        ],
+
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),

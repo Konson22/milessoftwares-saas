@@ -1,0 +1,13 @@
+# Runs `schedule:run` every minute via miles-scheduler.timer: invitation
+# expiry, webhook retries, audit export (hourly) and audit verification (daily).
+[Unit]
+Description=Miles platform scheduler
+
+[Service]
+Type=oneshot
+User=miles
+Group=miles
+WorkingDirectory=/srv/miles/current
+ExecStart=/usr/bin/php /srv/miles/current/artisan schedule:run --no-ansi
+NoNewPrivileges=true
+PrivateTmp=true
