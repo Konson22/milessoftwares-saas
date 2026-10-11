@@ -21,6 +21,10 @@
 - One role assignment = one scope (folds `role_assignment_scopes` into `role_assignments`).
 - Dev root domain: `.env.example` uses `milessoftwares.localhost`; this machine uses `milessoftwares.local`
   on port 8100 (hosts-file entries per subdomain, server bound to 0.0.0.0) — user decision 2026-10-09.
+- Dev is served on port 80 since 2026-10-11 (user decision): XAMPP Apache (`D:/srv/apache/miles-dev.conf`)
+  forwards `*.milessoftwares.local` to `artisan serve` on :8100, `APP_URL` has no port and
+  `TRUSTED_PROXIES=127.0.0.1`. Wayfinder bakes route hosts into the bundle without a port, so every
+  cross-host link and form broke on :8100.
 - Session revocation is driver-agnostic: a `user_sessions` row id is stored in the session payload and
   checked on every request, so Redis sessions stay. Revoking rotates the remember-me token.
 
