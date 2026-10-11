@@ -40,6 +40,8 @@ return [
             'region' => env('AUDIT_EXPORT_REGION'),
             'bucket' => env('AUDIT_EXPORT_BUCKET'),
             'endpoint' => env('AUDIT_EXPORT_ENDPOINT'),
+            // MinIO and most other S3-compatible stores need path-style URLs.
+            'use_path_style_endpoint' => env('AUDIT_EXPORT_PATH_STYLE', false),
             'throw' => true,
             'report' => true,
         ],

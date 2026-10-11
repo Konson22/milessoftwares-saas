@@ -16,17 +16,29 @@ is enough to start; the layout below also works per node behind a load balancer.
     /srv/miles/shared/storage/ app, framework/{cache,sessions,views}, logs
     ```
 
-4. Database roles once: `psql -v owner_password="'…'" -v app_password="'…'" -f ops/postgres/roles.sql`.
-   `.env` uses `DB_USERNAME=miles_app`. The deploy user exports `MIGRATION_DB_USERNAME=miles_owner` and
-   `MIGRATION_DB_PASSWORD`.
+4. Database and roles once, as a superuser:
+
+    ```bash
+    createdb miles_platform
+    psql -v db_name=miles_platform -v owner_password="'…'" -v app_password="'…'" \
+         -v backup_password="'…'" -f ops/postgres/roles.sql
+    ```
+
+    `.env` uses `DB_USERNAME=miles_app`. The deploy user exports `MIGRATION_DB_USERNAME=miles_owner` and
+    `MIGRATION_DB_PASSWORD`; `miles_backup` goes into `/etc/miles/backup.env`
+    ([backup-restore.md](backup-restore.md)).
+
 5. php-fpm pool `miles` listening on `/run/php/php8.4-fpm.sock`, `user = miles`. Allow the deploy user to
    run `sudo systemctl reload php8.4-fpm` without a password, and nothing else.
-6. nginx: copy `ops/nginx/milessoftwares.conf`, then follow [dns-tls.md](dns-tls.md) for the certificate.
-7. systemd: copy `ops/systemd/*` to `/etc/systemd/system/`, then
+6. nginx: copy `ops/nginx/milessoftwares.conf` (for another root domain, replace `milessoftwares.com`
+   throughout), then follow [dns-tls.md](dns-tls.md) for the certificate.
+7. First deploy: `ops/deploy/deploy.sh <ref> --bootstrap`. It migrates and creates the first-party OIDC
+   clients (written into `shared/.env`) before the configuration gate, which refuses to pass without them.
+   Later deploys never pass `--bootstrap`. Set `HEALTH_URL` for any environment other than production.
+8. systemd: copy `ops/systemd/*` to `/etc/systemd/system/`, then
    `systemctl enable --now miles-scheduler.timer miles-backup.timer miles-ssr miles-queue@{1..3}`.
-8. First super admin after the first deploy: `php artisan platform:staff <email> --role=super_admin`
+9. First super admin: `php artisan platform:staff <email> --role=super_admin`
    (the account must exist and have MFA enabled before it can open admin).
-9. First-party OIDC clients: `php artisan platform:oidc-clients`, then put the printed ids/secrets in `.env`.
 
 ## Release
 
@@ -36,7 +48,8 @@ ops/deploy/deploy.sh v1.4.0        # any git ref; tags preferred
 
 The script stops at the first failure and never switches traffic to a release that failed:
 
-1. Checks out the ref into `releases/<UTC timestamp>`, links `.env` and `storage`.
+1. Fetches every branch and tag (the bare clone has no fetch refspec of its own), checks out the ref
+   into `releases/<UTC timestamp>`, links `.env` and `storage`.
 2. `composer install --no-dev`, `npm ci`, `npm run build:ssr`.
 3. `platform:preflight --skip-database`: configuration gate.
 4. `migrate --force` as `miles_owner`, then `ops/postgres/grants.sql`.
