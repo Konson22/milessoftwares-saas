@@ -55,6 +55,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Workspace Paths
+    |--------------------------------------------------------------------------
+    |
+    | First path segments the platform itself serves on workspace hosts
+    | ({slug}.<root>): routes of the workspace shell and folders under
+    | public/. A product's route_prefix can never be one of these, or the web
+    | server would send the platform's own pages to the product.
+    | tests/Feature/Applications/RoutePrefixTest.php keeps this list complete.
+    |
+    */
+
+    'workspace_paths' => [
+        'auth', 'build', 'hot', 'images', 'logout', 'manage', 'members', 'storage', 'up',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Slug Rules
     |--------------------------------------------------------------------------
     */

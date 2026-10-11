@@ -64,7 +64,8 @@ class ApplicationController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
             'status' => ['required', Rule::in(['planned', 'beta', 'available', 'deprecated', 'retired'])],
-            'route_prefix' => ['nullable', 'string', 'max:32', 'regex:/^[a-z][a-z0-9-]*$/', Rule::unique('applications', 'route_prefix')->ignore($application->id)],
+            // Served at {slug}.<root>/<route_prefix>: never a path the workspace shell owns.
+            'route_prefix' => ['nullable', 'string', 'max:32', 'regex:/^[a-z][a-z0-9-]*$/', Rule::notIn((array) config('platform.workspace_paths')), Rule::unique('applications', 'route_prefix')->ignore($application->id)],
             'sort_order' => ['required', 'integer', 'between:0,65535'],
             'tagline' => ['nullable', 'string', 'max:200'],
             'features' => ['nullable', 'string', 'max:4000'],

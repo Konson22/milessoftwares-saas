@@ -173,6 +173,40 @@ admin → Applications. A published version never changes: publish a new version
 Assignments keep pointing at the version they were made under; `catalog_version` in the API shows
 which.
 
+## 6. Serving a product on workspace hosts
+
+A product lives under its **route prefix** on every workspace host:
+`https://{slug}.milessoftwares.com/pharmacy`. The launcher in the workspace links there, and the
+sign-in client's tenant callback path is `/pharmacy/auth/callback`.
+
+- The prefix is set in admin → Applications (lowercase, `^[a-z][a-z0-9-]*$`). Paths the workspace
+  shell serves itself are refused (`platform.workspace_paths`: `members`, `manage`, `auth`, `build`, …).
+- The product's routes have **no prefix**; the web server tells Laravel the base path, so
+  `url('/')` is `…/pharmacy`.
+- The platform's calls (webhooks, provisioning) go to `…/pharmacy/platform/webhooks` and
+  `…/pharmacy/platform` (base URL), on any host: they are signed and need no tenant.
+
+**Production (nginx).** One file per product in `ops/nginx/products/`, copied to
+`/etc/nginx/miles-products/`, which the HTTPS server block includes. Each product runs its own
+php-fpm pool; `SCRIPT_NAME=/pharmacy/index.php` gives Laravel the prefix.
+
+**Local development (XAMPP Apache).** `ops/local-dev/apache-dev.conf` forwards
+`{slug}.milessoftwares.local/pharmacy/*` to the product's `php artisan serve`, strips the prefix and
+sends it as `X-Forwarded-Prefix` (the product's `.env` needs `TRUSTED_PROXIES=127.0.0.1`). Ports:
+
+| Product  | Folder         | Dev port |
+| -------- | -------------- | -------- |
+| platform | `central-app`  | 8100     |
+| pharmacy | `pharmacy-app` | 8400     |
+
+Register a product folder with the local platform (catalog, prefix, clients, webhook, provisioning,
+and the product's `.env`):
+
+```bash
+cd central-app
+php artisan platform:local-product pharmacy-app --entitle=acme   # --fresh issues new secrets
+```
+
 ## Sample app (local)
 
 ```
