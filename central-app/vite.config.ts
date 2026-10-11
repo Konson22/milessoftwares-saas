@@ -5,7 +5,19 @@ import tailwindcss from '@tailwindcss/vite';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import laravel from 'laravel-vite-plugin';
 import { bunny } from 'laravel-vite-plugin/fonts';
+import { loadEnv } from 'vite';
 import { defineConfig, lazyPlugins } from 'vite-plus';
+
+const env = loadEnv(process.env.NODE_ENV ?? 'development', process.cwd(), '');
+
+// Pages on every platform host (apex, auth., app., admin., workspaces) load
+// scripts from the dev server, and module scripts need CORS.
+const rootDomain = (
+    env.PLATFORM_ROOT_DOMAIN || 'milessoftwares.localhost'
+).replaceAll('.', '\\.');
+const platformOrigin = new RegExp(
+    `^https?://([a-z0-9-]+\\.)?${rootDomain}(:\\d+)?$`,
+);
 
 export default defineConfig({
     plugins: lazyPlugins(() => [
@@ -29,6 +41,12 @@ export default defineConfig({
         }),
     ]),
     server: {
+        // DEV_SERVER_HOST: listen on the address the platform hosts resolve to
+        // (browsers block a LAN-address page from loading loopback assets).
+        host: env.DEV_SERVER_HOST || undefined,
+        port: env.DEV_SERVER_PORT ? Number(env.DEV_SERVER_PORT) : undefined,
+        strictPort: Boolean(env.DEV_SERVER_PORT),
+        cors: { origin: platformOrigin },
         watch: {
             ignored: [
                 '**/.agents/**',
