@@ -31,7 +31,7 @@ class SecurityTest extends TestCase
             ->withSession(['auth.password_confirmed_at' => time()])
             ->get(route('security.edit'))
             ->assertInertia(fn (Assert $page) => $page
-                ->component('settings/security')
+                ->component('central/settings/security')
                 ->where('canManagePasskeys', true)
                 ->where('passkeys', [])
                 ->where('canManageTwoFactor', true)
@@ -69,7 +69,7 @@ class SecurityTest extends TestCase
             ->get(route('security.edit'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('settings/security')
+                ->component('central/settings/security')
                 ->where('canManagePasskeys', false)
                 ->where('passkeys', [])
                 ->where('canManageTwoFactor', false)

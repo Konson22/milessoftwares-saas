@@ -39,7 +39,7 @@ it('lists the user\'s active sessions and marks the current one', function () {
     $this->actingAs($user)->get(route('sessions.index'));
     $this->get(route('sessions.index'))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('settings/sessions')
+            ->component('central/settings/sessions')
             ->has('sessions', 2)
             ->where('sessions.0.is_current', true)
             ->where('sessions.1.device', 'Chrome on macOS'));

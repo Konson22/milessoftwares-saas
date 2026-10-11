@@ -78,7 +78,7 @@ class IdentityServiceProvider extends ServiceProvider
             throw new LogicException('Unexpected authorization view parameters from Passport.');
         }
 
-        return Inertia::render('auth/authorize', [
+        return Inertia::render('central/auth/authorize', [
             'client' => ['id' => $client->getKey(), 'name' => $client->name],
             'scopes' => array_values(array_map(
                 fn (Scope $scope) => ['id' => $scope->id, 'description' => $scope->description],

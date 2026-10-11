@@ -87,7 +87,7 @@ it('lets the invited account join', function () {
     $this->actingAs($this->invitee)
         ->get(invitationUrl($token))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('invitations/show')
+            ->component('central/invitations/show')
             ->where('status', 'pending')
             ->where('organization.displayName', $this->organization->display_name));
 

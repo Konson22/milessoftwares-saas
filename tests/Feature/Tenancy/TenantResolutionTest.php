@@ -25,7 +25,7 @@ it('resolves an active organization for its members', function () {
         ->get(workspace('manggala'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('workspace/home')
+            ->component('central/workspace/home')
             ->where('organization.id', $org->id)
             ->where('organization.displayName', 'Manggala Trading'));
 });
@@ -53,7 +53,7 @@ it('shows the suspension page to members of a suspended organization', function 
     $this->actingAs(memberOf($org))
         ->get(workspace('pausedbiz'))
         ->assertForbidden()
-        ->assertInertia(fn ($page) => $page->component('workspace/suspended'));
+        ->assertInertia(fn ($page) => $page->component('central/workspace/suspended'));
 });
 
 it('does not reveal suspension to non-members', function () {

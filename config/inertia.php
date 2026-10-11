@@ -36,7 +36,10 @@ return [
     'pages' => [
 
         'paths' => [
-            resource_path('js/pages'),
+            // Pages are per site: resources/js/sites/{site}/pages/{page}.tsx for
+            // "{site}/{page}" (App\Support\Inertia\SitePages, bound in
+            // AppServiceProvider). Listed for tools that read this setting.
+            resource_path('js/sites'),
         ],
 
         'extensions' => [

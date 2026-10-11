@@ -1,8 +1,8 @@
 <?php
 
-use App\Http\Controllers\Api\IntegrationController;
-use App\Http\Controllers\Api\ProvisioningCallbackController;
-use App\Http\Controllers\Api\SharedModulesController;
+use App\Sites\Central\Http\Controllers\Api\IntegrationController;
+use App\Sites\Central\Http\Controllers\Api\ProvisioningCallbackController;
+use App\Sites\Central\Http\Controllers\Api\SharedModulesController;
 use Illuminate\Support\Facades\Route;
 
 /*

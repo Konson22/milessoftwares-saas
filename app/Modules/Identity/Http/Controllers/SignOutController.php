@@ -21,7 +21,7 @@ class SignOutController
             return redirect()->away(PlatformHosts::url(PlatformHosts::root()));
         }
 
-        return Inertia::render('auth/sign-out', [
+        return Inertia::render('central/auth/sign-out', [
             'homeUrl' => PlatformHosts::url(PlatformHosts::root()),
             'dashboardUrl' => PlatformHosts::url(PlatformHosts::app()),
         ]);

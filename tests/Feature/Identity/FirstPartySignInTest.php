@@ -147,7 +147,7 @@ it('rejects callbacks that fail validation', function (Closure $tamper) {
 
     callback($callbackQuery)
         ->assertStatus(400)
-        ->assertInertia(fn (AssertableInertia $page) => $page->component('auth/sign-in-failed'));
+        ->assertInertia(fn (AssertableInertia $page) => $page->component('central/auth/sign-in-failed'));
 
     $this->assertGuest();
     expect(AuthenticationEvent::query()->where('event', 'sso_failed')->exists())->toBeTrue();

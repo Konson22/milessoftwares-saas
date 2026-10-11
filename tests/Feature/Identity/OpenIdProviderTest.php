@@ -241,7 +241,7 @@ it('shows the consent screen to third-party clients', function () {
         ->get(authorizeUrl($request['query']))
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('auth/authorize')
+            ->component('central/auth/authorize')
             ->where('client.name', 'Retail')
             ->where('nonce', $request['query']['nonce'])
             ->has('scopes', 3));

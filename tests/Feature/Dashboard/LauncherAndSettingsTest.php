@@ -111,7 +111,7 @@ it('shows the owner which applications the organization can use', function () {
     $this->get(PlatformHosts::url(PlatformHosts::app(), 'organization/subscription'))
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('organizations/subscription')
+            ->component('central/organizations/subscription')
             ->has('entitlements', 1)
             ->where('entitlements.0.application', 'Retail')
             ->where('entitlements.0.source', 'manual'));

@@ -53,7 +53,7 @@ it('shows the structure to owners and structure administrators', function (strin
         ->get(onWorkspace('/manage/structure'))
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('workspace/manage/structure')
+            ->component('central/workspace/manage/structure')
             ->has('branches', 2)
             ->has('departments', 3)
             ->where('abilities.manageStructure', true));

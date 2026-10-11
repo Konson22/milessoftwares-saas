@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Support\Inertia\SitePageFinder;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -26,6 +27,10 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        // Pages live per site (resources/js/sites/{site}/pages). Bound in boot()
+        // so it replaces the binding the Inertia provider registers.
+        $this->app->bind('inertia.view-finder', fn ($app) => new SitePageFinder($app['files'], []));
     }
 
     /**

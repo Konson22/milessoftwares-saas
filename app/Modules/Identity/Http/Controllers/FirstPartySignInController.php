@@ -44,7 +44,7 @@ class FirstPartySignInController
             Log::warning('First-party sign-in failed', ['client' => $client, 'reason' => $e->getMessage()]);
             $this->recorder->record('sso_failed', context: ['client' => $client]);
 
-            return Inertia::render('auth/sign-in-failed', [
+            return Inertia::render('central/auth/sign-in-failed', [
                 'retryUrl' => PlatformHosts::url($request->getHost(), 'auth/login'),
             ])->toResponse($request)->setStatusCode(400);
         }

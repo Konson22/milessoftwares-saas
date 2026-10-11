@@ -1,8 +1,8 @@
 <?php
 
-use App\Http\Controllers\Settings\ProfileController;
-use App\Http\Controllers\Settings\SecurityController;
-use App\Http\Controllers\Settings\SessionController;
+use App\Sites\Central\Http\Controllers\Settings\ProfileController;
+use App\Sites\Central\Http\Controllers\Settings\SecurityController;
+use App\Sites\Central\Http\Controllers\Settings\SessionController;
 use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Support\Facades\Route;
 
@@ -32,7 +32,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->whereUuid('session')
         ->name('sessions.destroy');
 
-    Route::inertia('settings/appearance', 'settings/appearance')->name('appearance.edit');
+    Route::inertia('settings/appearance', 'central/settings/appearance')->name('appearance.edit');
 });
 
 Route::get('.well-known/passkey-endpoints', function () {

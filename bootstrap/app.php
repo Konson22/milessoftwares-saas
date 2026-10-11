@@ -1,16 +1,16 @@
 <?php
 
-use App\Http\Middleware\AdminIdleTimeout;
-use App\Http\Middleware\EnsurePlatformStaff;
-use App\Http\Middleware\EnsureWorkspaceAccess;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
-use App\Http\Middleware\RequirePlatformPermission;
-use App\Http\Middleware\ResolveCurrentOrganization;
-use App\Http\Middleware\ResolveTenant;
 use App\Http\Middleware\SecurityHeaders;
 use App\Modules\Identity\Http\Middleware\EnforceSessionState;
 use App\Modules\Integration\Http\AuthenticateApplicationClient;
+use App\Sites\Admin\Http\Middleware\AdminIdleTimeout;
+use App\Sites\Admin\Http\Middleware\EnsurePlatformStaff;
+use App\Sites\Admin\Http\Middleware\RequirePlatformPermission;
+use App\Sites\Central\Http\Middleware\EnsureWorkspaceAccess;
+use App\Sites\Central\Http\Middleware\ResolveCurrentOrganization;
+use App\Sites\Central\Http\Middleware\ResolveTenant;
 use App\Support\Hosts\HostType;
 use App\Support\Hosts\PlatformHosts;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
@@ -23,7 +23,13 @@ use Illuminate\Support\Facades\Route;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        web: __DIR__.'/../routes/web.php',
+        // One file per site. Order matters: central.php ends with the
+        // {tenant} wildcard host, which must be registered last.
+        web: [
+            __DIR__.'/../routes/public.php',
+            __DIR__.'/../routes/admin.php',
+            __DIR__.'/../routes/central.php',
+        ],
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {

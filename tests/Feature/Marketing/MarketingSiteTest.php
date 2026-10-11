@@ -65,7 +65,7 @@ it('lists released and upcoming products from the registry', function () {
     $this->get(site())
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('marketing/home')
+            ->component('public/home')
             ->where('canonical', site())
             ->where('products', fn ($products) => collect($products)->pluck('code')->all() === ['retail', 'school'])
             ->where('products.0.tagline', 'Sell more, count less.'));
@@ -75,7 +75,7 @@ it('shows a product page with only its public active plans', function () {
     $this->get(site('products/retail'))
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('marketing/product')
+            ->component('public/product')
             ->where('product.features', ['Multi-branch stock', 'Offline tills'])
             ->has('plans', 1)
             ->where('plans.0.name', 'Retail Standard')

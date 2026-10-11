@@ -57,7 +57,7 @@ it('shows the access page to branch access administrators', function () {
         ->get(workspacePath('/manage/access'))
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('workspace/manage/access')
+            ->component('central/workspace/manage/access')
             ->where('abilities.manageAccess', true)
             ->where('abilities.manageStructure', false)
             ->where('roles', fn ($roles) => collect($roles)->pluck('application')->unique()->sort()->values()->all() === ['Miles Softwares platform', 'Retail']));

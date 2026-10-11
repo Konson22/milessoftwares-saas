@@ -10,7 +10,7 @@ function host(string $label = ''): string
 }
 
 it('serves the marketing site on the apex domain', function () {
-    $this->get(host().'/')->assertOk()->assertInertia(fn ($page) => $page->component('marketing/home'));
+    $this->get(host().'/')->assertOk()->assertInertia(fn ($page) => $page->component('public/home'));
 });
 
 it('redirects www permanently to the apex, keeping path and query', function () {
@@ -20,7 +20,7 @@ it('redirects www permanently to the apex, keeping path and query', function () 
 });
 
 it('serves sign-in on the auth host only', function () {
-    $this->get(host('auth').'/login')->assertOk()->assertInertia(fn ($page) => $page->component('auth/login'));
+    $this->get(host('auth').'/login')->assertOk()->assertInertia(fn ($page) => $page->component('central/auth/login'));
 
     $this->get(host().'/login')->assertNotFound();
     $this->get(host('app').'/login')->assertNotFound();
