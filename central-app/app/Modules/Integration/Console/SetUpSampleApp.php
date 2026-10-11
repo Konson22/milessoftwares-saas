@@ -35,9 +35,9 @@ class SetUpSampleApp extends Command
         }
 
         $base = rtrim((string) $this->option('url'), '/');
-        $configPath = base_path('examples/sample-app/config.local.php');
+        $configPath = base_path('../examples/sample-app/config.local.php');
 
-        $definition = json_decode((string) file_get_contents(base_path('examples/sample-app/catalog.json')), true, flags: JSON_THROW_ON_ERROR);
+        $definition = json_decode((string) file_get_contents(base_path('../examples/sample-app/catalog.json')), true, flags: JSON_THROW_ON_ERROR);
         $catalogs->import($definition);
         $application = Application::query()->where('code', 'sample')->sole();
 
@@ -90,7 +90,7 @@ class SetUpSampleApp extends Command
             $this->components->info("{$organization->display_name} is entitled to the sample product and the reference Finance module.");
         }
 
-        $this->line('Run: php -S 127.0.0.1:8200 -t examples/sample-app/public  and  php -S 127.0.0.1:8300 -t examples/finance-module/public');
+        $this->line('Run: php -S 127.0.0.1:8200 -t ../examples/sample-app/public  and  php -S 127.0.0.1:8300 -t ../examples/finance-module/public');
         $this->line("Then open {$base}/login?org=<slug>");
 
         return self::SUCCESS;
@@ -102,11 +102,11 @@ class SetUpSampleApp extends Command
      */
     private function registerFinanceModule(CatalogImporter $catalogs, ManageIntegration $integration): Application
     {
-        $catalogs->import(json_decode((string) file_get_contents(base_path('examples/finance-module/catalog.json')), true, flags: JSON_THROW_ON_ERROR));
+        $catalogs->import(json_decode((string) file_get_contents(base_path('../examples/finance-module/catalog.json')), true, flags: JSON_THROW_ON_ERROR));
         $finance = Application::query()->where('code', 'finance')->sole();
         $finance->forceFill(['capabilities' => [...(array) ($finance->capabilities ?? []), 'marketing' => ['unlisted' => true]]])->save();
 
-        $configPath = base_path('examples/finance-module/config.local.php');
+        $configPath = base_path('../examples/finance-module/config.local.php');
 
         if (! is_file($configPath) || $this->option('fresh')) {
             $service = $integration->registerServiceClient($finance, 'Finance module backend', null);

@@ -97,7 +97,7 @@ it('needs the events.issue scope', function () {
 });
 
 it('lets a product post a sale to Finance exactly once, end to end', function () {
-    DB::unprepared((string) file_get_contents(base_path('packages/shared-module-kit/schema/postgres.sql')));
+    DB::unprepared((string) file_get_contents(base_path('../packages/shared-module-kit/schema/postgres.sql')));
     $inbox = new Inbox(DB::connection()->getPdo());
     $posted = 0;
 

@@ -1,31 +1,10 @@
-/.phpunit.cache
-/bootstrap/ssr
-/node_modules
-/public/build
-/public/fonts-manifest.dev.json
-/public/hot
-/public/storage
-/storage/*.key
-/storage/pail
-/resources/js/actions
-/resources/js/routes
-/resources/js/wayfinder
-/vendor
+# Repository root. The Laravel app's own ignores are in central-app/.gitignore;
+# each example keeps its local config out of git in its own .gitignore.
 .DS_Store
-.env
-.env.backup
-.env.production
-.phpactor.json
-.phpunit.result.cache
-Homestead.json
-Homestead.yaml
-npm-debug.log
-yarn-error.log
-/auth.json
-/.fleet
+Thumbs.db
 /.idea
-/.nova
 /.vscode
+/.fleet
 /.zed
 /.agents
 /.amp
@@ -39,6 +18,3 @@ yarn-error.log
 /.mcp.json
 /AGENTS.md
 /CLAUDE.md
-/boost.json
-/opencode.json
-/opencode.jsonc

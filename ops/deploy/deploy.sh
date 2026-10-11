@@ -9,7 +9,8 @@
 #
 # Layout under $BASE (default /srv/miles):
 #   repo/            bare clone
-#   releases/<id>/   one checkout per release
+#   releases/<id>/   one checkout of the repository per release; the Laravel
+#                    app is releases/<id>/central-app
 #   shared/.env      production environment (APP_ENV=production)
 #   shared/storage/  logs, framework cache; Passport keys come from the env
 #   current -> releases/<id>
@@ -47,11 +48,12 @@ mkdir -p "$release"
 git --git-dir="$BASE/repo" --work-tree="$release" checkout --quiet --force "$ref" -- .
 git --git-dir="$BASE/repo" rev-parse "$ref" > "$release/REVISION"
 
-ln -sfn "$BASE/shared/.env" "$release/.env"
-rm -rf "$release/storage"
-ln -sfn "$BASE/shared/storage" "$release/storage"
+app="$release/central-app"
+ln -sfn "$BASE/shared/.env" "$app/.env"
+rm -rf "$app/storage"
+ln -sfn "$BASE/shared/storage" "$app/storage"
 
-cd "$release"
+cd "$app"
 composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress
 npm ci --no-audit --no-fund
 # Client bundle plus the SSR bundle for the public site.
@@ -65,7 +67,7 @@ migrate_and_grant() {
         -p "$(env_value DB_PORT)" \
         -U "$MIGRATION_DB_USERNAME" \
         -d "$(env_value DB_DATABASE)" \
-        -f ops/postgres/grants.sql
+        -f ../ops/postgres/grants.sql
 }
 
 if [[ "$bootstrap" == "--bootstrap" ]]; then
@@ -91,9 +93,9 @@ ln -sfn "$release" "$BASE/current.tmp"
 mv -T "$BASE/current.tmp" "$BASE/current"
 
 sudo systemctl reload "$PHP_FPM_SERVICE"
-"$PHP" "$BASE/current/artisan" queue:restart --no-ansi
+"$PHP" "$BASE/current/central-app/artisan" queue:restart --no-ansi
 # systemd restarts the SSR server from the new release.
-"$PHP" "$BASE/current/artisan" inertia:stop-ssr --no-ansi || true
+"$PHP" "$BASE/current/central-app/artisan" inertia:stop-ssr --no-ansi || true
 
 if ! curl --fail --silent --show-error --max-time 10 "$HEALTH_URL" > /dev/null; then
     echo "health check failed: run ops/deploy/rollback.sh" >&2

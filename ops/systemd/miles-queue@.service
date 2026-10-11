@@ -8,8 +8,8 @@ After=network-online.target redis-server.service postgresql.service
 [Service]
 User=miles
 Group=miles
-WorkingDirectory=/srv/miles/current
-ExecStart=/usr/bin/php /srv/miles/current/artisan queue:work redis --sleep=1 --tries=3 --max-time=3600 --memory=256
+WorkingDirectory=/srv/miles/current/central-app
+ExecStart=/usr/bin/php /srv/miles/current/central-app/artisan queue:work redis --sleep=1 --tries=3 --max-time=3600 --memory=256
 Restart=always
 RestartSec=2
 NoNewPrivileges=true

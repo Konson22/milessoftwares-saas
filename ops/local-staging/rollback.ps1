@@ -25,8 +25,8 @@ cmd /c rmdir "$current"
 New-Item -ItemType Junction -Path $current -Target $previous.FullName | Out-Null
 
 & (Join-Path $PSScriptRoot 'services.ps1') reload
-& $Php -c $PhpIni (Join-Path $current 'artisan') queue:restart --no-ansi
-& $Php (Join-Path $current 'artisan') inertia:stop-ssr --no-ansi 2>$null
+& $Php -c $PhpIni (Join-Path $current 'central-app/artisan') queue:restart --no-ansi
+& $Php (Join-Path $current 'central-app/artisan') inertia:stop-ssr --no-ansi 2>$null
 
 $revision = Get-Content (Join-Path $previous.FullName 'REVISION') -ErrorAction SilentlyContinue
 Write-Output "rolled back to $($previous.Name) ($($revision ?? 'unknown'))"

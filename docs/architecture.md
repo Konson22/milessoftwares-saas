@@ -254,6 +254,10 @@ source_app, source_transaction_id, occurred_at, payload}`. The receiver keeps a 
 
 ## 8. Project folder structure
 
+The repository root holds `central-app/` (the Laravel application) next to `ops/` (deploy, backup,
+web server and process configs), `docs/`, `packages/` (the shared-module kit), `contracts/` (event
+schemas) and `examples/` (sample product and reference module). Paths below are inside `central-app/`.
+
 The code is split by **site** (what a visitor sees, per host) on top of the **modules** (the shared
 domain). A site owns its routes, controllers, middleware, pages, layouts and site-only components;
 anything two sites need lives in a module (PHP) or in `resources/js/shared` (frontend).

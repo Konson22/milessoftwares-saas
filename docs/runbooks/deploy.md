@@ -14,7 +14,11 @@ is enough to start; the layout below also works per node behind a load balancer.
     /srv/miles/releases/
     /srv/miles/shared/.env     0600 miles:miles
     /srv/miles/shared/storage/ app, framework/{cache,sessions,views}, logs
+    /srv/miles/current         → releases/<id>: the whole repository
     ```
+
+    The Laravel app is `central-app/` inside each release. Every `php artisan …` in the runbooks runs
+    from `/srv/miles/current/central-app`; `ops/` scripts run from the release root.
 
 4. Database and roles once, as a superuser:
 

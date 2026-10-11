@@ -129,6 +129,6 @@
     "repositories": [{
         "name": "shared-module-kit",
         "type": "path",
-        "url": "packages/shared-module-kit"
+        "url": "../packages/shared-module-kit"
     }]
 }

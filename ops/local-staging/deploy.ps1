@@ -5,7 +5,7 @@ Windows rehearsal of ops/deploy/deploy.sh: same steps, same order, same gates.
   ops/local-staging/deploy.ps1 main [-Bootstrap]
 
 Differences from Linux, all forced by Windows without admin rights:
-  - shared/.env is hard-linked into the release (file symlinks need admin);
+  - shared/.env is hard-linked into the release's central-app (file symlinks need admin);
     storage and current are directory junctions.
   - The switch removes and recreates the `current` junction: not atomic, a
     gap of milliseconds.
@@ -48,7 +48,7 @@ function Invoke-MigrateAndGrant {
     $env:PGPASSWORD = $env:MIGRATION_DB_PASSWORD
     try {
         & $Psql --no-psqlrc -v ON_ERROR_STOP=1 -q -h (Get-EnvValue DB_HOST) -p (Get-EnvValue DB_PORT) `
-            -U $env:MIGRATION_DB_USERNAME -d (Get-EnvValue DB_DATABASE) -f ops/postgres/grants.sql
+            -U $env:MIGRATION_DB_USERNAME -d (Get-EnvValue DB_DATABASE) -f ../ops/postgres/grants.sql
     }
     finally { Remove-Item Env:PGPASSWORD }
 }
@@ -63,11 +63,12 @@ New-Item -ItemType Directory $release | Out-Null
 git --git-dir=$repo --work-tree=$release checkout --quiet --force $Ref -- .
 git --git-dir=$repo rev-parse $Ref | Set-Content (Join-Path $release 'REVISION')
 
-New-Item -ItemType HardLink -Path (Join-Path $release '.env') -Target (Join-Path $Base 'shared\.env') | Out-Null
-Remove-Item -Recurse -Force (Join-Path $release 'storage')
-New-Item -ItemType Junction -Path (Join-Path $release 'storage') -Target (Join-Path $Base 'shared\storage') | Out-Null
+$app = Join-Path $release 'central-app'
+New-Item -ItemType HardLink -Path (Join-Path $app '.env') -Target (Join-Path $Base 'shared\.env') | Out-Null
+Remove-Item -Recurse -Force (Join-Path $app 'storage')
+New-Item -ItemType Junction -Path (Join-Path $app 'storage') -Target (Join-Path $Base 'shared\storage') | Out-Null
 
-Push-Location $release
+Push-Location $app
 try {
     composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress
     npm ci --no-audit --no-fund
@@ -101,11 +102,11 @@ New-Item -ItemType Junction -Path $current -Target $release | Out-Null
 # php-fpm is always running on Linux; here the pool may not be yet.
 & $Services start | Out-Null
 & $Services reload
-& $Php -c $PhpIni (Join-Path $current 'artisan') queue:restart --no-ansi
+& $Php -c $PhpIni (Join-Path $current 'central-app/artisan') queue:restart --no-ansi
 # From here on a failing command is handled, not thrown.
 $PSNativeCommandUseErrorActionPreference = $false
 # The supervisor restarts the SSR server from the new release.
-& $Php (Join-Path $current 'artisan') inertia:stop-ssr --no-ansi 2>$null
+& $Php (Join-Path $current 'central-app/artisan') inertia:stop-ssr --no-ansi 2>$null
 
 $ok = $false
 for ($i = 0; $i -lt 10 -and -not $ok; $i++) {
@@ -121,7 +122,7 @@ if (-not $ok) {
 # Keep the newest $Keep releases (ids sort by time; current is the newest).
 Get-ChildItem (Join-Path $Base 'releases') -Directory | Sort-Object Name | Select-Object -SkipLast $Keep |
     ForEach-Object {
-        cmd /c rmdir "$($_.FullName)\storage"
+        cmd /c rmdir "$($_.FullName)\central-app\storage"
         Remove-Item -Recurse -Force $_.FullName
     }
 

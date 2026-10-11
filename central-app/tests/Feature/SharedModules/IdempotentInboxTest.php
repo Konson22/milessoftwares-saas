@@ -15,7 +15,7 @@ use Miles\SharedModuleKit\InboxResult;
 
 beforeEach(function () {
     // The kit's own schema, as a module would create it in its database.
-    DB::unprepared((string) file_get_contents(base_path('packages/shared-module-kit/schema/postgres.sql')));
+    DB::unprepared((string) file_get_contents(base_path('../packages/shared-module-kit/schema/postgres.sql')));
 
     $this->organizationId = (string) Str::uuid();
     $this->token = new EventToken('retail', $this->organizationId, (string) Str::uuid(), new DateTimeImmutable('+5 minutes'));

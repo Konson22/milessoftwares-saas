@@ -19,12 +19,12 @@
 | Run:  php artisan platform:sample-app        (registers it, writes config)
 |       php -S 127.0.0.1:8200 -t examples/sample-app/public
 |
-| It reuses the platform repository's vendor directory for lcobucci/jwt; a
+| It reuses central-app's vendor directory for lcobucci/jwt; a
 | real product would install its own dependencies.
 |
 */
 
-require __DIR__.'/../../../vendor/autoload.php';
+require __DIR__.'/../../../central-app/vendor/autoload.php';
 require __DIR__.'/../src/Platform.php';
 
 use SampleApp\Platform;

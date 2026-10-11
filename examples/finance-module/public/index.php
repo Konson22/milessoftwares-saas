@@ -20,7 +20,7 @@
 |
 */
 
-require __DIR__.'/../../../vendor/autoload.php';
+require __DIR__.'/../../../central-app/vendor/autoload.php';
 
 use Miles\SharedModuleKit\Envelope;
 use Miles\SharedModuleKit\EventRejected;

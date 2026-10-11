@@ -25,6 +25,10 @@
   forwards `*.milessoftwares.local` to `artisan serve` on :8100, `APP_URL` has no port and
   `TRUSTED_PROXIES=127.0.0.1`. Wayfinder bakes route hosts into the bundle without a port, so every
   cross-host link and form broke on :8100.
+- Repository layout since 2026-10-11 (user decision): the Laravel app is `central-app/`; inside it each
+  site (public, admin, central) owns its routes, controllers, pages and layouts, and page names are
+  `{site}/{page}` (`docs/architecture.md` section 8). Run `composer run dev` and every artisan command
+  from `central-app/`.
 - Session revocation is driver-agnostic: a `user_sessions` row id is stored in the session payload and
   checked on every request, so Redis sessions stay. Revoking rotates the remember-me token.
 

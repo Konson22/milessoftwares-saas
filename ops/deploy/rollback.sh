@@ -20,7 +20,7 @@ fi
 ln -sfn "$previous" "$BASE/current.tmp"
 mv -T "$BASE/current.tmp" "$BASE/current"
 sudo systemctl reload "$PHP_FPM_SERVICE"
-"$PHP" "$BASE/current/artisan" queue:restart --no-ansi
-"$PHP" "$BASE/current/artisan" inertia:stop-ssr --no-ansi || true
+"$PHP" "$BASE/current/central-app/artisan" queue:restart --no-ansi
+"$PHP" "$BASE/current/central-app/artisan" inertia:stop-ssr --no-ansi || true
 
 echo "rolled back to $(basename "$previous") ($(cat "$previous/REVISION" 2>/dev/null || echo unknown))"

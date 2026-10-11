@@ -26,7 +26,8 @@ $PhpIni = Join-Path $Base 'shared\php\php.ini'
 $CgiWorkers = [int]($env:MILES_PHP_CGI_WORKERS ?? 6)
 $Run = Join-Path $Base 'run'
 $Logs = Join-Path $Base 'shared\storage\logs\services'
-$Current = Join-Path $Base 'current'
+# The Laravel app inside the live release.
+$Current = Join-Path $Base 'current/central-app'
 
 function Get-Services {
     $list = @()

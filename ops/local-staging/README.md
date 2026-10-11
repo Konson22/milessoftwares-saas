@@ -22,7 +22,7 @@ D:\srv\miles\releases\     one checkout per release
 D:\srv\miles\shared\.env   staging environment (hard-linked into each release)
 D:\srv\miles\shared\php\   php.ini for php-cgi (opcache, CA bundle incl. the local CA)
 D:\srv\miles\secrets\      db.env: database role passwords
-D:\srv\miles\current       junction to the live release
+D:\srv\miles\current       junction to the live release (the app is current\central-app)
 D:\srv\seaweedfs\          S3 store and its credentials
 D:\srv\tls\                local CA and certificate
 ```

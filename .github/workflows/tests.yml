@@ -37,6 +37,12 @@ jobs:
           --health-timeout 5s
           --health-retries 10
 
+    # The Laravel app lives in central-app/; ops/, docs/, packages/ and
+    # examples/ stay at the repository root.
+    defaults:
+      run:
+        working-directory: central-app
+
     env:
       DB_HOST: 127.0.0.1
       DB_PORT: 5432

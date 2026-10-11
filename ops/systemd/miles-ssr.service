@@ -6,8 +6,8 @@ After=network-online.target
 [Service]
 User=miles
 Group=miles
-WorkingDirectory=/srv/miles/current
-ExecStart=/usr/bin/php /srv/miles/current/artisan inertia:start-ssr
+WorkingDirectory=/srv/miles/current/central-app
+ExecStart=/usr/bin/php /srv/miles/current/central-app/artisan inertia:start-ssr
 Restart=always
 RestartSec=2
 NoNewPrivileges=true

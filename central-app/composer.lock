@@ -3245,7 +3245,7 @@
             "version": "0.1.0",
             "dist": {
                 "type": "path",
-                "url": "packages/shared-module-kit",
+                "url": "../packages/shared-module-kit",
                 "reference": "558c1c0b9bb7156f16285da3058721727403195b"
             },
             "require": {

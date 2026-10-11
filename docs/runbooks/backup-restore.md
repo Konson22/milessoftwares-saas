@@ -35,7 +35,7 @@ On a staging or scratch server, never on the production database server:
 ```bash
 aws s3 cp s3://…/db/miles_platform-<stamp>.dump.gpg .
 aws s3 cp s3://…/db/miles_platform-<stamp>.dump.gpg.sha256 .
-PGHOST=… PGUSER=<role with CREATEDB> APP_DIR=/srv/miles/current \
+PGHOST=… PGUSER=<role with CREATEDB> APP_DIR=/srv/miles/current/central-app \
   ops/backup/restore.sh miles_platform-<stamp>.dump.gpg miles_restore_<yyyymmdd>
 ```
 
