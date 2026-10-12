@@ -13,6 +13,7 @@ JSON Schemas in `contracts/events/`:
 | `envelope.schema.json`                       | the envelope every event uses |
 | `finance.invoice.issued.v1.schema.json`      | invoice or receipt issued     |
 | `finance.payment.received.v1.schema.json`    | payment taken                 |
+| `finance.bill.received.v1.schema.json`       | supplier bill (goods received) |
 | `hr.employee.joined.v1.schema.json`          | a person starts working       |
 | `payroll.timesheet.submitted.v1.schema.json` | hours worked                  |
 

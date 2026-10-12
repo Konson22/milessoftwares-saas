@@ -1,9 +1,12 @@
 <?php
 
 use App\Http\Controllers\BranchController;
+use App\Http\Controllers\GoodsReceiptController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MedicineController;
+use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\StockController;
+use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Route;
 use Miles\PlatformClient\PlatformConfig;
 
@@ -39,8 +42,33 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::put('medicines/{medicine}', [MedicineController::class, 'update'])->whereUuid('medicine')->name('medicines.update');
         });
 
+        // Suppliers are the organization's too.
+        Route::get('suppliers', [SupplierController::class, 'index'])->can('pharmacy.purchasing.view')->name('suppliers.index');
+        Route::middleware('can:pharmacy.purchasing.manage')->group(function () {
+            Route::post('suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
+            Route::put('suppliers/{supplier}', [SupplierController::class, 'update'])->whereUuid('supplier')->name('suppliers.update');
+        });
+
         Route::middleware('branch')->group(function () {
             Route::get('/', HomeController::class)->name('home');
+
+            // Purchasing for the branch being worked in.
+            Route::middleware('branch.can:pharmacy.purchasing.view')->group(function () {
+                Route::get('purchase-orders', [PurchaseOrderController::class, 'index'])->name('purchase-orders.index');
+                Route::get('purchase-orders/{order}', [PurchaseOrderController::class, 'show'])->whereUuid('order')->name('purchase-orders.show');
+                Route::get('receipts', [GoodsReceiptController::class, 'index'])->name('receipts.index');
+                Route::get('receipts/{receipt}', [GoodsReceiptController::class, 'show'])->whereUuid('receipt')->name('receipts.show');
+            });
+            Route::middleware('branch.can:pharmacy.purchasing.manage')->group(function () {
+                Route::get('purchase-orders/create', [PurchaseOrderController::class, 'create'])->name('purchase-orders.create');
+                Route::post('purchase-orders', [PurchaseOrderController::class, 'store'])->name('purchase-orders.store');
+                Route::post('purchase-orders/{order}/ordered', [PurchaseOrderController::class, 'markOrdered'])->whereUuid('order')->name('purchase-orders.ordered');
+                Route::post('purchase-orders/{order}/cancel', [PurchaseOrderController::class, 'cancel'])->whereUuid('order')->name('purchase-orders.cancel');
+            });
+            Route::middleware('branch.can:pharmacy.purchasing.receive')->group(function () {
+                Route::get('receipts/create', [GoodsReceiptController::class, 'create'])->name('receipts.create');
+                Route::post('receipts', [GoodsReceiptController::class, 'store'])->name('receipts.store');
+            });
 
             // Stock of the branch being worked in.
             Route::middleware('branch.can:pharmacy.stock.view')->group(function () {
