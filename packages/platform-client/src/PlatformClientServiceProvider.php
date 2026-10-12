@@ -8,6 +8,7 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 use Miles\PlatformClient\Access\CurrentAccess;
+use Miles\PlatformClient\Events\DeliverDueEvents;
 use Miles\PlatformClient\Http\Middleware\RequirePlatformAccess;
 use Miles\PlatformClient\Http\Middleware\ResolveTenant;
 use Miles\PlatformClient\Provisioning\NothingToProvision;
@@ -33,6 +34,10 @@ final class PlatformClientServiceProvider extends ServiceProvider
     {
         $this->publishes([__DIR__.'/../config/platform-client.php' => config_path('platform-client.php')], 'platform-client-config');
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([DeliverDueEvents::class]);
+        }
 
         $router->aliasMiddleware('platform.tenant', ResolveTenant::class);
         $router->aliasMiddleware('platform.access', RequirePlatformAccess::class);

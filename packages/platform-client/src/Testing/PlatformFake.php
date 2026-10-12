@@ -25,6 +25,15 @@ final class PlatformFake
     /** @var list<array{organization_id: string, audience: string}> */
     public array $eventTokens = [];
 
+    /** @var array<string, list<array<string, mixed>>> envelopes received, by module */
+    public array $moduleEvents = [];
+
+    /** @var array<string, list<int>> statuses the next deliveries get, by module (default 201) */
+    public array $moduleAnswers = [];
+
+    /** @var list<string> modules the organization is not entitled to: event tokens answer 404 */
+    public array $notEntitledTo = [];
+
     public function install(): self
     {
         Http::fake(function (Request $request) {
@@ -60,7 +69,20 @@ final class PlatformFake
                 return Http::response(['message' => 'Not Found'], 404);
             }
 
+            foreach ((array) config('platform-client.modules') as $module => $url) {
+                if (is_string($url) && $url !== '' && $request->url() === $url) {
+                    $this->moduleEvents[$module][] = $request->data();
+                    $this->moduleAnswers[$module] ??= [];
+                    $status = array_shift($this->moduleAnswers[$module]) ?? 201;
+
+                    return Http::response(['status' => $status], $status);
+                }
+            }
+
             if ($path === '/api/v1/event-tokens') {
+                if (in_array((string) $request['audience'], $this->notEntitledTo, true)) {
+                    return Http::response(['error' => 'not_entitled'], 404);
+                }
                 $this->eventTokens[] = ['organization_id' => (string) $request['organization_id'], 'audience' => (string) $request['audience']];
 
                 return Http::response(['token' => 'fake-event-token', 'expires_in' => 300]);

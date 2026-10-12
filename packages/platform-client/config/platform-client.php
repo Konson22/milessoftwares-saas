@@ -43,6 +43,14 @@ return [
         'client_secret' => env('PLATFORM_SERVICE_CLIENT_SECRET'),
     ],
 
+    // Events endpoints of the shared modules this product sends to
+    // (Events\Outbox), by module code.
+    'modules' => [
+        'finance' => env('PLATFORM_FINANCE_EVENTS_URL'),
+        'hr' => env('PLATFORM_HR_EVENTS_URL'),
+        'payroll' => env('PLATFORM_PAYROLL_EVENTS_URL'),
+    ],
+
     // Signs webhooks and provisioning calls (whsec_...).
     'webhook_secret' => env('PLATFORM_WEBHOOK_SECRET'),
 
