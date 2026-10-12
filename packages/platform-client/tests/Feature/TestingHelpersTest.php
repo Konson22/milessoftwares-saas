@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\Route;
 use Miles\PlatformClient\Api\NotVisible;
 use Miles\PlatformClient\Api\PlatformApi;
 use Miles\PlatformClient\Testing\InteractsWithPlatform;
@@ -60,4 +61,18 @@ it('treats branches of an organization it cannot see as not visible', function (
 
     expect(fn () => app(PlatformApi::class)->branches('0199a0b0-0000-7000-8000-00000000dead'))
         ->toThrow(NotVisible::class);
+});
+
+it('binds tenant-owned models from the URL inside the right workspace', function () {
+    Route::prefix('pharmacy')->middleware(['web', 'platform'])
+        ->get('prescriptions/{prescription}', fn (Prescription $prescription) => $prescription->reference);
+
+    $acme = $this->asTenant('acme', fn () => Prescription::query()->create(['reference' => 'A-1']));
+    $globex = $this->asTenant('globex', fn () => Prescription::query()->create(['reference' => 'G-1']));
+
+    $this->actingAsMember('acme', ['pharmacy.dispense']);
+
+    $this->get($this->workspaceUrl('acme', 'prescriptions/'.$acme->id))->assertOk()->assertSee('A-1');
+    // Another workspace's record id: not found, never shown.
+    $this->get($this->workspaceUrl('acme', 'prescriptions/'.$globex->id))->assertNotFound();
 });

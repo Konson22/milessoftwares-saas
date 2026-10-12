@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Pharmacy\Branches;
 use App\Pharmacy\CurrentBranch;
+use App\Pharmacy\Money;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Miles\PlatformClient\Access\CurrentAccess;
@@ -50,11 +51,26 @@ class HandleInertiaRequests extends Middleware
                     'permissions' => collect($access->roles)->pluck('permissions')->flatten()->unique()->values()->all(),
                 ];
             },
+            // The workspace currency: amounts are sent in its minor unit.
+            'currency' => fn () => app(CurrentTenant::class)->has() ? Money::currency() : null,
             // The branch this page works in, and whether the member can switch.
             'branch' => function () {
                 $branch = app(CurrentBranch::class)->get();
 
                 return $branch === null ? null : ['id' => $branch->id, 'name' => $branch->name];
+            },
+            // Permissions that apply in that branch, for showing and hiding UI.
+            'branchPermissions' => function () {
+                $branch = app(CurrentBranch::class)->get();
+                $access = app(CurrentAccess::class)->get();
+
+                if ($branch === null || $access === null) {
+                    return [];
+                }
+
+                return collect($access->roles)->pluck('permissions')->flatten()->unique()
+                    ->filter(fn (string $permission) => $access->allowsIn($permission, branchId: $branch->id))
+                    ->values()->all();
             },
             'canSwitchBranch' => fn () => app(CurrentAccess::class)->get() !== null && count(app(Branches::class)->available()) > 1,
             'flash' => [

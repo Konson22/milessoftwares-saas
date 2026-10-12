@@ -9,7 +9,7 @@ Miles Softwares' pharmacy product, served at `{workspace}/pharmacy`. Built from
 | Area                    | Status   |
 | ----------------------- | -------- |
 | Branch selection        | done     |
-| Medicines and stock     | planned  |
+| Medicines and stock     | done     |
 | Purchasing & receiving  | planned  |
 | Dispensing / sales      | planned  |
 | Prescriptions           | planned  |

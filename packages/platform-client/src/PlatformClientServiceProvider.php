@@ -3,6 +3,8 @@
 namespace Miles\PlatformClient;
 
 use Illuminate\Contracts\Auth\Access\Gate;
+use Illuminate\Contracts\Http\Kernel as HttpKernel;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 use Miles\PlatformClient\Access\CurrentAccess;
@@ -36,6 +38,14 @@ final class PlatformClientServiceProvider extends ServiceProvider
         $router->aliasMiddleware('platform.access', RequirePlatformAccess::class);
         // Everything a product page needs, in order.
         $router->middlewareGroup('platform', ['platform.tenant', 'platform.access']);
+
+        // Tenant-owned models in the URL can only be bound once the tenant is
+        // known (and the member checked): run both before SubstituteBindings.
+        if ($this->app->bound(HttpKernel::class)) {
+            $kernel = $this->app->make(HttpKernel::class);
+            $kernel->addToMiddlewarePriorityBefore(SubstituteBindings::class, ResolveTenant::class);
+            $kernel->addToMiddlewarePriorityBefore(SubstituteBindings::class, RequirePlatformAccess::class);
+        }
 
         if (config('platform-client.routes', true) && ! $this->app->routesAreCached() && $this->app->make(PlatformConfig::class)->configured()) {
             $this->loadRoutesFrom(__DIR__.'/../routes/platform-client.php');
