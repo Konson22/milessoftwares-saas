@@ -200,7 +200,8 @@ immutable `organization_id` is unaffected.
 
 Path-based product compatibility checklist (must pass before a product is placed under `/{module}`):
 
-- **Assets/routing**: the app supports a base path (Vite `base`, router basename, `X-Forwarded-Prefix`).
+- **Assets/routing**: the app registers routes under `/{module}` (and Vite `base` under
+  `/{module}/build/`). The gateway preserves the path; it does not strip it.
 - **Same-origin trust**: all modules on `{slug}.` share one origin. Cookie `Path` is _not_ a security
   boundary, and XSS in one module can act in another. Only first-party, reviewed products go under the
   gateway. Each module uses distinct HttpOnly cookie names and a strict CSP.
