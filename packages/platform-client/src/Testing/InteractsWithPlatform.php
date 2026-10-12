@@ -34,15 +34,17 @@ trait InteractsWithPlatform
     }
 
     /**
-     * Signs in a member of the workspace with these catalog permissions at
-     * organization scope (or pass roles with scopes to grant()).
+     * Signs in a member of the workspace with these catalog permissions, at
+     * organization scope or, with $branch, in that branch only. For several
+     * roles at different scopes use platform()->grant() directly.
      *
      * @param  list<string>  $permissions
      */
-    protected function actingAsMember(string $slug = 'acme', array $permissions = [], bool $owner = false, ?Authenticatable $user = null): Authenticatable
+    protected function actingAsMember(string $slug = 'acme', array $permissions = [], bool $owner = false, ?Authenticatable $user = null, ?string $branch = null): Authenticatable
     {
         $user ??= $this->platformUser();
-        $this->platform()->grant($slug, (string) $user->getAuthIdentifier(), $permissions === [] ? [] : [['permissions' => $permissions]], $owner);
+        $scope = $branch === null ? ['scope_type' => 'organization'] : ['scope_type' => 'branch', 'branch_id' => $branch];
+        $this->platform()->grant($slug, (string) $user->getAuthIdentifier(), $permissions === [] ? [] : [['permissions' => $permissions, 'scope' => $scope]], $owner);
 
         $this->actingAs($user);
         $this->withSession([RequirePlatformAccess::SESSION_TENANT => $this->platform()->organization($slug)['id']]);

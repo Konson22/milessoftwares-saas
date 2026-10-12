@@ -1,0 +1,185 @@
+{
+    "application": {
+        "code": "pharmacy",
+        "name": "Pharmacy",
+        "category": "products",
+        "kind": "standalone",
+        "status": "beta"
+    },
+    "version": "1.1.0",
+    "permissions": [
+        {
+            "key": "pharmacy.medicines.view",
+            "name": "View the medicine catalogue",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "pharmacy.medicines.manage",
+            "name": "Add and change medicines and prices",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "pharmacy.stock.view",
+            "name": "View stock and batches",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "pharmacy.stock.adjust",
+            "name": "Adjust stock (damage, expiry, count)",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "pharmacy.purchasing.view",
+            "name": "View suppliers, orders and receipts",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "pharmacy.purchasing.manage",
+            "name": "Manage suppliers and purchase orders",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "pharmacy.purchasing.receive",
+            "name": "Receive goods into stock",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "pharmacy.sales.view",
+            "name": "View sales",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "pharmacy.sales.create",
+            "name": "Sell and dispense at the counter",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "pharmacy.sales.void",
+            "name": "Void a sale",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "pharmacy.prescriptions.view",
+            "name": "View prescriptions",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "pharmacy.prescriptions.record",
+            "name": "Record prescriptions",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "pharmacy.prescriptions.verify",
+            "name": "Verify prescriptions (pharmacist)",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "pharmacy.controlled.view",
+            "name": "View the controlled drugs register",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "pharmacy.reports.view",
+            "name": "View reports",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        }
+    ],
+    "roles": [
+        {
+            "key": "manager",
+            "name": "Pharmacy Manager",
+            "sensitivity": 3,
+            "delegable": true,
+            "scopes": ["organization", "branch"],
+            "permissions": [
+                "pharmacy.medicines.view",
+                "pharmacy.medicines.manage",
+                "pharmacy.stock.view",
+                "pharmacy.stock.adjust",
+                "pharmacy.purchasing.view",
+                "pharmacy.purchasing.manage",
+                "pharmacy.purchasing.receive",
+                "pharmacy.sales.view",
+                "pharmacy.sales.create",
+                "pharmacy.sales.void",
+                "pharmacy.prescriptions.view",
+                "pharmacy.prescriptions.record",
+                "pharmacy.prescriptions.verify",
+                "pharmacy.controlled.view",
+                "pharmacy.reports.view"
+            ]
+        },
+        {
+            "key": "pharmacist",
+            "name": "Pharmacist",
+            "sensitivity": 3,
+            "delegable": true,
+            "scopes": ["organization", "branch"],
+            "permissions": [
+                "pharmacy.medicines.view",
+                "pharmacy.stock.view",
+                "pharmacy.purchasing.view",
+                "pharmacy.purchasing.receive",
+                "pharmacy.sales.view",
+                "pharmacy.sales.create",
+                "pharmacy.prescriptions.view",
+                "pharmacy.prescriptions.record",
+                "pharmacy.prescriptions.verify",
+                "pharmacy.controlled.view"
+            ]
+        },
+        {
+            "key": "cashier",
+            "name": "Cashier",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization", "branch"],
+            "permissions": [
+                "pharmacy.medicines.view",
+                "pharmacy.sales.view",
+                "pharmacy.sales.create"
+            ]
+        },
+        {
+            "key": "storekeeper",
+            "name": "Storekeeper",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization", "branch"],
+            "permissions": [
+                "pharmacy.medicines.view",
+                "pharmacy.stock.view",
+                "pharmacy.stock.adjust",
+                "pharmacy.purchasing.view",
+                "pharmacy.purchasing.receive"
+            ]
+        }
+    ],
+    "separation_of_duties": [
+        {
+            "permissions": ["pharmacy.sales.create", "pharmacy.stock.adjust"],
+            "mode": "warn",
+            "description": "One person selling and adjusting stock can hide shortages."
+        },
+        {
+            "permissions": ["pharmacy.sales.create", "pharmacy.sales.void"],
+            "mode": "warn",
+            "description": "Voiding sales you made yourself needs a second look."
+        }
+    ]
+}
