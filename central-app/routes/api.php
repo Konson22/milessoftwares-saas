@@ -21,6 +21,9 @@ Route::prefix('api/v1')->middleware('throttle:600,1')->name('api.')->group(funct
         Route::get('organizations/{organization}', [IntegrationController::class, 'organization'])
             ->where('organization', '[A-Za-z0-9-]+')
             ->name('organizations.show');
+        Route::get('organizations/{organization}/branches', [IntegrationController::class, 'branches'])
+            ->whereUuid('organization')
+            ->name('organizations.branches');
         Route::get('organizations/{organization}/members/{subject}/effective-access', [IntegrationController::class, 'effectiveAccess'])
             ->whereUuid('organization')
             ->name('effective-access');

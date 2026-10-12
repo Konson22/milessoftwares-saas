@@ -61,6 +61,7 @@ Then, with `Authorization: Bearer <token>`:
 | --------------------------------------------------------------- | ----------------------------------------- |
 | `GET /api/v1/organizations/{slug-or-id}`                        | id, slug, name, status, country, currency |
 | `GET /api/v1/organizations/{id}/members/{sub}/effective-access` | see below                                 |
+| `GET /api/v1/organizations/{id}/branches`                       | `data`: id, name, code, city, status      |
 
 Your token only ever sees **your own application**: organizations that never used it answer
 `404`, and roles are those of your catalog only.

@@ -1,5 +1,7 @@
 <?php
 
+use Miles\PlatformClient\Api\NotVisible;
+use Miles\PlatformClient\Api\PlatformApi;
 use Miles\PlatformClient\Testing\InteractsWithPlatform;
 use Miles\PlatformClient\Tests\Fixtures\Prescription;
 
@@ -33,4 +35,29 @@ it('runs code inside a tenant', function () {
     $this->asTenant('globex', fn () => Prescription::query()->create(['reference' => 'G-1']));
 
     expect($this->asTenant('acme', fn () => Prescription::query()->pluck('reference')->all()))->toBe(['A-1']);
+});
+
+it('lists an organization\'s branches, cached until the organization changes', function () {
+    $juba = $this->platform()->branch('acme', 'Juba', 'JUB');
+    $orgId = $this->platform()->organization('acme')['id'];
+    $api = app(PlatformApi::class);
+
+    $branches = $api->branches($orgId);
+    expect($branches)->toHaveCount(1)
+        ->and($branches[0]->id)->toBe($juba)
+        ->and($branches[0]->name)->toBe('Juba')
+        ->and($branches[0]->isActive())->toBeTrue();
+
+    $this->platform()->branch('acme', 'Wau');
+    expect($api->branches($orgId))->toHaveCount(1); // cached
+
+    $api->forget($orgId);
+    expect(array_map(fn ($b) => $b->name, $api->branches($orgId)))->toBe(['Juba', 'Wau']);
+});
+
+it('treats branches of an organization it cannot see as not visible', function () {
+    $this->platform()->organization('acme');
+
+    expect(fn () => app(PlatformApi::class)->branches('0199a0b0-0000-7000-8000-00000000dead'))
+        ->toThrow(NotVisible::class);
 });

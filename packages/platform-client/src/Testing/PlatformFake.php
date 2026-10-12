@@ -19,6 +19,9 @@ final class PlatformFake
     /** @var array<string, array<string, mixed>> keyed by "orgId:subject" */
     public array $access = [];
 
+    /** @var array<string, list<array<string, mixed>>> keyed by slug */
+    public array $branches = [];
+
     /** @var list<array{organization_id: string, audience: string}> */
     public array $eventTokens = [];
 
@@ -35,6 +38,16 @@ final class PlatformFake
                 return isset($this->access[$m[1].':'.$m[2]])
                     ? Http::response($this->access[$m[1].':'.$m[2]])
                     : Http::response(['message' => 'Not Found'], 404);
+            }
+
+            if (preg_match('#^/api/v1/organizations/([^/]+)/branches$#', $path, $m) === 1) {
+                foreach ($this->organizations as $slug => $organization) {
+                    if ($organization['id'] === $m[1]) {
+                        return Http::response(['data' => $this->branches[$slug] ?? []]);
+                    }
+                }
+
+                return Http::response(['message' => 'Not Found'], 404);
             }
 
             if (preg_match('#^/api/v1/organizations/([^/]+)$#', $path, $m) === 1) {
@@ -78,6 +91,18 @@ final class PlatformFake
             'default_currency' => 'SSP',
             'timezone' => 'Africa/Juba',
         ]);
+    }
+
+    /**
+     * Adds a branch to the organization; returns its id.
+     */
+    public function branch(string $slug, string $name, ?string $code = null): string
+    {
+        $this->organization($slug);
+        $id = (string) Str::uuid();
+        $this->branches[$slug][] = ['id' => $id, 'name' => $name, 'code' => $code ?? strtoupper(substr($name, 0, 3)), 'city' => $name, 'status' => 'active'];
+
+        return $id;
     }
 
     /**

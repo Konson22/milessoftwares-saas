@@ -7,6 +7,8 @@ use App\Modules\Applications\Models\Application;
 use App\Modules\Integration\Support\EffectiveAccess;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationSlug;
+use App\Modules\Structure\Models\Branch;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -37,6 +39,30 @@ class IntegrationController extends Controller
             'default_currency' => $record->default_currency,
             'timezone' => $record->timezone,
         ]);
+    }
+
+    /**
+     * The organization's branches: products keep stock, sales and role
+     * scopes per branch and need names for the ids in effective access.
+     */
+    public function branches(Request $request, string $organization, TenantContext $tenant): JsonResponse
+    {
+        $record = $this->visibleOrganization($this->application($request), $organization, allowSlug: false);
+
+        $branches = $tenant->run($record, fn () => Branch::query()
+            ->orderBy('name')
+            ->get(['id', 'name', 'code', 'city', 'status'])
+            ->map(fn (Branch $branch) => [
+                'id' => $branch->id,
+                'name' => $branch->name,
+                'code' => $branch->code,
+                'city' => $branch->city,
+                'status' => $branch->status,
+            ])
+            ->all());
+
+        return response()->json(['data' => $branches])
+            ->header('Cache-Control', 'private, max-age='.EffectiveAccess::TTL_SECONDS);
     }
 
     public function effectiveAccess(Request $request, string $organization, string $subject, EffectiveAccess $access): JsonResponse

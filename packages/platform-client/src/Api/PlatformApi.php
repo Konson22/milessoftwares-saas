@@ -77,6 +77,29 @@ final class PlatformApi
     }
 
     /**
+     * The organization's branches, by name. Cached like access answers.
+     *
+     * @return list<Branch>
+     *
+     * @throws NotVisible
+     * @throws PlatformUnavailable
+     */
+    public function branches(string $organizationId): array
+    {
+        $key = self::PREFIX.'branches:'.$organizationId.':'.$this->version($organizationId);
+        $cached = $this->cache->get($key);
+
+        if (! is_array($cached)) {
+            $data = $this->get('/api/v1/organizations/'.rawurlencode($organizationId).'/branches', 'access.read');
+            $cached = array_values(array_filter(is_array($data['data'] ?? null) ? $data['data'] : [], 'is_array'));
+            $this->cache->put($key, $cached, $this->config->cacheSeconds());
+        }
+
+        /** @var list<array<string, mixed>> $cached */
+        return array_map(fn (array $branch) => Branch::fromArray($branch), $cached);
+    }
+
+    /**
      * Short-lived token for sending one business event to a shared module
      * (docs/shared-modules.md). Never cached: one token per event.
      *
