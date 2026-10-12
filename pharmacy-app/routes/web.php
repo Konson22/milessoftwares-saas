@@ -7,6 +7,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MedicineController;
 use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\SupplierController;
@@ -90,6 +91,11 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::get('controlled-register', ControlledRegisterController::class)
                 ->middleware('branch.can:pharmacy.controlled.view')
                 ->name('controlled.index');
+
+            // The branch's figures for a period.
+            Route::get('reports', ReportController::class)
+                ->middleware('branch.can:pharmacy.reports.view')
+                ->name('reports.index');
 
             // Purchasing for the branch being worked in.
             Route::middleware('branch.can:pharmacy.purchasing.view')->group(function () {

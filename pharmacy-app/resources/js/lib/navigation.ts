@@ -3,6 +3,7 @@ import { index as controlled } from '@/routes/controlled';
 import { index as medicines } from '@/routes/medicines';
 import { index as prescriptions } from '@/routes/prescriptions';
 import { index as purchaseOrders } from '@/routes/purchase-orders';
+import { index as reports } from '@/routes/reports';
 import { create as counter, index as sales } from '@/routes/sales';
 import { index as stock } from '@/routes/stock';
 import { index as suppliers } from '@/routes/suppliers';
@@ -46,4 +47,5 @@ export const navigation: NavItem[] = [
         href: controlled(),
         permission: 'pharmacy.controlled.view',
     },
+    { title: 'Reports', href: reports(), permission: 'pharmacy.reports.view' },
 ];
