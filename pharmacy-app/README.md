@@ -12,7 +12,7 @@ Miles Softwares' pharmacy product, served at `{workspace}/pharmacy`. Built from
 | Medicines and stock     | done     |
 | Purchasing & receiving  | done     |
 | Dispensing / sales      | done     |
-| Prescriptions           | planned  |
+| Prescriptions           | done     |
 
 Roles and permissions: [`platform/catalog.json`](platform/catalog.json) (Pharmacy Manager,
 Pharmacist, Cashier, Storekeeper). Operational permissions can be scoped to a branch; a member

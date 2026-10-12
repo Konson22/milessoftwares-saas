@@ -1,5 +1,7 @@
 import type { InertiaLinkProps } from '@inertiajs/react';
+import { index as controlled } from '@/routes/controlled';
 import { index as medicines } from '@/routes/medicines';
+import { index as prescriptions } from '@/routes/prescriptions';
 import { index as purchaseOrders } from '@/routes/purchase-orders';
 import { create as counter, index as sales } from '@/routes/sales';
 import { index as stock } from '@/routes/stock';
@@ -18,6 +20,11 @@ export type NavItem = {
 export const navigation: NavItem[] = [
     { title: 'Counter', href: counter(), permission: 'pharmacy.sales.create' },
     { title: 'Sales', href: sales(), permission: 'pharmacy.sales.view' },
+    {
+        title: 'Prescriptions',
+        href: prescriptions(),
+        permission: 'pharmacy.prescriptions.view',
+    },
     { title: 'Stock', href: stock(), permission: 'pharmacy.stock.view' },
     {
         title: 'Purchasing',
@@ -33,5 +40,10 @@ export const navigation: NavItem[] = [
         title: 'Suppliers',
         href: suppliers(),
         permission: 'pharmacy.purchasing.view',
+    },
+    {
+        title: 'Controlled register',
+        href: controlled(),
+        permission: 'pharmacy.controlled.view',
     },
 ];

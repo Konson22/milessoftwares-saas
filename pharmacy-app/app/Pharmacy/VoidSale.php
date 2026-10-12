@@ -19,6 +19,7 @@ class VoidSale
     public function __construct(
         private readonly Stock $stock,
         private readonly Outbox $outbox,
+        private readonly Prescriptions $prescriptions,
     ) {}
 
     public function handle(Sale $sale, User $by, string $reason): Sale
@@ -41,6 +42,9 @@ class VoidSale
                 'voided_at' => now(),
                 'void_reason' => $reason,
             ])->save();
+
+            // A dispensed prescription can be dispensed again.
+            $this->prescriptions->saleVoided($locked);
 
             $this->outbox->record('finance', 'finance.invoice.voided', 1, "sale:{$locked->id}:void", [
                 'invoice_number' => $locked->number,

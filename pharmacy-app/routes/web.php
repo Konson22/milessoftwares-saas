@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Controllers\BranchController;
+use App\Http\Controllers\ControlledRegisterController;
 use App\Http\Controllers\GoodsReceiptController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MedicineController;
+use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\StockController;
@@ -66,6 +68,28 @@ Route::prefix(app(PlatformConfig::class)->path())
                 ->whereUuid('sale')
                 ->middleware('branch.can:pharmacy.sales.void')
                 ->name('sales.void');
+
+            // Prescriptions: recorded, verified by a pharmacist, dispensed.
+            Route::middleware('branch.can:pharmacy.prescriptions.view')->group(function () {
+                Route::get('prescriptions', [PrescriptionController::class, 'index'])->name('prescriptions.index');
+                Route::get('prescriptions/{prescription}', [PrescriptionController::class, 'show'])->whereUuid('prescription')->name('prescriptions.show');
+            });
+            Route::middleware('branch.can:pharmacy.prescriptions.record')->group(function () {
+                Route::get('prescriptions/create', [PrescriptionController::class, 'create'])->name('prescriptions.create');
+                Route::post('prescriptions', [PrescriptionController::class, 'store'])->name('prescriptions.store');
+                Route::post('prescriptions/{prescription}/cancel', [PrescriptionController::class, 'cancel'])->whereUuid('prescription')->name('prescriptions.cancel');
+            });
+            Route::middleware('branch.can:pharmacy.prescriptions.verify')->group(function () {
+                Route::post('prescriptions/{prescription}/verify', [PrescriptionController::class, 'verify'])->whereUuid('prescription')->name('prescriptions.verify');
+                Route::post('prescriptions/{prescription}/reject', [PrescriptionController::class, 'reject'])->whereUuid('prescription')->name('prescriptions.reject');
+            });
+            Route::post('prescriptions/{prescription}/dispense', [PrescriptionController::class, 'dispense'])
+                ->whereUuid('prescription')
+                ->middleware('branch.can:pharmacy.sales.create')
+                ->name('prescriptions.dispense');
+            Route::get('controlled-register', ControlledRegisterController::class)
+                ->middleware('branch.can:pharmacy.controlled.view')
+                ->name('controlled.index');
 
             // Purchasing for the branch being worked in.
             Route::middleware('branch.can:pharmacy.purchasing.view')->group(function () {
