@@ -31,8 +31,8 @@ const mainNavItems: NavItem[] = [
 
 export function AppSidebar() {
     return (
-        <Sidebar collapsible="icon" variant="inset">
-            <SidebarHeader>
+        <Sidebar collapsible="icon" variant="sidebar">
+            <SidebarHeader className="border-b border-sidebar-border">
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
