@@ -9,5 +9,6 @@ parameters:
         # Models using the tenancy trait, so PHPStan analyses it.
         - tests/Fixtures/Prescription.php
         - tests/Fixtures/User.php
+        - tests/Fixtures/ProductTestCase.php
 
     level: 7

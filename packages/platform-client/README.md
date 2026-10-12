@@ -6,14 +6,16 @@ the security-sensitive parts.
 
 | You get                                     | How                                                                 |
 | ------------------------------------------- | ------------------------------------------------------------------- |
-| Sign-in (OIDC code + PKCE, state, nonce)    | `GET auth/login`, `GET auth/callback`, `POST logout` (named `platform.*`) |
+| Sign-in (OIDC code + PKCE, state, nonce)    | `GET /{path}/auth/login`, `GET /{path}/auth/callback`, `POST /{path}/logout` (named `platform.*`) |
 | The organization from the workspace host    | middleware `platform.tenant` → `CurrentTenant`                      |
 | Access gate on every request                | middleware `platform.access` (cached ≤ 60 s, dropped by webhooks)   |
 | Catalog permissions in `can()` / `@can`     | `$user->can('pharmacy.dispense')`; scopes via `CurrentAccess`       |
 | Tenant-owned models, fail closed            | `use BelongsToTenant;` (needs an `organization_id` uuid column)     |
-| Signed, idempotent webhooks                 | `POST platform/webhooks` → `PlatformEventReceived` event            |
-| Signed, idempotent provisioning             | `POST platform/tenants` → your `ProvisionsTenants` binding          |
+| Signed, idempotent webhooks                 | `POST /{path}/platform/webhooks` → `PlatformEventReceived` event    |
+| Signed, idempotent provisioning             | `POST /{path}/platform/tenants` → your `ProvisionsTenants` binding  |
 | Event tokens for Finance/HR, health reports | `PlatformApi::eventToken()`, `PlatformApi::reportHealth()`          |
+
+`{path}` is the product's path on workspace hosts (default: the application code).
 
 ## Install
 
@@ -35,6 +37,7 @@ subject**, plus `name` and `email`. No passwords. Sign-in creates and updates th
 
 ```dotenv
 PLATFORM_APPLICATION=pharmacy
+PLATFORM_PATH=                       # optional; defaults to PLATFORM_APPLICATION
 PLATFORM_ROOT_DOMAIN=milessoftwares.com
 PLATFORM_ISSUER=https://auth.milessoftwares.com
 PLATFORM_BACKCHANNEL_URL=            # optional internal address of the auth host
@@ -48,18 +51,20 @@ PLATFORM_WEBHOOK_SECRET=whsec_...
 All values come from admin → Applications → _product_ → Integration. Register there:
 
 - tenant callback path: `/pharmacy/auth/callback`
-- webhook endpoint: `<internal URL>/platform/webhooks`
-- provisioning base URL: `<internal URL>/platform` (the platform calls `.../tenants`)
+- webhook endpoint: `<internal URL>/pharmacy/platform/webhooks`
+- provisioning base URL: `<internal URL>/pharmacy/platform` (the platform calls `.../tenants`)
 
 ## Use
 
 ```php
-// routes/web.php: every product page
-Route::middleware(['web', 'platform'])->group(function () {
-    Route::get('/', DashboardController::class)->name('home');
-    Route::post('dispensings', [DispensingController::class, 'store'])
-        ->can('pharmacy.dispense');
-});
+// routes/web.php: every product page under the same path as this package
+Route::prefix(app(\Miles\PlatformClient\PlatformConfig::class)->path())
+    ->middleware(['web', 'platform'])
+    ->group(function () {
+        Route::get('/', DashboardController::class)->name('home');
+        Route::post('dispensings', [DispensingController::class, 'store'])
+            ->can('pharmacy.dispense');
+    });
 
 // Tenant-owned data
 class Prescription extends Model

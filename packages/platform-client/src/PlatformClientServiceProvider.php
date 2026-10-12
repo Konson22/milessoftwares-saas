@@ -37,7 +37,7 @@ final class PlatformClientServiceProvider extends ServiceProvider
         // Everything a product page needs, in order.
         $router->middlewareGroup('platform', ['platform.tenant', 'platform.access']);
 
-        if (config('platform-client.routes', true) && ! $this->app->routesAreCached()) {
+        if (config('platform-client.routes', true) && ! $this->app->routesAreCached() && $this->app->make(PlatformConfig::class)->configured()) {
             $this->loadRoutesFrom(__DIR__.'/../routes/platform-client.php');
         }
 

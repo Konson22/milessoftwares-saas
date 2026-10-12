@@ -15,6 +15,18 @@ final class PlatformConfig
 {
     public function __construct(private readonly Repository $config) {}
 
+    /**
+     * Whether the product is connected at all. Without it (a fresh checkout
+     * before .env exists) the app still boots, but registers no product or
+     * platform routes.
+     */
+    public function configured(): bool
+    {
+        $application = $this->config->get('platform-client.application');
+
+        return is_string($application) && $application !== '';
+    }
+
     public function application(): string
     {
         return $this->required('application', 'PLATFORM_APPLICATION');
@@ -102,11 +114,26 @@ final class PlatformConfig
         return $this->required('user_model', 'PLATFORM_USER_MODEL');
     }
 
+    /**
+     * The product's path on workspace hosts, without slashes ("pharmacy").
+     */
+    public function path(): string
+    {
+        $path = $this->config->get('platform-client.path');
+        $path = trim(is_string($path) && $path !== '' ? $path : $this->application(), '/');
+
+        if (preg_match('/^[a-z][a-z0-9-]*$/', $path) !== 1) {
+            throw new RuntimeException("Platform client path [{$path}] must be lowercase letters, digits and dashes.");
+        }
+
+        return $path;
+    }
+
     public function home(): string
     {
-        $home = $this->config->get('platform-client.home', '/');
+        $home = $this->config->get('platform-client.home');
 
-        return is_string($home) ? $home : '/';
+        return is_string($home) && $home !== '' ? $home : '/'.$this->path();
     }
 
     public function cacheSeconds(): int

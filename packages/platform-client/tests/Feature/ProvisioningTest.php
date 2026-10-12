@@ -52,7 +52,7 @@ function provision(TestCase $test, ?string $key = 'step-1', array $overrides = [
         'callback_url' => TestCase::ISSUER.'/api/v1/provisioning/steps/step-1/complete',
     ]);
 
-    return $test->call('POST', 'http://pharmacy.internal/platform/tenants', [], [], [], array_filter([
+    return $test->call('POST', 'http://pharmacy.internal/pharmacy/platform/tenants', [], [], [], array_filter([
         'CONTENT_TYPE' => 'application/json',
         'HTTP_MILES_SIGNATURE' => $signature ?? Signature::header($body, TestCase::WEBHOOK_SECRET, time()),
         'HTTP_IDEMPOTENCY_KEY' => $key,

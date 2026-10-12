@@ -48,7 +48,7 @@ it('registers a product folder and writes its .env', function () {
     expect($retail)
         ->route_prefix->toBe('retail')
         ->provisioning_method->toBe('sync_api')
-        ->integration_endpoint->toBe('http://127.0.0.1:8400/platform')
+        ->integration_endpoint->toBe('http://127.0.0.1:8400/retail/platform')
         ->and(activeClients($retail))->toBe(['confidential', 'service']);
 
     $env = env_of($this->folder);

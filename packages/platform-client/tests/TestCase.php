@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Gate;
 use Miles\PlatformClient\PlatformClientServiceProvider;
+use Miles\PlatformClient\PlatformConfig;
 use Miles\PlatformClient\Tests\Fixtures\User;
 use Orchestra\Testbench\TestCase as Orchestra;
 
@@ -50,20 +51,28 @@ abstract class TestCase extends Orchestra
     }
 
     /**
-     * Product pages: everything behind the "platform" middleware group.
+     * Product pages under /{path}, behind the "platform" middleware group.
      *
      * @param  Router  $router
      */
     protected function defineRoutes($router): void
     {
-        $router->middleware(['web', 'platform'])->group(function (Router $router) {
-            $router->get('/', fn () => 'pharmacy home')->name('home');
-            $router->get('/dispense', fn () => Gate::allows('pharmacy.dispense') ? 'can dispense' : 'cannot dispense');
-        });
+        $router->prefix(app(PlatformConfig::class)->path())
+            ->middleware(['web', 'platform'])
+            ->group(function (Router $router) {
+                $router->get('/', fn () => 'pharmacy home')->name('home');
+                $router->get('/dispense', fn () => Gate::allows('pharmacy.dispense') ? 'can dispense' : 'cannot dispense');
+            });
     }
 
-    protected function url(string $slug, string $path = '/'): string
+    /**
+     * A URL of this product in a workspace: url('acme', 'dispense') is
+     * http://acme.<root>/pharmacy/dispense.
+     */
+    public function url(string $slug, string $path = ''): string
     {
-        return 'http://'.$slug.'.'.self::ROOT.'/'.ltrim($path, '/');
+        $prefix = app(PlatformConfig::class)->path();
+
+        return rtrim('http://'.$slug.'.'.self::ROOT.'/'.$prefix.'/'.ltrim($path, '/'), '/');
     }
 }

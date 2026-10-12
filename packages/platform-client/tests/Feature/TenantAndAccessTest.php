@@ -34,9 +34,9 @@ describe('tenant from the host', function () {
     it('answers 404 for hosts that are not a workspace', function (string $url) {
         $this->get($url)->assertNotFound();
     })->with([
-        'apex' => ['http://'.TestCase::ROOT.'/auth/login'],
-        'other domain' => ['http://acme.example.com/auth/login'],
-        'deeper subdomain' => ['http://x.acme.'.TestCase::ROOT.'/auth/login'],
+        'apex' => ['http://'.TestCase::ROOT.'/pharmacy/auth/login'],
+        'other domain' => ['http://acme.example.com/pharmacy/auth/login'],
+        'deeper subdomain' => ['http://x.acme.'.TestCase::ROOT.'/pharmacy/auth/login'],
     ]);
 
     it('answers 404 for an organization this application cannot see', function () {

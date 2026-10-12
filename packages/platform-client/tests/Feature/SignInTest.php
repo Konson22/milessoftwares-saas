@@ -20,7 +20,7 @@ it('starts sign-in at the platform with PKCE, state and nonce', function () {
     parse_str((string) parse_url($location, PHP_URL_QUERY), $query);
     expect($query)
         ->client_id->toBe('sign-in-client')
-        ->redirect_uri->toBe('http://acme.'.TestCase::ROOT.'/auth/callback')
+        ->redirect_uri->toBe('http://acme.'.TestCase::ROOT.'/pharmacy/auth/callback')
         ->response_type->toBe('code')
         ->scope->toBe('openid profile email')
         ->code_challenge_method->toBe('S256')
@@ -32,7 +32,7 @@ it('starts sign-in at the platform with PKCE, state and nonce', function () {
 it('signs in a member with access and lands on the product', function () {
     $response = signIn($this, $this->platform);
 
-    $response->assertRedirect('http://acme.'.TestCase::ROOT);
+    $response->assertRedirect('http://acme.'.TestCase::ROOT.'/pharmacy');
     expect(Auth::id())->toBe(FakePlatform::subject('ada'));
 
     $user = User::query()->find(FakePlatform::subject('ada'));

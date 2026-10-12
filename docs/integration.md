@@ -181,23 +181,26 @@ sign-in client's tenant callback path is `/pharmacy/auth/callback`.
 
 - The prefix is set in admin → Applications (lowercase, `^[a-z][a-z0-9-]*$`). Paths the workspace
   shell serves itself are refused (`platform.workspace_paths`: `members`, `manage`, `auth`, `build`, …).
-- The product's routes have **no prefix**; the web server tells Laravel the base path, so
-  `url('/')` is `…/pharmacy`.
+- Product routes (and `miles/platform-client`) register under that path with
+  `Route::prefix(...)`. The reverse proxy **preserves** the prefix; it does not strip it.
+- Built assets go to `public/pharmacy/build` (Vite `buildDirectory` and `Vite::useBuildDirectory()`),
+  so `/pharmacy/build/...` is a real file and never the platform's own `/build/`.
 - The platform's calls (webhooks, provisioning) go to `…/pharmacy/platform/webhooks` and
   `…/pharmacy/platform` (base URL), on any host: they are signed and need no tenant.
 
 **Production (nginx).** One file per product in `ops/nginx/products/`, copied to
 `/etc/nginx/miles-products/`, which the HTTPS server block includes. Each product runs its own
-php-fpm pool; `SCRIPT_NAME=/pharmacy/index.php` gives Laravel the prefix.
+php-fpm pool; REQUEST_URI keeps `/pharmacy/...` so it matches the prefixed Laravel routes.
 
 **Local development (XAMPP Apache).** `ops/local-dev/apache-dev.conf` forwards
-`{slug}.milessoftwares.local/pharmacy/*` to the product's `php artisan serve`, strips the prefix and
-sends it as `X-Forwarded-Prefix` (the product's `.env` needs `TRUSTED_PROXIES=127.0.0.1`). Ports:
+`{slug}.milessoftwares.local/pharmacy/*` to the product's `php artisan serve` with the path
+preserved (`ProxyPass "/pharmacy/" "http://127.0.0.1:8400/pharmacy/"`). Ports:
 
-| Product  | Folder         | Dev port |
-| -------- | -------------- | -------- |
-| platform | `central-app`  | 8100     |
-| pharmacy | `pharmacy-app` | 8400     |
+| Product   | Folder                  | Dev port |
+| --------- | ----------------------- | -------- |
+| platform  | `central-app`           | 8100     |
+| pharmacy  | `pharmacy-app`          | 8400     |
+| blueprint | `templates/product-app` | 8499     |
 
 Register a product folder with the local platform (catalog, prefix, clients, webhook, provisioning,
 and the product's `.env`):

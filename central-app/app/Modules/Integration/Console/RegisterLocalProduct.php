@@ -72,7 +72,7 @@ class RegisterLocalProduct extends Command
         $application->forceFill([
             'route_prefix' => $prefix,
             'provisioning_method' => 'sync_api',
-            'integration_endpoint' => "{$base}/platform",
+            'integration_endpoint' => "{$base}/{$prefix}/platform",
         ])->save();
 
         $envPath = $folder.'/.env';
@@ -98,11 +98,11 @@ class RegisterLocalProduct extends Command
                 'PLATFORM_SIGN_IN_CLIENT_SECRET' => (string) $signIn['client_secret'],
                 'PLATFORM_SERVICE_CLIENT_ID' => $service['client_id'],
                 'PLATFORM_SERVICE_CLIENT_SECRET' => (string) $service['client_secret'],
-                'PLATFORM_WEBHOOK_SECRET' => (string) $integration->configureWebhook($application, "{$base}/platform/webhooks", true, null),
+                'PLATFORM_WEBHOOK_SECRET' => (string) $integration->configureWebhook($application, "{$base}/{$prefix}/platform/webhooks", true, null),
             ];
             $this->components->info("Registered clients for {$application->name}.");
         } else {
-            $integration->configureWebhook($application, "{$base}/platform/webhooks", false, null);
+            $integration->configureWebhook($application, "{$base}/{$prefix}/platform/webhooks", false, null);
             $this->components->info("{$application->name} is already registered (use --fresh to issue new clients).");
         }
 

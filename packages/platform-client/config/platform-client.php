@@ -15,9 +15,13 @@ return [
     // The application code registered on the platform, e.g. "pharmacy".
     'application' => env('PLATFORM_APPLICATION'),
 
-    // Workspaces are {slug}.<root_domain>; the product is served under
-    // /<application> on those hosts.
+    // Workspaces are {slug}.<root_domain>.
     'root_domain' => env('PLATFORM_ROOT_DOMAIN'),
+
+    // The product's path on workspace hosts ({slug}.<root>/<path>), the
+    // application's route prefix on the platform. Every product route,
+    // including this package's, lives under it. Default: the application code.
+    'path' => env('PLATFORM_PATH'),
 
     // Public URL of the auth host: the id_token issuer and where browsers
     // are sent to sign in, e.g. https://auth.milessoftwares.com
@@ -46,8 +50,9 @@ return [
     // (uuid), with name and email. Updated at every sign-in.
     'user_model' => env('PLATFORM_USER_MODEL', 'App\\Models\\User'),
 
-    // Where a signed-in user lands when there is no intended URL.
-    'home' => '/',
+    // Where a signed-in user lands when there is no intended URL
+    // (default: /<path>).
+    'home' => null,
 
     // Register the sign-in, webhook and provisioning routes.
     'routes' => true,
@@ -57,5 +62,13 @@ return [
     'cache_seconds' => 60,
 
     'http_timeout' => 10,
+
+    // Http\Middleware\SecurityHeaders: the platform's browser policy.
+    'security_headers' => [
+        'csp' => env('PLATFORM_CSP', true),
+        'csp_report_only' => env('PLATFORM_CSP_REPORT_ONLY', false),
+        'hsts' => env('PLATFORM_HSTS', false),
+        'hsts_max_age' => (int) env('PLATFORM_HSTS_MAX_AGE', 63072000),
+    ],
 
 ];

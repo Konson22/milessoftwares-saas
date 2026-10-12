@@ -14,7 +14,7 @@ function webhook(TestCase $test, array $event, ?string $signature = null, ?int $
     $body = json_encode($event);
     $signature ??= Signature::header($body, TestCase::WEBHOOK_SECRET, $timestamp ?? time());
 
-    return $test->call('POST', 'http://pharmacy.internal/platform/webhooks', [], [], [], [
+    return $test->call('POST', 'http://pharmacy.internal/pharmacy/platform/webhooks', [], [], [], [
         'CONTENT_TYPE' => 'application/json',
         'HTTP_MILES_SIGNATURE' => $signature,
     ], $body);
