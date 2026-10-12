@@ -1,6 +1,7 @@
 import type { InertiaLinkProps } from '@inertiajs/react';
 import { index as medicines } from '@/routes/medicines';
 import { index as purchaseOrders } from '@/routes/purchase-orders';
+import { create as counter, index as sales } from '@/routes/sales';
 import { index as stock } from '@/routes/stock';
 import { index as suppliers } from '@/routes/suppliers';
 
@@ -15,6 +16,8 @@ export type NavItem = {
  * The pharmacy's sections, in menu order. Each feature adds its own entry.
  */
 export const navigation: NavItem[] = [
+    { title: 'Counter', href: counter(), permission: 'pharmacy.sales.create' },
+    { title: 'Sales', href: sales(), permission: 'pharmacy.sales.view' },
     { title: 'Stock', href: stock(), permission: 'pharmacy.stock.view' },
     {
         title: 'Purchasing',

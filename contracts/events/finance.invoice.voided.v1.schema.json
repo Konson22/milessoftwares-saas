@@ -1,0 +1,32 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milessoftwares.com/contracts/events/finance.invoice.voided.v1.schema.json",
+    "title": "finance.invoice.voided, schema_version 1",
+    "description": "A product cancelled an invoice or receipt it had issued (finance.invoice.issued) and, if it was paid, refunded the payment. Finance reverses the revenue and the payment. Amounts are integers in the currency's minor unit.",
+    "type": "object",
+    "required": ["invoice_number", "currency", "total_minor", "reason"],
+    "additionalProperties": false,
+    "properties": {
+        "invoice_number": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "The invoice_number of the finance.invoice.issued being voided."
+        },
+        "branch_id": { "type": ["string", "null"], "format": "uuid" },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "total_minor": { "type": "integer", "minimum": 0 },
+        "reason": { "type": "string", "maxLength": 255 },
+        "refund": {
+            "type": ["object", "null"],
+            "required": ["method", "amount_minor"],
+            "additionalProperties": false,
+            "properties": {
+                "method": {
+                    "enum": ["cash", "mobile_money", "card", "bank_transfer", "other"]
+                },
+                "amount_minor": { "type": "integer", "minimum": 1 },
+                "payment_reference": { "type": ["string", "null"], "maxLength": 64 }
+            }
+        }
+    }
+}

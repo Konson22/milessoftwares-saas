@@ -11,7 +11,7 @@ Miles Softwares' pharmacy product, served at `{workspace}/pharmacy`. Built from
 | Branch selection        | done     |
 | Medicines and stock     | done     |
 | Purchasing & receiving  | done     |
-| Dispensing / sales      | planned  |
+| Dispensing / sales      | done     |
 | Prescriptions           | planned  |
 
 Roles and permissions: [`platform/catalog.json`](platform/catalog.json) (Pharmacy Manager,

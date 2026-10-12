@@ -5,6 +5,7 @@ use App\Http\Controllers\GoodsReceiptController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MedicineController;
 use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\SaleController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Route;
@@ -51,6 +52,20 @@ Route::prefix(app(PlatformConfig::class)->path())
 
         Route::middleware('branch')->group(function () {
             Route::get('/', HomeController::class)->name('home');
+
+            // The counter of the branch being worked in.
+            Route::middleware('branch.can:pharmacy.sales.create')->group(function () {
+                Route::get('sales/create', [SaleController::class, 'create'])->name('sales.create');
+                Route::post('sales', [SaleController::class, 'store'])->name('sales.store');
+            });
+            Route::middleware('branch.can:pharmacy.sales.view')->group(function () {
+                Route::get('sales', [SaleController::class, 'index'])->name('sales.index');
+                Route::get('sales/{sale}', [SaleController::class, 'show'])->whereUuid('sale')->name('sales.show');
+            });
+            Route::post('sales/{sale}/void', [SaleController::class, 'void'])
+                ->whereUuid('sale')
+                ->middleware('branch.can:pharmacy.sales.void')
+                ->name('sales.void');
 
             // Purchasing for the branch being worked in.
             Route::middleware('branch.can:pharmacy.purchasing.view')->group(function () {
