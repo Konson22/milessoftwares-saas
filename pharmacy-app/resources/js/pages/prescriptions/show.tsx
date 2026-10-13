@@ -42,14 +42,22 @@ type Props = {
         verifiedBy: string | null;
         verifiedAt: string | null;
         rejectionReason: string | null;
-        sale: { id: string; number: string } | null;
-        totalMinor: number;
+        sales: {
+            id: string;
+            number: string;
+            soldAt: string;
+            totalMinor: number;
+            voided: boolean;
+        }[];
         items: {
             id: string;
             medicine: string;
             controlled: boolean;
             unit: string;
             quantity: number;
+            dispensed: number;
+            remaining: number;
+            unitPriceMinor: number;
             directions: string;
             available: number;
         }[];
@@ -70,9 +78,28 @@ export default function ShowPrescription({
 }: Props) {
     const { currency, errors } = usePage().props;
     const [method, setMethod] = useState(paymentMethods[0]?.value ?? 'cash');
-    const short = prescription.items.some(
-        (item) => item.available < item.quantity,
+    const open = prescription.items.filter((item) => item.remaining > 0);
+    // What is given now: by default all that is left, as far as stock allows.
+    const [quantities, setQuantities] = useState<Record<string, string>>(() =>
+        Object.fromEntries(
+            open.map((item) => [
+                item.id,
+                String(Math.min(item.remaining, item.available)),
+            ]),
+        ),
     );
+    const giving = open.map((item) => ({
+        item,
+        quantity: Math.max(0, Math.floor(Number(quantities[item.id]) || 0)),
+    }));
+    const totalMinor = giving.reduce(
+        (sum, { item, quantity }) => sum + quantity * item.unitPriceMinor,
+        0,
+    );
+    const short = giving.some(
+        ({ item, quantity }) => quantity > item.available,
+    );
+    const nothing = giving.every(({ quantity }) => quantity === 0);
 
     return (
         <>
@@ -137,18 +164,32 @@ export default function ShowPrescription({
                                 </dd>
                             </>
                         )}
-                        {prescription.sale && (
+                        {prescription.sales.length > 0 && (
                             <>
                                 <dt className="text-muted-foreground">
-                                    Dispensed as
+                                    Dispensed in
                                 </dt>
-                                <dd>
-                                    <Link
-                                        href={showSale(prescription.sale.id)}
-                                        className="underline"
-                                    >
-                                        {prescription.sale.number}
-                                    </Link>
+                                <dd className="flex flex-wrap gap-x-3">
+                                    {prescription.sales.map((sale) => (
+                                        <span key={sale.id}>
+                                            <Link
+                                                href={showSale(sale.id)}
+                                                className={
+                                                    sale.voided
+                                                        ? 'line-through'
+                                                        : 'underline'
+                                                }
+                                            >
+                                                {sale.number}
+                                            </Link>{' '}
+                                            <span className="text-muted-foreground">
+                                                {new Date(
+                                                    sale.soldAt,
+                                                ).toLocaleDateString()}
+                                                {sale.voided && ', voided'}
+                                            </span>
+                                        </span>
+                                    ))}
                                 </dd>
                             </>
                         )}
@@ -168,6 +209,7 @@ export default function ShowPrescription({
                         <TableRow>
                             <TableHead>Medicine</TableHead>
                             <TableHead>Quantity</TableHead>
+                            <TableHead>Given</TableHead>
                             <TableHead>Directions</TableHead>
                             <TableHead className="text-right">
                                 In stock
@@ -193,11 +235,24 @@ export default function ShowPrescription({
                                 <TableCell>
                                     {item.quantity} {item.unit}
                                 </TableCell>
+                                <TableCell className="tabular-nums">
+                                    {item.dispensed === 0 ? (
+                                        <span className="text-muted-foreground">
+                                            None yet
+                                        </span>
+                                    ) : item.remaining === 0 ? (
+                                        <StatusBadge tone="success">
+                                            All {item.dispensed}
+                                        </StatusBadge>
+                                    ) : (
+                                        `${item.dispensed}, ${item.remaining} left`
+                                    )}
+                                </TableCell>
                                 <TableCell className="text-muted-foreground">
                                     {item.directions}
                                 </TableCell>
                                 <TableCell
-                                    className={`text-right tabular-nums ${item.available < item.quantity ? 'text-destructive' : 'text-muted-foreground'}`}
+                                    className={`text-right tabular-nums ${item.available < item.remaining ? 'text-destructive' : 'text-muted-foreground'}`}
                                 >
                                     {item.available}
                                 </TableCell>
@@ -257,7 +312,8 @@ export default function ShowPrescription({
             {can.dispense && (
                 <Panel className="max-w-xl">
                     <PanelHeader
-                        title={`Dispense: ${formatMoney(prescription.totalMinor, currency ?? 'USD')}`}
+                        title={`Dispense: ${formatMoney(totalMinor, currency ?? 'USD')}`}
+                        description="Give all that is left, or part now and the rest on another visit."
                     />
                     <PanelBody>
                         <Form
@@ -266,10 +322,69 @@ export default function ShowPrescription({
                         >
                             {({ processing }) => (
                                 <>
+                                    <div className="grid gap-2">
+                                        {open.map((item) => (
+                                            <div
+                                                key={item.id}
+                                                className="flex items-center gap-3"
+                                            >
+                                                <Label
+                                                    htmlFor={`quantity-${item.id}`}
+                                                    className="flex-1 font-normal"
+                                                >
+                                                    {item.medicine}
+                                                    <span className="block text-xs text-muted-foreground">
+                                                        {item.remaining} left,{' '}
+                                                        {item.available} in
+                                                        stock
+                                                    </span>
+                                                </Label>
+                                                <Input
+                                                    id={`quantity-${item.id}`}
+                                                    name={`quantities[${item.id}]`}
+                                                    type="number"
+                                                    min={0}
+                                                    max={item.remaining}
+                                                    value={
+                                                        quantities[item.id] ??
+                                                        '0'
+                                                    }
+                                                    onChange={(event) =>
+                                                        setQuantities(
+                                                            (current) => ({
+                                                                ...current,
+                                                                [item.id]:
+                                                                    event.target
+                                                                        .value,
+                                                            }),
+                                                        )
+                                                    }
+                                                    className="w-24 text-right tabular-nums"
+                                                />
+                                                <span className="w-12 text-sm text-muted-foreground">
+                                                    {item.unit}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {(errors.quantities ||
+                                        Object.entries(errors).some(([key]) =>
+                                            key.startsWith('quantities.'),
+                                        )) && (
+                                        <p className="text-sm text-destructive">
+                                            {errors.quantities ??
+                                                Object.entries(errors).find(
+                                                    ([key]) =>
+                                                        key.startsWith(
+                                                            'quantities.',
+                                                        ),
+                                                )?.[1]}
+                                        </p>
+                                    )}
                                     {short && (
                                         <p className="text-sm text-destructive">
                                             Not enough stock in this branch for
-                                            every medicine.
+                                            what is entered.
                                         </p>
                                     )}
                                     <div className="grid gap-1.5">
@@ -325,7 +440,9 @@ export default function ShowPrescription({
                                     )}
                                     <Button
                                         type="submit"
-                                        disabled={processing || short}
+                                        disabled={
+                                            processing || short || nothing
+                                        }
                                     >
                                         Dispense and take payment
                                     </Button>

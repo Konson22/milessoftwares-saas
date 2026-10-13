@@ -47,6 +47,7 @@ const STATUS_TONES: Record<string, Tone> = {
     voided: 'danger',
     recorded: 'warning',
     verified: 'info',
+    partly_dispensed: 'warning',
     dispensed: 'success',
     rejected: 'danger',
 };

@@ -31,6 +31,7 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property string|null $voided_by
  * @property CarbonImmutable|null $voided_at
  * @property string|null $void_reason
+ * @property string|null $prescription_id
  * @property-read User $seller
  * @property-read User|null $voider
  * @property-read Collection<int, SaleLine> $lines

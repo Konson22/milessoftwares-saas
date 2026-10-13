@@ -8,6 +8,7 @@ use App\Models\Batch;
 use App\Models\Medicine;
 use App\Models\Prescription;
 use App\Models\PrescriptionItem;
+use App\Models\Sale;
 use App\Models\User;
 use App\Pharmacy\CurrentBranch;
 use App\Pharmacy\InsufficientStock;
@@ -110,7 +111,7 @@ class PrescriptionController extends Controller
     public function show(Prescription $prescription): Response
     {
         $this->ensureHere($prescription);
-        $prescription->load(['items.medicine', 'recorder:id,name', 'verifier:id,name', 'sale:id,number']);
+        $prescription->load(['items.medicine', 'recorder:id,name', 'verifier:id,name', 'sales:id,number,status,sold_at,total_minor,prescription_id']);
 
         $sellable = Batch::query()
             ->where('branch_id', $this->branch->id())
@@ -142,14 +143,22 @@ class PrescriptionController extends Controller
                 'verifiedBy' => $prescription->verifier?->name,
                 'verifiedAt' => $prescription->verified_at?->toIso8601String(),
                 'rejectionReason' => $prescription->rejection_reason,
-                'sale' => $prescription->sale === null ? null : ['id' => $prescription->sale->id, 'number' => $prescription->sale->number],
-                'totalMinor' => (int) $prescription->items->sum(fn (PrescriptionItem $item) => $item->quantity * $item->medicine->sell_price_minor),
+                'sales' => $prescription->sales->map(fn (Sale $sale) => [
+                    'id' => $sale->id,
+                    'number' => $sale->number,
+                    'soldAt' => $sale->sold_at->toIso8601String(),
+                    'totalMinor' => $sale->total_minor,
+                    'voided' => $sale->status === Sale::VOIDED,
+                ]),
                 'items' => $prescription->items->map(fn (PrescriptionItem $item) => [
                     'id' => $item->id,
                     'medicine' => $item->medicine->label(),
                     'controlled' => $item->medicine->controlled,
                     'unit' => $item->medicine->unit,
                     'quantity' => $item->quantity,
+                    'dispensed' => $item->dispensed_quantity,
+                    'remaining' => $item->remaining(),
+                    'unitPriceMinor' => $item->medicine->sell_price_minor,
                     'directions' => $item->directions,
                     'available' => (int) ($sellable[$item->medicine_id] ?? 0),
                 ]),
@@ -157,8 +166,8 @@ class PrescriptionController extends Controller
             'can' => [
                 'verify' => $status === PrescriptionStatus::Recorded && $can('pharmacy.prescriptions.verify'),
                 'reject' => in_array($status, [PrescriptionStatus::Recorded, PrescriptionStatus::Verified], true) && $can('pharmacy.prescriptions.verify'),
-                'cancel' => in_array($status, [PrescriptionStatus::Recorded, PrescriptionStatus::Verified], true) && $can('pharmacy.prescriptions.record'),
-                'dispense' => $status === PrescriptionStatus::Verified && ! $prescription->isExpired() && $can('pharmacy.sales.create'),
+                'cancel' => in_array($status, [PrescriptionStatus::Recorded, PrescriptionStatus::Verified, PrescriptionStatus::PartlyDispensed], true) && $can('pharmacy.prescriptions.record'),
+                'dispense' => in_array($status, [PrescriptionStatus::Verified, PrescriptionStatus::PartlyDispensed], true) && ! $prescription->isExpired() && $can('pharmacy.sales.create'),
             ],
             'paymentMethods' => array_map(fn (PaymentMethod $method) => ['value' => $method->value, 'label' => $method->label()], PaymentMethod::cases()),
         ]);
@@ -196,6 +205,9 @@ class PrescriptionController extends Controller
             'payment_method' => ['required', Rule::enum(PaymentMethod::class)],
             'payment_reference' => ['nullable', 'string', 'max:64'],
             'amount_tendered' => ['nullable', 'string', Money::rule()],
+            // Item id => quantity given now; all that is left when omitted.
+            'quantities' => ['nullable', 'array', 'max:30'],
+            'quantities.*' => ['nullable', 'integer', 'min:0', 'max:100000'],
         ]);
 
         try {
@@ -205,6 +217,7 @@ class PrescriptionController extends Controller
                 PaymentMethod::from($validated['payment_method']),
                 $validated['payment_reference'] ?? null,
                 isset($validated['amount_tendered']) ? Money::toMinor($validated['amount_tendered']) : null,
+                isset($validated['quantities']) ? array_map(fn ($quantity) => (int) $quantity, $validated['quantities']) : null,
             );
         } catch (InsufficientStock $e) {
             throw ValidationException::withMessages(['status' => $e->getMessage()]);

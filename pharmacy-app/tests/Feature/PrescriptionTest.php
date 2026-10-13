@@ -74,7 +74,8 @@ it('records, verifies and dispenses a prescription as one sale', function () {
     dispense($prescription)->assertSessionHasNoErrors();
 
     $sale = $this->asTenant('acme', fn () => Sale::query()->sole());
-    expect($prescription->refresh())->status->toBe(PrescriptionStatus::Dispensed)->dispensed_sale_id->toBe($sale->id)
+    expect($prescription->refresh())->status->toBe(PrescriptionStatus::Dispensed)
+        ->and($sale->prescription_id)->toBe($prescription->id)
         ->and($sale)->total_minor->toBe(21 * 1200 + 2 * 5000)->customer_name->toBe('Mary Akol')
         ->and($this->asTenant('acme', fn () => Batch::query()->pluck('quantity_on_hand', 'batch_number')->all()))->toBe(['A-1' => 9, 'M-1' => 8]);
 
@@ -135,8 +136,55 @@ it('makes a prescription dispensable again when its sale is voided', function ()
 
     $this->post($this->workspaceUrl('acme', "sales/{$sale->id}/void"), ['reason' => 'Patient left'])->assertSessionHasNoErrors();
 
-    expect($prescription->refresh())->status->toBe(PrescriptionStatus::Verified)->dispensed_sale_id->toBeNull();
+    expect($prescription->refresh())->status->toBe(PrescriptionStatus::Verified);
     dispense($prescription)->assertSessionHasNoErrors();
+});
+
+it('dispenses in parts: some now, the rest on another visit', function () {
+    pharmacist($this->juba);
+    $prescription = recordPrescription();
+    $this->post($this->workspaceUrl('acme', "prescriptions/{$prescription->id}/verify"));
+    [$amox, $morphine] = $this->asTenant('acme', fn () => $prescription->items()->get()->all());
+    $give = fn (array $quantities) => $this->post($this->workspaceUrl('acme', "prescriptions/{$prescription->id}/dispense"), [
+        'payment_method' => 'cash', 'amount_tendered' => '400.00', 'quantities' => $quantities,
+    ]);
+
+    // Seven days of antibiotics now, no morphine yet.
+    $give([$amox->id => 7, $morphine->id => 0])->assertSessionHasNoErrors();
+    expect($prescription->refresh()->status)->toBe(PrescriptionStatus::PartlyDispensed)
+        ->and($this->asTenant('acme', fn () => $amox->refresh()->dispensed_quantity))->toBe(7);
+
+    // Never more than is left, and never nothing.
+    $give([$amox->id => 15])->assertSessionHasErrors("quantities.{$amox->id}");
+    $give([$amox->id => 0])->assertSessionHasErrors('quantities');
+
+    // The rest: all that is left when no quantities are given.
+    dispense($prescription)->assertSessionHasNoErrors();
+
+    $sales = $this->asTenant('acme', fn () => Sale::query()->orderBy('number')->get());
+    expect($prescription->refresh()->status)->toBe(PrescriptionStatus::Dispensed)
+        ->and($sales->pluck('total_minor')->all())->toBe([7 * 1200, 14 * 1200 + 2 * 5000])
+        ->and($sales->pluck('prescription_id')->unique()->all())->toBe([$prescription->id]);
+
+    // Voiding the first visit gives its seven back.
+    $this->post($this->workspaceUrl('acme', "sales/{$sales[0]->id}/void"), ['reason' => 'Wrong strength'])->assertSessionHasNoErrors();
+    expect($prescription->refresh()->status)->toBe(PrescriptionStatus::PartlyDispensed)
+        ->and($this->asTenant('acme', fn () => $amox->refresh()->remaining()))->toBe(7);
+
+    // A patient who will not come back: the prescription is closed.
+    $this->post($this->workspaceUrl('acme', "prescriptions/{$prescription->id}/cancel"))->assertSessionHasNoErrors();
+    expect($prescription->refresh()->status)->toBe(PrescriptionStatus::Cancelled);
+    dispense($prescription)->assertSessionHasErrors('status');
+});
+
+it('refuses quantities for medicines that are not on the prescription', function () {
+    pharmacist($this->juba);
+    $prescription = recordPrescription();
+    $this->post($this->workspaceUrl('acme', "prescriptions/{$prescription->id}/verify"));
+
+    $this->post($this->workspaceUrl('acme', "prescriptions/{$prescription->id}/dispense"), [
+        'payment_method' => 'cash', 'amount_tendered' => '400.00', 'quantities' => [(string) str()->uuid() => 1],
+    ])->assertSessionHasErrors('quantities');
 });
 
 it('keeps branches apart', function () {

@@ -37,10 +37,12 @@ class ControlledRegisterController extends Controller
 
             // What each movement points at, fetched once per kind.
             $saleIds = $movements->where('reference_type', 'sale')->pluck('reference_id')->unique();
-            $sales = Sale::query()->whereIn('id', $saleIds)->get(['id', 'number'])->keyBy('id');
-            $prescriptions = Prescription::query()->whereIn('dispensed_sale_id', $saleIds)
-                ->get(['number', 'patient_name', 'prescriber_name', 'prescriber_registration', 'dispensed_sale_id'])
-                ->keyBy('dispensed_sale_id');
+            $sales = Sale::query()->whereIn('id', $saleIds)->get(['id', 'number', 'prescription_id'])->keyBy('id');
+            $byPrescription = Prescription::query()->whereIn('id', $sales->pluck('prescription_id')->filter()->unique())
+                ->get(['id', 'number', 'patient_name', 'prescriber_name', 'prescriber_registration'])
+                ->keyBy('id');
+            // Each sale's prescription (a prescription may be dispensed over several sales).
+            $prescriptions = $sales->map(fn (Sale $sale) => $sale->prescription_id === null ? null : $byPrescription->get($sale->prescription_id))->filter();
             $receipts = GoodsReceipt::query()
                 ->whereIn('id', $movements->where('reference_type', 'goods_receipt')->pluck('reference_id')->unique())
                 ->with('supplier:id,name')

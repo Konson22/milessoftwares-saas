@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $prescription_id
  * @property string $medicine_id
  * @property int $quantity
+ * @property int $dispensed_quantity
  * @property string $directions
  * @property-read Medicine $medicine
  */
@@ -26,7 +27,15 @@ class PrescriptionItem extends Model
 
     protected function casts(): array
     {
-        return ['quantity' => 'integer'];
+        return ['quantity' => 'integer', 'dispensed_quantity' => 'integer'];
+    }
+
+    /**
+     * What is still to be given.
+     */
+    public function remaining(): int
+    {
+        return max(0, $this->quantity - $this->dispensed_quantity);
     }
 
     /**

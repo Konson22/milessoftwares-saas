@@ -13,7 +13,7 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
 
 /**
  * A prescription brought to a branch: recorded, verified by a pharmacist,
- * then dispensed as a sale.
+ * then dispensed in one or more sales.
  *
  * @property string $id
  * @property string $organization_id
@@ -30,11 +30,10 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property string|null $verified_by
  * @property CarbonImmutable|null $verified_at
  * @property string|null $rejection_reason
- * @property string|null $dispensed_sale_id
  * @property CarbonImmutable $created_at
  * @property-read User $recorder
  * @property-read User|null $verifier
- * @property-read Sale|null $sale
+ * @property-read Collection<int, Sale> $sales
  * @property-read Collection<int, PrescriptionItem> $items
  */
 class Prescription extends Model
@@ -84,11 +83,13 @@ class Prescription extends Model
     }
 
     /**
-     * @return BelongsTo<Sale, $this>
+     * The sales it was dispensed in (one per visit).
+     *
+     * @return HasMany<Sale, $this>
      */
-    public function sale(): BelongsTo
+    public function sales(): HasMany
     {
-        return $this->belongsTo(Sale::class, 'dispensed_sale_id');
+        return $this->hasMany(Sale::class)->orderBy('sold_at');
     }
 
     /**

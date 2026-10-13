@@ -13,8 +13,9 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Prescriptions: recorded at the counter, verified (or rejected) by a
- * pharmacist, then dispensed in full as one sale. Only a verified, unexpired
- * prescription lets prescription-only and controlled medicines be sold.
+ * pharmacist, then dispensed in one or more sales (the patient may take part
+ * now and the rest later). Only a verified, unexpired prescription lets
+ * prescription-only and controlled medicines be sold.
  */
 class Prescriptions
 {
@@ -72,23 +73,31 @@ class Prescriptions
         ]));
     }
 
+    /**
+     * Withdraws a prescription, or closes one partly dispensed that the
+     * patient will not come back for (what was given stays given).
+     */
     public function cancel(Prescription $prescription): Prescription
     {
-        return $this->transition($prescription, [PrescriptionStatus::Recorded, PrescriptionStatus::Verified], fn (Prescription $locked) => $locked->forceFill([
+        return $this->transition($prescription, [PrescriptionStatus::Recorded, PrescriptionStatus::Verified, PrescriptionStatus::PartlyDispensed], fn (Prescription $locked) => $locked->forceFill([
             'status' => PrescriptionStatus::Cancelled,
         ]));
     }
 
     /**
-     * Dispenses the whole prescription as one sale from the branch's stock.
+     * Dispenses what is given now as one sale from the branch's stock: all
+     * that is left by default, or the quantities asked for (item id =>
+     * quantity) when the patient takes part now and the rest later.
+     *
+     * @param  array<string, int>|null  $quantities
      */
-    public function dispense(Prescription $prescription, User $by, PaymentMethod $method, ?string $paymentReference, ?int $tenderedMinor): Sale
+    public function dispense(Prescription $prescription, User $by, PaymentMethod $method, ?string $paymentReference, ?int $tenderedMinor, ?array $quantities = null): Sale
     {
-        return DB::transaction(function () use ($prescription, $by, $method, $paymentReference, $tenderedMinor) {
-            // Locked first: the same prescription is never dispensed twice.
+        return DB::transaction(function () use ($prescription, $by, $method, $paymentReference, $tenderedMinor, $quantities) {
+            // Locked first: the same quantities are never dispensed twice.
             $locked = Prescription::query()->whereKey($prescription->id)->lockForUpdate()->firstOrFail();
 
-            if ($locked->status !== PrescriptionStatus::Verified) {
+            if (! in_array($locked->status, [PrescriptionStatus::Verified, PrescriptionStatus::PartlyDispensed], true)) {
                 throw ValidationException::withMessages(['status' => "Prescription {$locked->number} is not ready to dispense ({$locked->status->label()})."]);
             }
             if ($locked->isExpired()) {
@@ -96,32 +105,90 @@ class Prescriptions
             }
 
             $items = $locked->items()->get();
+            $unknown = array_diff(array_keys($quantities ?? []), $items->pluck('id')->all());
+            if ($unknown !== []) {
+                throw ValidationException::withMessages(['quantities' => 'A medicine is not on this prescription.']);
+            }
+
+            $giving = [];
+            foreach ($items as $item) {
+                $quantity = $quantities === null ? $item->remaining() : (int) ($quantities[$item->id] ?? 0);
+
+                if ($quantity < 0 || $quantity > $item->remaining()) {
+                    throw ValidationException::withMessages(["quantities.{$item->id}" => "Only {$item->remaining()} of {$item->quantity} are left to give."]);
+                }
+                if ($quantity > 0) {
+                    $giving[] = [$item, $quantity];
+                }
+            }
+
+            if ($giving === []) {
+                throw ValidationException::withMessages(['quantities' => 'Give at least one medicine.']);
+            }
 
             $sale = $this->sell->handle(
                 by: $by,
                 branchId: $locked->branch_id,
-                items: array_values($items->map(fn (PrescriptionItem $item) => ['medicine_id' => $item->medicine_id, 'quantity' => $item->quantity])->all()),
+                items: array_map(fn (array $part) => ['medicine_id' => $part[0]->medicine_id, 'quantity' => $part[1]], $giving),
                 method: $method,
                 paymentReference: $paymentReference,
                 tenderedMinor: $tenderedMinor,
                 customerName: $locked->patient_name,
                 prescribed: array_values($items->map(fn (PrescriptionItem $item) => $item->medicine_id)->all()),
             );
+            $sale->forceFill(['prescription_id' => $locked->id])->save();
 
-            $locked->forceFill(['status' => PrescriptionStatus::Dispensed, 'dispensed_sale_id' => $sale->id])->save();
+            foreach ($giving as [$item, $quantity]) {
+                $item->forceFill(['dispensed_quantity' => $item->dispensed_quantity + $quantity])->save();
+            }
+
+            $this->settle($locked);
 
             return $sale;
         });
     }
 
     /**
-     * A voided sale makes its prescription dispensable again.
+     * A voided sale gives its quantities back to the prescription.
      */
     public function saleVoided(Sale $sale): void
     {
-        Prescription::query()
-            ->where('dispensed_sale_id', $sale->id)
-            ->update(['status' => PrescriptionStatus::Verified->value, 'dispensed_sale_id' => null, 'updated_at' => now()]);
+        if ($sale->prescription_id === null) {
+            return;
+        }
+
+        $prescription = Prescription::query()->whereKey($sale->prescription_id)->lockForUpdate()->firstOrFail();
+        $returned = $sale->lines()->get()->groupBy('medicine_id')->map(fn ($lines) => (int) $lines->sum('quantity'));
+
+        foreach ($prescription->items()->get() as $item) {
+            $back = (int) ($returned[$item->medicine_id] ?? 0);
+            if ($back > 0) {
+                $item->forceFill(['dispensed_quantity' => max(0, $item->dispensed_quantity - $back)])->save();
+            }
+        }
+
+        $this->settle($prescription);
+    }
+
+    /**
+     * Status from what has been given: none, some, or all of it.
+     */
+    private function settle(Prescription $prescription): void
+    {
+        // A closed prescription stays closed, even if a sale from it is voided.
+        if (in_array($prescription->status, [PrescriptionStatus::Cancelled, PrescriptionStatus::Rejected], true)) {
+            return;
+        }
+
+        $items = $prescription->items()->get();
+        $given = (int) $items->sum('dispensed_quantity');
+        $left = (int) $items->sum(fn (PrescriptionItem $item) => $item->remaining());
+
+        $prescription->forceFill(['status' => match (true) {
+            $given === 0 => PrescriptionStatus::Verified,
+            $left > 0 => PrescriptionStatus::PartlyDispensed,
+            default => PrescriptionStatus::Dispensed,
+        }])->save();
     }
 
     /**
