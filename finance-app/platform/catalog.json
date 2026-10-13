@@ -1,0 +1,132 @@
+{
+    "application": {
+        "code": "finance",
+        "name": "Finance",
+        "category": "shared",
+        "kind": "shared_module",
+        "status": "beta"
+    },
+    "version": "1.0.0",
+    "permissions": [
+        {
+            "key": "finance.accounts.view",
+            "name": "View the chart of accounts and the ledger",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.accounts.manage",
+            "name": "Add and change accounts",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.journals.view",
+            "name": "View journals",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.journals.post",
+            "name": "Post and reverse manual journals",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.payables.view",
+            "name": "View suppliers, bills and supplier payments",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.payables.manage",
+            "name": "Record bills and pay suppliers",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.receivables.view",
+            "name": "View invoices and customer payments",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.receivables.manage",
+            "name": "Raise invoices and record customer payments",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.banking.view",
+            "name": "View bank and cash accounts",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.banking.manage",
+            "name": "Record money in, money out and transfers",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.reports.view",
+            "name": "View financial statements",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        }
+    ],
+    "roles": [
+        {
+            "key": "accountant",
+            "name": "Accountant",
+            "sensitivity": 3,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "finance.accounts.view",
+                "finance.accounts.manage",
+                "finance.journals.view",
+                "finance.journals.post",
+                "finance.payables.view",
+                "finance.payables.manage",
+                "finance.receivables.view",
+                "finance.receivables.manage",
+                "finance.banking.view",
+                "finance.banking.manage",
+                "finance.reports.view"
+            ]
+        },
+        {
+            "key": "bookkeeper",
+            "name": "Bookkeeper",
+            "sensitivity": 3,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "finance.accounts.view",
+                "finance.journals.view",
+                "finance.payables.view",
+                "finance.payables.manage",
+                "finance.receivables.view",
+                "finance.receivables.manage",
+                "finance.banking.view",
+                "finance.banking.manage"
+            ]
+        },
+        {
+            "key": "auditor",
+            "name": "Auditor (read only)",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "finance.accounts.view",
+                "finance.journals.view",
+                "finance.payables.view",
+                "finance.receivables.view",
+                "finance.banking.view",
+                "finance.reports.view"
+            ]
+        }
+    ]
+}

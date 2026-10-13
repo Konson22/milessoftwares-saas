@@ -47,10 +47,20 @@ export default defineConfig({
         }),
     ]),
     server: {
-        // DEV_SERVER_HOST: listen on the address the platform hosts resolve to
-        // (browsers block a LAN-address page from loading loopback assets).
+        // DEV_SERVER_HOST: the address to listen on (0.0.0.0 for every one).
+        // DEV_SERVER_PUBLIC_HOST: the name pages load scripts from, e.g.
+        // milessoftwares.local. It resolves to the same address as the page
+        // (browsers block a LAN-address page from loading loopback assets)
+        // and follows the hosts file when the machine's IP changes.
         host: env.DEV_SERVER_HOST || undefined,
         port: env.DEV_SERVER_PORT ? Number(env.DEV_SERVER_PORT) : undefined,
+        origin:
+            env.DEV_SERVER_PUBLIC_HOST && env.DEV_SERVER_PORT
+                ? `http://${env.DEV_SERVER_PUBLIC_HOST}:${env.DEV_SERVER_PORT}`
+                : undefined,
+        hmr: env.DEV_SERVER_PUBLIC_HOST
+            ? { host: env.DEV_SERVER_PUBLIC_HOST }
+            : undefined,
         strictPort: Boolean(env.DEV_SERVER_PORT),
         cors: { origin: platformOrigin },
         watch: {

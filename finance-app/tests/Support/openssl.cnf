@@ -1,0 +1,5 @@
+# Minimal OpenSSL config so openssl_pkey_new() works on Windows PHP builds
+# without OPENSSL_CONF (test key generation only).
+[ req ]
+distinguished_name = req_dn
+[ req_dn ]

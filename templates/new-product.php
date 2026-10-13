@@ -112,6 +112,7 @@ Next:
   3. Register:        cd ../central-app && php artisan platform:local-product {$code}-app --url=http://127.0.0.1:{$port} --entitle=<workspace-slug>
   4. Web server:      add to ops/local-dev/apache-dev.conf (before the platform's ProxyPass "/"), copy it to D:/srv/apache/miles-dev.conf, restart Apache:
                         RedirectMatch 301 "^/{$code}$" "/{$code}/"
+                        ProxyPassMatch   "^/{$code}$" "!"
                         ProxyPass        "/{$code}/" "http://127.0.0.1:{$port}/{$code}/"
                         ProxyPassReverse "/{$code}/" "http://127.0.0.1:{$port}/{$code}/"
      Production:      copy ops/nginx/products/pharmacy.conf to ops/nginx/products/{$code}.conf and rename the paths.
