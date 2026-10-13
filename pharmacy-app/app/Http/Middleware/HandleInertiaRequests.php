@@ -8,6 +8,7 @@ use App\Pharmacy\Money;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Miles\PlatformClient\Access\CurrentAccess;
+use Miles\PlatformClient\Api\Branch;
 use Miles\PlatformClient\Tenancy\CurrentTenant;
 
 class HandleInertiaRequests extends Middleware
@@ -72,6 +73,11 @@ class HandleInertiaRequests extends Middleware
                     ->filter(fn (string $permission) => $access->allowsIn($permission, branchId: $branch->id))
                     ->values()->all();
             },
+            // The branches open to the member, for the branch switcher.
+            'branches' => fn () => app(CurrentAccess::class)->get() === null ? [] : array_map(
+                fn (Branch $branch) => ['id' => $branch->id, 'name' => $branch->name],
+                app(Branches::class)->available(),
+            ),
             'canSwitchBranch' => fn () => app(CurrentAccess::class)->get() !== null && count(app(Branches::class)->available()) > 1,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

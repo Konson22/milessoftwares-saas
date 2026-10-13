@@ -1,7 +1,9 @@
 import { Form, Head, usePage } from '@inertiajs/react';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/page-header';
+import { Panel, PanelBody, PanelHeader } from '@/components/panel';
+import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -108,157 +110,162 @@ export default function Counter({ medicines, paymentMethods }: Props) {
     return (
         <>
             <Head title="Counter" />
-            <h1 className="text-2xl font-semibold">Counter, {branch?.name}</h1>
+            <PageHeader title="Counter" description={branch?.name} />
 
-            <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_22rem]">
-                <section aria-label="Find medicines">
-                    <Label htmlFor="search">Find a medicine</Label>
-                    <Input
-                        id="search"
-                        value={search}
-                        onChange={(event) => setSearch(event.target.value)}
-                        placeholder="Name, generic name or scan a barcode"
-                        autoFocus
-                        autoComplete="off"
-                        className="mt-1.5"
-                    />
-                    {matches.length > 0 && (
-                        <ul className="mt-2 divide-y rounded-md border">
-                            {matches.map((medicine) => {
-                                const blocked =
-                                    medicine.prescriptionOnly ||
-                                    medicine.available === 0;
+            <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
+                <Panel>
+                    <PanelHeader title="Find medicines" />
+                    <PanelBody>
+                        <Label htmlFor="search">Find a medicine</Label>
+                        <Input
+                            id="search"
+                            value={search}
+                            onChange={(event) => setSearch(event.target.value)}
+                            placeholder="Name, generic name or scan a barcode"
+                            autoFocus
+                            autoComplete="off"
+                            className="mt-1.5"
+                        />
+                        {matches.length > 0 && (
+                            <ul className="mt-2 divide-y rounded-md border">
+                                {matches.map((medicine) => {
+                                    const blocked =
+                                        medicine.prescriptionOnly ||
+                                        medicine.available === 0;
 
-                                return (
-                                    <li key={medicine.id}>
-                                        <button
-                                            type="button"
-                                            disabled={blocked}
-                                            onClick={() => add(medicine)}
-                                            className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-left text-sm hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-60"
-                                        >
-                                            <span className="font-medium">
-                                                {medicine.label}
-                                            </span>
-                                            <span className="text-muted-foreground">
-                                                {medicine.genericName}
-                                            </span>
-                                            {medicine.prescriptionOnly && (
-                                                <Badge variant="secondary">
-                                                    Needs prescription
-                                                </Badge>
-                                            )}
-                                            <span className="ml-auto tabular-nums">
-                                                {money(medicine.priceMinor)} ·{' '}
-                                                {medicine.available}{' '}
-                                                {medicine.unit} in stock
-                                            </span>
-                                        </button>
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    )}
+                                    return (
+                                        <li key={medicine.id}>
+                                            <button
+                                                type="button"
+                                                disabled={blocked}
+                                                onClick={() => add(medicine)}
+                                                className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-left text-sm hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-60"
+                                            >
+                                                <span className="font-medium">
+                                                    {medicine.label}
+                                                </span>
+                                                <span className="text-muted-foreground">
+                                                    {medicine.genericName}
+                                                </span>
+                                                {medicine.prescriptionOnly && (
+                                                    <StatusBadge tone="info">
+                                                        Needs prescription
+                                                    </StatusBadge>
+                                                )}
+                                                <span className="ml-auto tabular-nums">
+                                                    {money(medicine.priceMinor)}{' '}
+                                                    · {medicine.available}{' '}
+                                                    {medicine.unit} in stock
+                                                </span>
+                                            </button>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        )}
 
-                    <h2 className="mt-6 text-lg font-semibold">Basket</h2>
-                    {basket.length === 0 ? (
-                        <p className="mt-2 text-sm text-muted-foreground">
-                            Nothing yet: search above.
-                        </p>
-                    ) : (
-                        <ul className="mt-2 divide-y rounded-md border">
-                            {basket.map((line) => (
-                                <li
-                                    key={line.medicine.id}
-                                    className="flex flex-wrap items-center gap-3 px-4 py-2 text-sm"
-                                >
-                                    <span className="font-medium">
-                                        {line.medicine.label}
-                                    </span>
-                                    <div className="ml-auto flex items-center gap-1">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="icon"
-                                            className="size-8"
-                                            aria-label={`One less ${line.medicine.label}`}
-                                            onClick={() =>
-                                                setQuantity(
-                                                    line.medicine.id,
-                                                    line.quantity - 1,
-                                                )
-                                            }
-                                        >
-                                            <Minus
-                                                className="size-4"
-                                                aria-hidden
-                                            />
-                                        </Button>
-                                        <Input
-                                            type="number"
-                                            min={1}
-                                            max={line.medicine.available}
-                                            value={line.quantity}
-                                            onChange={(event) =>
-                                                setQuantity(
-                                                    line.medicine.id,
-                                                    Number(event.target.value),
-                                                )
-                                            }
-                                            aria-label={`Quantity of ${line.medicine.label}`}
-                                            className="h-8 w-20 text-center"
-                                        />
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="icon"
-                                            className="size-8"
-                                            aria-label={`One more ${line.medicine.label}`}
-                                            onClick={() =>
-                                                setQuantity(
-                                                    line.medicine.id,
-                                                    line.quantity + 1,
-                                                )
-                                            }
-                                        >
-                                            <Plus
-                                                className="size-4"
-                                                aria-hidden
-                                            />
-                                        </Button>
-                                    </div>
-                                    <span className="w-28 text-right tabular-nums">
-                                        {money(
-                                            line.quantity *
-                                                line.medicine.priceMinor,
-                                        )}
-                                    </span>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="size-8"
-                                        aria-label={`Remove ${line.medicine.label}`}
-                                        onClick={() =>
-                                            setBasket(
-                                                basket.filter(
-                                                    (l) =>
-                                                        l.medicine.id !==
-                                                        line.medicine.id,
-                                                ),
-                                            )
-                                        }
+                        <h2 className="mt-6 text-sm font-semibold">Basket</h2>
+                        {basket.length === 0 ? (
+                            <p className="mt-2 text-sm text-muted-foreground">
+                                Nothing yet: search above.
+                            </p>
+                        ) : (
+                            <ul className="mt-2 divide-y rounded-md border">
+                                {basket.map((line) => (
+                                    <li
+                                        key={line.medicine.id}
+                                        className="flex flex-wrap items-center gap-3 px-4 py-2 text-sm"
                                     >
-                                        <Trash2
-                                            className="size-4"
-                                            aria-hidden
-                                        />
-                                    </Button>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </section>
+                                        <span className="font-medium">
+                                            {line.medicine.label}
+                                        </span>
+                                        <div className="ml-auto flex items-center gap-1">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="icon"
+                                                className="size-8"
+                                                aria-label={`One less ${line.medicine.label}`}
+                                                onClick={() =>
+                                                    setQuantity(
+                                                        line.medicine.id,
+                                                        line.quantity - 1,
+                                                    )
+                                                }
+                                            >
+                                                <Minus
+                                                    className="size-4"
+                                                    aria-hidden
+                                                />
+                                            </Button>
+                                            <Input
+                                                type="number"
+                                                min={1}
+                                                max={line.medicine.available}
+                                                value={line.quantity}
+                                                onChange={(event) =>
+                                                    setQuantity(
+                                                        line.medicine.id,
+                                                        Number(
+                                                            event.target.value,
+                                                        ),
+                                                    )
+                                                }
+                                                aria-label={`Quantity of ${line.medicine.label}`}
+                                                className="h-8 w-20 text-center"
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="icon"
+                                                className="size-8"
+                                                aria-label={`One more ${line.medicine.label}`}
+                                                onClick={() =>
+                                                    setQuantity(
+                                                        line.medicine.id,
+                                                        line.quantity + 1,
+                                                    )
+                                                }
+                                            >
+                                                <Plus
+                                                    className="size-4"
+                                                    aria-hidden
+                                                />
+                                            </Button>
+                                        </div>
+                                        <span className="w-28 text-right tabular-nums">
+                                            {money(
+                                                line.quantity *
+                                                    line.medicine.priceMinor,
+                                            )}
+                                        </span>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="size-8"
+                                            aria-label={`Remove ${line.medicine.label}`}
+                                            onClick={() =>
+                                                setBasket(
+                                                    basket.filter(
+                                                        (l) =>
+                                                            l.medicine.id !==
+                                                            line.medicine.id,
+                                                    ),
+                                                )
+                                            }
+                                        >
+                                            <Trash2
+                                                className="size-4"
+                                                aria-hidden
+                                            />
+                                        </Button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </PanelBody>
+                </Panel>
 
                 <Form
                     {...store.form()}
@@ -266,7 +273,7 @@ export default function Counter({ medicines, paymentMethods }: Props) {
                         setBasket([]);
                         setTendered('');
                     }}
-                    className="grid content-start gap-4 rounded-md border p-4"
+                    className="grid content-start gap-4 rounded-lg border bg-card p-4 shadow-xs"
                 >
                     {({ errors, processing }) => (
                         <>

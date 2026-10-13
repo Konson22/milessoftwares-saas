@@ -1,9 +1,19 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/page-header';
+import { Panel, PanelBody, PanelHeader } from '@/components/panel';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { formatMoney } from '@/lib/money';
 import {
     cancel,
@@ -67,108 +77,137 @@ export default function ShowPrescription({
     return (
         <>
             <Head title={prescription.number} />
-            <Link
-                href={index()}
-                className="text-sm text-muted-foreground hover:underline"
-            >
-                ← Prescriptions
-            </Link>
-            <div className="mt-2 flex flex-wrap items-center gap-3">
-                <h1 className="text-2xl font-semibold">
-                    {prescription.number}
-                </h1>
-                <Badge variant="secondary">{prescription.statusLabel}</Badge>
-                {prescription.expired && (
-                    <Badge variant="destructive">Expired</Badge>
-                )}
-            </div>
+            <PageHeader
+                title={prescription.number}
+                badges={
+                    <>
+                        <StatusBadge tone={statusTone(prescription.status)}>
+                            {prescription.statusLabel}
+                        </StatusBadge>
+                        {prescription.expired && (
+                            <StatusBadge tone="danger">Expired</StatusBadge>
+                        )}
+                    </>
+                }
+                actions={
+                    <Button variant="outline" size="sm" asChild>
+                        <Link href={index()}>← Prescriptions</Link>
+                    </Button>
+                }
+            />
             {errors.status && (
-                <p className="mt-2 text-sm text-destructive">{errors.status}</p>
+                <p className="mb-4 text-sm text-destructive">{errors.status}</p>
             )}
 
-            <dl className="mt-4 grid max-w-3xl gap-x-6 gap-y-1 text-sm sm:grid-cols-[max-content_1fr]">
-                <dt className="text-muted-foreground">Patient</dt>
-                <dd>
-                    {prescription.patientName}
-                    {prescription.patientAge !== null &&
-                        `, ${prescription.patientAge} years`}
-                </dd>
-                <dt className="text-muted-foreground">Prescriber</dt>
-                <dd>
-                    {prescription.prescriberName}
-                    {prescription.prescriberRegistration &&
-                        ` (${prescription.prescriberRegistration})`}
-                </dd>
-                <dt className="text-muted-foreground">Written</dt>
-                <dd>
-                    {prescription.issuedOn}, valid until{' '}
-                    {prescription.expiresOn}
-                </dd>
-                <dt className="text-muted-foreground">Recorded by</dt>
-                <dd>{prescription.recordedBy}</dd>
-                {prescription.verifiedBy && (
-                    <>
-                        <dt className="text-muted-foreground">
-                            {prescription.status === 'rejected'
-                                ? 'Rejected by'
-                                : 'Verified by'}
-                        </dt>
+            <Panel className="mb-5 max-w-3xl">
+                <PanelBody>
+                    <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-[max-content_1fr]">
+                        <dt className="text-muted-foreground">Patient</dt>
                         <dd>
-                            {prescription.verifiedBy}
-                            {prescription.verifiedAt &&
-                                `, ${new Date(prescription.verifiedAt).toLocaleString()}`}
-                            {prescription.rejectionReason &&
-                                `: ${prescription.rejectionReason}`}
+                            {prescription.patientName}
+                            {prescription.patientAge !== null &&
+                                `, ${prescription.patientAge} years`}
                         </dd>
-                    </>
-                )}
-                {prescription.sale && (
-                    <>
-                        <dt className="text-muted-foreground">Dispensed as</dt>
+                        <dt className="text-muted-foreground">Prescriber</dt>
                         <dd>
-                            <Link
-                                href={showSale(prescription.sale.id)}
-                                className="underline"
-                            >
-                                {prescription.sale.number}
-                            </Link>
+                            {prescription.prescriberName}
+                            {prescription.prescriberRegistration &&
+                                ` (${prescription.prescriberRegistration})`}
                         </dd>
-                    </>
-                )}
-                {prescription.notes && (
-                    <>
-                        <dt className="text-muted-foreground">Notes</dt>
-                        <dd>{prescription.notes}</dd>
-                    </>
-                )}
-            </dl>
-
-            <ul className="mt-6 divide-y rounded-md border">
-                {prescription.items.map((item) => (
-                    <li
-                        key={item.id}
-                        className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-sm"
-                    >
-                        <span className="font-medium">{item.medicine}</span>
-                        {item.controlled && (
-                            <Badge variant="destructive">Controlled</Badge>
+                        <dt className="text-muted-foreground">Written</dt>
+                        <dd>
+                            {prescription.issuedOn}, valid until{' '}
+                            {prescription.expiresOn}
+                        </dd>
+                        <dt className="text-muted-foreground">Recorded by</dt>
+                        <dd>{prescription.recordedBy}</dd>
+                        {prescription.verifiedBy && (
+                            <>
+                                <dt className="text-muted-foreground">
+                                    {prescription.status === 'rejected'
+                                        ? 'Rejected by'
+                                        : 'Verified by'}
+                                </dt>
+                                <dd>
+                                    {prescription.verifiedBy}
+                                    {prescription.verifiedAt &&
+                                        `, ${new Date(prescription.verifiedAt).toLocaleString()}`}
+                                    {prescription.rejectionReason &&
+                                        `: ${prescription.rejectionReason}`}
+                                </dd>
+                            </>
                         )}
-                        <span>
-                            {item.quantity} {item.unit}
-                        </span>
-                        <span className="text-muted-foreground">
-                            {item.directions}
-                        </span>
-                        <span
-                            className={`ml-auto ${item.available < item.quantity ? 'text-destructive' : 'text-muted-foreground'}`}
-                        >
-                            {item.available} in stock
-                        </span>
-                    </li>
-                ))}
-            </ul>
+                        {prescription.sale && (
+                            <>
+                                <dt className="text-muted-foreground">
+                                    Dispensed as
+                                </dt>
+                                <dd>
+                                    <Link
+                                        href={showSale(prescription.sale.id)}
+                                        className="underline"
+                                    >
+                                        {prescription.sale.number}
+                                    </Link>
+                                </dd>
+                            </>
+                        )}
+                        {prescription.notes && (
+                            <>
+                                <dt className="text-muted-foreground">Notes</dt>
+                                <dd>{prescription.notes}</dd>
+                            </>
+                        )}
+                    </dl>
+                </PanelBody>
+            </Panel>
 
-            <div className="mt-6 flex flex-wrap gap-3">
+            <Panel className="mb-5">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Medicine</TableHead>
+                            <TableHead>Quantity</TableHead>
+                            <TableHead>Directions</TableHead>
+                            <TableHead className="text-right">
+                                In stock
+                            </TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {prescription.items.map((item) => (
+                            <TableRow key={item.id}>
+                                <TableCell>
+                                    <span className="font-medium">
+                                        {item.medicine}
+                                    </span>
+                                    {item.controlled && (
+                                        <StatusBadge
+                                            tone="danger"
+                                            className="ml-2"
+                                        >
+                                            Controlled
+                                        </StatusBadge>
+                                    )}
+                                </TableCell>
+                                <TableCell>
+                                    {item.quantity} {item.unit}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">
+                                    {item.directions}
+                                </TableCell>
+                                <TableCell
+                                    className={`text-right tabular-nums ${item.available < item.quantity ? 'text-destructive' : 'text-muted-foreground'}`}
+                                >
+                                    {item.available}
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </Panel>
+
+            <div className="mb-5 flex flex-wrap gap-3">
                 {can.verify && (
                     <Form {...verify.form(prescription.id)}>
                         <Button type="submit">Verify (pharmacist)</Button>
@@ -186,7 +225,7 @@ export default function ShowPrescription({
             {can.reject && (
                 <Form
                     {...reject.form(prescription.id)}
-                    className="mt-4 flex max-w-xl flex-wrap items-start gap-2"
+                    className="mb-5 flex max-w-xl flex-wrap items-start gap-2"
                 >
                     {({ errors: formErrors, processing }) => (
                         <>
@@ -216,83 +255,85 @@ export default function ShowPrescription({
             )}
 
             {can.dispense && (
-                <Form
-                    {...dispense.form(prescription.id)}
-                    className="mt-6 grid max-w-xl gap-3 rounded-md border p-4"
-                >
-                    {({ processing }) => (
-                        <>
-                            <h2 className="font-semibold">
-                                Dispense:{' '}
-                                {formatMoney(
-                                    prescription.totalMinor,
-                                    currency ?? 'USD',
-                                )}
-                            </h2>
-                            {short && (
-                                <p className="text-sm text-destructive">
-                                    Not enough stock in this branch for every
-                                    medicine.
-                                </p>
-                            )}
-                            <div className="grid gap-1.5">
-                                <Label htmlFor="payment_method">Payment</Label>
-                                <select
-                                    id="payment_method"
-                                    name="payment_method"
-                                    value={method}
-                                    onChange={(event) =>
-                                        setMethod(event.target.value)
-                                    }
-                                    className="h-9 rounded-md border bg-transparent px-3 text-sm"
-                                >
-                                    {paymentMethods.map((option) => (
-                                        <option
-                                            key={option.value}
-                                            value={option.value}
-                                        >
-                                            {option.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                            {method === 'cash' ? (
-                                <div className="grid gap-1.5">
-                                    <Label htmlFor="amount_tendered">
-                                        Cash given
-                                    </Label>
-                                    <Input
-                                        id="amount_tendered"
-                                        name="amount_tendered"
-                                        inputMode="decimal"
-                                        required
-                                    />
-                                    {errors.amount_tendered && (
+                <Panel className="max-w-xl">
+                    <PanelHeader
+                        title={`Dispense: ${formatMoney(prescription.totalMinor, currency ?? 'USD')}`}
+                    />
+                    <PanelBody>
+                        <Form
+                            {...dispense.form(prescription.id)}
+                            className="grid gap-3"
+                        >
+                            {({ processing }) => (
+                                <>
+                                    {short && (
                                         <p className="text-sm text-destructive">
-                                            {errors.amount_tendered}
+                                            Not enough stock in this branch for
+                                            every medicine.
                                         </p>
                                     )}
-                                </div>
-                            ) : (
-                                <div className="grid gap-1.5">
-                                    <Label htmlFor="payment_reference">
-                                        Payment reference
-                                    </Label>
-                                    <Input
-                                        id="payment_reference"
-                                        name="payment_reference"
-                                    />
-                                </div>
+                                    <div className="grid gap-1.5">
+                                        <Label htmlFor="payment_method">
+                                            Payment
+                                        </Label>
+                                        <select
+                                            id="payment_method"
+                                            name="payment_method"
+                                            value={method}
+                                            onChange={(event) =>
+                                                setMethod(event.target.value)
+                                            }
+                                            className="h-9 rounded-md border bg-transparent px-3 text-sm"
+                                        >
+                                            {paymentMethods.map((option) => (
+                                                <option
+                                                    key={option.value}
+                                                    value={option.value}
+                                                >
+                                                    {option.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    {method === 'cash' ? (
+                                        <div className="grid gap-1.5">
+                                            <Label htmlFor="amount_tendered">
+                                                Cash given
+                                            </Label>
+                                            <Input
+                                                id="amount_tendered"
+                                                name="amount_tendered"
+                                                inputMode="decimal"
+                                                required
+                                            />
+                                            {errors.amount_tendered && (
+                                                <p className="text-sm text-destructive">
+                                                    {errors.amount_tendered}
+                                                </p>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="grid gap-1.5">
+                                            <Label htmlFor="payment_reference">
+                                                Payment reference
+                                            </Label>
+                                            <Input
+                                                id="payment_reference"
+                                                name="payment_reference"
+                                            />
+                                        </div>
+                                    )}
+                                    <Button
+                                        type="submit"
+                                        disabled={processing || short}
+                                    >
+                                        Dispense and take payment
+                                    </Button>
+                                </>
                             )}
-                            <Button
-                                type="submit"
-                                disabled={processing || short}
-                            >
-                                Dispense and take payment
-                            </Button>
-                        </>
-                    )}
-                </Form>
+                        </Form>
+                    </PanelBody>
+                </Panel>
             )}
         </>
     );

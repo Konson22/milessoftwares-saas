@@ -1,11 +1,13 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+    AlertTriangle,
+    Clock,
+    FileText,
+    Package,
+    ReceiptText,
+} from 'lucide-react';
+import { PageHeader } from '@/components/page-header';
+import { StatCard } from '@/components/stat-card';
 import { formatMoney } from '@/lib/money';
 import { index as prescriptions } from '@/routes/prescriptions';
 import { index as sales } from '@/routes/sales';
@@ -32,89 +34,62 @@ export default function Home({
     return (
         <>
             <Head title="Home" />
-            <h1 className="text-2xl font-semibold">
-                {branch?.name}, {workspace?.name}
-            </h1>
-            <p className="mt-1 text-muted-foreground">Welcome, {user?.name}.</p>
+            <PageHeader
+                title={`${branch?.name ?? 'Pharmacy'}`}
+                description={`Welcome, ${user?.name}.${workspace ? ` ${workspace.name}.` : ''}`}
+            />
 
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {today && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Today&apos;s takings</CardTitle>
-                            <CardDescription>
-                                {today.count} sales
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="text-2xl font-semibold tabular-nums">
-                            <Link href={sales()} className="hover:underline">
-                                {formatMoney(
-                                    today.totalMinor,
-                                    currency ?? 'USD',
-                                )}
-                            </Link>
-                        </CardContent>
-                    </Card>
+                    <StatCard
+                        label="Today's takings"
+                        value={formatMoney(today.totalMinor, currency ?? 'USD')}
+                        hint={`${today.count} sales`}
+                        icon={ReceiptText}
+                        accent="blue"
+                        href={sales()}
+                    />
                 )}
                 {levels && (
                     <>
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Low stock</CardTitle>
-                                <CardDescription>
-                                    At or below the reorder level
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="text-2xl font-semibold tabular-nums">
-                                <Link
-                                    href={stock({ query: { filter: 'low' } })}
-                                    className="hover:underline"
-                                >
-                                    {levels.low}
-                                </Link>
-                            </CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Expiring soon</CardTitle>
-                                <CardDescription>
-                                    Within {expiringDays} days
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="text-2xl font-semibold tabular-nums">
-                                <Link
-                                    href={stock({
-                                        query: { filter: 'expiring' },
-                                    })}
-                                    className="hover:underline"
-                                >
-                                    {levels.expiring}
-                                </Link>
-                            </CardContent>
-                        </Card>
+                        <StatCard
+                            label="Low stock"
+                            value={levels.low}
+                            hint="At or below the reorder level"
+                            icon={Package}
+                            accent="amber"
+                            href={stock({ query: { filter: 'low' } })}
+                        />
+                        <StatCard
+                            label="Expiring soon"
+                            value={levels.expiring}
+                            hint={`Within ${expiringDays} days`}
+                            icon={AlertTriangle}
+                            accent="red"
+                            href={stock({ query: { filter: 'expiring' } })}
+                        />
                     </>
                 )}
                 {awaitingVerification !== null && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Prescriptions</CardTitle>
-                            <CardDescription>
-                                Waiting for a pharmacist
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="text-2xl font-semibold tabular-nums">
-                            <Link
-                                href={prescriptions({
-                                    query: { status: 'recorded' },
-                                })}
-                                className="hover:underline"
-                            >
-                                {awaitingVerification}
-                            </Link>
-                        </CardContent>
-                    </Card>
+                    <StatCard
+                        label="Prescriptions"
+                        value={awaitingVerification}
+                        hint="Waiting for a pharmacist"
+                        icon={FileText}
+                        accent="violet"
+                        href={prescriptions({
+                            query: { status: 'recorded' },
+                        })}
+                    />
                 )}
             </div>
+
+            {!today && !levels && awaitingVerification === null && (
+                <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="size-4" aria-hidden />
+                    Nothing to show for your permissions in this branch.
+                </p>
+            )}
         </>
     );
 }

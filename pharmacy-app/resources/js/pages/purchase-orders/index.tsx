@@ -1,6 +1,18 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Badge } from '@/components/ui/badge';
+import { ClipboardList } from 'lucide-react';
+import { EmptyState } from '@/components/empty-state';
+import { PageHeader } from '@/components/page-header';
+import { Panel } from '@/components/panel';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { formatMoney } from '@/lib/money';
 import { ORDER_STATUS } from '@/lib/purchasing';
 import { create, show } from '@/routes/purchase-orders';
@@ -28,54 +40,84 @@ export default function PurchaseOrders({
     return (
         <>
             <Head title="Purchase orders" />
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <h1 className="text-2xl font-semibold">
-                    Purchase orders, {branch?.name}
-                </h1>
-                <div className="flex gap-2">
-                    <Button variant="outline" asChild>
-                        <Link href={receipts()}>Goods received</Link>
-                    </Button>
-                    {canManage && (
-                        <Button asChild>
-                            <Link href={create()}>New order</Link>
+            <PageHeader
+                title="Purchase orders"
+                description={branch?.name}
+                actions={
+                    <div className="flex gap-2">
+                        <Button variant="outline" asChild>
+                            <Link href={receipts()}>Goods received</Link>
                         </Button>
-                    )}
-                </div>
-            </div>
-
-            <ul className="mt-6 divide-y rounded-md border">
-                {orders.length === 0 && (
-                    <li className="px-4 py-3 text-sm text-muted-foreground">
-                        No purchase orders yet.
-                    </li>
-                )}
-                {orders.map((order) => (
-                    <li
-                        key={order.id}
-                        className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-sm"
-                    >
-                        <Link
-                            href={show(order.id)}
-                            className="font-medium hover:underline"
-                        >
-                            {order.number}
-                        </Link>
-                        <span>{order.supplier}</span>
-                        <Badge variant="secondary">
-                            {ORDER_STATUS[order.status] ?? order.status}
-                        </Badge>
-                        {order.expectedOn && (
-                            <span className="text-muted-foreground">
-                                expected {order.expectedOn}
-                            </span>
+                        {canManage && (
+                            <Button asChild>
+                                <Link href={create()}>New order</Link>
+                            </Button>
                         )}
-                        <span className="ml-auto tabular-nums">
-                            {formatMoney(order.totalMinor, currency ?? 'USD')}
-                        </span>
-                    </li>
-                ))}
-            </ul>
+                    </div>
+                }
+            />
+
+            <Panel>
+                {orders.length === 0 ? (
+                    <EmptyState
+                        icon={ClipboardList}
+                        title="No purchase orders yet"
+                        action={
+                            canManage ? (
+                                <Button asChild>
+                                    <Link href={create()}>New order</Link>
+                                </Button>
+                            ) : undefined
+                        }
+                    />
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Number</TableHead>
+                                <TableHead>Supplier</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Expected</TableHead>
+                                <TableHead className="text-right">
+                                    Total
+                                </TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {orders.map((order) => (
+                                <TableRow key={order.id}>
+                                    <TableCell>
+                                        <Link
+                                            href={show(order.id)}
+                                            className="font-medium hover:underline"
+                                        >
+                                            {order.number}
+                                        </Link>
+                                    </TableCell>
+                                    <TableCell>{order.supplier}</TableCell>
+                                    <TableCell>
+                                        <StatusBadge
+                                            tone={statusTone(order.status)}
+                                        >
+                                            {ORDER_STATUS[order.status] ??
+                                                order.status}
+                                        </StatusBadge>
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground tabular-nums">
+                                        {order.expectedOn ?? '—'}
+                                    </TableCell>
+                                    <TableCell className="text-right tabular-nums">
+                                        {formatMoney(
+                                            order.totalMinor,
+                                            currency ?? 'USD',
+                                        )}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
+            </Panel>
         </>
     );
 }

@@ -1,9 +1,21 @@
 import { Form, Head } from '@inertiajs/react';
+import { Truck } from 'lucide-react';
 import { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/empty-state';
+import { PageHeader } from '@/components/page-header';
+import { Panel, PanelBody, PanelHeader } from '@/components/panel';
+import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { store, update } from '@/routes/suppliers';
 
 type Supplier = {
@@ -51,116 +63,164 @@ export default function Suppliers({ suppliers, canManage }: Props) {
     return (
         <>
             <Head title="Suppliers" />
-            <h1 className="text-2xl font-semibold">Suppliers</h1>
+            <PageHeader title="Suppliers" />
 
             {canManage && (
-                <Form
-                    {...store.form()}
-                    resetOnSuccess
-                    className="mt-6 grid max-w-4xl gap-3 rounded-md border p-4 sm:grid-cols-4"
-                >
-                    {({ errors, processing }) => (
-                        <>
-                            <SupplierFields />
-                            <div className="flex items-center gap-3 sm:col-span-4">
-                                <Button type="submit" disabled={processing}>
-                                    Add supplier
-                                </Button>
-                                {errors.name && (
-                                    <p className="text-sm text-destructive">
-                                        {errors.name}
-                                    </p>
-                                )}
-                            </div>
-                        </>
-                    )}
-                </Form>
+                <Panel className="mb-5">
+                    <PanelHeader title="Add supplier" />
+                    <PanelBody>
+                        <Form
+                            {...store.form()}
+                            resetOnSuccess
+                            className="grid gap-3 sm:grid-cols-4"
+                        >
+                            {({ errors, processing }) => (
+                                <>
+                                    <SupplierFields />
+                                    <div className="flex items-center gap-3 sm:col-span-4">
+                                        <Button
+                                            type="submit"
+                                            disabled={processing}
+                                        >
+                                            Add supplier
+                                        </Button>
+                                        {errors.name && (
+                                            <p className="text-sm text-destructive">
+                                                {errors.name}
+                                            </p>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </Form>
+                    </PanelBody>
+                </Panel>
             )}
 
-            <ul className="mt-6 divide-y rounded-md border">
-                {suppliers.length === 0 && (
-                    <li className="px-4 py-3 text-sm text-muted-foreground">
-                        No suppliers yet.
-                    </li>
-                )}
-                {suppliers.map((supplier) =>
-                    editing === supplier.id ? (
-                        <li key={supplier.id} className="px-4 py-3">
-                            <Form
-                                {...update.form(supplier.id)}
-                                onSuccess={() => setEditing(null)}
-                                className="grid gap-3 sm:grid-cols-4"
-                            >
-                                {({ processing }) => (
-                                    <>
-                                        <SupplierFields supplier={supplier} />
-                                        <input
-                                            type="hidden"
-                                            name="active"
-                                            value="0"
-                                        />
-                                        <label className="flex items-center gap-2 text-sm">
-                                            <input
-                                                type="checkbox"
-                                                name="active"
-                                                value="1"
-                                                defaultChecked={supplier.active}
-                                            />
-                                            Active
-                                        </label>
-                                        <div className="flex gap-2 sm:col-span-3">
-                                            <Button
-                                                type="submit"
-                                                size="sm"
-                                                disabled={processing}
+            <Panel>
+                {suppliers.length === 0 ? (
+                    <EmptyState icon={Truck} title="No suppliers yet" />
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Contact</TableHead>
+                                <TableHead>Status</TableHead>
+                                {canManage && <TableHead />}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {suppliers.map((supplier) =>
+                                editing === supplier.id ? (
+                                    <TableRow key={supplier.id}>
+                                        <TableCell
+                                            colSpan={canManage ? 4 : 3}
+                                            className="p-4"
+                                        >
+                                            <Form
+                                                {...update.form(supplier.id)}
+                                                onSuccess={() =>
+                                                    setEditing(null)
+                                                }
+                                                className="grid gap-3 sm:grid-cols-4"
                                             >
-                                                Save
-                                            </Button>
-                                            <Button
-                                                type="button"
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => setEditing(null)}
+                                                {({ processing }) => (
+                                                    <>
+                                                        <SupplierFields
+                                                            supplier={supplier}
+                                                        />
+                                                        <input
+                                                            type="hidden"
+                                                            name="active"
+                                                            value="0"
+                                                        />
+                                                        <label className="flex items-center gap-2 text-sm">
+                                                            <input
+                                                                type="checkbox"
+                                                                name="active"
+                                                                value="1"
+                                                                defaultChecked={
+                                                                    supplier.active
+                                                                }
+                                                            />
+                                                            Active
+                                                        </label>
+                                                        <div className="flex gap-2 sm:col-span-3">
+                                                            <Button
+                                                                type="submit"
+                                                                size="sm"
+                                                                disabled={
+                                                                    processing
+                                                                }
+                                                            >
+                                                                Save
+                                                            </Button>
+                                                            <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                onClick={() =>
+                                                                    setEditing(
+                                                                        null,
+                                                                    )
+                                                                }
+                                                            >
+                                                                Cancel
+                                                            </Button>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </Form>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    <TableRow key={supplier.id}>
+                                        <TableCell className="font-medium">
+                                            {supplier.name}
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">
+                                            {[
+                                                supplier.phone,
+                                                supplier.email,
+                                                supplier.address,
+                                            ]
+                                                .filter(Boolean)
+                                                .join(' · ') || '—'}
+                                        </TableCell>
+                                        <TableCell>
+                                            <StatusBadge
+                                                tone={
+                                                    supplier.active
+                                                        ? 'success'
+                                                        : 'neutral'
+                                                }
                                             >
-                                                Cancel
-                                            </Button>
-                                        </div>
-                                    </>
-                                )}
-                            </Form>
-                        </li>
-                    ) : (
-                        <li
-                            key={supplier.id}
-                            className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-sm"
-                        >
-                            <span className="font-medium">{supplier.name}</span>
-                            {!supplier.active && (
-                                <Badge variant="outline">Inactive</Badge>
+                                                {supplier.active
+                                                    ? 'Active'
+                                                    : 'Inactive'}
+                                            </StatusBadge>
+                                        </TableCell>
+                                        {canManage && (
+                                            <TableCell className="text-right">
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() =>
+                                                        setEditing(supplier.id)
+                                                    }
+                                                >
+                                                    Edit
+                                                </Button>
+                                            </TableCell>
+                                        )}
+                                    </TableRow>
+                                ),
                             )}
-                            <span className="text-muted-foreground">
-                                {[
-                                    supplier.phone,
-                                    supplier.email,
-                                    supplier.address,
-                                ]
-                                    .filter(Boolean)
-                                    .join(' · ')}
-                            </span>
-                            {canManage && (
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="ml-auto"
-                                    onClick={() => setEditing(supplier.id)}
-                                >
-                                    Edit
-                                </Button>
-                            )}
-                        </li>
-                    ),
+                        </TableBody>
+                    </Table>
                 )}
-            </ul>
+            </Panel>
         </>
     );
 }

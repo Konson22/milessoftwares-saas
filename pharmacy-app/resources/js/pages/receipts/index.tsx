@@ -1,5 +1,17 @@
 import { Head, Link, usePage } from '@inertiajs/react';
+import { PackageCheck } from 'lucide-react';
+import { EmptyState } from '@/components/empty-state';
+import { PageHeader } from '@/components/page-header';
+import { Panel } from '@/components/panel';
 import { Button } from '@/components/ui/button';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { useCanHere } from '@/lib/access';
 import { formatMoney } from '@/lib/money';
 import { create, show } from '@/routes/receipts';
@@ -21,47 +33,83 @@ export default function Receipts({ receipts }: { receipts: Receipt[] }) {
     return (
         <>
             <Head title="Goods received" />
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <h1 className="text-2xl font-semibold">
-                    Goods received, {branch?.name}
-                </h1>
-                {canHere('pharmacy.purchasing.receive') && (
-                    <Button asChild>
-                        <Link href={create()}>Receive without an order</Link>
-                    </Button>
-                )}
-            </div>
+            <PageHeader
+                title="Goods received"
+                description={branch?.name}
+                actions={
+                    canHere('pharmacy.purchasing.receive') ? (
+                        <Button asChild>
+                            <Link href={create()}>
+                                Receive without an order
+                            </Link>
+                        </Button>
+                    ) : undefined
+                }
+            />
 
-            <ul className="mt-6 divide-y rounded-md border">
-                {receipts.length === 0 && (
-                    <li className="px-4 py-3 text-sm text-muted-foreground">
-                        Nothing received yet.
-                    </li>
+            <Panel>
+                {receipts.length === 0 ? (
+                    <EmptyState
+                        icon={PackageCheck}
+                        title="Nothing received yet"
+                        action={
+                            canHere('pharmacy.purchasing.receive') ? (
+                                <Button asChild>
+                                    <Link href={create()}>
+                                        Receive without an order
+                                    </Link>
+                                </Button>
+                            ) : undefined
+                        }
+                    />
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Number</TableHead>
+                                <TableHead>Supplier</TableHead>
+                                <TableHead>Received</TableHead>
+                                <TableHead>Reference</TableHead>
+                                <TableHead className="text-right">
+                                    Total
+                                </TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {receipts.map((receipt) => (
+                                <TableRow key={receipt.id}>
+                                    <TableCell>
+                                        <Link
+                                            href={show(receipt.id)}
+                                            className="font-medium hover:underline"
+                                        >
+                                            {receipt.number}
+                                        </Link>
+                                    </TableCell>
+                                    <TableCell>{receipt.supplier}</TableCell>
+                                    <TableCell className="tabular-nums">
+                                        {receipt.receivedOn}
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground">
+                                        {[
+                                            receipt.order,
+                                            receipt.supplierReference,
+                                        ]
+                                            .filter(Boolean)
+                                            .join(' · ') || '—'}
+                                    </TableCell>
+                                    <TableCell className="text-right tabular-nums">
+                                        {formatMoney(
+                                            receipt.totalMinor,
+                                            currency ?? 'USD',
+                                        )}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
                 )}
-                {receipts.map((receipt) => (
-                    <li
-                        key={receipt.id}
-                        className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-sm"
-                    >
-                        <Link
-                            href={show(receipt.id)}
-                            className="font-medium hover:underline"
-                        >
-                            {receipt.number}
-                        </Link>
-                        <span>{receipt.supplier}</span>
-                        <span className="text-muted-foreground">
-                            {receipt.receivedOn}
-                            {receipt.order && ` · ${receipt.order}`}
-                            {receipt.supplierReference &&
-                                ` · ${receipt.supplierReference}`}
-                        </span>
-                        <span className="ml-auto tabular-nums">
-                            {formatMoney(receipt.totalMinor, currency ?? 'USD')}
-                        </span>
-                    </li>
-                ))}
-            </ul>
+            </Panel>
         </>
     );
 }

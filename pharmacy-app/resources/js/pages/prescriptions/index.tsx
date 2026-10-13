@@ -1,7 +1,20 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Badge } from '@/components/ui/badge';
+import { FileText } from 'lucide-react';
+import { EmptyState } from '@/components/empty-state';
+import { PageHeader } from '@/components/page-header';
+import { Panel, PanelToolbar } from '@/components/panel';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { useCanHere } from '@/lib/access';
+import { cn } from '@/lib/utils';
 import { create, index, show } from '@/routes/prescriptions';
 
 type Prescription = {
@@ -32,80 +45,123 @@ export default function Prescriptions({
     return (
         <>
             <Head title="Prescriptions" />
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <h1 className="text-2xl font-semibold">
-                    Prescriptions, {branch?.name}
-                </h1>
-                {canHere('pharmacy.prescriptions.record') && (
-                    <Button asChild>
-                        <Link href={create()}>Record a prescription</Link>
-                    </Button>
-                )}
-            </div>
+            <PageHeader
+                title="Prescriptions"
+                description={branch?.name}
+                actions={
+                    canHere('pharmacy.prescriptions.record') ? (
+                        <Button asChild>
+                            <Link href={create()}>Record a prescription</Link>
+                        </Button>
+                    ) : undefined
+                }
+            />
 
-            <nav
-                aria-label="Filter by status"
-                className="mt-6 flex flex-wrap gap-2"
-            >
-                <Button
-                    size="sm"
-                    variant={status === null ? 'default' : 'outline'}
-                    asChild
-                >
-                    <Link href={index()}>All</Link>
-                </Button>
-                {statuses.map((option) => (
-                    <Button
-                        key={option.value}
-                        size="sm"
-                        variant={
-                            status === option.value ? 'default' : 'outline'
+            <Panel>
+                <PanelToolbar>
+                    <nav
+                        aria-label="Filter by status"
+                        className="flex flex-wrap gap-2"
+                    >
+                        <Button
+                            size="sm"
+                            variant={status === null ? 'default' : 'outline'}
+                            asChild
+                        >
+                            <Link href={index()}>All</Link>
+                        </Button>
+                        {statuses.map((option) => (
+                            <Button
+                                key={option.value}
+                                size="sm"
+                                variant={
+                                    status === option.value
+                                        ? 'default'
+                                        : 'outline'
+                                }
+                                asChild
+                            >
+                                <Link
+                                    href={index({
+                                        query: { status: option.value },
+                                    })}
+                                >
+                                    {option.label}
+                                </Link>
+                            </Button>
+                        ))}
+                    </nav>
+                </PanelToolbar>
+
+                {prescriptions.length === 0 ? (
+                    <EmptyState
+                        icon={FileText}
+                        title="No prescriptions"
+                        action={
+                            canHere('pharmacy.prescriptions.record') ? (
+                                <Button asChild>
+                                    <Link href={create()}>
+                                        Record a prescription
+                                    </Link>
+                                </Button>
+                            ) : undefined
                         }
-                        asChild
-                    >
-                        <Link href={index({ query: { status: option.value } })}>
-                            {option.label}
-                        </Link>
-                    </Button>
-                ))}
-            </nav>
-
-            <ul className="mt-4 divide-y rounded-md border">
-                {prescriptions.length === 0 && (
-                    <li className="px-4 py-3 text-sm text-muted-foreground">
-                        No prescriptions.
-                    </li>
+                    />
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Number</TableHead>
+                                <TableHead>Patient</TableHead>
+                                <TableHead>Prescriber</TableHead>
+                                <TableHead>Issued</TableHead>
+                                <TableHead>Items</TableHead>
+                                <TableHead>Status</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {prescriptions.map((prescription) => (
+                                <TableRow key={prescription.id}>
+                                    <TableCell>
+                                        <Link
+                                            href={show(prescription.id)}
+                                            className="font-medium hover:underline"
+                                        >
+                                            {prescription.number}
+                                        </Link>
+                                    </TableCell>
+                                    <TableCell>
+                                        {prescription.patientName}
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground">
+                                        {prescription.prescriberName}
+                                    </TableCell>
+                                    <TableCell className="tabular-nums">
+                                        {prescription.issuedOn}
+                                    </TableCell>
+                                    <TableCell className="tabular-nums">
+                                        {prescription.items}
+                                    </TableCell>
+                                    <TableCell>
+                                        <StatusBadge
+                                            tone={statusTone(
+                                                prescription.status,
+                                            )}
+                                            className={cn(
+                                                prescription.status ===
+                                                    'recorded' &&
+                                                    'border-blue-200 bg-blue-50 text-blue-700',
+                                            )}
+                                        >
+                                            {prescription.statusLabel}
+                                        </StatusBadge>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
                 )}
-                {prescriptions.map((prescription) => (
-                    <li
-                        key={prescription.id}
-                        className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-sm"
-                    >
-                        <Link
-                            href={show(prescription.id)}
-                            className="font-medium hover:underline"
-                        >
-                            {prescription.number}
-                        </Link>
-                        <span>{prescription.patientName}</span>
-                        <span className="text-muted-foreground">
-                            {prescription.prescriberName} ·{' '}
-                            {prescription.issuedOn} · {prescription.items}{' '}
-                            item(s)
-                        </span>
-                        <Badge
-                            variant={
-                                prescription.status === 'recorded'
-                                    ? 'default'
-                                    : 'secondary'
-                            }
-                            className="ml-auto"
-                        >
-                            {prescription.statusLabel}
-                        </Badge>
-                    </li>
-                ))}
-            </ul>
+            </Panel>
         </>
     );
 }

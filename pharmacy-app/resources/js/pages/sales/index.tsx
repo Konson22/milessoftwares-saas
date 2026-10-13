@@ -1,7 +1,19 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
-import { Badge } from '@/components/ui/badge';
+import { ReceiptText, ShoppingCart } from 'lucide-react';
+import { EmptyState } from '@/components/empty-state';
+import { PageHeader } from '@/components/page-header';
+import { Panel, PanelToolbar } from '@/components/panel';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { useCanHere } from '@/lib/access';
 import { formatMoney } from '@/lib/money';
 import { create, index, show } from '@/routes/sales';
@@ -30,82 +42,124 @@ export default function Sales({ day, sales, takings }: Props) {
     return (
         <>
             <Head title="Sales" />
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <h1 className="text-2xl font-semibold">
-                    Sales, {branch?.name}
-                </h1>
-                {canHere('pharmacy.sales.create') && (
-                    <Button asChild>
-                        <Link href={create()}>Open the counter</Link>
-                    </Button>
-                )}
-            </div>
+            <PageHeader
+                title="Sales"
+                description={branch?.name}
+                actions={
+                    canHere('pharmacy.sales.create') ? (
+                        <Button asChild>
+                            <Link href={create()}>
+                                <ShoppingCart className="size-4" aria-hidden />
+                                Open the counter
+                            </Link>
+                        </Button>
+                    ) : undefined
+                }
+            />
 
-            <div className="mt-6 flex flex-wrap items-end gap-6">
-                <Form {...index.form()} className="flex items-end gap-2">
-                    <div className="grid gap-1.5">
-                        <label htmlFor="day" className="text-sm font-medium">
-                            Day
-                        </label>
-                        <Input
-                            id="day"
-                            name="day"
-                            type="date"
-                            defaultValue={day}
-                            className="w-44"
-                        />
-                    </div>
-                    <Button type="submit" variant="outline">
-                        Show
-                    </Button>
-                </Form>
-                <p className="text-sm">
-                    <span className="text-muted-foreground">Takings: </span>
-                    <span className="font-semibold tabular-nums">
-                        {money(takings.totalMinor)}
-                    </span>
-                    <span className="text-muted-foreground">
-                        {' '}
-                        from {takings.count} sales
-                    </span>
-                </p>
-            </div>
-
-            <ul className="mt-6 divide-y rounded-md border">
-                {sales.length === 0 && (
-                    <li className="px-4 py-3 text-sm text-muted-foreground">
-                        No sales this day.
-                    </li>
-                )}
-                {sales.map((sale) => (
-                    <li
-                        key={sale.id}
-                        className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-sm"
+            <Panel>
+                <PanelToolbar className="justify-between">
+                    <Form
+                        {...index.form()}
+                        className="flex flex-wrap items-end gap-2"
                     >
-                        <Link
-                            href={show(sale.id)}
-                            className="font-medium hover:underline"
-                        >
-                            {sale.number}
-                        </Link>
-                        <span className="text-muted-foreground tabular-nums">
-                            {new Date(sale.soldAt).toLocaleTimeString()}
+                        <div className="grid gap-1.5">
+                            <label
+                                htmlFor="day"
+                                className="text-sm font-medium"
+                            >
+                                Day
+                            </label>
+                            <Input
+                                id="day"
+                                name="day"
+                                type="date"
+                                defaultValue={day}
+                                className="w-44"
+                            />
+                        </div>
+                        <Button type="submit" variant="outline">
+                            Show
+                        </Button>
+                    </Form>
+                    <p className="text-sm">
+                        <span className="text-muted-foreground">Takings: </span>
+                        <span className="font-semibold tabular-nums">
+                            {money(takings.totalMinor)}
                         </span>
-                        <span>{sale.soldBy}</span>
                         <span className="text-muted-foreground">
-                            {sale.paymentMethod}
+                            {' '}
+                            from {takings.count} sales
                         </span>
-                        {sale.status === 'voided' && (
-                            <Badge variant="outline">Voided</Badge>
-                        )}
-                        <span
-                            className={`ml-auto tabular-nums ${sale.status === 'voided' ? 'line-through' : ''}`}
-                        >
-                            {money(sale.totalMinor)}
-                        </span>
-                    </li>
-                ))}
-            </ul>
+                    </p>
+                </PanelToolbar>
+
+                {sales.length === 0 ? (
+                    <EmptyState
+                        icon={ReceiptText}
+                        title="No sales this day"
+                        action={
+                            canHere('pharmacy.sales.create') ? (
+                                <Button asChild>
+                                    <Link href={create()}>
+                                        Open the counter
+                                    </Link>
+                                </Button>
+                            ) : undefined
+                        }
+                    />
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Number</TableHead>
+                                <TableHead>Time</TableHead>
+                                <TableHead>Sold by</TableHead>
+                                <TableHead>Payment</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead className="text-right">
+                                    Total
+                                </TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {sales.map((sale) => (
+                                <TableRow key={sale.id}>
+                                    <TableCell>
+                                        <Link
+                                            href={show(sale.id)}
+                                            className="font-medium hover:underline"
+                                        >
+                                            {sale.number}
+                                        </Link>
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground tabular-nums">
+                                        {new Date(
+                                            sale.soldAt,
+                                        ).toLocaleTimeString()}
+                                    </TableCell>
+                                    <TableCell>{sale.soldBy}</TableCell>
+                                    <TableCell className="text-muted-foreground">
+                                        {sale.paymentMethod}
+                                    </TableCell>
+                                    <TableCell>
+                                        <StatusBadge
+                                            tone={statusTone(sale.status)}
+                                        >
+                                            {sale.status}
+                                        </StatusBadge>
+                                    </TableCell>
+                                    <TableCell
+                                        className={`text-right tabular-nums ${sale.status === 'voided' ? 'line-through' : ''}`}
+                                    >
+                                        {money(sale.totalMinor)}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
+            </Panel>
         </>
     );
 }

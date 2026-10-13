@@ -1,5 +1,17 @@
 import { Head, Link, usePage } from '@inertiajs/react';
+import { ShieldAlert } from 'lucide-react';
+import { EmptyState } from '@/components/empty-state';
+import { PageHeader } from '@/components/page-header';
+import { Panel, PanelToolbar } from '@/components/panel';
 import { Button } from '@/components/ui/button';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { index } from '@/routes/controlled';
 
 type Entry = {
@@ -46,135 +58,122 @@ export default function ControlledRegister({
     return (
         <>
             <Head title="Controlled drugs register" />
-            <h1 className="text-2xl font-semibold">
-                Controlled drugs register, {branch?.name}
-            </h1>
+            <PageHeader
+                title="Controlled drugs register"
+                description={branch?.name}
+            />
 
             {medicines.length === 0 ? (
-                <p className="mt-6 text-muted-foreground">
-                    No medicine is marked as controlled.
-                </p>
+                <Panel>
+                    <EmptyState
+                        icon={ShieldAlert}
+                        title="No medicine is marked as controlled"
+                    />
+                </Panel>
             ) : (
-                <>
-                    <nav
-                        aria-label="Controlled medicines"
-                        className="mt-6 flex flex-wrap gap-2"
-                    >
-                        {medicines.map((medicine) => (
-                            <Button
-                                key={medicine.id}
-                                size="sm"
-                                variant={
-                                    medicine.id === selected
-                                        ? 'default'
-                                        : 'outline'
-                                }
-                                asChild
-                            >
-                                <Link
-                                    href={index({
-                                        query: { medicine: medicine.id },
-                                    })}
+                <Panel>
+                    <PanelToolbar>
+                        <nav
+                            aria-label="Controlled medicines"
+                            className="flex flex-wrap gap-2"
+                        >
+                            {medicines.map((medicine) => (
+                                <Button
+                                    key={medicine.id}
+                                    size="sm"
+                                    variant={
+                                        medicine.id === selected
+                                            ? 'default'
+                                            : 'outline'
+                                    }
+                                    asChild
                                 >
-                                    {medicine.label}
-                                </Link>
-                            </Button>
-                        ))}
-                    </nav>
+                                    <Link
+                                        href={index({
+                                            query: { medicine: medicine.id },
+                                        })}
+                                    >
+                                        {medicine.label}
+                                    </Link>
+                                </Button>
+                            ))}
+                        </nav>
+                    </PanelToolbar>
 
-                    <div className="mt-4 overflow-x-auto rounded-md border">
-                        <table className="w-full text-sm">
-                            <thead className="bg-muted/50 text-left">
-                                <tr>
-                                    <th className="px-3 py-2 font-medium">
-                                        When
-                                    </th>
-                                    <th className="px-3 py-2 font-medium">
-                                        What
-                                    </th>
-                                    <th className="px-3 py-2 text-right font-medium">
+                    {entries.length === 0 ? (
+                        <EmptyState
+                            icon={ShieldAlert}
+                            title="No movements in this branch"
+                        />
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>When</TableHead>
+                                    <TableHead>What</TableHead>
+                                    <TableHead className="text-right">
                                         In / out
-                                    </th>
-                                    <th className="px-3 py-2 text-right font-medium">
+                                    </TableHead>
+                                    <TableHead className="text-right">
                                         Balance
-                                    </th>
-                                    <th className="px-3 py-2 font-medium">
-                                        Batch
-                                    </th>
-                                    <th className="px-3 py-2 font-medium">
-                                        Document
-                                    </th>
-                                    <th className="px-3 py-2 font-medium">
-                                        For / from
-                                    </th>
-                                    <th className="px-3 py-2 font-medium">
-                                        By
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y">
-                                {entries.length === 0 && (
-                                    <tr>
-                                        <td
-                                            colSpan={8}
-                                            className="px-3 py-6 text-center text-muted-foreground"
-                                        >
-                                            No movements in this branch.
-                                        </td>
-                                    </tr>
-                                )}
+                                    </TableHead>
+                                    <TableHead>Batch</TableHead>
+                                    <TableHead>Document</TableHead>
+                                    <TableHead>For / from</TableHead>
+                                    <TableHead>By</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
                                 {entries.map((entry) => (
-                                    <tr key={entry.id}>
-                                        <td className="px-3 py-2 whitespace-nowrap tabular-nums">
+                                    <TableRow key={entry.id}>
+                                        <TableCell className="whitespace-nowrap tabular-nums">
                                             {new Date(
                                                 entry.at,
                                             ).toLocaleString()}
-                                        </td>
-                                        <td className="px-3 py-2">
+                                        </TableCell>
+                                        <TableCell>
                                             {TYPES[entry.type] ?? entry.type}
                                             {entry.reason && (
                                                 <span className="block text-xs text-muted-foreground">
                                                     {entry.reason}
                                                 </span>
                                             )}
-                                        </td>
-                                        <td
-                                            className={`px-3 py-2 text-right tabular-nums ${entry.quantity < 0 ? 'text-destructive' : ''}`}
+                                        </TableCell>
+                                        <TableCell
+                                            className={`text-right tabular-nums ${entry.quantity < 0 ? 'text-destructive' : ''}`}
                                         >
                                             {entry.quantity > 0 ? '+' : ''}
                                             {entry.quantity}
-                                        </td>
-                                        <td className="px-3 py-2 text-right font-medium tabular-nums">
+                                        </TableCell>
+                                        <TableCell className="text-right font-medium tabular-nums">
                                             {entry.balance}
-                                        </td>
-                                        <td className="px-3 py-2">
+                                        </TableCell>
+                                        <TableCell>
                                             {entry.batchNumber}
-                                        </td>
-                                        <td className="px-3 py-2">
+                                        </TableCell>
+                                        <TableCell>
                                             {entry.document}
                                             {entry.prescription && (
                                                 <span className="block text-xs text-muted-foreground">
                                                     {entry.prescription}
                                                 </span>
                                             )}
-                                        </td>
-                                        <td className="px-3 py-2">
+                                        </TableCell>
+                                        <TableCell>
                                             {entry.patient ?? entry.supplier}
                                             {entry.prescriber && (
                                                 <span className="block text-xs text-muted-foreground">
                                                     {entry.prescriber}
                                                 </span>
                                             )}
-                                        </td>
-                                        <td className="px-3 py-2">
-                                            {entry.by}
-                                        </td>
-                                    </tr>
+                                        </TableCell>
+                                        <TableCell>{entry.by}</TableCell>
+                                    </TableRow>
                                 ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </>
+                            </TableBody>
+                        </Table>
+                    )}
+                </Panel>
             )}
         </>
     );

@@ -1,6 +1,8 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { Printer } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/page-header';
+import { Panel, PanelBody } from '@/components/panel';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatMoney } from '@/lib/money';
@@ -46,103 +48,110 @@ export default function ShowSale({ sale, canVoid }: Props) {
     return (
         <>
             <Head title={sale.number} />
-            <div className="flex flex-wrap items-center gap-3 print:hidden">
-                <Link
-                    href={index()}
-                    className="text-sm text-muted-foreground hover:underline"
-                >
-                    ← Sales
-                </Link>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="ml-auto"
-                    onClick={() => window.print()}
-                >
-                    <Printer className="size-4" aria-hidden />
-                    Print receipt
-                </Button>
-            </div>
+            <PageHeader
+                title={`Receipt ${sale.number}`}
+                badges={
+                    <StatusBadge tone={statusTone(sale.status)}>
+                        {sale.status}
+                    </StatusBadge>
+                }
+                actions={
+                    <div className="flex flex-wrap gap-2 print:hidden">
+                        <Button variant="outline" size="sm" asChild>
+                            <Link href={index()}>← Sales</Link>
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.print()}
+                        >
+                            <Printer className="size-4" aria-hidden />
+                            Print receipt
+                        </Button>
+                    </div>
+                }
+            />
 
-            <article className="mx-auto mt-4 max-w-md rounded-md border p-6 print:border-0">
-                <header className="text-center">
-                    <p className="font-semibold">{workspace?.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                        {branch?.name}
-                    </p>
-                    <h1 className="mt-3 text-xl font-semibold">
-                        Receipt {sale.number}{' '}
-                        {sale.status === 'voided' && (
-                            <Badge variant="destructive">Voided</Badge>
+            <Panel className="mx-auto max-w-md print:border-0 print:shadow-none">
+                <PanelBody className="p-6">
+                    <header className="text-center">
+                        <p className="font-semibold">{workspace?.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                            {branch?.name}
+                        </p>
+                        <h1 className="mt-3 text-xl font-semibold">
+                            Receipt {sale.number}
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            {new Date(sale.soldAt).toLocaleString()} ·{' '}
+                            {sale.soldBy}
+                        </p>
+                        {sale.customerName && (
+                            <p className="text-sm">{sale.customerName}</p>
                         )}
-                    </h1>
-                    <p className="text-sm text-muted-foreground">
-                        {new Date(sale.soldAt).toLocaleString()} · {sale.soldBy}
-                    </p>
-                    {sale.customerName && (
-                        <p className="text-sm">{sale.customerName}</p>
-                    )}
-                </header>
+                    </header>
 
-                <table className="mt-4 w-full text-sm">
-                    <tbody className="divide-y">
-                        {sale.lines.map((line) => (
-                            <tr key={line.id}>
-                                <td className="py-1.5">
-                                    {line.medicine}
-                                    <span className="block text-xs text-muted-foreground">
-                                        {line.quantity} ×{' '}
-                                        {money(line.unitPriceMinor)} · batch{' '}
-                                        {line.batchNumber}, exp {line.expiresOn}
-                                    </span>
-                                </td>
+                    <table className="mt-4 w-full text-sm">
+                        <tbody className="divide-y">
+                            {sale.lines.map((line) => (
+                                <tr key={line.id}>
+                                    <td className="py-1.5">
+                                        {line.medicine}
+                                        <span className="block text-xs text-muted-foreground">
+                                            {line.quantity} ×{' '}
+                                            {money(line.unitPriceMinor)} · batch{' '}
+                                            {line.batchNumber}, exp{' '}
+                                            {line.expiresOn}
+                                        </span>
+                                    </td>
+                                    <td className="py-1.5 text-right tabular-nums">
+                                        {money(line.lineTotalMinor)}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                        <tfoot className="border-t">
+                            <tr className="font-semibold">
+                                <td className="py-1.5">Total</td>
                                 <td className="py-1.5 text-right tabular-nums">
-                                    {money(line.lineTotalMinor)}
+                                    {money(sale.totalMinor)}
                                 </td>
                             </tr>
-                        ))}
-                    </tbody>
-                    <tfoot className="border-t">
-                        <tr className="font-semibold">
-                            <td className="py-1.5">Total</td>
-                            <td className="py-1.5 text-right tabular-nums">
-                                {money(sale.totalMinor)}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td className="py-0.5 text-muted-foreground">
-                                {sale.paymentMethod}
-                                {sale.paymentReference &&
-                                    ` (${sale.paymentReference})`}
-                            </td>
-                            <td className="py-0.5 text-right tabular-nums">
-                                {sale.tenderedMinor !== null
-                                    ? money(sale.tenderedMinor)
-                                    : ''}
-                            </td>
-                        </tr>
-                        {sale.changeMinor !== null && (
                             <tr>
                                 <td className="py-0.5 text-muted-foreground">
-                                    Change
+                                    {sale.paymentMethod}
+                                    {sale.paymentReference &&
+                                        ` (${sale.paymentReference})`}
                                 </td>
                                 <td className="py-0.5 text-right tabular-nums">
-                                    {money(sale.changeMinor)}
+                                    {sale.tenderedMinor !== null
+                                        ? money(sale.tenderedMinor)
+                                        : ''}
                                 </td>
                             </tr>
-                        )}
-                    </tfoot>
-                </table>
+                            {sale.changeMinor !== null && (
+                                <tr>
+                                    <td className="py-0.5 text-muted-foreground">
+                                        Change
+                                    </td>
+                                    <td className="py-0.5 text-right tabular-nums">
+                                        {money(sale.changeMinor)}
+                                    </td>
+                                </tr>
+                            )}
+                        </tfoot>
+                    </table>
 
-                {sale.status === 'voided' && (
-                    <p className="mt-4 text-sm text-destructive">
-                        Voided by {sale.voidedBy} on{' '}
-                        {sale.voidedAt &&
-                            new Date(sale.voidedAt).toLocaleString()}
-                        : {sale.voidReason}
-                    </p>
-                )}
-            </article>
+                    {sale.status === 'voided' && (
+                        <p className="mt-4 text-sm text-destructive">
+                            Voided by {sale.voidedBy} on{' '}
+                            {sale.voidedAt &&
+                                new Date(sale.voidedAt).toLocaleString()}
+                            : {sale.voidReason}
+                        </p>
+                    )}
+                </PanelBody>
+            </Panel>
 
             {canVoid && (
                 <Form

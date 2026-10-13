@@ -1,7 +1,19 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
-import { Badge } from '@/components/ui/badge';
+import { Pill } from 'lucide-react';
+import { EmptyState } from '@/components/empty-state';
+import { PageHeader } from '@/components/page-header';
+import { Panel, PanelToolbar } from '@/components/panel';
+import { SearchField } from '@/components/search-field';
+import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { formatMoney } from '@/lib/money';
 import { create, edit, index } from '@/routes/medicines';
 
@@ -30,117 +42,127 @@ export default function Medicines({ medicines, filters, canManage }: Props) {
     return (
         <>
             <Head title="Medicines" />
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <h1 className="text-2xl font-semibold">Medicines</h1>
-                {canManage && (
-                    <Button asChild>
-                        <Link href={create()}>Add medicine</Link>
-                    </Button>
-                )}
-            </div>
+            <PageHeader
+                title="Medicines"
+                actions={
+                    canManage ? (
+                        <Button asChild>
+                            <Link href={create()}>Add medicine</Link>
+                        </Button>
+                    ) : undefined
+                }
+            />
 
-            <Form
-                {...index.form()}
-                options={{ preserveState: true }}
-                className="mt-6 flex flex-wrap items-center gap-3"
-            >
-                <Input
-                    name="search"
-                    defaultValue={filters.search}
-                    placeholder="Name, generic name or barcode"
-                    aria-label="Search medicines"
-                    className="max-w-xs"
-                />
-                <label className="flex items-center gap-2 text-sm">
-                    <input
-                        type="checkbox"
-                        name="inactive"
-                        value="1"
-                        defaultChecked={filters.inactive}
+            <Panel>
+                <PanelToolbar>
+                    <Form
+                        {...index.form()}
+                        options={{ preserveState: true }}
+                        className="flex flex-wrap items-center gap-3"
+                    >
+                        <SearchField
+                            name="search"
+                            defaultValue={filters.search}
+                            placeholder="Name, generic name or barcode"
+                            aria-label="Search medicines"
+                            className="max-w-sm"
+                        />
+                        <label className="flex items-center gap-2 text-sm">
+                            <input
+                                type="checkbox"
+                                name="inactive"
+                                value="1"
+                                defaultChecked={filters.inactive}
+                            />
+                            Include inactive
+                        </label>
+                        <Button type="submit" variant="outline">
+                            Search
+                        </Button>
+                    </Form>
+                </PanelToolbar>
+
+                {medicines.length === 0 ? (
+                    <EmptyState
+                        icon={Pill}
+                        title="No medicines yet"
+                        action={
+                            canManage ? (
+                                <Button asChild>
+                                    <Link href={create()}>Add medicine</Link>
+                                </Button>
+                            ) : undefined
+                        }
                     />
-                    Include inactive
-                </label>
-                <Button type="submit" variant="outline">
-                    Search
-                </Button>
-            </Form>
-
-            <div className="mt-6 overflow-x-auto rounded-md border">
-                <table className="w-full text-sm">
-                    <thead className="bg-muted/50 text-left">
-                        <tr>
-                            <th className="px-4 py-2 font-medium">Medicine</th>
-                            <th className="px-4 py-2 font-medium">Generic</th>
-                            <th className="px-4 py-2 font-medium">Unit</th>
-                            <th className="px-4 py-2 text-right font-medium">
-                                Price
-                            </th>
-                            <th className="px-4 py-2 font-medium">
-                                <span className="sr-only">Flags</span>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                        {medicines.length === 0 && (
-                            <tr>
-                                <td
-                                    colSpan={5}
-                                    className="px-4 py-6 text-center text-muted-foreground"
-                                >
-                                    No medicines yet.
-                                </td>
-                            </tr>
-                        )}
-                        {medicines.map((medicine) => (
-                            <tr key={medicine.id}>
-                                <td className="px-4 py-2">
-                                    {canManage ? (
-                                        <Link
-                                            href={edit(medicine.id)}
-                                            className="font-medium hover:underline"
-                                        >
-                                            {medicine.name}
-                                        </Link>
-                                    ) : (
-                                        <span className="font-medium">
-                                            {medicine.name}
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Medicine</TableHead>
+                                <TableHead>Generic</TableHead>
+                                <TableHead>Unit</TableHead>
+                                <TableHead className="text-right">
+                                    Price
+                                </TableHead>
+                                <TableHead>Flags</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {medicines.map((medicine) => (
+                                <TableRow key={medicine.id}>
+                                    <TableCell>
+                                        {canManage ? (
+                                            <Link
+                                                href={edit(medicine.id)}
+                                                className="font-medium hover:underline"
+                                            >
+                                                {medicine.name}
+                                            </Link>
+                                        ) : (
+                                            <span className="font-medium">
+                                                {medicine.name}
+                                            </span>
+                                        )}{' '}
+                                        <span className="text-muted-foreground">
+                                            {medicine.strength} {medicine.form}
                                         </span>
-                                    )}{' '}
-                                    {medicine.strength} {medicine.form}
-                                </td>
-                                <td className="px-4 py-2 text-muted-foreground">
-                                    {medicine.genericName}
-                                </td>
-                                <td className="px-4 py-2">{medicine.unit}</td>
-                                <td className="px-4 py-2 text-right tabular-nums">
-                                    {formatMoney(
-                                        medicine.sellPriceMinor,
-                                        currency ?? 'USD',
-                                    )}
-                                </td>
-                                <td className="space-x-1 px-4 py-2">
-                                    {medicine.controlled && (
-                                        <Badge variant="destructive">
-                                            Controlled
-                                        </Badge>
-                                    )}
-                                    {medicine.prescriptionOnly &&
-                                        !medicine.controlled && (
-                                            <Badge variant="secondary">
-                                                Rx
-                                            </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground">
+                                        {medicine.genericName}
+                                    </TableCell>
+                                    <TableCell>{medicine.unit}</TableCell>
+                                    <TableCell className="text-right tabular-nums">
+                                        {formatMoney(
+                                            medicine.sellPriceMinor,
+                                            currency ?? 'USD',
                                         )}
-                                    {!medicine.active && (
-                                        <Badge variant="outline">
-                                            Inactive
-                                        </Badge>
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-wrap gap-1">
+                                            {medicine.controlled && (
+                                                <StatusBadge tone="danger">
+                                                    Controlled
+                                                </StatusBadge>
+                                            )}
+                                            {medicine.prescriptionOnly &&
+                                                !medicine.controlled && (
+                                                    <StatusBadge tone="info">
+                                                        Rx
+                                                    </StatusBadge>
+                                                )}
+                                            {!medicine.active && (
+                                                <StatusBadge tone="neutral">
+                                                    Inactive
+                                                </StatusBadge>
+                                            )}
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
+            </Panel>
         </>
     );
 }

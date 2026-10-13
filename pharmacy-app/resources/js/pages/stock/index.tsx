@@ -1,7 +1,19 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
-import { Badge } from '@/components/ui/badge';
+import { Boxes } from 'lucide-react';
+import { EmptyState } from '@/components/empty-state';
+import { PageHeader } from '@/components/page-header';
+import { Panel, PanelToolbar } from '@/components/panel';
+import { SearchField } from '@/components/search-field';
+import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { index, show } from '@/routes/stock';
 
 type Row = {
@@ -35,121 +47,118 @@ export default function StockIndex({ rows, filters, expiringDays }: Props) {
     return (
         <>
             <Head title="Stock" />
-            <h1 className="text-2xl font-semibold">Stock in {branch?.name}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-                Sellable stock excludes expired batches. Expiring soon: within{' '}
-                {expiringDays} days.
-            </p>
+            <PageHeader
+                title="Stock"
+                description={`Sellable stock in ${branch?.name}. Expiring soon: within ${expiringDays} days.`}
+            />
 
-            <nav
-                aria-label="Stock filters"
-                className="mt-6 flex flex-wrap gap-2"
-            >
-                {FILTERS.map((option) => (
-                    <Button
-                        key={option.value}
-                        size="sm"
-                        variant={
-                            filters.filter === option.value
-                                ? 'default'
-                                : 'outline'
-                        }
-                        asChild
+            <Panel>
+                <PanelToolbar className="justify-between gap-3">
+                    <nav
+                        aria-label="Stock filters"
+                        className="flex flex-wrap gap-2"
                     >
-                        <Link
-                            href={index({
-                                query: {
-                                    filter: option.value,
-                                    search: filters.search || undefined,
-                                },
-                            })}
-                            preserveState
-                        >
-                            {option.label}
-                        </Link>
-                    </Button>
-                ))}
-                <Form
-                    {...index.form()}
-                    options={{ preserveState: true }}
-                    className="ml-auto flex gap-2"
-                >
-                    <input type="hidden" name="filter" value={filters.filter} />
-                    <Input
-                        name="search"
-                        defaultValue={filters.search}
-                        placeholder="Search medicines"
-                        aria-label="Search medicines"
-                        className="h-8 w-56"
-                    />
-                </Form>
-            </nav>
-
-            <div className="mt-4 overflow-x-auto rounded-md border">
-                <table className="w-full text-sm">
-                    <thead className="bg-muted/50 text-left">
-                        <tr>
-                            <th className="px-4 py-2 font-medium">Medicine</th>
-                            <th className="px-4 py-2 text-right font-medium">
-                                Sellable
-                            </th>
-                            <th className="px-4 py-2 font-medium">
-                                Next expiry
-                            </th>
-                            <th className="px-4 py-2 font-medium">
-                                <span className="sr-only">Status</span>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                        {rows.length === 0 && (
-                            <tr>
-                                <td
-                                    colSpan={4}
-                                    className="px-4 py-6 text-center text-muted-foreground"
+                        {FILTERS.map((option) => (
+                            <Button
+                                key={option.value}
+                                size="sm"
+                                variant={
+                                    filters.filter === option.value
+                                        ? 'default'
+                                        : 'outline'
+                                }
+                                asChild
+                            >
+                                <Link
+                                    href={index({
+                                        query: {
+                                            filter: option.value,
+                                            search: filters.search || undefined,
+                                        },
+                                    })}
+                                    preserveState
                                 >
-                                    Nothing to show.
-                                </td>
-                            </tr>
-                        )}
-                        {rows.map((row) => (
-                            <tr key={row.id}>
-                                <td className="px-4 py-2">
-                                    <Link
-                                        href={show(row.id)}
-                                        className="font-medium hover:underline"
-                                    >
-                                        {row.label}
-                                    </Link>
-                                </td>
-                                <td className="px-4 py-2 text-right tabular-nums">
-                                    {row.sellable} {row.unit}
-                                </td>
-                                <td className="px-4 py-2 tabular-nums">
-                                    {row.nextExpiry ?? '—'}
-                                </td>
-                                <td className="space-x-1 px-4 py-2">
-                                    {row.low && (
-                                        <Badge variant="destructive">
-                                            Low (reorder at {row.reorderLevel})
-                                        </Badge>
-                                    )}
-                                    {row.expiringSoon && (
-                                        <Badge variant="secondary">
-                                            Expiring soon
-                                        </Badge>
-                                    )}
-                                    {row.expired > 0 && (
-                                        <Badge variant="outline">
-                                            {row.expired} expired
-                                        </Badge>
-                                    )}
-                                </td>
-                            </tr>
+                                    {option.label}
+                                </Link>
+                            </Button>
                         ))}
-                    </tbody>
-                </table>
-            </div>
+                    </nav>
+                    <Form
+                        {...index.form()}
+                        options={{ preserveState: true }}
+                        className="flex gap-2"
+                    >
+                        <input
+                            type="hidden"
+                            name="filter"
+                            value={filters.filter}
+                        />
+                        <SearchField
+                            name="search"
+                            defaultValue={filters.search}
+                            placeholder="Search medicines"
+                            aria-label="Search medicines"
+                        />
+                    </Form>
+                </PanelToolbar>
+
+                {rows.length === 0 ? (
+                    <EmptyState icon={Boxes} title="Nothing to show" />
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Medicine</TableHead>
+                                <TableHead className="text-right">
+                                    Sellable
+                                </TableHead>
+                                <TableHead>Next expiry</TableHead>
+                                <TableHead>Flags</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {rows.map((row) => (
+                                <TableRow key={row.id}>
+                                    <TableCell>
+                                        <Link
+                                            href={show(row.id)}
+                                            className="font-medium hover:underline"
+                                        >
+                                            {row.label}
+                                        </Link>
+                                    </TableCell>
+                                    <TableCell className="text-right tabular-nums">
+                                        {row.sellable} {row.unit}
+                                    </TableCell>
+                                    <TableCell className="tabular-nums">
+                                        {row.nextExpiry ?? '—'}
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-wrap gap-1">
+                                            {row.low && (
+                                                <StatusBadge tone="danger">
+                                                    Low (reorder at{' '}
+                                                    {row.reorderLevel})
+                                                </StatusBadge>
+                                            )}
+                                            {row.expiringSoon && (
+                                                <StatusBadge tone="warning">
+                                                    Expiring soon
+                                                </StatusBadge>
+                                            )}
+                                            {row.expired > 0 && (
+                                                <StatusBadge tone="neutral">
+                                                    {row.expired} expired
+                                                </StatusBadge>
+                                            )}
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
+            </Panel>
         </>
     );
 }

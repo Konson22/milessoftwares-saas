@@ -13,6 +13,8 @@ export type SharedProps = {
     branch: { id: string; name: string } | null;
     /** Permissions that apply in that branch (UI only). */
     branchPermissions: string[];
+    /** The branches open to the member, for the branch switcher. */
+    branches: { id: string; name: string }[];
     canSwitchBranch: boolean;
     flash: { success: string | null };
 };
