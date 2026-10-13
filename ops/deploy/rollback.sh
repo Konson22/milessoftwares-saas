@@ -22,5 +22,11 @@ mv -T "$BASE/current.tmp" "$BASE/current"
 sudo systemctl reload "$PHP_FPM_SERVICE"
 "$PHP" "$BASE/current/central-app/artisan" queue:restart --no-ansi
 "$PHP" "$BASE/current/central-app/artisan" inertia:stop-ssr --no-ansi || true
+# Products in that release (the same list deploy.sh used).
+for code in ${PRODUCTS-pharmacy finance}; do
+    if [[ -f "$BASE/current/$code-app/artisan" ]]; then
+        "$PHP" "$BASE/current/$code-app/artisan" queue:restart --no-ansi
+    fi
+done
 
 echo "rolled back to $(basename "$previous") ($(cat "$previous/REVISION" 2>/dev/null || echo unknown))"

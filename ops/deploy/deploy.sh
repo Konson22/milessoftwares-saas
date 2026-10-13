@@ -13,7 +13,14 @@
 #                    app is releases/<id>/central-app
 #   shared/.env      production environment (APP_ENV=production)
 #   shared/storage/  logs, framework cache; Passport keys come from the env
+#   shared/products/<code>/{.env,storage/}
+#                    each product's own environment and storage
 #   current -> releases/<id>
+#
+# Products ($PRODUCTS, default "pharmacy finance") ship in the same release:
+# releases/<id>/<code>-app, each with its own database (migrated and granted
+# like the platform's), its catalog imported into the platform, and its own
+# php-fpm pool, queue worker and scheduler (ops/php-fpm, ops/systemd).
 #
 # Migrations and grants run as the schema owner (MIGRATION_DB_USERNAME /
 # MIGRATION_DB_PASSWORD in the deploy user's environment, never in .env);
@@ -34,10 +41,19 @@ KEEP="${KEEP_RELEASES:-5}"
 PHP="${PHP:-php}"
 PHP_FPM_SERVICE="${PHP_FPM_SERVICE:-php8.4-fpm}"
 HEALTH_URL="${HEALTH_URL:-https://milessoftwares.com/up}"
+PRODUCTS="${PRODUCTS-pharmacy finance}"
 : "${MIGRATION_DB_USERNAME:?set MIGRATION_DB_USERNAME}"
 : "${MIGRATION_DB_PASSWORD:?set MIGRATION_DB_PASSWORD}"
 
-env_value() { grep -E "^$1=" "$BASE/shared/.env" | tail -n 1 | cut -d= -f2- | tr -d "\"'"; }
+# env_value KEY [env file]: a value from the platform's (or a product's) .env.
+env_value() { grep -E "^$1=" "${2:-$BASE/shared/.env}" | tail -n 1 | cut -d= -f2- | tr -d "\"'"; }
+
+for code in $PRODUCTS; do
+    if [[ ! -f "$BASE/shared/products/$code/.env" ]]; then
+        echo "missing $BASE/shared/products/$code/.env (see docs/runbooks/deploy.md, Products)" >&2
+        exit 1
+    fi
+done
 
 id="$(date -u +%Y%m%d%H%M%S)"
 release="$BASE/releases/$id"
@@ -59,6 +75,26 @@ npm ci --no-audit --no-fund
 # Client bundle plus the SSR bundle for the public site.
 npm run build:ssr
 # node_modules stays: the SSR bundle imports React and Inertia from it at runtime.
+
+# Products: install and build each in its own folder of the release.
+for code in $PRODUCTS; do
+    product="$release/$code-app"
+    if [[ ! -f "$product/artisan" ]]; then
+        echo "no product $code-app in $ref" >&2
+        exit 1
+    fi
+    ln -sfn "$BASE/shared/products/$code/.env" "$product/.env"
+    rm -rf "$product/storage"
+    ln -sfn "$BASE/shared/products/$code/storage" "$product/storage"
+    (
+        cd "$product"
+        composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress
+        npm ci --no-audit --no-fund
+        npm run build
+        # Client-only bundle: node_modules is not needed at runtime.
+        rm -rf node_modules
+    )
+done
 
 migrate_and_grant() {
     DB_USERNAME="$MIGRATION_DB_USERNAME" DB_PASSWORD="$MIGRATION_DB_PASSWORD" "$PHP" artisan migrate --force --no-ansi
@@ -85,7 +121,28 @@ migrate_and_grant
 # As the runtime role: not a superuser, audit_logs append-only, chain intact.
 "$PHP" artisan platform:preflight --no-ansi
 
-"$PHP" artisan platform:catalog-import --no-ansi
+# Each product's database, the same way (migrations backward compatible too).
+for code in $PRODUCTS; do
+    product_env="$BASE/shared/products/$code/.env"
+    (
+        cd "$release/$code-app"
+        DB_USERNAME="$MIGRATION_DB_USERNAME" DB_PASSWORD="$MIGRATION_DB_PASSWORD" "$PHP" artisan migrate --force --no-ansi
+        PGPASSWORD="$MIGRATION_DB_PASSWORD" psql --no-psqlrc -v ON_ERROR_STOP=1 -q \
+            -h "$(env_value DB_HOST "$product_env")" \
+            -p "$(env_value DB_PORT "$product_env")" \
+            -U "$MIGRATION_DB_USERNAME" \
+            -d "$(env_value DB_DATABASE "$product_env")" \
+            -f ../ops/postgres/product-grants.sql
+        "$PHP" artisan optimize --no-ansi
+    )
+done
+
+# The platform's own catalogs and each product's (roles and permissions).
+catalogs=(database/catalogs/*.json)
+for code in $PRODUCTS; do
+    catalogs+=("../$code-app/platform/catalog.json")
+done
+"$PHP" artisan platform:catalog-import "${catalogs[@]}" --no-ansi
 "$PHP" artisan optimize --no-ansi
 
 # Atomic switch.
@@ -94,6 +151,9 @@ mv -T "$BASE/current.tmp" "$BASE/current"
 
 sudo systemctl reload "$PHP_FPM_SERVICE"
 "$PHP" "$BASE/current/central-app/artisan" queue:restart --no-ansi
+for code in $PRODUCTS; do
+    "$PHP" "$BASE/current/$code-app/artisan" queue:restart --no-ansi
+done
 # systemd restarts the SSR server from the new release.
 "$PHP" "$BASE/current/central-app/artisan" inertia:stop-ssr --no-ansi || true
 

@@ -1,0 +1,21 @@
+# A product's queue worker; the instance is the product code:
+#   systemctl enable --now miles-product-queue@pharmacy miles-product-queue@finance
+# `php artisan queue:restart` (run by deploy.sh for each product) makes it
+# exit after the current job; systemd starts it again on the new release.
+[Unit]
+Description=Miles product %i queue worker
+After=network-online.target redis-server.service postgresql.service
+
+[Service]
+User=miles
+Group=miles
+WorkingDirectory=/srv/miles/current/%i-app
+ExecStart=/usr/bin/php /srv/miles/current/%i-app/artisan queue:work --sleep=1 --tries=3 --max-time=3600 --memory=256
+Restart=always
+RestartSec=2
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

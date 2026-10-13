@@ -1,0 +1,11 @@
+# systemctl enable --now miles-product-scheduler@pharmacy.timer miles-product-scheduler@finance.timer
+[Unit]
+Description=Run the Miles product %i scheduler every minute
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+AccuracySec=1s
+Persistent=false
+
+[Install]
+WantedBy=timers.target

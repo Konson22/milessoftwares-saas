@@ -44,6 +44,37 @@ is enough to start; the layout below also works per node behind a load balancer.
 9. First super admin: `php artisan platform:staff <email> --role=super_admin`
    (the account must exist and have MFA enabled before it can open admin).
 
+## Products
+
+Products (Pharmacy, Finance, …) ship in the same release as the platform: `releases/<id>/<code>-app`.
+`deploy.sh` deploys the ones in `PRODUCTS` (default `pharmacy finance`; `PRODUCTS=""` for none).
+Once per product, before its first deploy:
+
+1. Database, as a superuser (the roles from `roles.sql` are reused):
+
+    ```bash
+    createdb pharmacy
+    psql -v db_name=pharmacy -f ops/postgres/product-database.sql
+    ```
+
+2. `/srv/miles/shared/products/<code>/.env` (0600 miles:miles) from `<code>-app/.env.example`:
+   `APP_ENV=production`, `APP_DEBUG=false`, a new `APP_KEY`, `DB_DATABASE=<code>`,
+   `DB_USERNAME=miles_app`, and the `PLATFORM_*` values. Register the product on the platform
+   (admin → Applications, or `php artisan platform:local-product` on a staging copy) for its
+   sign-in and service clients and webhook secret. Products that send business events set
+   `PLATFORM_FINANCE_EVENTS_URL=https://milessoftwares.com/finance/events` (any host the nginx
+   server block answers; the event token, not the host, proves who sends what).
+3. `/srv/miles/shared/products/<code>/storage/` with `app`, `framework/{cache,sessions,views}`, `logs`.
+4. php-fpm pool: copy `ops/php-fpm/<code>.conf` to `/etc/php/8.4/fpm/pool.d/`.
+5. nginx: copy `ops/nginx/products/<code>.conf` to `/etc/nginx/miles-products/`, `nginx -t`, reload.
+6. After its first deploy: `systemctl enable --now miles-product-queue@<code> miles-product-scheduler@<code>.timer`
+   (the scheduler delivers the product's outbox of business events every minute).
+
+Each release then installs and builds every product, migrates its database as `miles_owner` and runs
+`ops/postgres/product-grants.sql`, caches its configuration, imports its `platform/catalog.json`
+into the platform, and restarts its queue worker after the switch. Product migrations follow the same
+expand → deploy → contract rule as the platform's.
+
 ## Release
 
 ```bash
@@ -54,13 +85,15 @@ The script stops at the first failure and never switches traffic to a release th
 
 1. Fetches every branch and tag (the bare clone has no fetch refspec of its own), checks out the ref
    into `releases/<UTC timestamp>`, links `.env` and `storage`.
-2. `composer install --no-dev`, `npm ci`, `npm run build:ssr`.
+2. `composer install --no-dev`, `npm ci`, `npm run build:ssr`; for each product, `composer install
+   --no-dev`, `npm ci`, `npm run build`.
 3. `platform:preflight --skip-database`: configuration gate.
 4. `migrate --force` as `miles_owner`, then `ops/postgres/grants.sql`.
 5. `platform:preflight`: database gate as `miles_app` (not superuser, append-only audit, chain intact).
-6. `platform:catalog-import`, `optimize`.
-7. Atomic `current` symlink switch, php-fpm reload, `queue:restart`, SSR restart.
-8. `GET /up` must answer 200, otherwise it tells you to roll back.
+6. For each product: `migrate --force` as `miles_owner`, `ops/postgres/product-grants.sql`, `optimize`.
+7. `platform:catalog-import` (the platform's catalogs and each product's), `optimize`.
+8. Atomic `current` symlink switch, php-fpm reload, `queue:restart` (platform and products), SSR restart.
+9. `GET /up` must answer 200, otherwise it tells you to roll back.
 
 **Migrations must be backward compatible** with the release before (expand → deploy → contract):
 add columns nullable or with defaults, backfill in a job, drop old columns one release later.

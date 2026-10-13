@@ -1,0 +1,14 @@
+# Runs a product's `schedule:run` every minute via miles-product-scheduler@<code>.timer:
+# for every product, the events outbox (platform:outbox) that delivers
+# business events to Finance, HR and Payroll with retries.
+[Unit]
+Description=Miles product %i scheduler
+
+[Service]
+Type=oneshot
+User=miles
+Group=miles
+WorkingDirectory=/srv/miles/current/%i-app
+ExecStart=/usr/bin/php /srv/miles/current/%i-app/artisan schedule:run --no-ansi
+NoNewPrivileges=true
+PrivateTmp=true

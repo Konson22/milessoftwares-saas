@@ -29,22 +29,13 @@ return new class extends Migration
             DB::table('prescription_items')->where('prescription_id', $prescription->id)->update(['dispensed_quantity' => DB::raw('quantity')]);
         }
 
-        Schema::table('prescriptions', function (Blueprint $table) {
-            $table->dropConstrainedForeignId('dispensed_sale_id');
-        });
+        // prescriptions.dispensed_sale_id is no longer written or read. It
+        // stays until the next release (expand, deploy, contract), so the
+        // release before this one still runs against this schema.
     }
 
     public function down(): void
     {
-        Schema::table('prescriptions', function (Blueprint $table) {
-            $table->foreignUuid('dispensed_sale_id')->nullable()->constrained('sales');
-        });
-
-        // The latest sale stands for the whole prescription again.
-        foreach (DB::table('sales')->whereNotNull('prescription_id')->where('status', 'completed')->orderBy('sold_at')->get(['id', 'prescription_id']) as $sale) {
-            DB::table('prescriptions')->where('id', $sale->prescription_id)->update(['dispensed_sale_id' => $sale->id]);
-        }
-
         Schema::table('sales', function (Blueprint $table) {
             $table->dropConstrainedForeignId('prescription_id');
         });
