@@ -37,5 +37,28 @@ ops/local-staging/rollback.ps1
 ops/local-staging/services.ps1 status
 ```
 
+## Products
+
+Pharmacy and Finance deploy with the platform (`$env:MILES_PRODUCTS`, default `pharmacy finance`;
+set it to an empty string for none), as in the runbook's Products section. Once per product:
+
+```powershell
+createdb -U postgres staging_pharmacy
+psql -U postgres -v db_name=staging_pharmacy -f ops/postgres/product-database.sql
+New-Item -ItemType Directory D:\srv\miles\shared\products\pharmacy\storage\app, `
+    D:\srv\miles\shared\products\pharmacy\storage\framework\cache, `
+    D:\srv\miles\shared\products\pharmacy\storage\framework\sessions, `
+    D:\srv\miles\shared\products\pharmacy\storage\framework\views, `
+    D:\srv\miles\shared\products\pharmacy\storage\logs
+# D:\srv\miles\shared\products\pharmacy\.env from pharmacy-app\.env.example:
+#   APP_ENV=production, APP_DEBUG=false, a new APP_KEY, DB_DATABASE=staging_pharmacy,
+#   DB_USERNAME=miles_app, PLATFORM_ROOT_DOMAIN=staging.milessoftwares.com and the product's
+#   staging clients; Pharmacy also PLATFORM_FINANCE_EVENTS_URL=https://staging.milessoftwares.com/finance/events
+```
+
+The same for `finance` (`staging_finance`). Each product gets its own php-cgi pool (Pharmacy on
+:9301–9302, Finance on :9311–9312), queue worker and scheduler from `services.ps1`, and Apache
+proxies `/<code>/` to it (`apache-staging.conf`).
+
 Not covered here: nginx's refusal of unknown hosts (XAMPP keeps its default vhosts), systemd
 hardening, and anything that needs public DNS (SSL Labs, real certificates).

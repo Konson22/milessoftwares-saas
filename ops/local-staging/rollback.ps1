@@ -27,6 +27,11 @@ New-Item -ItemType Junction -Path $current -Target $previous.FullName | Out-Null
 & (Join-Path $PSScriptRoot 'services.ps1') reload
 & $Php -c $PhpIni (Join-Path $current 'central-app/artisan') queue:restart --no-ansi
 & $Php (Join-Path $current 'central-app/artisan') inertia:stop-ssr --no-ansi 2>$null
+# Products in that release (the same list deploy.ps1 used).
+foreach ($code in (($env:MILES_PRODUCTS ?? 'pharmacy finance') -split '\s+' | Where-Object { $_ })) {
+    $artisan = Join-Path $current "$code-app/artisan"
+    if (Test-Path $artisan) { & $Php -c $PhpIni $artisan queue:restart --no-ansi }
+}
 
 $revision = Get-Content (Join-Path $previous.FullName 'REVISION') -ErrorAction SilentlyContinue
 Write-Output "rolled back to $($previous.Name) ($($revision ?? 'unknown'))"

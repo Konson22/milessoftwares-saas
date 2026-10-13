@@ -12,6 +12,12 @@ reaching PHP_FCGI_MAX_REQUESTS behave as they do on Linux.
   queue 1..3     queue:work redis           (miles-queue@)
   scheduler      schedule:work              (miles-scheduler.timer)
   ssr            inertia:start-ssr          (miles-ssr)
+
+Each product in $env:MILES_PRODUCTS (default "pharmacy finance"), number n
+from 0 in that order:
+  <code>-cgi-1..2   FastCGI on 127.0.0.1:93n1..93n2 (its php-fpm pool)
+  <code>-queue      queue:work                (miles-product-queue@<code>)
+  <code>-scheduler  schedule:work             (miles-product-scheduler@<code>)
 #>
 param(
     [Parameter(Mandatory)][ValidateSet('start', 'stop', 'status', 'reload')][string]$Action
@@ -28,17 +34,28 @@ $Run = Join-Path $Base 'run'
 $Logs = Join-Path $Base 'shared\storage\logs\services'
 # The Laravel app inside the live release.
 $Current = Join-Path $Base 'current/central-app'
+$Products = @((($env:MILES_PRODUCTS ?? 'pharmacy finance') -split '\s+') | Where-Object { $_ })
 
 function Get-Services {
     $list = @()
     for ($i = 1; $i -le $CgiWorkers; $i++) {
-        $list += @{ Name = "php-cgi-$i"; Exe = $PhpCgi; Args = @('-c', $PhpIni, '-b', "127.0.0.1:$(9200 + $i)"); Group = 'php' }
+        $list += @{ Name = "php-cgi-$i"; Exe = $PhpCgi; Args = @('-c', $PhpIni, '-b', "127.0.0.1:$(9200 + $i)"); Group = 'php'; Dir = $Current }
     }
     for ($i = 1; $i -le 3; $i++) {
-        $list += @{ Name = "queue-$i"; Exe = $Php; Args = @('-c', $PhpIni, "$Current\artisan", 'queue:work', 'redis', '--sleep=1', '--tries=3', '--max-time=3600', '--memory=256'); Group = 'app' }
+        $list += @{ Name = "queue-$i"; Exe = $Php; Args = @('-c', $PhpIni, "$Current\artisan", 'queue:work', 'redis', '--sleep=1', '--tries=3', '--max-time=3600', '--memory=256'); Group = 'app'; Dir = $Current }
     }
-    $list += @{ Name = 'scheduler'; Exe = $Php; Args = @('-c', $PhpIni, "$Current\artisan", 'schedule:work'); Group = 'app' }
-    $list += @{ Name = 'ssr'; Exe = $Php; Args = @("$Current\artisan", 'inertia:start-ssr'); Group = 'app' }
+    $list += @{ Name = 'scheduler'; Exe = $Php; Args = @('-c', $PhpIni, "$Current\artisan", 'schedule:work'); Group = 'app'; Dir = $Current }
+    $list += @{ Name = 'ssr'; Exe = $Php; Args = @("$Current\artisan", 'inertia:start-ssr'); Group = 'app'; Dir = $Current }
+
+    for ($n = 0; $n -lt $Products.Count; $n++) {
+        $code = $Products[$n]
+        $dir = Join-Path $Base "current/$code-app"
+        for ($i = 1; $i -le 2; $i++) {
+            $list += @{ Name = "$code-cgi-$i"; Exe = $PhpCgi; Args = @('-c', $PhpIni, '-b', "127.0.0.1:$(9300 + 10 * $n + $i)"); Group = 'php'; Dir = $dir }
+        }
+        $list += @{ Name = "$code-queue"; Exe = $Php; Args = @('-c', $PhpIni, "$dir\artisan", 'queue:work', '--sleep=1', '--tries=3', '--max-time=3600', '--memory=256'); Group = 'app'; Dir = $dir }
+        $list += @{ Name = "$code-scheduler"; Exe = $Php; Args = @('-c', $PhpIni, "$dir\artisan", 'schedule:work'); Group = 'scheduler'; Dir = $dir }
+    }
     return $list
 }
 
@@ -81,7 +98,7 @@ switch ($Action) {
             if (Get-Pid "$Run\$($svc.Name).sup") { Write-Output "$($svc.Name): already running"; continue }
             ConvertTo-Json -Compress @($svc.Args) | Set-Content "$Run\$($svc.Name).args.json"
             $sup = Start-Process pwsh -WindowStyle Hidden -PassThru -ArgumentList @(
-                '-NoProfile', '-File', $script, $svc.Name, "`"$($svc.Exe)`"", $Run, $Logs, $Current)
+                '-NoProfile', '-File', $script, $svc.Name, "`"$($svc.Exe)`"", $Run, $Logs, $svc.Dir)
             Set-Content "$Run\$($svc.Name).sup" $sup.Id
             Write-Output "$($svc.Name): started"
         }
@@ -99,15 +116,16 @@ switch ($Action) {
         foreach ($svc in Get-Services) {
             $sup = Get-Pid "$Run\$($svc.Name).sup"
             $child = Get-Pid "$Run\$($svc.Name).child"
-            '{0,-12} supervisor {1,-8} process {2}' -f $svc.Name, ($sup ?? 'down'), ($child ?? 'down')
+            '{0,-20} supervisor {1,-8} process {2}' -f $svc.Name, ($sup ?? 'down'), ($child ?? 'down')
         }
     }
     'reload' {
         # php-fpm reload: new php-cgi processes pick up the new release and an empty opcache.
-        # Scheduler included: schedule:work keeps the release it started from.
+        # Schedulers included: schedule:work keeps the release it started from.
         Stop-Children 'php'
+        Stop-Children 'scheduler'
         $id = Get-Pid "$Run\scheduler.child"
         if ($id) { Stop-Process -Id $id -Force -ErrorAction SilentlyContinue }
-        Write-Output 'reloaded php-cgi pool and scheduler'
+        Write-Output 'reloaded php-cgi pools and schedulers'
     }
 }
