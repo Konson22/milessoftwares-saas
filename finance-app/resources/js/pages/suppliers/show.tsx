@@ -53,12 +53,28 @@ type Props = {
         reference: string | null;
         journalId: string;
     }[];
+    credits: {
+        id: string;
+        number: string;
+        creditedOn: string;
+        billId: string | null;
+        billNumber: string | null;
+        totalMinor: number;
+        unappliedMinor: number;
+        reason: string;
+        journalId: string | null;
+    }[];
 };
 
 /**
- * One supplier: bills, payments and what is owed.
+ * One supplier: bills, payments, credits and what is owed.
  */
-export default function ShowSupplier({ supplier, bills, payments }: Props) {
+export default function ShowSupplier({
+    supplier,
+    bills,
+    payments,
+    credits,
+}: Props) {
     const can = useCan();
     const money = useMoney();
     const canManage = can('finance.payables.manage');
@@ -232,6 +248,78 @@ export default function ShowSupplier({ supplier, bills, payments }: Props) {
                     </TableBody>
                 </Table>
             </Panel>
+
+            {credits.length > 0 && (
+                <Panel className="mt-5">
+                    <PanelHeader
+                        title="Credits"
+                        description="Goods returned: taken off the bill they came on; any rest stays on account."
+                    />
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Number</TableHead>
+                                <TableHead>Date</TableHead>
+                                <TableHead>Bill</TableHead>
+                                <TableHead>Reason</TableHead>
+                                <TableHead className="text-right">
+                                    Amount
+                                </TableHead>
+                                <TableHead className="text-right">
+                                    On account
+                                </TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {credits.map((credit) => (
+                                <TableRow key={credit.id}>
+                                    <TableCell className="font-mono text-xs">
+                                        {credit.journalId ? (
+                                            <Link
+                                                href={showJournal(
+                                                    credit.journalId,
+                                                )}
+                                                className="text-primary hover:underline"
+                                            >
+                                                {credit.number}
+                                            </Link>
+                                        ) : (
+                                            credit.number
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="tabular-nums">
+                                        {credit.creditedOn}
+                                    </TableCell>
+                                    <TableCell className="font-mono text-xs">
+                                        {credit.billId ? (
+                                            <Link
+                                                href={showBill(credit.billId)}
+                                                className="hover:underline"
+                                            >
+                                                {credit.billNumber}
+                                            </Link>
+                                        ) : (
+                                            '—'
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground">
+                                        {credit.reason}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Amount minor={credit.totalMinor} />
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Amount
+                                            minor={credit.unappliedMinor}
+                                            blankZero
+                                        />
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </Panel>
+            )}
         </>
     );
 }

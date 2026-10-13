@@ -13,4 +13,5 @@ enum MovementType: string
     case Sale = 'sale';
     case SaleVoid = 'sale_void';
     case Adjustment = 'adjustment';
+    case SupplierReturn = 'supplier_return';
 }

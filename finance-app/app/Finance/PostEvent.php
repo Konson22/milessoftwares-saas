@@ -9,6 +9,7 @@ use App\Models\CustomerPayment;
 use App\Models\Invoice;
 use App\Models\Journal;
 use App\Models\Supplier;
+use App\Models\SupplierCredit;
 use Carbon\CarbonImmutable;
 use Miles\SharedModuleKit\Envelope;
 
@@ -22,6 +23,11 @@ use Miles\SharedModuleKit\Envelope;
  *                             Dr receivable        Cr cash/bank/...
  *   finance.bill.received     Dr inventory (or the line's account) (+ tax)
  *                                                  Cr payable
+ *   finance.credit_note.received
+ *                             Dr payable           Cr inventory (or the line's account) (+ tax),
+ *                                                  set against its bill
+ *
+ * Sales carrying a cost also move it: Dr cost of goods sold / Cr inventory.
  */
 class PostEvent
 {
@@ -44,6 +50,7 @@ class PostEvent
             'finance.payment.received.v1' => $this->paymentReceived($event),
             'finance.invoice.voided.v1' => $this->invoiceVoided($event),
             'finance.bill.received.v1' => $this->billReceived($event),
+            'finance.credit_note.received.v1' => $this->creditNoteReceived($event),
             default => throw new UnsupportedEvent("Finance does not handle {$event->eventType} v{$event->schemaVersion}."),
         };
     }
@@ -233,6 +240,66 @@ class PostEvent
             'due_on' => $p['due_on'] ?? null,
             'total_minor' => $total,
             'tax_minor' => $tax,
+            'lines' => $lines,
+            'journal_id' => $journal?->id,
+        ]);
+    }
+
+    /**
+     * Goods sent back: Dr payable / Cr inventory (or the line's account),
+     * and the credit set against the bill it came from.
+     */
+    private function creditNoteReceived(Envelope $event): void
+    {
+        $p = $event->payload;
+        $date = CarbonImmutable::parse($p['credited_on']);
+        $total = (int) $p['total_minor'];
+        $tax = (int) ($p['tax_minor'] ?? 0);
+        $lines = $this->lines($p['lines'] ?? [], 'expense_account');
+
+        $bill = null;
+        if (isset($p['bill_number'])) {
+            $bill = Bill::query()->where('source_app', $event->sourceApp)->where('number', $p['bill_number'])->lockForUpdate()->first();
+
+            if ($bill === null) {
+                throw new NotYetPostable("Bill {$p['bill_number']} has not arrived yet.");
+            }
+        }
+
+        $supplier = $bill?->supplier()->firstOrFail() ?? (isset($p['supplier_id'])
+            ? Supplier::query()->firstOrCreate(
+                ['source_app' => $event->sourceApp, 'source_supplier_id' => $p['supplier_id']],
+                ['name' => $p['supplier_name']],
+            )
+            : Supplier::query()->firstOrCreate(['name' => $p['supplier_name'], 'source_app' => null]));
+
+        $journal = null;
+        if ($total > 0) {
+            $journalLines = [['account' => Account::system(Account::PAYABLE), 'debit' => $total, 'description' => $supplier->name]];
+            foreach ($this->split($lines, $total - $tax, Account::INVENTORY) as [$account, $amount]) {
+                $journalLines[] = ['account' => $account, 'credit' => $amount];
+            }
+            if ($tax > 0) {
+                $journalLines[] = ['account' => Account::system(Account::TAX), 'credit' => $tax];
+            }
+
+            $journal = $this->ledger->post($date, "Credit {$p['credit_note_number']} from {$supplier->name}: {$p['reason']}", $journalLines, $this->source($event, $p['credit_note_number']));
+        }
+
+        $applied = $bill === null ? 0 : min($total, $bill->outstanding());
+        $bill?->forceFill(['paid_minor' => $bill->paid_minor + $applied])->save();
+
+        SupplierCredit::query()->create([
+            'supplier_id' => $supplier->id,
+            'number' => $p['credit_note_number'],
+            'source_app' => $event->sourceApp,
+            'bill_id' => $bill?->id,
+            'branch_id' => $p['branch_id'] ?? null,
+            'credited_on' => $date,
+            'total_minor' => $total,
+            'tax_minor' => $tax,
+            'applied_minor' => $applied,
+            'reason' => $p['reason'],
             'lines' => $lines,
             'journal_id' => $journal?->id,
         ]);

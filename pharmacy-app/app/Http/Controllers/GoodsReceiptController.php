@@ -8,6 +8,7 @@ use App\Models\Medicine;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderLine;
 use App\Models\Supplier;
+use App\Models\SupplierReturn;
 use App\Models\User;
 use App\Pharmacy\CurrentBranch;
 use App\Pharmacy\Money;
@@ -134,8 +135,21 @@ class GoodsReceiptController extends Controller
     {
         abort_unless($receipt->branch_id === $this->branch->id(), 404);
         $receipt->load(['supplier:id,name', 'purchaseOrder:id,number', 'receiver:id,name', 'lines.medicine']);
+        $returned = SupplierReturnController::returned($receipt);
 
         return Inertia::render('receipts/show', [
+            'returns' => SupplierReturn::query()
+                ->where('goods_receipt_id', $receipt->id)
+                ->orderBy('number')
+                ->get(['id', 'number', 'returned_on', 'total_minor', 'reason'])
+                ->map(fn (SupplierReturn $return) => [
+                    'id' => $return->id,
+                    'number' => $return->number,
+                    'returnedOn' => $return->returned_on->toDateString(),
+                    'totalMinor' => $return->total_minor,
+                    'reason' => $return->reason,
+                ]),
+            'canReturn' => array_sum(array_map(fn (GoodsReceiptLine $line) => $line->quantity - ($returned[$line->id] ?? 0), $receipt->lines->all())) > 0,
             'receipt' => [
                 'id' => $receipt->id,
                 'number' => $receipt->number,
@@ -151,6 +165,7 @@ class GoodsReceiptController extends Controller
                     'batchNumber' => $line->batch_number,
                     'expiresOn' => $line->expires_on->toDateString(),
                     'quantity' => $line->quantity,
+                    'returned' => $returned[$line->id] ?? 0,
                     'unitCostMinor' => $line->unit_cost_minor,
                     'lineTotalMinor' => $line->line_total_minor,
                 ]),

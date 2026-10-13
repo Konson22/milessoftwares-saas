@@ -56,6 +56,7 @@ const TYPE_LABELS: Record<string, string> = {
     receipt: 'Received',
     sale: 'Sold',
     sale_void: 'Sale voided',
+    supplier_return: 'Returned to supplier',
     adjustment: 'Adjusted',
 };
 

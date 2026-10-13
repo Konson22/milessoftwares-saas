@@ -1,6 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { PageHeader } from '@/components/page-header';
-import { Panel } from '@/components/panel';
+import { Panel, PanelHeader } from '@/components/panel';
 import { Button } from '@/components/ui/button';
 import {
     Table,
@@ -11,9 +11,14 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useCanHere } from '@/lib/access';
 import { formatMoney } from '@/lib/money';
 import { show as showOrder } from '@/routes/purchase-orders';
 import { index } from '@/routes/receipts';
+import {
+    create as returnGoods,
+    show as showReturn,
+} from '@/routes/supplier-returns';
 
 type Props = {
     receipt: {
@@ -31,14 +36,24 @@ type Props = {
             batchNumber: string;
             expiresOn: string;
             quantity: number;
+            returned: number;
             unitCostMinor: number;
             lineTotalMinor: number;
         }[];
     };
+    returns: {
+        id: string;
+        number: string;
+        returnedOn: string;
+        totalMinor: number;
+        reason: string;
+    }[];
+    canReturn: boolean;
 };
 
-export default function ShowReceipt({ receipt }: Props) {
+export default function ShowReceipt({ receipt, returns, canReturn }: Props) {
     const { currency } = usePage().props;
+    const canHere = useCanHere();
     const money = (minor: number) => formatMoney(minor, currency ?? 'USD');
 
     return (
@@ -66,9 +81,19 @@ export default function ShowReceipt({ receipt }: Props) {
                     </>
                 }
                 actions={
-                    <Button variant="outline" size="sm" asChild>
-                        <Link href={index()}>← Goods received</Link>
-                    </Button>
+                    <>
+                        <Button variant="outline" size="sm" asChild>
+                            <Link href={index()}>← Goods received</Link>
+                        </Button>
+                        {canReturn &&
+                            canHere('pharmacy.purchasing.receive') && (
+                                <Button size="sm" asChild>
+                                    <Link href={returnGoods(receipt.id)}>
+                                        Return goods
+                                    </Link>
+                                </Button>
+                            )}
+                    </>
                 }
             />
 
@@ -81,6 +106,9 @@ export default function ShowReceipt({ receipt }: Props) {
                             <TableHead>Expires</TableHead>
                             <TableHead className="text-right">
                                 Quantity
+                            </TableHead>
+                            <TableHead className="text-right">
+                                Returned
                             </TableHead>
                             <TableHead className="text-right">
                                 Unit cost
@@ -99,6 +127,9 @@ export default function ShowReceipt({ receipt }: Props) {
                                 <TableCell className="text-right tabular-nums">
                                     {line.quantity}
                                 </TableCell>
+                                <TableCell className="text-right text-muted-foreground tabular-nums">
+                                    {line.returned > 0 ? line.returned : ''}
+                                </TableCell>
                                 <TableCell className="text-right tabular-nums">
                                     {money(line.unitCostMinor)}
                                 </TableCell>
@@ -111,7 +142,7 @@ export default function ShowReceipt({ receipt }: Props) {
                     <TableFooter>
                         <TableRow>
                             <TableCell
-                                colSpan={5}
+                                colSpan={6}
                                 className="text-right font-medium"
                             >
                                 Owed to supplier
@@ -123,6 +154,36 @@ export default function ShowReceipt({ receipt }: Props) {
                     </TableFooter>
                 </Table>
             </Panel>
+
+            {returns.length > 0 && (
+                <Panel className="mt-5">
+                    <PanelHeader title="Returned to the supplier" />
+                    <ul className="divide-y text-sm">
+                        {returns.map((supplierReturn) => (
+                            <li
+                                key={supplierReturn.id}
+                                className="flex flex-wrap items-center gap-x-4 px-4 py-2.5"
+                            >
+                                <Link
+                                    href={showReturn(supplierReturn.id)}
+                                    className="font-medium hover:underline"
+                                >
+                                    {supplierReturn.number}
+                                </Link>
+                                <span className="text-muted-foreground tabular-nums">
+                                    {supplierReturn.returnedOn}
+                                </span>
+                                <span className="text-muted-foreground">
+                                    {supplierReturn.reason}
+                                </span>
+                                <span className="ml-auto tabular-nums">
+                                    {money(supplierReturn.totalMinor)}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                </Panel>
+            )}
         </>
     );
 }

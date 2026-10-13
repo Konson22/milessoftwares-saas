@@ -8,6 +8,7 @@ use App\Models\Account;
 use App\Models\Bill;
 use App\Models\BillPayment;
 use App\Models\Supplier;
+use App\Models\SupplierCredit;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -85,6 +86,13 @@ class BillController extends Controller
                 'journalId' => $bill->journal_id,
                 'lines' => $bill->lines,
             ],
+            'credits' => SupplierCredit::query()->where('bill_id', $bill->id)->orderBy('credited_on')->get()->map(fn (SupplierCredit $credit) => [
+                'number' => $credit->number,
+                'creditedOn' => $credit->credited_on->toDateString(),
+                'amountMinor' => $credit->applied_minor,
+                'reason' => $credit->reason,
+                'journalId' => $credit->journal_id,
+            ]),
             'payments' => $payments->map(fn (BillPayment $payment) => [
                 'number' => (string) $payment->getAttribute('number'),
                 'paidOn' => substr((string) $payment->getAttribute('paid_on'), 0, 10),

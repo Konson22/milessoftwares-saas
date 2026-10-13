@@ -1,0 +1,52 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milessoftwares.com/contracts/events/finance.credit_note.received.v1.schema.json",
+    "title": "finance.credit_note.received, schema_version 1",
+    "description": "A product sent goods back to a supplier (or the supplier allowed a reduction) and is owed less. Finance takes it off payables (and inventory or expense), against the named bill when given. Amounts are integers in the currency's minor unit.",
+    "type": "object",
+    "required": ["credit_note_number", "supplier_name", "currency", "total_minor", "credited_on", "reason", "lines"],
+    "additionalProperties": false,
+    "properties": {
+        "credit_note_number": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "The product's own document number (e.g. a supplier return)."
+        },
+        "bill_number": {
+            "type": ["string", "null"],
+            "maxLength": 64,
+            "description": "The bill (finance.bill.received bill_number from the same product) this reduces."
+        },
+        "supplier_name": { "type": "string", "maxLength": 255 },
+        "supplier_id": {
+            "type": ["string", "null"],
+            "maxLength": 64,
+            "description": "The product's id for the supplier, as on its bills."
+        },
+        "branch_id": { "type": ["string", "null"], "format": "uuid" },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "total_minor": { "type": "integer", "minimum": 0 },
+        "tax_minor": { "type": "integer", "default": 0 },
+        "credited_on": { "type": "string", "format": "date" },
+        "reason": { "type": "string", "maxLength": 255 },
+        "lines": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "type": "object",
+                "required": ["description", "quantity", "amount_minor"],
+                "additionalProperties": false,
+                "properties": {
+                    "description": { "type": "string", "maxLength": 255 },
+                    "quantity": { "type": "number" },
+                    "amount_minor": { "type": "integer" },
+                    "expense_account": {
+                        "type": ["string", "null"],
+                        "maxLength": 32,
+                        "description": "Where it was posted on the bill; inventory when null."
+                    }
+                }
+            }
+        }
+    }
+}

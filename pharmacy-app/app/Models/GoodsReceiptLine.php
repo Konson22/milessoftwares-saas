@@ -47,4 +47,12 @@ class GoodsReceiptLine extends Model
     {
         return $this->belongsTo(Medicine::class);
     }
+
+    /**
+     * @return BelongsTo<Batch, $this>
+     */
+    public function batch(): BelongsTo
+    {
+        return $this->belongsTo(Batch::class);
+    }
 }

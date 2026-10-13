@@ -104,6 +104,32 @@ class Stock
     }
 
     /**
+     * Sends a quantity of one batch back to its supplier (expired stock
+     * too: that is often why). Never below zero.
+     *
+     * @throws ValidationException
+     */
+    public function returnToSupplier(Batch $batch, int $quantity, User $user, string $returnId, string $field): Batch
+    {
+        return DB::transaction(function () use ($batch, $quantity, $user, $returnId, $field) {
+            $locked = Batch::query()->whereKey($batch->id)->lockForUpdate()->firstOrFail();
+
+            if ($quantity > $locked->quantity_on_hand) {
+                throw ValidationException::withMessages([
+                    $field => "Only {$locked->quantity_on_hand} left in batch {$locked->batch_number}.",
+                ]);
+            }
+
+            $locked->quantity_on_hand -= $quantity;
+            $locked->save();
+
+            $this->record($locked, -$quantity, MovementType::SupplierReturn, $user, null, null, 'supplier_return', $returnId);
+
+            return $locked;
+        });
+    }
+
+    /**
      * Takes a quantity of a medicine from a branch for a sale: oldest expiry
      * first (FEFO), never from expired batches. All or nothing.
      *

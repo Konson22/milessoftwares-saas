@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Bill;
 use App\Models\Supplier;
+use App\Models\SupplierCredit;
 use App\Models\SupplierPayment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -57,6 +58,17 @@ class SupplierController extends Controller
             ],
             'bills' => $bills->map(fn (Bill $bill) => BillController::row($bill)),
             'payments' => $payments->map(fn (SupplierPayment $payment) => SupplierPaymentController::row($payment)),
+            'credits' => SupplierCredit::query()->where('supplier_id', $supplier->id)->with('bill:id,number')->orderByDesc('credited_on')->get()->map(fn (SupplierCredit $credit) => [
+                'id' => $credit->id,
+                'number' => $credit->number,
+                'creditedOn' => $credit->credited_on->toDateString(),
+                'billId' => $credit->bill_id,
+                'billNumber' => $credit->bill?->number,
+                'totalMinor' => $credit->total_minor,
+                'unappliedMinor' => $credit->unapplied(),
+                'reason' => $credit->reason,
+                'journalId' => $credit->journal_id,
+            ]),
         ]);
     }
 

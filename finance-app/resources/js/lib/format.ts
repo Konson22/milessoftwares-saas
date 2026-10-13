@@ -59,6 +59,7 @@ const SOURCE_TYPES: Record<string, string> = {
     'finance.payment.received': 'Payment received',
     'finance.invoice.voided': 'Void',
     'finance.bill.received': 'Supplier bill',
+    'finance.credit_note.received': 'Supplier credit',
 };
 
 export function sourceTypeLabel(type: string): string {

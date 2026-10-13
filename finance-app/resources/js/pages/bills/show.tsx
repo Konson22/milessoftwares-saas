@@ -51,12 +51,20 @@ type Props = {
         amountMinor: number;
         journalId: string;
     }[];
+    credits: {
+        number: string;
+        creditedOn: string;
+        amountMinor: number;
+        reason: string;
+        journalId: string | null;
+    }[];
 };
 
 /**
- * One supplier bill: its lines, payments against it, and what is left.
+ * One supplier bill: its lines, payments and credits against it, and what
+ * is left.
  */
-export default function ShowBill({ bill, payments }: Props) {
+export default function ShowBill({ bill, payments, credits }: Props) {
     const can = useCan();
 
     return (
@@ -230,6 +238,43 @@ export default function ShowBill({ bill, payments }: Props) {
                             </ul>
                         )}
                     </Panel>
+
+                    {credits.length > 0 && (
+                        <Panel>
+                            <PanelHeader
+                                title="Credits"
+                                description="Goods returned to the supplier"
+                            />
+                            <ul className="divide-y text-sm">
+                                {credits.map((credit) => (
+                                    <li
+                                        key={credit.number}
+                                        className="grid grid-cols-[1fr_auto] gap-x-3 px-4 py-2.5"
+                                    >
+                                        {credit.journalId ? (
+                                            <Link
+                                                href={showJournal(
+                                                    credit.journalId,
+                                                )}
+                                                className="font-mono text-xs text-primary hover:underline"
+                                            >
+                                                {credit.number}
+                                            </Link>
+                                        ) : (
+                                            <span className="font-mono text-xs">
+                                                {credit.number}
+                                            </span>
+                                        )}
+                                        <Amount minor={credit.amountMinor} />
+                                        <span className="col-span-2 text-xs text-muted-foreground">
+                                            {credit.creditedOn} ·{' '}
+                                            {credit.reason}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </Panel>
+                    )}
                 </div>
             </div>
         </>

@@ -7,6 +7,7 @@ use App\Models\CustomerPayment;
 use App\Models\Invoice;
 use App\Models\Journal;
 use App\Models\Supplier;
+use App\Models\SupplierCredit;
 
 beforeEach(function () {
     $this->platform()->organization('acme');
@@ -175,6 +176,35 @@ it('moves sold goods from inventory to cost of goods sold, and back when the sal
 
     expect(balanceOf(Account::INVENTORY))->toBe(4000)
         ->and(balanceOf(Account::PURCHASES))->toBe(0);
+});
+
+it('takes returned goods off the bill they came on', function () {
+    $credit = fn () => $this->sendEvent('finance.credit_note.received', 'supplier_return:1', [
+        'credit_note_number' => 'RTN-00001', 'bill_number' => 'GRN-7', 'supplier_name' => 'Juba Medical Supplies',
+        'supplier_id' => '01a1a1a1-0000-7000-8000-000000000001', 'currency' => 'SSP', 'total_minor' => 600,
+        'credited_on' => '2026-10-12', 'reason' => 'Damaged in transit',
+        'lines' => [['description' => 'Amoxicillin (batch A1)', 'quantity' => 5, 'amount_minor' => 600, 'expense_account' => null]],
+    ]);
+
+    // Before its bill: try again later.
+    $credit()->assertStatus(503);
+
+    $this->sendEvent('finance.bill.received', 'goods_receipt:7', [
+        'bill_number' => 'GRN-7', 'supplier_name' => 'Juba Medical Supplies', 'supplier_id' => '01a1a1a1-0000-7000-8000-000000000001',
+        'currency' => 'SSP', 'total_minor' => 4800, 'received_on' => '2026-10-10',
+        'lines' => [['description' => 'Amoxicillin (batch A1)', 'quantity' => 40, 'amount_minor' => 4800]],
+    ])->assertCreated();
+    $credit()->assertCreated();
+
+    expect(balanceOf(Account::PAYABLE))->toBe(4200)
+        ->and(balanceOf(Account::INVENTORY))->toBe(4200);
+
+    $this->asTenant('acme', function () {
+        $bill = Bill::query()->sole();
+        expect($bill->outstanding())->toBe(4200)
+            ->and(SupplierCredit::query()->sole())->applied_minor->toBe(600)->bill_id->toBe($bill->id)
+            ->and(Supplier::query()->count())->toBe(1);
+    });
 });
 
 it('posts invoice lines to the revenue account they name', function () {

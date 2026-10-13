@@ -12,6 +12,7 @@ import {
     ShieldAlert,
     ShoppingCart,
     Truck,
+    Undo2,
 } from 'lucide-react';
 import { home } from '@/routes';
 import { index as controlled } from '@/routes/controlled';
@@ -22,6 +23,7 @@ import { index as receipts } from '@/routes/receipts';
 import { index as reports } from '@/routes/reports';
 import { create as counter, index as sales } from '@/routes/sales';
 import { index as stock } from '@/routes/stock';
+import { index as supplierReturns } from '@/routes/supplier-returns';
 import { index as suppliers } from '@/routes/suppliers';
 
 export type NavItem = {
@@ -121,6 +123,13 @@ export const navigation: NavGroup[] = [
                 title: 'Goods received',
                 href: receipts(),
                 icon: PackageCheck,
+                permission: 'pharmacy.purchasing.view',
+                scope: 'branch',
+            },
+            {
+                title: 'Returns',
+                href: supplierReturns(),
+                icon: Undo2,
                 permission: 'pharmacy.purchasing.view',
                 scope: 'branch',
             },

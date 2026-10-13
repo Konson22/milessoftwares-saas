@@ -7,6 +7,7 @@ use App\Models\Medicine;
 use App\Models\PurchaseOrder;
 use App\Models\StockMovement;
 use App\Models\Supplier;
+use App\Models\SupplierReturn;
 use App\Models\Workspace;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
@@ -218,4 +219,88 @@ it('opens every purchasing page', function () {
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('order.number', 'PO-00001')
             ->where('order.lines.0.remaining', 99));
+});
+
+function receiveForReturn(): GoodsReceipt
+{
+    storekeeper(test()->juba);
+    receiveLines(null, [
+        ['medicine_id' => test()->amox->id, 'batch_number' => 'AMX-9', 'expires_on' => '2027-09-30', 'quantity' => 40, 'unit_cost' => '1.20'],
+        ['medicine_id' => test()->para->id, 'batch_number' => 'PAR-9', 'expires_on' => '2026-10-20', 'quantity' => 10, 'unit_cost' => '0.40'],
+    ])->assertSessionHasNoErrors();
+
+    return test()->asTenant('acme', fn () => GoodsReceipt::query()->with('lines')->sole());
+}
+
+function returnGoods(GoodsReceipt $receipt, array $quantities, string $reason = 'Damaged in transit')
+{
+    return test()->post(test()->workspaceUrl('acme', "receipts/{$receipt->id}/returns"), [
+        'returned_on' => '2026-10-12',
+        'reason' => $reason,
+        'quantities' => $quantities,
+    ]);
+}
+
+it('returns goods to the supplier at cost, out of stock, and sends Finance a credit note', function () {
+    $receipt = receiveForReturn();
+    [$amoxLine, $paraLine] = [$receipt->lines->firstWhere('batch_number', 'AMX-9'), $receipt->lines->firstWhere('batch_number', 'PAR-9')];
+
+    returnGoods($receipt, [$amoxLine->id => 5, $paraLine->id => 0])->assertSessionHasNoErrors();
+
+    $return = $this->asTenant('acme', fn () => SupplierReturn::query()->with('lines')->sole());
+    expect($return)->number->toBe('RTN-00001')->total_minor->toBe(5 * 120)->supplier_id->toBe($this->supplier->id)
+        ->and($return->lines)->toHaveCount(1)
+        ->and($this->asTenant('acme', fn () => Batch::query()->where('batch_number', 'AMX-9')->value('quantity_on_hand')))->toBe(35)
+        ->and($this->asTenant('acme', fn () => StockMovement::query()->where('type', 'supplier_return')->value('quantity')))->toBe(-5);
+
+    $credit = Envelope::fromArray(collect($this->platform()->moduleEvents['finance'])->last());
+    expect($credit->eventType)->toBe('finance.credit_note.received')
+        ->and($credit->payload)->toMatchArray([
+            'credit_note_number' => 'RTN-00001', 'bill_number' => $receipt->number, 'supplier_id' => $this->supplier->id,
+            'total_minor' => 600, 'currency' => 'SSP', 'reason' => 'Damaged in transit',
+        ]);
+
+    // The delivery shows what went back.
+    $this->get($this->workspaceUrl('acme', "receipts/{$receipt->id}"))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('returns.0.number', 'RTN-00001')->where('receipt.lines.0.returned', 5));
+});
+
+it('never returns more than was received, or more than is left in the batch', function () {
+    $receipt = receiveForReturn();
+    $amoxLine = $receipt->lines->firstWhere('batch_number', 'AMX-9');
+
+    returnGoods($receipt, [$amoxLine->id => 30])->assertSessionHasNoErrors();
+    returnGoods($receipt, [$amoxLine->id => 11])->assertSessionHasErrors("quantities.{$amoxLine->id}");
+
+    // Ten sold or used elsewhere: only what is on the shelf can go back.
+    $this->asTenant('acme', fn () => Batch::query()->where('batch_number', 'AMX-9')->update(['quantity_on_hand' => 4]));
+    returnGoods($receipt, [$amoxLine->id => 5])->assertSessionHasErrors("quantities.{$amoxLine->id}");
+
+    returnGoods($receipt, [$amoxLine->id => 0])->assertSessionHasErrors('quantities');
+    returnGoods($receipt, [(string) str()->uuid() => 1])->assertSessionHasErrors('quantities');
+    returnGoods($receipt, ['not-a-line' => 1])->assertSessionHasErrors('quantities');
+});
+
+it('takes expired stock back too', function () {
+    $receipt = receiveForReturn();
+    $this->travelTo(now()->setDate(2026, 10, 25));
+
+    $paraLine = $receipt->lines->firstWhere('batch_number', 'PAR-9');
+    $this->post($this->workspaceUrl('acme', "receipts/{$receipt->id}/returns"), [
+        'returned_on' => '2026-10-25', 'reason' => 'Expired', 'quantities' => [$paraLine->id => 10],
+    ])->assertSessionHasNoErrors();
+
+    expect($this->asTenant('acme', fn () => Batch::query()->where('batch_number', 'PAR-9')->value('quantity_on_hand')))->toBe(0);
+});
+
+it('keeps another branch\'s deliveries out of reach, and needs the receive permission', function () {
+    $receipt = receiveForReturn();
+    $amoxLine = $receipt->lines->firstWhere('batch_number', 'AMX-9');
+
+    storekeeper($this->wau);
+    $this->get($this->workspaceUrl('acme', "receipts/{$receipt->id}/return"))->assertNotFound();
+
+    $this->actingAsMember('acme', ['pharmacy.purchasing.view'], branch: $this->juba);
+    returnGoods($receipt, [$amoxLine->id => 1])->assertForbidden();
+    $this->get($this->workspaceUrl('acme', 'supplier-returns'))->assertOk();
 });

@@ -11,6 +11,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\SupplierReturnController;
 use Illuminate\Support\Facades\Route;
 use Miles\PlatformClient\PlatformConfig;
 
@@ -103,6 +104,8 @@ Route::prefix(app(PlatformConfig::class)->path())
                 Route::get('purchase-orders/{order}', [PurchaseOrderController::class, 'show'])->whereUuid('order')->name('purchase-orders.show');
                 Route::get('receipts', [GoodsReceiptController::class, 'index'])->name('receipts.index');
                 Route::get('receipts/{receipt}', [GoodsReceiptController::class, 'show'])->whereUuid('receipt')->name('receipts.show');
+                Route::get('supplier-returns', [SupplierReturnController::class, 'index'])->name('supplier-returns.index');
+                Route::get('supplier-returns/{return}', [SupplierReturnController::class, 'show'])->whereUuid('return')->name('supplier-returns.show');
             });
             Route::middleware('branch.can:pharmacy.purchasing.manage')->group(function () {
                 Route::get('purchase-orders/create', [PurchaseOrderController::class, 'create'])->name('purchase-orders.create');
@@ -113,6 +116,9 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::middleware('branch.can:pharmacy.purchasing.receive')->group(function () {
                 Route::get('receipts/create', [GoodsReceiptController::class, 'create'])->name('receipts.create');
                 Route::post('receipts', [GoodsReceiptController::class, 'store'])->name('receipts.store');
+                // Sending goods back to the supplier of a delivery.
+                Route::get('receipts/{receipt}/return', [SupplierReturnController::class, 'create'])->whereUuid('receipt')->name('supplier-returns.create');
+                Route::post('receipts/{receipt}/returns', [SupplierReturnController::class, 'store'])->whereUuid('receipt')->name('supplier-returns.store');
             });
 
             // Stock of the branch being worked in.
