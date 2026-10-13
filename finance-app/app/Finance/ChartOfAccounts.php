@@ -31,7 +31,7 @@ class ChartOfAccounts
         ['code' => '3100', 'name' => 'Retained earnings', 'type' => AccountType::Equity, 'key' => Account::RETAINED_EARNINGS],
         ['code' => '4000', 'name' => 'Sales revenue', 'type' => AccountType::Revenue, 'key' => Account::SALES],
         ['code' => '4900', 'name' => 'Other income', 'type' => AccountType::Revenue],
-        ['code' => '5000', 'name' => 'Purchases (cost of goods sold)', 'type' => AccountType::Expense, 'key' => Account::PURCHASES],
+        ['code' => '5000', 'name' => 'Cost of goods sold', 'type' => AccountType::Expense, 'key' => Account::PURCHASES],
         ['code' => '6000', 'name' => 'Rent', 'type' => AccountType::Expense],
         ['code' => '6100', 'name' => 'Salaries and wages', 'type' => AccountType::Expense],
         ['code' => '6200', 'name' => 'Utilities', 'type' => AccountType::Expense],

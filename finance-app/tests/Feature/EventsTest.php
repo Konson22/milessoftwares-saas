@@ -153,6 +153,30 @@ it('posts a supplier bill to inventory and payables, one supplier per product su
     });
 });
 
+it('moves sold goods from inventory to cost of goods sold, and back when the sale is voided', function () {
+    $this->sendEvent('finance.bill.received', 'goods_receipt:1', [
+        'bill_number' => 'GRN-1', 'supplier_name' => 'Juba Medical Supplies', 'currency' => 'SSP',
+        'total_minor' => 4000, 'received_on' => '2026-10-01',
+        'lines' => [['description' => 'Paracetamol x40', 'quantity' => 40, 'amount_minor' => 4000]],
+    ])->assertCreated();
+
+    $this->sendEvent('finance.invoice.issued', 'sale:S-1:invoice', [
+        'invoice_number' => 'S-1', 'currency' => 'SSP', 'total_minor' => 1250,
+        'lines' => [['description' => 'Paracetamol', 'quantity' => 5, 'amount_minor' => 1250, 'revenue_account' => null, 'cost_minor' => 500]],
+    ])->assertCreated();
+
+    expect(balanceOf(Account::INVENTORY))->toBe(3500)
+        ->and(balanceOf(Account::PURCHASES))->toBe(500)
+        ->and(balanceOf(Account::SALES))->toBe(1250);
+
+    $this->sendEvent('finance.invoice.voided', 'sale:S-1:void', [
+        'invoice_number' => 'S-1', 'currency' => 'SSP', 'total_minor' => 1250, 'reason' => 'Returned', 'refund' => null,
+    ])->assertCreated();
+
+    expect(balanceOf(Account::INVENTORY))->toBe(4000)
+        ->and(balanceOf(Account::PURCHASES))->toBe(0);
+});
+
 it('posts invoice lines to the revenue account they name', function () {
     $other = $this->asTenant('acme', fn () => Account::query()->where('code', '4900')->sole());
 

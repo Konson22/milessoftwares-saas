@@ -60,6 +60,7 @@ class Receivables
                     'quantity' => null,
                     'amount_minor' => $line['amount_minor'],
                     'account' => $line['account']->code,
+                    'cost_minor' => null,
                 ], $lines),
                 'journal_id' => $journal->id,
             ]);

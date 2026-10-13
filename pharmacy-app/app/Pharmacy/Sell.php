@@ -89,7 +89,10 @@ class Sell
             $invoiceLines = [];
 
             foreach ($priced as [$medicine, $quantity]) {
+                // What the stock sold cost, batch by batch: Finance's cost of goods sold.
+                $cost = 0;
                 foreach ($this->stock->take($medicine, $branchId, $quantity, $by, 'sale', $sale->id) as $part) {
+                    $cost += $part['quantity'] * $part['batch']->unit_cost_minor;
                     $sale->lines()->create([
                         'medicine_id' => $medicine->id,
                         'batch_id' => $part['batch']->id,
@@ -104,6 +107,7 @@ class Sell
                     'quantity' => $quantity,
                     'amount_minor' => $quantity * $medicine->sell_price_minor,
                     'revenue_account' => null,
+                    'cost_minor' => $cost,
                 ];
             }
 

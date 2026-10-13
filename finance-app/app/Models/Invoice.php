@@ -23,7 +23,7 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property int $total_minor
  * @property int $tax_minor
  * @property int $paid_minor
- * @property list<array{description: string, quantity: int|float|null, amount_minor: int, account: string|null}> $lines
+ * @property list<array{description: string, quantity: int|float|null, amount_minor: int, account: string|null, cost_minor: int|null}> $lines
  * @property string|null $journal_id
  * @property CarbonImmutable|null $voided_at
  * @property string|null $void_reason

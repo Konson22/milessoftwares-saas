@@ -28,6 +28,11 @@
                     "revenue_account": {
                         "type": ["string", "null"],
                         "maxLength": 32
+                    },
+                    "cost_minor": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "What the goods on this line cost the seller (stock at cost). Finance moves it from inventory to cost of goods sold. Omit for services."
                     }
                 }
             }

@@ -25,7 +25,7 @@ beforeEach(function () {
     $stock = app(Stock::class);
     $keeper = User::factory()->create();
     $this->asTenant('acme', function () use ($stock, $keeper) {
-        $stock->add($this->para, $this->juba, 'P-SOON', CarbonImmutable::parse('2026-12-31'), 3, 100, $keeper);
+        $stock->add($this->para, $this->juba, 'P-SOON', CarbonImmutable::parse('2026-12-31'), 3, 90, $keeper);
         $stock->add($this->para, $this->juba, 'P-LATE', CarbonImmutable::parse('2027-12-31'), 20, 100, $keeper);
         $stock->add($this->amox, $this->juba, 'A-1', CarbonImmutable::parse('2027-06-30'), 20, 800, $keeper);
     });
@@ -73,7 +73,7 @@ it('sells oldest expiry first, gives change, and reports the sale to Finance', f
     expect($invoice->eventType)->toBe('finance.invoice.issued')
         ->and($invoice->sourceTransactionId)->toBe("sale:{$sale->id}:invoice")
         ->and($invoice->payload)->toMatchArray(['invoice_number' => 'S-000001', 'total_minor' => 1250, 'currency' => 'SSP', 'branch_id' => $this->juba])
-        ->and($invoice->payload['lines'])->toBe([['description' => $this->para->label(), 'quantity' => 5, 'amount_minor' => 1250, 'revenue_account' => null]])
+        ->and($invoice->payload['lines'])->toBe([['description' => $this->para->label(), 'quantity' => 5, 'amount_minor' => 1250, 'revenue_account' => null, 'cost_minor' => 3 * 90 + 2 * 100]])
         ->and($payment->eventType)->toBe('finance.payment.received')
         ->and($payment->payload)->toMatchArray(['amount_minor' => 1250, 'method' => 'cash', 'invoice_number' => 'S-000001']);
 });

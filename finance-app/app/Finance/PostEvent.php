@@ -56,13 +56,22 @@ class PostEvent
         $tax = (int) ($p['tax_minor'] ?? 0);
         $lines = $this->lines($p['lines'] ?? [], 'revenue_account');
 
-        $credits = $this->split($lines, $total - $tax, Account::SALES);
-        $journalLines = [['account' => Account::system(Account::RECEIVABLE), 'debit' => $total, 'description' => $p['customer_reference'] ?? null]];
-        foreach ($credits as [$account, $amount]) {
-            $journalLines[] = ['account' => $account, 'credit' => $amount];
+        $journalLines = [];
+        if ($total > 0) {
+            $journalLines[] = ['account' => Account::system(Account::RECEIVABLE), 'debit' => $total, 'description' => $p['customer_reference'] ?? null];
+            foreach ($this->split($lines, $total - $tax, Account::SALES) as [$account, $amount]) {
+                $journalLines[] = ['account' => $account, 'credit' => $amount];
+            }
+            if ($tax > 0) {
+                $journalLines[] = ['account' => Account::system(Account::TAX), 'credit' => $tax];
+            }
         }
-        if ($tax > 0) {
-            $journalLines[] = ['account' => Account::system(Account::TAX), 'credit' => $tax];
+
+        // The goods leave inventory at what they cost: cost of goods sold.
+        $cost = array_sum(array_map(fn (array $line) => $line['cost_minor'] ?? 0, $lines));
+        if ($cost > 0) {
+            $journalLines[] = ['account' => Account::system(Account::PURCHASES), 'debit' => $cost, 'description' => 'Cost of goods sold'];
+            $journalLines[] = ['account' => Account::system(Account::INVENTORY), 'credit' => $cost];
         }
 
         $invoice = new Invoice([
@@ -77,8 +86,9 @@ class PostEvent
             'lines' => $lines,
         ]);
 
-        // A zero total posts nothing; the invoice is still kept for voids.
-        if ($total > 0) {
+        // Nothing charged and nothing at cost posts nothing; the invoice is
+        // still kept for voids.
+        if ($journalLines !== []) {
             $invoice->journal_id = $this->ledger->post($date, "Invoice {$p['invoice_number']}", $journalLines, $this->source($event, $p['invoice_number']))->id;
         }
         $invoice->save();
@@ -243,7 +253,7 @@ class PostEvent
 
     /**
      * @param  array<int, mixed>  $lines
-     * @return list<array{description: string, quantity: int|float|null, amount_minor: int, account: string|null}>
+     * @return list<array{description: string, quantity: int|float|null, amount_minor: int, account: string|null, cost_minor: int|null}>
      */
     private function lines(array $lines, string $accountKey): array
     {
@@ -252,6 +262,7 @@ class PostEvent
             'quantity' => $line['quantity'] ?? null,
             'amount_minor' => (int) ($line['amount_minor'] ?? 0),
             'account' => isset($line[$accountKey]) ? (string) $line[$accountKey] : null,
+            'cost_minor' => isset($line['cost_minor']) ? max(0, (int) $line['cost_minor']) : null,
         ], array_filter($lines, 'is_array')));
     }
 
@@ -259,7 +270,7 @@ class PostEvent
      * The amount split across the accounts the lines name (by code), the
      * rest of it (or all of it, when the lines do not add up) to the default.
      *
-     * @param  list<array{description: string, quantity: int|float|null, amount_minor: int, account: string|null}>  $lines
+     * @param  list<array{description: string, quantity: int|float|null, amount_minor: int, account: string|null, cost_minor: int|null}>  $lines
      * @return list<array{0: Account, 1: int}>
      */
     private function split(array $lines, int $amount, string $defaultKey): array
