@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react';
 import { Badge } from '@/shared/components/ui/badge';
 import { register } from '@/routes';
 
@@ -30,7 +31,9 @@ export default function PlanCard({
     headingLevel?: 'h2' | 'h3';
 }) {
     return (
-        <li className="flex flex-col rounded-xl border bg-background p-6">
+        <li
+            className={`flex flex-col rounded-xl border bg-background p-6 ${plan.isBundle ? 'border-primary shadow-sm' : ''}`}
+        >
             <div className="flex items-center gap-2">
                 <Heading className="text-lg font-semibold">{plan.name}</Heading>
                 {plan.isBundle && <Badge variant="secondary">Bundle</Badge>}
@@ -50,9 +53,18 @@ export default function PlanCard({
                     {plan.description}
                 </p>
             )}
-            <p className="mt-3 text-sm">
-                Includes: {plan.applications.join(', ')}
-            </p>
+            <p className="mt-5 text-sm font-medium">Includes</p>
+            <ul className="mt-2 flex-1 space-y-2 text-sm">
+                {plan.applications.map((application) => (
+                    <li key={application} className="flex gap-2">
+                        <Check
+                            className="mt-0.5 size-4 shrink-0 text-primary"
+                            aria-hidden
+                        />
+                        {application}
+                    </li>
+                ))}
+            </ul>
             <a
                 href={register.url()}
                 className="mt-6 rounded-md bg-primary px-4 py-2 text-center text-sm font-medium text-primary-foreground hover:bg-primary/90"

@@ -1,9 +1,9 @@
 import { Link } from '@inertiajs/react';
-import { Check } from 'lucide-react';
+import { ArrowLeft, Check } from 'lucide-react';
 import { Badge } from '@/shared/components/ui/badge';
 import PlanCard from '@/sites/public/components/plan-card';
 import type { Plan } from '@/sites/public/components/plan-card';
-import { statusLabel } from '@/sites/public/components/product';
+import { productIcon, statusLabel } from '@/sites/public/components/product';
 import type { Product } from '@/sites/public/components/product';
 import Seo from '@/sites/public/components/seo';
 
@@ -18,6 +18,7 @@ export default function ProductPage({ product, plans, canonical }: Props) {
         product.tagline ??
         product.description ??
         `${product.name} by Miles Global Softwares.`;
+    const Icon = productIcon(product.code);
 
     return (
         <>
@@ -38,11 +39,15 @@ export default function ProductPage({ product, plans, canonical }: Props) {
             <section className="mx-auto max-w-6xl px-4 py-16">
                 <Link
                     href="/#products"
-                    className="text-sm text-muted-foreground hover:underline"
+                    className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
                 >
+                    <ArrowLeft className="size-4" aria-hidden />
                     All applications
                 </Link>
-                <div className="mt-4 flex flex-wrap items-center gap-3">
+                <div className="mt-6 flex flex-wrap items-center gap-4">
+                    <span className="inline-flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <Icon className="size-6" aria-hidden />
+                    </span>
                     <h1 className="text-4xl font-semibold tracking-tight">
                         {product.name}
                     </h1>
@@ -75,22 +80,31 @@ export default function ProductPage({ product, plans, canonical }: Props) {
                     </ul>
                 )}
 
-                <div className="mt-10">
+                <div className="mt-10 flex flex-wrap gap-3">
                     <Link
                         href={`/demo?product=${product.code}`}
-                        className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                        className="rounded-md bg-primary px-5 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
                     >
                         {product.status === 'planned'
                             ? 'Tell me when it launches'
                             : `Book a ${product.name} demo`}
                     </Link>
+                    {product.status !== 'planned' && plans.length > 0 && (
+                        <a
+                            href="#plans"
+                            className="rounded-md border px-5 py-3 text-sm font-medium hover:bg-accent"
+                        >
+                            See plans
+                        </a>
+                    )}
                 </div>
             </section>
 
             {plans.length > 0 && (
                 <section
+                    id="plans"
                     aria-labelledby="plans-heading"
-                    className="border-t bg-muted/30"
+                    className="scroll-mt-20 border-t bg-muted/30"
                 >
                     <div className="mx-auto max-w-6xl px-4 py-16">
                         <h2
