@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react';
-import { Badge } from '@/shared/components/ui/badge';
+import { button } from '@/sites/public/components/styles';
 import { register } from '@/routes';
 
 export type Plan = {
@@ -21,7 +21,8 @@ const per: Record<Plan['interval'], string> = {
 
 /**
  * headingLevel keeps the outline intact: h2 directly under a page title,
- * h3 inside a section that already has an h2.
+ * h3 inside a section that already has an h2. Bundles stand out with a
+ * brand border and glow.
  */
 export default function PlanCard({
     plan,
@@ -32,48 +33,51 @@ export default function PlanCard({
 }) {
     return (
         <li
-            className={`flex flex-col rounded-xl border bg-background p-6 ${plan.isBundle ? 'border-primary shadow-sm' : ''}`}
+            className={`relative flex flex-col rounded-2xl border bg-card p-7 shadow-sm ${plan.isBundle ? 'border-primary shadow-xl ring-1 shadow-primary/15 ring-primary' : ''}`}
         >
-            <div className="flex items-center gap-2">
-                <Heading className="text-lg font-semibold">{plan.name}</Heading>
-                {plan.isBundle && <Badge variant="secondary">Bundle</Badge>}
-            </div>
-            <p className="mt-3">
-                <span className="text-3xl font-semibold tabular-nums">
+            {plan.isBundle && (
+                <span className="absolute -top-3 left-7 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground shadow-md shadow-primary/30">
+                    Bundle
+                </span>
+            )}
+            <Heading className="text-lg font-semibold">{plan.name}</Heading>
+            {plan.description && (
+                <p className="mt-2 text-sm text-muted-foreground">
+                    {plan.description}
+                </p>
+            )}
+            <p className="mt-6 flex flex-wrap items-baseline gap-x-2">
+                <span className="text-4xl font-semibold tracking-tight tabular-nums">
                     {plan.price}
-                </span>{' '}
+                </span>
                 {plan.price !== 'Free' && (
                     <span className="text-sm text-muted-foreground">
                         {per[plan.interval]}
                     </span>
                 )}
             </p>
-            {plan.description && (
-                <p className="mt-3 text-sm text-muted-foreground">
-                    {plan.description}
-                </p>
-            )}
-            <p className="mt-5 text-sm font-medium">Includes</p>
-            <ul className="mt-2 flex-1 space-y-2 text-sm">
-                {plan.applications.map((application) => (
-                    <li key={application} className="flex gap-2">
-                        <Check
-                            className="mt-0.5 size-4 shrink-0 text-primary"
-                            aria-hidden
-                        />
-                        {application}
-                    </li>
-                ))}
-            </ul>
             <a
                 href={register.url()}
-                className="mt-6 rounded-md bg-primary px-4 py-2 text-center text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                className={`mt-6 ${plan.isBundle ? button.primary : button.outline} py-2.5`}
             >
                 {plan.trialDays > 0
                     ? `Start a ${plan.trialDays}-day trial`
                     : 'Get started'}
                 <span className="sr-only"> with {plan.name}</span>
             </a>
+            <div className="mt-7 border-t pt-6">
+                <p className="text-sm font-medium">Includes</p>
+                <ul className="mt-3 space-y-2.5 text-sm">
+                    {plan.applications.map((application) => (
+                        <li key={application} className="flex gap-2.5">
+                            <span className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                                <Check className="size-3" aria-hidden />
+                            </span>
+                            {application}
+                        </li>
+                    ))}
+                </ul>
+            </div>
         </li>
     );
 }

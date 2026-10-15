@@ -1,5 +1,6 @@
 import { Label } from '@/shared/components/ui/label';
 import LeadForm, { Field } from '@/sites/public/components/lead-form';
+import PageHero from '@/sites/public/components/page-hero';
 import Seo from '@/sites/public/components/seo';
 
 type Props = {
@@ -23,16 +24,18 @@ export default function Demo({
                 canonical={canonical}
             />
 
-            <section className="mx-auto max-w-2xl px-4 py-16">
-                <h1 className="text-4xl font-semibold tracking-tight">
-                    Book a demo
-                </h1>
-                <p className="mt-4 text-lg text-muted-foreground">
-                    Tell us about your organization and we will set up a
-                    walkthrough.
-                </p>
+            <PageHero
+                padding="pt-16 pb-36 sm:pt-20 sm:pb-40"
+                className="text-center [&_h1]:mx-auto [&_p]:mx-auto"
+                title="Book a demo"
+                intro="Tell us about your organization and we will set up a walkthrough."
+            />
 
-                <div className="mt-10">
+            <section
+                aria-label="Demo request"
+                className="mx-auto max-w-3xl px-4 pb-24"
+            >
+                <div className="relative -mt-24 rounded-2xl border bg-card p-6 shadow-xl sm:p-10">
                     <LeadForm
                         action="/demo"
                         formToken={formToken}
@@ -46,7 +49,7 @@ export default function Demo({
                                         id="product"
                                         name="product"
                                         defaultValue={selected ?? ''}
-                                        className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs"
+                                        className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
                                     >
                                         <option value="">Not sure yet</option>
                                         {products.map((product) => (

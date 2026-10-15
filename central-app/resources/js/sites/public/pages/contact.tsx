@@ -1,4 +1,5 @@
 import LeadForm, { Field } from '@/sites/public/components/lead-form';
+import PageHero from '@/sites/public/components/page-hero';
 import Seo from '@/sites/public/components/seo';
 
 type Props = {
@@ -15,15 +16,18 @@ export default function Contact({ formToken, canonical }: Props) {
                 canonical={canonical}
             />
 
-            <section className="mx-auto max-w-2xl px-4 py-16">
-                <h1 className="text-4xl font-semibold tracking-tight">
-                    Contact us
-                </h1>
-                <p className="mt-4 text-lg text-muted-foreground">
-                    We reply within one working day.
-                </p>
+            <PageHero
+                padding="pt-16 pb-36 sm:pt-20 sm:pb-40"
+                className="text-center [&_h1]:mx-auto [&_p]:mx-auto"
+                title="Contact us"
+                intro="We reply within one working day."
+            />
 
-                <div className="mt-10">
+            <section
+                aria-label="Message"
+                className="mx-auto max-w-3xl px-4 pb-24"
+            >
+                <div className="relative -mt-24 rounded-2xl border bg-card p-6 shadow-xl sm:p-10">
                     <LeadForm
                         action="/contact"
                         formToken={formToken}
