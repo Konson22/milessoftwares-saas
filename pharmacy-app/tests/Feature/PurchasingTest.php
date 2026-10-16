@@ -34,8 +34,8 @@ function orderAmoxAndPara(): PurchaseOrder
     test()->post(test()->workspaceUrl('acme', 'purchase-orders'), [
         'supplier_id' => test()->supplier->id,
         'lines' => [
-            ['medicine_id' => test()->amox->id, 'quantity' => 100, 'unit_cost' => '1.20'],
-            ['medicine_id' => test()->para->id, 'quantity' => 50, 'unit_cost' => '0.40'],
+            ['item_id' => test()->amox->id, 'quantity' => 100, 'unit_cost' => '1.20'],
+            ['item_id' => test()->para->id, 'quantity' => 50, 'unit_cost' => '0.40'],
         ],
     ])->assertSessionHasNoErrors();
 
@@ -70,17 +70,17 @@ it('drafts, sends and numbers purchase orders per organization', function () {
 it('receives an order in two deliveries, into batches, and tells Finance once per delivery', function () {
     storekeeper($this->juba);
     $order = orderAmoxAndPara();
-    [$amoxLine, $paraLine] = [$order->lines->firstWhere('medicine_id', $this->amox->id), $order->lines->firstWhere('medicine_id', $this->para->id)];
+    [$amoxLine, $paraLine] = [$order->lines->firstWhere('item_id', $this->amox->id), $order->lines->firstWhere('item_id', $this->para->id)];
 
     receiveLines($order, [
-        ['medicine_id' => $this->amox->id, 'purchase_order_line_id' => $amoxLine->id, 'batch_number' => 'AMX-1', 'expires_on' => '2027-09-30', 'quantity' => 60, 'unit_cost' => '1.20'],
+        ['item_id' => $this->amox->id, 'purchase_order_line_id' => $amoxLine->id, 'batch_number' => 'AMX-1', 'expires_on' => '2027-09-30', 'quantity' => 60, 'unit_cost' => '1.20'],
     ])->assertSessionHasNoErrors();
 
     expect($order->refresh()->status)->toBe(PurchaseOrderStatus::PartlyReceived);
 
     receiveLines($order, [
-        ['medicine_id' => $this->amox->id, 'purchase_order_line_id' => $amoxLine->id, 'batch_number' => 'AMX-2', 'expires_on' => '2028-01-31', 'quantity' => 40, 'unit_cost' => '1.25'],
-        ['medicine_id' => $this->para->id, 'purchase_order_line_id' => $paraLine->id, 'batch_number' => 'PAR-1', 'expires_on' => '2027-12-31', 'quantity' => 50, 'unit_cost' => '0.40'],
+        ['item_id' => $this->amox->id, 'purchase_order_line_id' => $amoxLine->id, 'batch_number' => 'AMX-2', 'expires_on' => '2028-01-31', 'quantity' => 40, 'unit_cost' => '1.25'],
+        ['item_id' => $this->para->id, 'purchase_order_line_id' => $paraLine->id, 'batch_number' => 'PAR-1', 'expires_on' => '2027-12-31', 'quantity' => 50, 'unit_cost' => '0.40'],
     ])->assertSessionHasNoErrors();
 
     expect($order->refresh()->status)->toBe(PurchaseOrderStatus::Received);
@@ -120,10 +120,10 @@ it('receives an order in two deliveries, into batches, and tells Finance once pe
 it('refuses to receive more than the order still expects', function () {
     storekeeper($this->juba);
     $order = orderAmoxAndPara();
-    $amoxLine = $order->lines->firstWhere('medicine_id', $this->amox->id);
+    $amoxLine = $order->lines->firstWhere('item_id', $this->amox->id);
 
     receiveLines($order, [
-        ['medicine_id' => $this->amox->id, 'purchase_order_line_id' => $amoxLine->id, 'batch_number' => 'AMX-1', 'expires_on' => '2027-09-30', 'quantity' => 101, 'unit_cost' => '1.20'],
+        ['item_id' => $this->amox->id, 'purchase_order_line_id' => $amoxLine->id, 'batch_number' => 'AMX-1', 'expires_on' => '2027-09-30', 'quantity' => 101, 'unit_cost' => '1.20'],
     ])->assertSessionHasErrors('lines.0.quantity');
 
     expect($this->asTenant('acme', fn () => Batch::query()->count()))->toBe(0);
@@ -131,12 +131,12 @@ it('refuses to receive more than the order still expects', function () {
 
 it('keeps a delivery all or nothing: no stock, number or event when a line fails', function () {
     storekeeper($this->juba);
-    receiveLines(null, [['medicine_id' => $this->amox->id, 'batch_number' => 'AMX-1', 'expires_on' => '2027-09-30', 'quantity' => 5, 'unit_cost' => '1.00']])->assertSessionHasNoErrors();
+    receiveLines(null, [['item_id' => $this->amox->id, 'batch_number' => 'AMX-1', 'expires_on' => '2027-09-30', 'quantity' => 5, 'unit_cost' => '1.00']])->assertSessionHasNoErrors();
 
     // Second line repeats batch AMX-1 with another expiry: the whole receipt fails.
     receiveLines(null, [
-        ['medicine_id' => $this->para->id, 'batch_number' => 'PAR-1', 'expires_on' => '2027-12-31', 'quantity' => 10, 'unit_cost' => '0.40'],
-        ['medicine_id' => $this->amox->id, 'batch_number' => 'AMX-1', 'expires_on' => '2028-03-31', 'quantity' => 5, 'unit_cost' => '1.00'],
+        ['item_id' => $this->para->id, 'batch_number' => 'PAR-1', 'expires_on' => '2027-12-31', 'quantity' => 10, 'unit_cost' => '0.40'],
+        ['item_id' => $this->amox->id, 'batch_number' => 'AMX-1', 'expires_on' => '2028-03-31', 'quantity' => 5, 'unit_cost' => '1.00'],
     ])->assertSessionHasErrors('expires_on');
 
     expect($this->asTenant('acme', fn () => Batch::query()->pluck('batch_number')->all()))->toBe(['AMX-1'])
@@ -144,7 +144,7 @@ it('keeps a delivery all or nothing: no stock, number or event when a line fails
         ->and(DB::table('platform_outbox')->count())->toBe(1);
 
     // The failed attempt did not use up GRN-00002.
-    receiveLines(null, [['medicine_id' => $this->para->id, 'batch_number' => 'PAR-1', 'expires_on' => '2027-12-31', 'quantity' => 10, 'unit_cost' => '0.40']]);
+    receiveLines(null, [['item_id' => $this->para->id, 'batch_number' => 'PAR-1', 'expires_on' => '2027-12-31', 'quantity' => 10, 'unit_cost' => '0.40']]);
     expect($this->asTenant('acme', fn () => GoodsReceipt::query()->latest('number')->value('number')))->toBe('GRN-00002');
 });
 
@@ -155,12 +155,12 @@ it('treats another branch\'s order as unknown, and lines of other orders as not 
 
     $this->get($this->workspaceUrl('acme', "purchase-orders/{$wauOrder->id}"))->assertNotFound();
     receiveLines($wauOrder, [
-        ['medicine_id' => $this->amox->id, 'batch_number' => 'X', 'expires_on' => '2027-09-30', 'quantity' => 1, 'unit_cost' => '1.00'],
+        ['item_id' => $this->amox->id, 'batch_number' => 'X', 'expires_on' => '2027-09-30', 'quantity' => 1, 'unit_cost' => '1.00'],
     ])->assertSessionHasErrors('purchase_order_id');
 
     $jubaOrder = orderAmoxAndPara();
     receiveLines($jubaOrder, [
-        ['medicine_id' => $this->amox->id, 'purchase_order_line_id' => $wauOrder->lines[0]->id, 'batch_number' => 'X', 'expires_on' => '2027-09-30', 'quantity' => 1, 'unit_cost' => '1.00'],
+        ['item_id' => $this->amox->id, 'purchase_order_line_id' => $wauOrder->lines[0]->id, 'batch_number' => 'X', 'expires_on' => '2027-09-30', 'quantity' => 1, 'unit_cost' => '1.00'],
     ])->assertSessionHasErrors('lines.0.purchase_order_line_id');
 });
 
@@ -168,7 +168,7 @@ it('only cancels orders nothing has arrived for', function () {
     storekeeper($this->juba);
     $order = orderAmoxAndPara();
     receiveLines($order, [
-        ['medicine_id' => $this->amox->id, 'purchase_order_line_id' => $order->lines[0]->id, 'batch_number' => 'AMX-1', 'expires_on' => '2027-09-30', 'quantity' => 1, 'unit_cost' => '1.20'],
+        ['item_id' => $this->amox->id, 'purchase_order_line_id' => $order->lines[0]->id, 'batch_number' => 'AMX-1', 'expires_on' => '2027-09-30', 'quantity' => 1, 'unit_cost' => '1.20'],
     ]);
 
     $this->post($this->workspaceUrl('acme', "purchase-orders/{$order->id}/cancel"))->assertSessionHasErrors('status');
@@ -178,7 +178,7 @@ it('only cancels orders nothing has arrived for', function () {
 it('needs the receive permission in this branch to receive', function () {
     $this->actingAsMember('acme', ['pharmacy.purchasing.view'], branch: $this->juba);
 
-    receiveLines(null, [['medicine_id' => $this->amox->id, 'batch_number' => 'X', 'expires_on' => '2027-09-30', 'quantity' => 1, 'unit_cost' => '1.00']])
+    receiveLines(null, [['item_id' => $this->amox->id, 'batch_number' => 'X', 'expires_on' => '2027-09-30', 'quantity' => 1, 'unit_cost' => '1.00']])
         ->assertForbidden();
 });
 
@@ -196,7 +196,7 @@ it('opens every purchasing page', function () {
     storekeeper($this->juba);
     $order = orderAmoxAndPara();
     receiveLines($order, [
-        ['medicine_id' => $this->amox->id, 'purchase_order_line_id' => $order->lines[0]->id, 'batch_number' => 'AMX-1', 'expires_on' => '2027-09-30', 'quantity' => 1, 'unit_cost' => '1.20'],
+        ['item_id' => $this->amox->id, 'purchase_order_line_id' => $order->lines[0]->id, 'batch_number' => 'AMX-1', 'expires_on' => '2027-09-30', 'quantity' => 1, 'unit_cost' => '1.20'],
     ]);
     $receipt = $this->asTenant('acme', fn () => GoodsReceipt::query()->sole());
 
@@ -225,8 +225,8 @@ function receiveForReturn(): GoodsReceipt
 {
     storekeeper(test()->juba);
     receiveLines(null, [
-        ['medicine_id' => test()->amox->id, 'batch_number' => 'AMX-9', 'expires_on' => '2027-09-30', 'quantity' => 40, 'unit_cost' => '1.20'],
-        ['medicine_id' => test()->para->id, 'batch_number' => 'PAR-9', 'expires_on' => '2026-10-20', 'quantity' => 10, 'unit_cost' => '0.40'],
+        ['item_id' => test()->amox->id, 'batch_number' => 'AMX-9', 'expires_on' => '2027-09-30', 'quantity' => 40, 'unit_cost' => '1.20'],
+        ['item_id' => test()->para->id, 'batch_number' => 'PAR-9', 'expires_on' => '2026-10-20', 'quantity' => 10, 'unit_cost' => '0.40'],
     ])->assertSessionHasNoErrors();
 
     return test()->asTenant('acme', fn () => GoodsReceipt::query()->with('lines')->sole());

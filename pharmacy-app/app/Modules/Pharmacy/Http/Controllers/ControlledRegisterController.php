@@ -22,7 +22,7 @@ class ControlledRegisterController extends Controller
 {
     public function __invoke(Request $request, CurrentBranch $branch): Response
     {
-        $medicines = Medicine::query()->where('controlled', true)->orderBy('name')->get();
+        $medicines = Medicine::query()->whereRelation('item', 'controlled', true)->orderBy('name')->get();
         $selected = $medicines->firstWhere('id', $request->query('medicine')) ?? $medicines->first();
 
         $entries = [];
@@ -30,7 +30,7 @@ class ControlledRegisterController extends Controller
         if ($selected !== null) {
             $movements = StockMovement::query()
                 ->where('branch_id', $branch->id())
-                ->where('medicine_id', $selected->id)
+                ->where('item_id', $selected->id)
                 ->with(['batch:id,batch_number', 'user:id,name'])
                 ->orderBy('created_at')
                 ->orderBy('id')

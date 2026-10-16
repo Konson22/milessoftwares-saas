@@ -18,12 +18,12 @@ beforeEach(function () {
     $this->asTenant('acme', function () {
         $keeper = User::factory()->create();
         $this->para = Medicine::factory()->create(['sell_price_minor' => 250]);
-        $sell = fn (string $branch, int $quantity, PaymentMethod $method) => app(Sell::class)->handle($keeper, $branch, [['medicine_id' => $this->para->id, 'quantity' => $quantity]], $method, tenderedMinor: $method === PaymentMethod::Cash ? 10_000 : null);
+        $sell = fn (string $branch, int $quantity, PaymentMethod $method) => app(Sell::class)->handle($keeper, $branch, [['item_id' => $this->para->id, 'quantity' => $quantity]], $method, tenderedMinor: $method === PaymentMethod::Cash ? 10_000 : null);
 
         $this->travelTo(CarbonImmutable::parse('2026-09-01 09:00'));
-        app(Stock::class)->add($this->para, $this->juba, 'E-1', CarbonImmutable::parse('2026-10-01'), 5, 80, $keeper);
-        app(Stock::class)->add($this->para, $this->juba, 'P-1', CarbonImmutable::parse('2027-03-31'), 40, 100, $keeper);
-        app(Stock::class)->add($this->para, $this->malakal, 'M-1', CarbonImmutable::parse('2027-03-31'), 10, 100, $keeper);
+        app(Stock::class)->add($this->para->item, $this->juba, 'E-1', CarbonImmutable::parse('2026-10-01'), 5, 80, $keeper);
+        app(Stock::class)->add($this->para->item, $this->juba, 'P-1', CarbonImmutable::parse('2027-03-31'), 40, 100, $keeper);
+        app(Stock::class)->add($this->para->item, $this->malakal, 'M-1', CarbonImmutable::parse('2027-03-31'), 10, 100, $keeper);
 
         // September, outside the default period: from E-1, which expires first.
         $this->travelTo(CarbonImmutable::parse('2026-09-15 12:00'));

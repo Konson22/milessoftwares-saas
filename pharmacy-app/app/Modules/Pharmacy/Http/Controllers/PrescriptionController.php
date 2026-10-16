@@ -62,7 +62,7 @@ class PrescriptionController extends Controller
     public function create(): Response
     {
         return Inertia::render('prescriptions/create', [
-            'medicines' => Medicine::query()->where('active', true)->orderBy('name')->get()
+            'medicines' => Medicine::query()->active()->orderBy('name')->get()
                 ->map(fn (Medicine $medicine) => [
                     'id' => $medicine->id,
                     'label' => $medicine->label(),
@@ -116,11 +116,11 @@ class PrescriptionController extends Controller
 
         $sellable = Batch::query()
             ->where('branch_id', $this->branch->id())
-            ->whereIn('medicine_id', $prescription->items->pluck('medicine_id'))
+            ->whereIn('item_id', $prescription->items->pluck('medicine_id'))
             ->whereDate('expires_on', '>', CarbonImmutable::today())
-            ->groupBy('medicine_id')
-            ->selectRaw('medicine_id, SUM(quantity_on_hand) AS quantity')
-            ->pluck('quantity', 'medicine_id');
+            ->groupBy('item_id')
+            ->selectRaw('item_id, SUM(quantity_on_hand) AS quantity')
+            ->pluck('quantity', 'item_id');
 
         $access = app(CurrentAccess::class)->get();
         $can = fn (string $permission) => $access?->allowsIn($permission, branchId: $this->branch->id()) ?? false;

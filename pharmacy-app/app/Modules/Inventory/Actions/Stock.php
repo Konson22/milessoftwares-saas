@@ -6,8 +6,8 @@ use App\Models\User;
 use App\Modules\Inventory\Enums\AdjustmentReason;
 use App\Modules\Inventory\Enums\MovementType;
 use App\Modules\Inventory\Models\Batch;
+use App\Modules\Inventory\Models\Item;
 use App\Modules\Inventory\Models\StockMovement;
-use App\Modules\Pharmacy\Models\Medicine;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -26,7 +26,7 @@ class Stock
      * @throws ValidationException when the batch exists with another expiry date
      */
     public function add(
-        Medicine $medicine,
+        Item $item,
         string $branchId,
         string $batchNumber,
         CarbonImmutable $expiresOn,
@@ -41,10 +41,10 @@ class Stock
             throw ValidationException::withMessages(['quantity' => 'The quantity must be at least 1.']);
         }
 
-        return DB::transaction(function () use ($medicine, $branchId, $batchNumber, $expiresOn, $quantity, $unitCostMinor, $user, $type, $referenceType, $referenceId) {
+        return DB::transaction(function () use ($item, $branchId, $batchNumber, $expiresOn, $quantity, $unitCostMinor, $user, $type, $referenceType, $referenceId) {
             $batch = Batch::query()
                 ->where('branch_id', $branchId)
-                ->where('medicine_id', $medicine->id)
+                ->where('item_id', $item->id)
                 ->where('batch_number', $batchNumber)
                 ->lockForUpdate()
                 ->first();
@@ -52,7 +52,7 @@ class Stock
             if ($batch === null) {
                 $batch = new Batch([
                     'branch_id' => $branchId,
-                    'medicine_id' => $medicine->id,
+                    'item_id' => $item->id,
                     'batch_number' => $batchNumber,
                     'expires_on' => $expiresOn,
                     'unit_cost_minor' => $unitCostMinor,
@@ -130,14 +130,14 @@ class Stock
     }
 
     /**
-     * Takes a quantity of a medicine from a branch for a sale: oldest expiry
+     * Takes a quantity of an item from a branch for a sale: oldest expiry
      * first (FEFO), never from expired batches. All or nothing.
      *
      * @return list<array{batch: Batch, quantity: int}>
      *
      * @throws InsufficientStock
      */
-    public function take(Medicine $medicine, string $branchId, int $quantity, User $user, string $referenceType, string $referenceId, ?CarbonImmutable $today = null): array
+    public function take(Item $item, string $branchId, int $quantity, User $user, string $referenceType, string $referenceId, ?CarbonImmutable $today = null): array
     {
         if ($quantity <= 0) {
             throw ValidationException::withMessages(['quantity' => 'The quantity must be at least 1.']);
@@ -145,10 +145,10 @@ class Stock
 
         $today = ($today ?? CarbonImmutable::today())->startOfDay();
 
-        return DB::transaction(function () use ($medicine, $branchId, $quantity, $user, $referenceType, $referenceId, $today) {
+        return DB::transaction(function () use ($item, $branchId, $quantity, $user, $referenceType, $referenceId, $today) {
             $batches = Batch::query()
                 ->where('branch_id', $branchId)
-                ->where('medicine_id', $medicine->id)
+                ->where('item_id', $item->id)
                 ->where('quantity_on_hand', '>', 0)
                 ->whereDate('expires_on', '>', $today)
                 ->orderBy('expires_on')
@@ -158,7 +158,7 @@ class Stock
 
             $available = (int) $batches->sum('quantity_on_hand');
             if ($available < $quantity) {
-                throw new InsufficientStock($medicine, $quantity, $available);
+                throw new InsufficientStock($item, $quantity, $available);
             }
 
             $taken = [];
@@ -198,13 +198,13 @@ class Stock
     }
 
     /**
-     * Quantity of a medicine a branch can sell today.
+     * Quantity of an item a branch can sell today.
      */
-    public function sellable(Medicine $medicine, string $branchId, ?CarbonImmutable $today = null): int
+    public function sellable(Item $item, string $branchId, ?CarbonImmutable $today = null): int
     {
         return (int) Batch::query()
             ->where('branch_id', $branchId)
-            ->where('medicine_id', $medicine->id)
+            ->where('item_id', $item->id)
             ->whereDate('expires_on', '>', ($today ?? CarbonImmutable::today())->startOfDay())
             ->sum('quantity_on_hand');
     }
@@ -213,7 +213,7 @@ class Stock
     {
         StockMovement::query()->create([
             'branch_id' => $batch->branch_id,
-            'medicine_id' => $batch->medicine_id,
+            'item_id' => $batch->item_id,
             'batch_id' => $batch->id,
             'quantity' => $quantity,
             'type' => $type,

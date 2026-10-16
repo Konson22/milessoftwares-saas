@@ -13,7 +13,8 @@ another owner's tables. Platform-side ownership is unchanged from `docs/architec
 | **ERP products (commercial)** | central-app `Products` (`erp_products`) | new (Phase 1 slice 1) | public site, dashboard (later slices) | — |
 | Plans, subscriptions, entitlements | central-app `Subscriptions` / `Entitlements` | ✅ | products via API/webhooks | add grace/read-only |
 | Chart of accounts, GL, AR/AP, banking | finance-app | ✅ | every product (events) | add periods, reconciliation, FX |
-| Medicines, batches, stock movements | pharmacy-app | ✅ | — | shared inventory engine (D1) |
+| Items, batches, stock movements | pharmacy-app `Inventory` module (`items`, Phase 3.2) | ✅ | Procurement, Sales, Pharmacy | shared inventory engine (D1) |
+| Medicines (pharmacy details of an item) | pharmacy-app `Pharmacy` module | ✅ | — | stays Pharmacy-specific |
 | Suppliers (purchasing view) | pharmacy-app | ✅ | finance-app via bill events | shared master data (Phase 3) |
 | Suppliers (payables view) | finance-app | ✅ | — | keeps payee data, linked by reference |
 | POs, goods receipts, supplier returns | pharmacy-app | ✅ | finance-app | shared procurement (D1) |

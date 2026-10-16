@@ -25,9 +25,9 @@ beforeEach(function () {
     $stock = app(Stock::class);
     $keeper = User::factory()->create();
     $this->asTenant('acme', function () use ($stock, $keeper) {
-        $stock->add($this->para, $this->juba, 'P-SOON', CarbonImmutable::parse('2026-12-31'), 3, 90, $keeper);
-        $stock->add($this->para, $this->juba, 'P-LATE', CarbonImmutable::parse('2027-12-31'), 20, 100, $keeper);
-        $stock->add($this->amox, $this->juba, 'A-1', CarbonImmutable::parse('2027-06-30'), 20, 800, $keeper);
+        $stock->add($this->para->item, $this->juba, 'P-SOON', CarbonImmutable::parse('2026-12-31'), 3, 90, $keeper);
+        $stock->add($this->para->item, $this->juba, 'P-LATE', CarbonImmutable::parse('2027-12-31'), 20, 100, $keeper);
+        $stock->add($this->amox->item, $this->juba, 'A-1', CarbonImmutable::parse('2027-06-30'), 20, 800, $keeper);
     });
 });
 
@@ -54,7 +54,7 @@ function onHand(string $batch): int
 it('sells oldest expiry first, gives change, and reports the sale to Finance', function () {
     cashier($this->juba);
 
-    sell([['medicine_id' => $this->para->id, 'quantity' => 5]], tendered: '20.00')->assertSessionHasNoErrors();
+    sell([['item_id' => $this->para->id, 'quantity' => 5]], tendered: '20.00')->assertSessionHasNoErrors();
 
     $sale = $this->asTenant('acme', fn () => Sale::query()->with('lines')->sole());
     expect($sale)
@@ -81,7 +81,7 @@ it('sells oldest expiry first, gives change, and reports the sale to Finance', f
 it('changes nothing when the sale cannot go through', function (array $items, ?string $tendered, string $error) {
     cashier($this->juba);
     // Datasets are built before the medicines exist: names stand for them.
-    $items = array_map(fn (array $item) => ['medicine_id' => $this->{$item['medicine_id']}->id, 'quantity' => $item['quantity']], $items);
+    $items = array_map(fn (array $item) => ['item_id' => $this->{$item['item_id']}->id, 'quantity' => $item['quantity']], $items);
 
     sell($items, tendered: $tendered)->assertSessionHasErrors($error);
 
@@ -89,17 +89,17 @@ it('changes nothing when the sale cannot go through', function (array $items, ?s
         ->and(onHand('P-SOON') + onHand('P-LATE'))->toBe(23)
         ->and(DB::table('platform_outbox')->count())->toBe(0);
 })->with([
-    'not enough cash' => [[['medicine_id' => 'para', 'quantity' => 5]], '10.00', 'amount_tendered'],
-    'not enough stock' => [[['medicine_id' => 'para', 'quantity' => 24]], '100.00', 'items.0.quantity'],
-    'prescription only' => [[['medicine_id' => 'para', 'quantity' => 1], ['medicine_id' => 'amox', 'quantity' => 1]], '50.00', 'items.1.medicine_id'],
+    'not enough cash' => [[['item_id' => 'para', 'quantity' => 5]], '10.00', 'amount_tendered'],
+    'not enough stock' => [[['item_id' => 'para', 'quantity' => 24]], '100.00', 'items.0.quantity'],
+    'prescription only' => [[['item_id' => 'para', 'quantity' => 1], ['item_id' => 'amox', 'quantity' => 1]], '50.00', 'items.1.item_id'],
 ]);
 
 it('takes mobile money without cash and keeps the reference', function () {
     cashier($this->juba);
 
-    sell([['medicine_id' => $this->para->id, 'quantity' => 2]], 'mobile_money', null)->assertSessionHasNoErrors();
+    sell([['item_id' => $this->para->id, 'quantity' => 2]], 'mobile_money', null)->assertSessionHasNoErrors();
     $this->post($this->workspaceUrl('acme', 'sales'), [
-        'items' => [['medicine_id' => $this->para->id, 'quantity' => 1]],
+        'items' => [['item_id' => $this->para->id, 'quantity' => 1]],
         'payment_method' => 'mobile_money',
         'payment_reference' => 'MTN-88231',
     ])->assertSessionHasNoErrors();
@@ -110,7 +110,7 @@ it('takes mobile money without cash and keeps the reference', function () {
 
 it('voids a sale: stock back to its batches, Finance told, only once', function () {
     cashier($this->juba, ['pharmacy.sales.void']);
-    sell([['medicine_id' => $this->para->id, 'quantity' => 5]], tendered: '12.50');
+    sell([['item_id' => $this->para->id, 'quantity' => 5]], tendered: '12.50');
     $sale = $this->asTenant('acme', fn () => Sale::query()->sole());
 
     $this->post($this->workspaceUrl('acme', "sales/{$sale->id}/void"), ['reason' => 'Wrong item'])->assertSessionHasNoErrors();
@@ -134,7 +134,7 @@ it('voids a sale: stock back to its batches, Finance told, only once', function 
 
 it('needs the void permission in this branch, and never shows another branch\'s sales', function () {
     cashier($this->juba);
-    sell([['medicine_id' => $this->para->id, 'quantity' => 1]], tendered: '2.50');
+    sell([['item_id' => $this->para->id, 'quantity' => 1]], tendered: '2.50');
     $sale = $this->asTenant('acme', fn () => Sale::query()->sole());
 
     $this->post($this->workspaceUrl('acme', "sales/{$sale->id}/void"), ['reason' => 'Mine'])->assertForbidden();
@@ -146,8 +146,8 @@ it('needs the void permission in this branch, and never shows another branch\'s 
 
 it('shows the counter, the day\'s takings without voided sales, and the receipt', function () {
     cashier($this->juba, ['pharmacy.sales.void']);
-    sell([['medicine_id' => $this->para->id, 'quantity' => 2]], tendered: '5.00');
-    sell([['medicine_id' => $this->para->id, 'quantity' => 1]], tendered: '2.50');
+    sell([['item_id' => $this->para->id, 'quantity' => 2]], tendered: '5.00');
+    sell([['item_id' => $this->para->id, 'quantity' => 1]], tendered: '2.50');
     $voided = $this->asTenant('acme', fn () => Sale::query()->where('number', 'S-000002')->sole());
     $this->post($this->workspaceUrl('acme', "sales/{$voided->id}/void"), ['reason' => 'Test']);
 

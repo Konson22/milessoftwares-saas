@@ -5,7 +5,7 @@ namespace App\Modules\Sales\Actions;
 use App\Models\User;
 use App\Modules\Inventory\Actions\InsufficientStock;
 use App\Modules\Inventory\Actions\Stock;
-use App\Modules\Pharmacy\Models\Medicine;
+use App\Modules\Inventory\Models\Item;
 use App\Modules\Sales\Enums\PaymentMethod;
 use App\Modules\Sales\Models\Sale;
 use App\Support\DocumentNumbers;
@@ -20,8 +20,8 @@ use Miles\PlatformClient\Events\Outbox;
  * (finance.invoice.issued) and a payment (finance.payment.received). All
  * in one transaction: a sale either happened completely or not at all.
  *
- * Prescription-only medicines (controlled ones included) are only sold when
- * a verified prescription allows them ($prescribed).
+ * Restricted items (prescription-only medicines) are only sold when the
+ * industry module has authorized them for this sale ($authorized).
  */
 class Sell
 {
@@ -32,8 +32,8 @@ class Sell
     ) {}
 
     /**
-     * @param  list<array{medicine_id: string, quantity: int}>  $items
-     * @param  list<string>  $prescribed  medicine ids a verified prescription allows
+     * @param  list<array{item_id: string, quantity: int}>  $items
+     * @param  list<string>  $authorized  restricted item ids allowed in this sale (a verified prescription's)
      *
      * @throws ValidationException
      * @throws InsufficientStock
@@ -46,25 +46,25 @@ class Sell
         ?string $paymentReference = null,
         ?int $tenderedMinor = null,
         ?string $customerName = null,
-        array $prescribed = [],
+        array $authorized = [],
     ): Sale {
-        return DB::transaction(function () use ($by, $branchId, $items, $method, $paymentReference, $tenderedMinor, $customerName, $prescribed) {
+        return DB::transaction(function () use ($by, $branchId, $items, $method, $paymentReference, $tenderedMinor, $customerName, $authorized) {
             // Price and check everything before touching stock.
             $priced = [];
             $total = 0;
 
-            foreach ($items as $index => $item) {
-                $medicine = Medicine::query()->find($item['medicine_id']);
+            foreach ($items as $index => $line) {
+                $item = Item::query()->find($line['item_id']);
 
-                if ($medicine === null || ! $medicine->active) {
-                    throw ValidationException::withMessages(["items.{$index}.medicine_id" => 'This medicine cannot be sold.']);
+                if ($item === null || ! $item->active) {
+                    throw ValidationException::withMessages(["items.{$index}.item_id" => 'This item cannot be sold.']);
                 }
-                if ($medicine->prescription_only && ! in_array($medicine->id, $prescribed, true)) {
-                    throw ValidationException::withMessages(["items.{$index}.medicine_id" => "{$medicine->label()} needs a verified prescription."]);
+                if ($item->restricted && ! in_array($item->id, $authorized, true)) {
+                    throw ValidationException::withMessages(["items.{$index}.item_id" => "{$item->name} needs a verified prescription."]);
                 }
 
-                $priced[] = [$medicine, $item['quantity']];
-                $total += $item['quantity'] * $medicine->sell_price_minor;
+                $priced[] = [$item, $line['quantity']];
+                $total += $line['quantity'] * $item->sell_price_minor;
             }
 
             $change = null;
@@ -92,24 +92,24 @@ class Sell
 
             $invoiceLines = [];
 
-            foreach ($priced as [$medicine, $quantity]) {
+            foreach ($priced as [$item, $quantity]) {
                 // What the stock sold cost, batch by batch: Finance's cost of goods sold.
                 $cost = 0;
-                foreach ($this->stock->take($medicine, $branchId, $quantity, $by, 'sale', $sale->id) as $part) {
+                foreach ($this->stock->take($item, $branchId, $quantity, $by, 'sale', $sale->id) as $part) {
                     $cost += $part['quantity'] * $part['batch']->unit_cost_minor;
                     $sale->lines()->create([
-                        'medicine_id' => $medicine->id,
+                        'item_id' => $item->id,
                         'batch_id' => $part['batch']->id,
                         'quantity' => $part['quantity'],
-                        'unit_price_minor' => $medicine->sell_price_minor,
-                        'line_total_minor' => $part['quantity'] * $medicine->sell_price_minor,
+                        'unit_price_minor' => $item->sell_price_minor,
+                        'line_total_minor' => $part['quantity'] * $item->sell_price_minor,
                     ]);
                 }
 
                 $invoiceLines[] = [
-                    'description' => $medicine->label(),
+                    'description' => $item->name,
                     'quantity' => $quantity,
-                    'amount_minor' => $quantity * $medicine->sell_price_minor,
+                    'amount_minor' => $quantity * $item->sell_price_minor,
                     'revenue_account' => null,
                     'cost_minor' => $cost,
                 ];

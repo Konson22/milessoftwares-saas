@@ -4,8 +4,8 @@ namespace App\Modules\Procurement\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Modules\Inventory\Models\Item;
 use App\Modules\MasterData\Models\Supplier;
-use App\Modules\Pharmacy\Models\Medicine;
 use App\Modules\Procurement\Actions\ReceiveGoods;
 use App\Modules\Procurement\Models\GoodsReceipt;
 use App\Modules\Procurement\Models\GoodsReceiptLine;
@@ -58,14 +58,14 @@ class GoodsReceiptController extends Controller
     {
         $order = null;
         if (is_string($request->query('order'))) {
-            $order = PurchaseOrder::query()->with('lines.medicine')->find($request->query('order'));
+            $order = PurchaseOrder::query()->with('lines.item')->find($request->query('order'));
             abort_if($order === null || $order->branch_id !== $this->branch->id() || ! $order->status->canReceive(), 404);
         }
 
         return Inertia::render('receipts/create', [
             'suppliers' => Supplier::query()->where('active', true)->orderBy('name')->get(['id', 'name']),
-            'medicines' => Medicine::query()->where('active', true)->orderBy('name')->get()
-                ->map(fn (Medicine $medicine) => ['id' => $medicine->id, 'label' => $medicine->label(), 'unit' => $medicine->unit]),
+            'medicines' => Item::query()->where('active', true)->orderBy('name')->get()
+                ->map(fn (Item $item) => ['id' => $item->id, 'label' => $item->name, 'unit' => $item->unit]),
             'order' => $order === null ? null : [
                 'id' => $order->id,
                 'number' => $order->number,
@@ -75,8 +75,8 @@ class GoodsReceiptController extends Controller
                     ->values()
                     ->map(fn (PurchaseOrderLine $line) => [
                         'id' => $line->id,
-                        'medicineId' => $line->medicine_id,
-                        'medicine' => $line->medicine->label(),
+                        'medicineId' => $line->item_id,
+                        'medicine' => $line->item->name,
                         'remaining' => $line->remaining(),
                         'unitCost' => Money::toMajor($line->unit_cost_minor),
                     ]),
@@ -95,7 +95,7 @@ class GoodsReceiptController extends Controller
             'supplier_reference' => ['nullable', 'string', 'max:128'],
             'received_on' => ['required', 'date', 'before_or_equal:today'],
             'lines' => ['required', 'array', 'min:1', 'max:200'],
-            'lines.*.medicine_id' => ['required', 'uuid', Rule::exists('medicines', 'id')->where('organization_id', $organizationId)],
+            'lines.*.item_id' => ['required', 'uuid', Rule::exists('items', 'id')->where('organization_id', $organizationId)],
             'lines.*.purchase_order_line_id' => ['nullable', 'uuid'],
             'lines.*.batch_number' => ['required', 'string', 'max:64'],
             'lines.*.expires_on' => ['required', 'date', 'after:received_on'],
@@ -120,7 +120,7 @@ class GoodsReceiptController extends Controller
             supplierReference: $validated['supplier_reference'] ?? null,
             receivedOn: CarbonImmutable::parse($validated['received_on']),
             lines: array_values(array_map(fn (array $line) => [
-                'medicine_id' => $line['medicine_id'],
+                'item_id' => $line['item_id'],
                 'purchase_order_line_id' => $line['purchase_order_line_id'] ?? null,
                 'batch_number' => trim($line['batch_number']),
                 'expires_on' => $line['expires_on'],
@@ -135,7 +135,7 @@ class GoodsReceiptController extends Controller
     public function show(GoodsReceipt $receipt): Response
     {
         abort_unless($receipt->branch_id === $this->branch->id(), 404);
-        $receipt->load(['supplier:id,name', 'purchaseOrder:id,number', 'receiver:id,name', 'lines.medicine']);
+        $receipt->load(['supplier:id,name', 'purchaseOrder:id,number', 'receiver:id,name', 'lines.item']);
         $returned = SupplierReturnController::returned($receipt);
 
         return Inertia::render('receipts/show', [
@@ -162,7 +162,7 @@ class GoodsReceiptController extends Controller
                 'totalMinor' => $receipt->total_minor,
                 'lines' => $receipt->lines->map(fn (GoodsReceiptLine $line) => [
                     'id' => $line->id,
-                    'medicine' => $line->medicine->label(),
+                    'medicine' => $line->item->name,
                     'batchNumber' => $line->batch_number,
                     'expiresOn' => $line->expires_on->toDateString(),
                     'quantity' => $line->quantity,

@@ -6,8 +6,8 @@ use App\Modules\Inventory\Actions\Stock;
 use App\Modules\Inventory\Enums\AdjustmentReason;
 use App\Modules\Inventory\Enums\MovementType;
 use App\Modules\Inventory\Models\Batch;
+use App\Modules\Inventory\Models\Item;
 use App\Modules\Inventory\Models\StockMovement;
-use App\Modules\Pharmacy\Models\Medicine;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +19,7 @@ beforeEach(function () {
     $this->user = User::factory()->create();
     $this->juba = $this->platform()->branch('acme', 'Juba');
     $this->wau = $this->platform()->branch('acme', 'Wau');
-    $this->medicine = $this->asTenant('acme', fn () => Medicine::factory()->create());
+    $this->item = $this->asTenant('acme', fn () => Item::factory()->create());
     $this->today = CarbonImmutable::parse('2026-10-12');
     $this->saleId = (string) Str::uuid();
 });
@@ -27,7 +27,7 @@ beforeEach(function () {
 function receive(string $branch, string $batch, string $expires, int $quantity): Batch
 {
     return test()->asTenant('acme', fn () => test()->stock->add(
-        test()->medicine, $branch, $batch, CarbonImmutable::parse($expires), $quantity, 100, test()->user,
+        test()->item, $branch, $batch, CarbonImmutable::parse($expires), $quantity, 100, test()->user,
     ));
 }
 
@@ -55,18 +55,18 @@ it('sells the oldest expiry first, across batches, never expired stock', functio
     receive($this->juba, 'LATE', '2027-06-30', 10);
     receive($this->juba, 'SOON', '2026-12-31', 4);
 
-    $taken = $this->asTenant('acme', fn () => $this->stock->take($this->medicine, $this->juba, 6, $this->user, 'sale', $this->saleId, $this->today));
+    $taken = $this->asTenant('acme', fn () => $this->stock->take($this->item, $this->juba, 6, $this->user, 'sale', $this->saleId, $this->today));
 
     expect(array_map(fn ($part) => [$part['batch']->batch_number, $part['quantity']], $taken))
         ->toBe([['SOON', 4], ['LATE', 2]])
-        ->and($this->asTenant('acme', fn () => $this->stock->sellable($this->medicine, $this->juba, $this->today)))->toBe(8);
+        ->and($this->asTenant('acme', fn () => $this->stock->sellable($this->item, $this->juba, $this->today)))->toBe(8);
 });
 
 it('takes nothing when there is not enough sellable stock', function () {
     receive($this->juba, 'EXPIRED', '2026-10-01', 100);
     receive($this->juba, 'OK', '2027-06-30', 3);
 
-    expect(fn () => $this->asTenant('acme', fn () => $this->stock->take($this->medicine, $this->juba, 5, $this->user, 'sale', $this->saleId, $this->today)))
+    expect(fn () => $this->asTenant('acme', fn () => $this->stock->take($this->item, $this->juba, 5, $this->user, 'sale', $this->saleId, $this->today)))
         ->toThrow(InsufficientStock::class);
 
     expect($this->asTenant('acme', fn () => Batch::query()->where('batch_number', 'OK')->value('quantity_on_hand')))->toBe(3);
@@ -75,7 +75,7 @@ it('takes nothing when there is not enough sellable stock', function () {
 it('keeps branches apart', function () {
     receive($this->wau, 'W1', '2027-06-30', 50);
 
-    expect(fn () => $this->asTenant('acme', fn () => $this->stock->take($this->medicine, $this->juba, 1, $this->user, 'sale', $this->saleId, $this->today)))
+    expect(fn () => $this->asTenant('acme', fn () => $this->stock->take($this->item, $this->juba, 1, $this->user, 'sale', $this->saleId, $this->today)))
         ->toThrow(InsufficientStock::class);
 });
 
@@ -95,7 +95,7 @@ it('adjusts stock by hand but never below zero', function () {
 
 it('puts stock back into the batch it came from', function () {
     receive($this->juba, 'B1', '2027-01-31', 10);
-    $taken = $this->asTenant('acme', fn () => $this->stock->take($this->medicine, $this->juba, 4, $this->user, 'sale', $this->saleId, $this->today));
+    $taken = $this->asTenant('acme', fn () => $this->stock->take($this->item, $this->juba, 4, $this->user, 'sale', $this->saleId, $this->today));
 
     $this->asTenant('acme', fn () => $this->stock->putBack($taken[0]['batch'], 4, $this->user, 'sale', $this->saleId));
 

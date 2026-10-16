@@ -24,8 +24,8 @@ beforeEach(function () {
 
     $keeper = User::factory()->create(['name' => 'Store Keeper']);
     $this->asTenant('acme', function () use ($keeper) {
-        app(Stock::class)->add($this->amox, $this->juba, 'A-1', CarbonImmutable::parse('2027-06-30'), 30, 800, $keeper);
-        app(Stock::class)->add($this->morphine, $this->juba, 'M-1', CarbonImmutable::parse('2027-03-31'), 10, 3000, $keeper);
+        app(Stock::class)->add($this->amox->item, $this->juba, 'A-1', CarbonImmutable::parse('2027-06-30'), 30, 800, $keeper);
+        app(Stock::class)->add($this->morphine->item, $this->juba, 'M-1', CarbonImmutable::parse('2027-03-31'), 10, 3000, $keeper);
     });
 });
 
@@ -91,10 +91,10 @@ it('still refuses prescription-only medicines at the counter', function () {
     pharmacist($this->juba);
 
     $this->post($this->workspaceUrl('acme', 'sales'), [
-        'items' => [['medicine_id' => $this->morphine->id, 'quantity' => 1]],
+        'items' => [['item_id' => $this->morphine->id, 'quantity' => 1]],
         'payment_method' => 'cash',
         'amount_tendered' => '100.00',
-    ])->assertSessionHasErrors('items.0.medicine_id');
+    ])->assertSessionHasErrors('items.0.item_id');
 });
 
 it('refuses prescriptions older than 30 days', function () {

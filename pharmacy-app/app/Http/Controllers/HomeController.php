@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Modules\Inventory\Http\Controllers\StockController;
 use App\Modules\Inventory\Models\Batch;
+use App\Modules\Inventory\Models\Item;
 use App\Modules\Pharmacy\Enums\PrescriptionStatus;
-use App\Modules\Pharmacy\Models\Medicine;
 use App\Modules\Pharmacy\Models\Prescription;
 use App\Modules\Sales\Models\Sale;
 use App\Support\CurrentBranch;
@@ -41,13 +41,13 @@ class HomeController extends Controller
             $sellable = Batch::query()
                 ->where('branch_id', $branch->id())
                 ->whereDate('expires_on', '>', $today)
-                ->groupBy('medicine_id')
-                ->selectRaw('medicine_id, SUM(quantity_on_hand) AS quantity')
-                ->pluck('quantity', 'medicine_id');
+                ->groupBy('item_id')
+                ->selectRaw('item_id, SUM(quantity_on_hand) AS quantity')
+                ->pluck('quantity', 'item_id');
 
             $stock = [
-                'low' => Medicine::query()->where('active', true)->get(['id', 'reorder_level'])
-                    ->filter(fn (Medicine $medicine) => (int) ($sellable[$medicine->id] ?? 0) <= $medicine->reorder_level)
+                'low' => Item::query()->where('active', true)->get(['id', 'reorder_level'])
+                    ->filter(fn (Item $item) => (int) ($sellable[$item->id] ?? 0) <= $item->reorder_level)
                     ->count(),
                 'expiring' => Batch::query()
                     ->where('branch_id', $branch->id())
@@ -55,7 +55,7 @@ class HomeController extends Controller
                     ->whereDate('expires_on', '>', $today)
                     ->whereDate('expires_on', '<=', $today->addDays(StockController::EXPIRING_DAYS))
                     ->distinct()
-                    ->count('medicine_id'),
+                    ->count('item_id'),
             ];
         }
 

@@ -27,10 +27,10 @@ Pharmacy as the industry module on top.
 | Folder                    | Holds                                                      |
 | ------------------------- | ---------------------------------------------------------- |
 | `app/Modules/MasterData`  | suppliers (customers and units later)                      |
-| `app/Modules/Inventory`   | batches, the append-only stock movements, FEFO (`Stock`)   |
+| `app/Modules/Inventory`   | items, batches, append-only stock movements, FEFO (`Stock`) |
 | `app/Modules/Procurement` | purchase orders, goods receipts, supplier returns          |
 | `app/Modules/Sales`       | counter sales and voids                                    |
-| `app/Modules/Pharmacy`    | medicines, prescriptions, the controlled register          |
+| `app/Modules/Pharmacy`    | medicines (details of items), prescriptions, the register  |
 | `app/Support`             | the working branch, money, document numbers (every module) |
 | `app/Http`                | branch choice, home and reports (pages that span modules)  |
 
@@ -40,12 +40,17 @@ Each module has `Models`, `Enums`, `Actions` and `Http/Controllers`. Rules, enfo
 - Shared modules never use Pharmacy. They raise events instead and Pharmacy listens (a voided
   sale reopens its prescription through `SaleVoided`). Listeners run in the raising transaction,
   never queued.
-- One exception until a shared item master exists: `Pharmacy\Models\Medicine` is still the item
-  that batches, order lines and sale lines point at.
+- Batches, movements and order, receipt, sale and return lines point at `Inventory\Models\Item`
+  (`item_id`). A medicine is Pharmacy's details of an item under the same id (name, form,
+  strength); unit, barcode, price, reorder level and the prescription-only and controlled flags
+  live on the item (`restricted`, `controlled`). `Medicine` reads and writes those through its
+  item and saves both together, keeping the item's name equal to the medicine's label.
 - Inventory knows nothing of Procurement or Sales; those two stay apart; master data depends on
   no other module; `app/Support` depends on none.
 
-Tables, routes, route names and permission keys did not change with the move.
+Routes, route names and permission keys did not change with the move. The item master (Phase
+3.2) moved the shared medicine columns onto `items` and renamed `medicine_id` to `item_id` on the
+shared tables; order, receipt and sale forms post `item_id`.
 
 ## Develop
 

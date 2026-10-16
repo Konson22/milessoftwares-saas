@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Inventory\Actions\InsufficientStock;
 use App\Modules\Inventory\Models\Batch;
-use App\Modules\Pharmacy\Models\Medicine;
+use App\Modules\Inventory\Models\Item;
 use App\Modules\Sales\Actions\Sell;
 use App\Modules\Sales\Actions\VoidSale;
 use App\Modules\Sales\Enums\PaymentMethod;
@@ -68,24 +68,24 @@ class SaleController extends Controller
             ->where('branch_id', $this->branch->id())
             ->where('quantity_on_hand', '>', 0)
             ->whereDate('expires_on', '>', CarbonImmutable::today())
-            ->groupBy('medicine_id')
-            ->selectRaw('medicine_id, SUM(quantity_on_hand) AS quantity')
-            ->pluck('quantity', 'medicine_id');
+            ->groupBy('item_id')
+            ->selectRaw('item_id, SUM(quantity_on_hand) AS quantity')
+            ->pluck('quantity', 'item_id');
 
         return Inertia::render('sales/create', [
-            'medicines' => Medicine::query()
+            'medicines' => Item::query()
                 ->where('active', true)
                 ->orderBy('name')
                 ->get()
-                ->map(fn (Medicine $medicine) => [
-                    'id' => $medicine->id,
-                    'label' => $medicine->label(),
-                    'genericName' => $medicine->generic_name,
-                    'barcode' => $medicine->barcode,
-                    'unit' => $medicine->unit,
-                    'priceMinor' => $medicine->sell_price_minor,
-                    'available' => (int) ($sellable[$medicine->id] ?? 0),
-                    'prescriptionOnly' => $medicine->prescription_only,
+                ->map(fn (Item $item) => [
+                    'id' => $item->id,
+                    'label' => $item->name,
+                    'genericName' => $item->alias ?? '',
+                    'barcode' => $item->barcode,
+                    'unit' => $item->unit,
+                    'priceMinor' => $item->sell_price_minor,
+                    'available' => (int) ($sellable[$item->id] ?? 0),
+                    'prescriptionOnly' => $item->restricted,
                 ]),
             'paymentMethods' => array_map(fn (PaymentMethod $method) => ['value' => $method->value, 'label' => $method->label()], PaymentMethod::cases()),
         ]);
@@ -95,7 +95,7 @@ class SaleController extends Controller
     {
         $validated = $request->validate([
             'items' => ['required', 'array', 'min:1', 'max:100'],
-            'items.*.medicine_id' => ['required', 'uuid', 'distinct'],
+            'items.*.item_id' => ['required', 'uuid', 'distinct'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:100000'],
             'payment_method' => ['required', Rule::enum(PaymentMethod::class)],
             'payment_reference' => ['nullable', 'string', 'max:64'],
@@ -108,7 +108,7 @@ class SaleController extends Controller
                 by: $this->user($request),
                 branchId: $this->branch->id(),
                 items: array_values(array_map(fn (array $item) => [
-                    'medicine_id' => (string) $item['medicine_id'],
+                    'item_id' => (string) $item['item_id'],
                     'quantity' => (int) $item['quantity'],
                 ], $validated['items'])),
                 method: PaymentMethod::from($validated['payment_method']),
@@ -117,7 +117,7 @@ class SaleController extends Controller
                 customerName: $validated['customer_name'] ?? null,
             );
         } catch (InsufficientStock $e) {
-            $index = array_search($e->medicine->id, array_column($validated['items'], 'medicine_id'), true);
+            $index = array_search($e->item->id, array_column($validated['items'], 'item_id'), true);
 
             throw ValidationException::withMessages(['items.'.($index === false ? 0 : $index).'.quantity' => $e->getMessage()]);
         }
@@ -128,7 +128,7 @@ class SaleController extends Controller
     public function show(Sale $sale): Response
     {
         $this->ensureHere($sale);
-        $sale->load(['seller:id,name', 'voider:id,name', 'lines.medicine', 'lines.batch:id,batch_number,expires_on']);
+        $sale->load(['seller:id,name', 'voider:id,name', 'lines.item', 'lines.batch:id,batch_number,expires_on']);
 
         return Inertia::render('sales/show', [
             'sale' => [
@@ -149,7 +149,7 @@ class SaleController extends Controller
                 'voidReason' => $sale->void_reason,
                 'lines' => $sale->lines->map(fn (SaleLine $line) => [
                     'id' => $line->id,
-                    'medicine' => $line->medicine->label(),
+                    'medicine' => $line->item->name,
                     'batchNumber' => $line->batch->batch_number,
                     'expiresOn' => $line->batch->expires_on->toDateString(),
                     'quantity' => $line->quantity,

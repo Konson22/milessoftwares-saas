@@ -85,7 +85,7 @@ export default function CreatePurchaseOrder({ suppliers, medicines }: Props) {
                                             >
                                                 <div>
                                                     <select
-                                                        name={`lines[${i}][medicine_id]`}
+                                                        name={`lines[${i}][item_id]`}
                                                         aria-label={`Medicine, line ${i + 1}`}
                                                         className={selectClass}
                                                     >
@@ -107,12 +107,12 @@ export default function CreatePurchaseOrder({ suppliers, medicines }: Props) {
                                                         )}
                                                     </select>
                                                     {errors[
-                                                        `lines.${i}.medicine_id`
+                                                        `lines.${i}.item_id`
                                                     ] && (
                                                         <p className="text-xs text-destructive">
                                                             {
                                                                 errors[
-                                                                    `lines.${i}.medicine_id`
+                                                                    `lines.${i}.item_id`
                                                                 ]
                                                             }
                                                         </p>

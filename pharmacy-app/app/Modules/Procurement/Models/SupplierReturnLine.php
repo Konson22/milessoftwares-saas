@@ -3,7 +3,7 @@
 namespace App\Modules\Procurement\Models;
 
 use App\Modules\Inventory\Models\Batch;
-use App\Modules\Pharmacy\Models\Medicine;
+use App\Modules\Inventory\Models\Item;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,12 +15,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $id
  * @property string $supplier_return_id
  * @property string $goods_receipt_line_id
- * @property string $medicine_id
+ * @property string $item_id
  * @property string $batch_id
  * @property int $quantity
  * @property int $unit_cost_minor
  * @property int $line_total_minor
- * @property-read Medicine $medicine
+ * @property-read Item $item
  * @property-read Batch $batch
  */
 class SupplierReturnLine extends Model
@@ -41,11 +41,11 @@ class SupplierReturnLine extends Model
     }
 
     /**
-     * @return BelongsTo<Medicine, $this>
+     * @return BelongsTo<Item, $this>
      */
-    public function medicine(): BelongsTo
+    public function item(): BelongsTo
     {
-        return $this->belongsTo(Medicine::class);
+        return $this->belongsTo(Item::class);
     }
 
     /**

@@ -42,7 +42,7 @@ class ReturnGoods
         return DB::transaction(function () use ($by, $receipt, $quantities, $reason, $returnedOn) {
             // Locked: two returns of the same delivery never return it twice.
             $locked = GoodsReceipt::query()->whereKey($receipt->id)->lockForUpdate()->firstOrFail();
-            $lines = $locked->lines()->with('medicine')->get()->keyBy('id');
+            $lines = $locked->lines()->with('item')->get()->keyBy('id');
 
             $unknown = array_diff(array_keys($quantities), $lines->keys()->all());
             if ($unknown !== []) {
@@ -83,7 +83,7 @@ class ReturnGoods
                 $lineTotal = $quantity * $line->unit_cost_minor;
                 $return->lines()->create([
                     'goods_receipt_line_id' => $line->id,
-                    'medicine_id' => $line->medicine_id,
+                    'item_id' => $line->item_id,
                     'batch_id' => $line->batch_id,
                     'quantity' => $quantity,
                     'unit_cost_minor' => $line->unit_cost_minor,
@@ -91,7 +91,7 @@ class ReturnGoods
                 ]);
                 $total += $lineTotal;
                 $creditLines[] = [
-                    'description' => "{$line->medicine->label()} (batch {$line->batch_number})",
+                    'description' => "{$line->item->name} (batch {$line->batch_number})",
                     'quantity' => $quantity,
                     'amount_minor' => $lineTotal,
                     'expense_account' => null,

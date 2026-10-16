@@ -2,7 +2,6 @@
 
 namespace App\Modules\Inventory\Models;
 
-use App\Modules\Pharmacy\Models\Medicine;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -10,18 +9,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Miles\PlatformClient\Tenancy\BelongsToTenant;
 
 /**
- * Stock of one medicine in one branch, from one batch. Only the Stock
+ * Stock of one item in one branch, from one batch. Only the Stock
  * service changes quantity_on_hand, together with a StockMovement.
  *
  * @property string $id
  * @property string $organization_id
  * @property string $branch_id
- * @property string $medicine_id
+ * @property string $item_id
  * @property string $batch_number
  * @property CarbonImmutable $expires_on
  * @property int $unit_cost_minor
  * @property int $quantity_on_hand
- * @property-read Medicine $medicine
+ * @property-read Item $item
  */
 class Batch extends Model
 {
@@ -40,11 +39,11 @@ class Batch extends Model
     }
 
     /**
-     * @return BelongsTo<Medicine, $this>
+     * @return BelongsTo<Item, $this>
      */
-    public function medicine(): BelongsTo
+    public function item(): BelongsTo
     {
-        return $this->belongsTo(Medicine::class);
+        return $this->belongsTo(Item::class);
     }
 
     /**

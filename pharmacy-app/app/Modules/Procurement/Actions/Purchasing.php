@@ -20,7 +20,7 @@ class Purchasing
     public function __construct(private readonly DocumentNumbers $numbers) {}
 
     /**
-     * @param  list<array{medicine_id: string, quantity: int, unit_cost_minor: int}>  $lines
+     * @param  list<array{item_id: string, quantity: int, unit_cost_minor: int}>  $lines
      */
     public function createOrder(User $by, string $branchId, Supplier $supplier, array $lines, ?CarbonImmutable $expectedOn, ?string $notes): PurchaseOrder
     {
@@ -38,7 +38,7 @@ class Purchasing
 
             foreach ($lines as $line) {
                 $order->lines()->create([
-                    'medicine_id' => $line['medicine_id'],
+                    'item_id' => $line['item_id'],
                     'quantity_ordered' => $line['quantity'],
                     'unit_cost_minor' => $line['unit_cost_minor'],
                 ]);

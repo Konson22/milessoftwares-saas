@@ -175,7 +175,7 @@ export default function ReceiveGoods({
                                                             />
                                                             <input
                                                                 type="hidden"
-                                                                name={`lines[${i}][medicine_id]`}
+                                                                name={`lines[${i}][item_id]`}
                                                                 value={
                                                                     line
                                                                         .orderLine
@@ -200,7 +200,7 @@ export default function ReceiveGoods({
                                                         </>
                                                     ) : (
                                                         <select
-                                                            name={`lines[${i}][medicine_id]`}
+                                                            name={`lines[${i}][item_id]`}
                                                             aria-label={`Medicine, line ${i + 1}`}
                                                             className={
                                                                 selectClass
@@ -224,14 +224,12 @@ export default function ReceiveGoods({
                                                             )}
                                                         </select>
                                                     )}
-                                                    {(error('medicine_id') ||
+                                                    {(error('item_id') ||
                                                         error(
                                                             'purchase_order_line_id',
                                                         )) && (
                                                         <p className="text-xs text-destructive">
-                                                            {error(
-                                                                'medicine_id',
-                                                            ) ??
+                                                            {error('item_id') ??
                                                                 error(
                                                                     'purchase_order_line_id',
                                                                 )}

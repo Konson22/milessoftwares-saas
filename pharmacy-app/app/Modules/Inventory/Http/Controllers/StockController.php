@@ -8,8 +8,8 @@ use App\Modules\Inventory\Actions\Stock;
 use App\Modules\Inventory\Enums\AdjustmentReason;
 use App\Modules\Inventory\Enums\MovementType;
 use App\Modules\Inventory\Models\Batch;
+use App\Modules\Inventory\Models\Item;
 use App\Modules\Inventory\Models\StockMovement;
-use App\Modules\Pharmacy\Models\Medicine;
 use App\Support\CurrentBranch;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
@@ -35,26 +35,26 @@ class StockController extends Controller
         $filter = in_array($request->query('filter'), ['low', 'expiring', 'expired'], true) ? (string) $request->query('filter') : 'all';
         $today = CarbonImmutable::today();
 
-        // Per medicine in this branch: sellable (unexpired) quantity, expired
+        // Per item in this branch: sellable (unexpired) quantity, expired
         // quantity, and the nearest expiry among batches with stock.
         $totals = Batch::query()
             ->where('branch_id', $this->branch->id())
             ->where('quantity_on_hand', '>', 0)
-            ->groupBy('medicine_id')
-            ->select('medicine_id')
+            ->groupBy('item_id')
+            ->select('item_id')
             ->selectRaw('SUM(CASE WHEN expires_on > ? THEN quantity_on_hand ELSE 0 END) AS sellable', [$today->toDateString()])
             ->selectRaw('SUM(CASE WHEN expires_on <= ? THEN quantity_on_hand ELSE 0 END) AS expired', [$today->toDateString()])
             ->selectRaw('MIN(CASE WHEN expires_on > ? THEN expires_on END) AS next_expiry', [$today->toDateString()])
             ->get()
-            ->keyBy('medicine_id');
+            ->keyBy('item_id');
 
-        $rows = Medicine::query()
+        $rows = Item::query()
             ->where('active', true)
             ->search($request->string('search')->toString())
             ->orderBy('name')
             ->get()
-            ->map(function (Medicine $medicine) use ($totals, $today) {
-                $total = $totals->get($medicine->id);
+            ->map(function (Item $item) use ($totals, $today) {
+                $total = $totals->get($item->id);
                 // Aggregates from the query above, not columns of the model.
                 $sellable = (int) ($total?->getAttribute('sellable') ?? 0);
                 $expired = (int) ($total?->getAttribute('expired') ?? 0);
@@ -62,15 +62,15 @@ class StockController extends Controller
                 $nextExpiry = is_string($next) ? CarbonImmutable::parse($next) : null;
 
                 return [
-                    'id' => $medicine->id,
-                    'label' => $medicine->label(),
-                    'unit' => $medicine->unit,
+                    'id' => $item->id,
+                    'label' => $item->name,
+                    'unit' => $item->unit,
                     'sellable' => $sellable,
                     'expired' => $expired,
                     'nextExpiry' => $nextExpiry?->toDateString(),
-                    'low' => $sellable <= $medicine->reorder_level,
+                    'low' => $sellable <= $item->reorder_level,
                     'expiringSoon' => $nextExpiry !== null && $nextExpiry->lessThanOrEqualTo($today->addDays(self::EXPIRING_DAYS)),
-                    'reorderLevel' => $medicine->reorder_level,
+                    'reorderLevel' => $item->reorder_level,
                 ];
             })
             ->filter(fn (array $row) => match ($filter) {
@@ -88,13 +88,13 @@ class StockController extends Controller
         ]);
     }
 
-    public function show(Request $request, Medicine $medicine): Response
+    public function show(Request $request, Item $item): Response
     {
         $today = CarbonImmutable::today();
 
         $batches = Batch::query()
             ->where('branch_id', $this->branch->id())
-            ->where('medicine_id', $medicine->id)
+            ->where('item_id', $item->id)
             ->orderBy('expires_on')
             ->get()
             ->map(fn (Batch $batch) => [
@@ -108,7 +108,7 @@ class StockController extends Controller
 
         $movements = StockMovement::query()
             ->where('branch_id', $this->branch->id())
-            ->where('medicine_id', $medicine->id)
+            ->where('item_id', $item->id)
             ->with(['batch:id,batch_number', 'user:id,name'])
             ->latest('created_at')
             ->limit(50)
@@ -128,11 +128,11 @@ class StockController extends Controller
 
         return Inertia::render('stock/show', [
             'medicine' => [
-                'id' => $medicine->id,
-                'label' => $medicine->label(),
-                'unit' => $medicine->unit,
-                'controlled' => $medicine->controlled,
-                'reorderLevel' => $medicine->reorder_level,
+                'id' => $item->id,
+                'label' => $item->name,
+                'unit' => $item->unit,
+                'controlled' => $item->controlled,
+                'reorderLevel' => $item->reorder_level,
             ],
             'batches' => $batches,
             'movements' => $movements,
@@ -145,7 +145,7 @@ class StockController extends Controller
      * Stock already on the shelf when the pharmacy starts using the system,
      * or found during a count, as a new batch.
      */
-    public function storeOpening(Request $request, Medicine $medicine, Stock $stock): RedirectResponse
+    public function storeOpening(Request $request, Item $item, Stock $stock): RedirectResponse
     {
         $validated = $request->validate([
             'batch_number' => ['required', 'string', 'max:64'],
@@ -155,7 +155,7 @@ class StockController extends Controller
         ]);
 
         $stock->add(
-            medicine: $medicine,
+            item: $item,
             branchId: $this->branch->id(),
             batchNumber: trim($validated['batch_number']),
             expiresOn: CarbonImmutable::parse($validated['expires_on']),

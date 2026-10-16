@@ -50,7 +50,7 @@ class SupplierReturnController extends Controller
     public function show(SupplierReturn $return): Response
     {
         abort_unless($return->branch_id === $this->branch->id(), 404);
-        $return->load(['supplier:id,name', 'receipt:id,number', 'returner:id,name', 'lines.medicine', 'lines.batch']);
+        $return->load(['supplier:id,name', 'receipt:id,number', 'returner:id,name', 'lines.item', 'lines.batch']);
 
         return Inertia::render('supplier-returns/show', [
             'supplierReturn' => [
@@ -64,7 +64,7 @@ class SupplierReturnController extends Controller
                 'totalMinor' => $return->total_minor,
                 'lines' => $return->lines->map(fn (SupplierReturnLine $line) => [
                     'id' => $line->id,
-                    'medicine' => $line->medicine->label(),
+                    'medicine' => $line->item->name,
                     'batchNumber' => $line->batch->batch_number,
                     'quantity' => $line->quantity,
                     'unitCostMinor' => $line->unit_cost_minor,
@@ -80,7 +80,7 @@ class SupplierReturnController extends Controller
     public function create(GoodsReceipt $receipt): Response
     {
         abort_unless($receipt->branch_id === $this->branch->id(), 404);
-        $receipt->load(['supplier:id,name', 'lines.medicine', 'lines.batch']);
+        $receipt->load(['supplier:id,name', 'lines.item', 'lines.batch']);
         $returned = $this->returned($receipt);
 
         return Inertia::render('supplier-returns/create', [
@@ -91,7 +91,7 @@ class SupplierReturnController extends Controller
                 'receivedOn' => $receipt->received_on->toDateString(),
                 'lines' => $receipt->lines->map(fn (GoodsReceiptLine $line) => [
                     'id' => $line->id,
-                    'medicine' => $line->medicine->label(),
+                    'medicine' => $line->item->name,
                     'batchNumber' => $line->batch_number,
                     'expiresOn' => $line->expires_on->toDateString(),
                     'received' => $line->quantity,

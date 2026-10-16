@@ -124,10 +124,10 @@ Route::prefix(app(PlatformConfig::class)->path())
             // Stock of the branch being worked in.
             Route::middleware('branch.can:pharmacy.stock.view')->group(function () {
                 Route::get('stock', [StockController::class, 'index'])->name('stock.index');
-                Route::get('stock/{medicine}', [StockController::class, 'show'])->whereUuid('medicine')->name('stock.show');
+                Route::get('stock/{item}', [StockController::class, 'show'])->whereUuid('item')->name('stock.show');
             });
             Route::middleware('branch.can:pharmacy.stock.adjust')->group(function () {
-                Route::post('stock/{medicine}/opening', [StockController::class, 'storeOpening'])->whereUuid('medicine')->name('stock.opening');
+                Route::post('stock/{item}/opening', [StockController::class, 'storeOpening'])->whereUuid('item')->name('stock.opening');
                 Route::post('batches/{batch}/adjustments', [StockController::class, 'storeAdjustment'])->whereUuid('batch')->name('stock.adjust');
             });
         });

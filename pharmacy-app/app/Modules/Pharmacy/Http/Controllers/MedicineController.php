@@ -27,7 +27,7 @@ class MedicineController extends Controller
         return Inertia::render('medicines/index', [
             'medicines' => Medicine::query()
                 ->search($search)
-                ->when(! $showInactive, fn ($query) => $query->where('active', true))
+                ->when(! $showInactive, fn ($query) => $query->active())
                 ->orderBy('name')
                 ->limit(200)
                 ->get()
@@ -84,7 +84,7 @@ class MedicineController extends Controller
             'unit' => ['required', 'string', 'max:32'],
             'barcode' => [
                 'nullable', 'string', 'max:64',
-                Rule::unique('medicines', 'barcode')
+                Rule::unique('items', 'barcode')
                     ->where('organization_id', $medicine->organization_id ?? app(CurrentTenant::class)->id())
                     ->ignore($medicine->id),
             ],

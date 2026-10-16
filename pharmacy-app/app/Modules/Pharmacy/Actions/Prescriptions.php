@@ -131,12 +131,13 @@ class Prescriptions
             $sale = $this->sell->handle(
                 by: $by,
                 branchId: $locked->branch_id,
-                items: array_map(fn (array $part) => ['medicine_id' => $part[0]->medicine_id, 'quantity' => $part[1]], $giving),
+                // A medicine's id is its item's id.
+                items: array_map(fn (array $part) => ['item_id' => $part[0]->medicine_id, 'quantity' => $part[1]], $giving),
                 method: $method,
                 paymentReference: $paymentReference,
                 tenderedMinor: $tenderedMinor,
                 customerName: $locked->patient_name,
-                prescribed: array_values($items->map(fn (PrescriptionItem $item) => $item->medicine_id)->all()),
+                authorized: array_values($items->map(fn (PrescriptionItem $item) => $item->medicine_id)->all()),
             );
             $sale->forceFill(['prescription_id' => $locked->id])->save();
 
@@ -160,7 +161,7 @@ class Prescriptions
         }
 
         $prescription = Prescription::query()->whereKey($sale->prescription_id)->lockForUpdate()->firstOrFail();
-        $returned = $sale->lines()->get()->groupBy('medicine_id')->map(fn ($lines) => (int) $lines->sum('quantity'));
+        $returned = $sale->lines()->get()->groupBy('item_id')->map(fn ($lines) => (int) $lines->sum('quantity'));
 
         foreach ($prescription->items()->get() as $item) {
             $back = (int) ($returned[$item->medicine_id] ?? 0);

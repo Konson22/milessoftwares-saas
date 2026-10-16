@@ -18,8 +18,8 @@ beforeEach(function () {
         $keeper = User::factory()->create();
         $para = Medicine::factory()->create(['reorder_level' => 50, 'sell_price_minor' => 250]);
         Medicine::factory()->create(['reorder_level' => 0]); // none in stock, nothing to reorder
-        app(Stock::class)->add($para, $this->juba, 'P-1', CarbonImmutable::parse('2026-11-30'), 40, 100, $keeper);
-        app(Sell::class)->handle($keeper, $this->juba, [['medicine_id' => $para->id, 'quantity' => 4]], PaymentMethod::MobileMoney);
+        app(Stock::class)->add($para->item, $this->juba, 'P-1', CarbonImmutable::parse('2026-11-30'), 40, 100, $keeper);
+        app(Sell::class)->handle($keeper, $this->juba, [['item_id' => $para->id, 'quantity' => 4]], PaymentMethod::MobileMoney);
     });
 });
 

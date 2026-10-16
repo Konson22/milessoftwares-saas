@@ -5,8 +5,8 @@ namespace App\Modules\Procurement\Actions;
 use App\Models\User;
 use App\Modules\Inventory\Actions\Stock;
 use App\Modules\Inventory\Enums\MovementType;
+use App\Modules\Inventory\Models\Item;
 use App\Modules\MasterData\Models\Supplier;
-use App\Modules\Pharmacy\Models\Medicine;
 use App\Modules\Procurement\Enums\PurchaseOrderStatus;
 use App\Modules\Procurement\Models\GoodsReceipt;
 use App\Modules\Procurement\Models\PurchaseOrder;
@@ -33,7 +33,7 @@ class ReceiveGoods
     ) {}
 
     /**
-     * @param  list<array{medicine_id: string, batch_number: string, expires_on: string, quantity: int, unit_cost_minor: int, purchase_order_line_id?: string|null}>  $lines
+     * @param  list<array{item_id: string, batch_number: string, expires_on: string, quantity: int, unit_cost_minor: int, purchase_order_line_id?: string|null}>  $lines
      *
      * @throws ValidationException
      */
@@ -66,8 +66,8 @@ class ReceiveGoods
             $billLines = [];
 
             foreach ($lines as $index => $line) {
-                $medicine = Medicine::query()->find($line['medicine_id'])
-                    ?? throw ValidationException::withMessages(["lines.{$index}.medicine_id" => 'Unknown medicine.']);
+                $item = Item::query()->find($line['item_id'])
+                    ?? throw ValidationException::withMessages(["lines.{$index}.item_id" => 'Unknown item.']);
 
                 $orderLine = null;
                 if (! empty($line['purchase_order_line_id'])) {
@@ -75,8 +75,8 @@ class ReceiveGoods
                     $orderLine = $order?->lines()->whereKey($line['purchase_order_line_id'])->lockForUpdate()->first()
                         ?? throw ValidationException::withMessages(["lines.{$index}.purchase_order_line_id" => 'Not a line of this order.']);
 
-                    if ($orderLine->medicine_id !== $medicine->id) {
-                        throw ValidationException::withMessages(["lines.{$index}.medicine_id" => 'The order line is for another medicine.']);
+                    if ($orderLine->item_id !== $item->id) {
+                        throw ValidationException::withMessages(["lines.{$index}.item_id" => 'The order line is for another item.']);
                     }
                     if ($line['quantity'] > $orderLine->remaining()) {
                         throw ValidationException::withMessages(["lines.{$index}.quantity" => "Only {$orderLine->remaining()} still expected on the order."]);
@@ -84,7 +84,7 @@ class ReceiveGoods
                 }
 
                 $batch = $this->stock->add(
-                    medicine: $medicine,
+                    item: $item,
                     branchId: $branchId,
                     batchNumber: $line['batch_number'],
                     expiresOn: CarbonImmutable::parse($line['expires_on']),
@@ -100,7 +100,7 @@ class ReceiveGoods
                 $total += $lineTotal;
 
                 $receipt->lines()->create([
-                    'medicine_id' => $medicine->id,
+                    'item_id' => $item->id,
                     'batch_id' => $batch->id,
                     'purchase_order_line_id' => $orderLine?->id,
                     'batch_number' => $line['batch_number'],
@@ -115,7 +115,7 @@ class ReceiveGoods
                 }
 
                 $billLines[] = [
-                    'description' => "{$medicine->label()} (batch {$line['batch_number']})",
+                    'description' => "{$item->name} (batch {$line['batch_number']})",
                     'quantity' => $line['quantity'],
                     'amount_minor' => $lineTotal,
                     'expense_account' => null,

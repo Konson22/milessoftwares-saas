@@ -9,21 +9,17 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 | events instead of calling an industry module.
 */
 
-/**
- * Batches, order lines and sale lines still point at the medicine as their
- * item. Until a shared item master exists (Phase 3, master data), this is
- * the one Pharmacy class shared modules may use.
- */
-const ITEM = 'App\Modules\Pharmacy\Models\Medicine';
-
-// One rule per module: an array of targets combined with ignoring() lets
-// violations through (checked against Pest 5.3).
+// Batches, order lines and sale lines point at Inventory's Item; a medicine
+// is the pharmacy's details of one. No exception is needed any more.
 foreach (['MasterData', 'Inventory', 'Procurement', 'Sales'] as $module) {
     arch("{$module} does not depend on the pharmacy")
         ->expect("App\\Modules\\{$module}")
-        ->not->toUse('App\Modules\Pharmacy')
-        ->ignoring(ITEM);
+        ->not->toUse('App\Modules\Pharmacy');
 }
+
+arch('workspace pages read items, not medicines')
+    ->expect(['App\Http\Controllers\HomeController', 'App\Http\Controllers\ReportController'])
+    ->not->toUse('App\Modules\Pharmacy');
 
 arch('master data depends on no other module')
     ->expect('App\Modules\MasterData')

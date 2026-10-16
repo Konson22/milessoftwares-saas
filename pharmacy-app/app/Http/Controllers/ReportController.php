@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Modules\Inventory\Models\Batch;
-use App\Modules\Pharmacy\Models\Medicine;
+use App\Modules\Inventory\Models\Item;
 use App\Modules\Sales\Enums\PaymentMethod;
 use App\Modules\Sales\Models\Sale;
 use App\Modules\Sales\Models\SaleLine;
@@ -56,13 +56,13 @@ class ReportController extends Controller
         $cost = (int) $lines()->sum(DB::raw('sale_lines.quantity * batches.unit_cost_minor'));
 
         $top = $lines()
-            ->groupBy('sale_lines.medicine_id')
-            ->selectRaw('sale_lines.medicine_id, SUM(sale_lines.quantity) AS quantity, SUM(sale_lines.line_total_minor) AS revenue, SUM(sale_lines.quantity * batches.unit_cost_minor) AS cost')
+            ->groupBy('sale_lines.item_id')
+            ->selectRaw('sale_lines.item_id, SUM(sale_lines.quantity) AS quantity, SUM(sale_lines.line_total_minor) AS revenue, SUM(sale_lines.quantity * batches.unit_cost_minor) AS cost')
             ->orderByDesc('revenue')
             ->limit(self::TOP_MEDICINES)
             ->toBase()
             ->get();
-        $medicines = Medicine::query()->whereIn('id', $top->pluck('medicine_id'))->get()->keyBy('id');
+        $items = Item::query()->whereIn('id', $top->pluck('item_id'))->get()->keyBy('id');
 
         return Inertia::render('reports/index', [
             'from' => $from->toDateString(),
@@ -99,8 +99,8 @@ class ReportController extends Controller
                     'totalMinor' => (int) $row->total,
                 ]),
             'topMedicines' => $top->map(fn (object $row) => [
-                'id' => (string) $row->medicine_id,
-                'medicine' => $medicines->get((string) $row->medicine_id)?->label() ?? '',
+                'id' => (string) $row->item_id,
+                'medicine' => $items->get((string) $row->item_id)->name ?? '',
                 'quantity' => (int) $row->quantity,
                 'revenueMinor' => (int) $row->revenue,
                 'costMinor' => (int) $row->cost,
@@ -123,8 +123,8 @@ class ReportController extends Controller
 
         $sellable = $onHand()
             ->whereDate('batches.expires_on', '>', $today)
-            ->join('medicines', 'medicines.id', '=', 'batches.medicine_id')
-            ->selectRaw('SUM(batches.quantity_on_hand) AS units, SUM(batches.quantity_on_hand * batches.unit_cost_minor) AS cost, SUM(batches.quantity_on_hand * medicines.sell_price_minor) AS retail')
+            ->join('items', 'items.id', '=', 'batches.item_id')
+            ->selectRaw('SUM(batches.quantity_on_hand) AS units, SUM(batches.quantity_on_hand * batches.unit_cost_minor) AS cost, SUM(batches.quantity_on_hand * items.sell_price_minor) AS retail')
             ->toBase()
             ->first();
 

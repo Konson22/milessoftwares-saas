@@ -19,7 +19,7 @@ beforeEach(function () {
 function stockIn(string $branch, string $batch, string $expires, int $quantity): Batch
 {
     return test()->asTenant('acme', fn () => app(Stock::class)->add(
-        test()->medicine, $branch, $batch, CarbonImmutable::parse($expires), $quantity, 100, User::factory()->create(),
+        test()->medicine->item, $branch, $batch, CarbonImmutable::parse($expires), $quantity, 100, User::factory()->create(),
     ));
 }
 

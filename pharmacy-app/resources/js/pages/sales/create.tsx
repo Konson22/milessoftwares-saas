@@ -281,7 +281,7 @@ export default function Counter({ medicines, paymentMethods }: Props) {
                                 <span key={line.medicine.id}>
                                     <input
                                         type="hidden"
-                                        name={`items[${i}][medicine_id]`}
+                                        name={`items[${i}][item_id]`}
                                         value={line.medicine.id}
                                     />
                                     <input

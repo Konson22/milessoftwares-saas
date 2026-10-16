@@ -1,7 +1,9 @@
 <?php
 
 use App\Models\Workspace;
+use App\Modules\Inventory\Models\Item;
 use App\Modules\Pharmacy\Models\Medicine;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 function medicinePayload(array $overrides = []): array
@@ -85,4 +87,47 @@ it('never opens another organization\'s medicine', function () {
 
     $this->get($this->workspaceUrl('acme', 'medicines/'.$foreign->id.'/edit'))->assertNotFound();
     $this->put($this->workspaceUrl('acme', 'medicines/'.$foreign->id), medicinePayload())->assertNotFound();
+});
+
+it('keeps the medicine on an inventory item under the same id', function () {
+    $this->actingAsMember('acme', ['pharmacy.medicines.view', 'pharmacy.medicines.manage']);
+
+    $this->post($this->workspaceUrl('acme', 'medicines'), medicinePayload())->assertSessionHasNoErrors();
+    $medicine = $this->asTenant('acme', fn () => Medicine::query()->sole());
+
+    $this->put($this->workspaceUrl('acme', "medicines/{$medicine->id}"), medicinePayload(['strength' => '250 mg', 'sell_price' => '8.00', 'active' => false]))
+        ->assertSessionHasNoErrors();
+
+    // What every module reads: on the item, named as the medicine's label.
+    expect($this->asTenant('acme', fn () => Item::query()->sole()))
+        ->id->toBe($medicine->id)
+        ->kind->toBe(Medicine::KIND)
+        ->name->toBe('Amoxil 250 mg capsule')
+        ->alias->toBe('amoxicillin')
+        ->unit->toBe('capsule')
+        ->barcode->toBe('6001234500017')
+        ->sell_price_minor->toBe(800)
+        ->reorder_level->toBe(40)
+        ->restricted->toBeTrue()
+        ->controlled->toBeFalse()
+        ->active->toBeFalse()
+        ->organization_id->toBe($this->platform()->organization('acme')['id']);
+
+    // The medicine row keeps only the pharmacy's own details.
+    expect(array_keys((array) DB::table('medicines')->sole()))
+        ->toEqualCanonicalizing(['id', 'organization_id', 'name', 'form', 'strength', 'created_at', 'updated_at']);
+});
+
+it('finds medicines by name, generic name or barcode, through the item', function () {
+    $this->asTenant('acme', function () {
+        Medicine::factory()->create(['name' => 'Amoxil', 'generic_name' => 'amoxicillin', 'barcode' => '600111']);
+        Medicine::factory()->create(['name' => 'Panadol', 'generic_name' => 'paracetamol', 'active' => false]);
+    });
+
+    $names = fn (string $term) => $this->asTenant('acme', fn () => Medicine::query()->search($term)->pluck('name')->all());
+
+    expect($names('amox'))->toBe(['Amoxil'])
+        ->and($names('PARACET'))->toBe(['Panadol'])
+        ->and($names('600111'))->toBe(['Amoxil'])
+        ->and($this->asTenant('acme', fn () => Medicine::query()->active()->pluck('name')->all()))->toBe(['Amoxil']);
 });

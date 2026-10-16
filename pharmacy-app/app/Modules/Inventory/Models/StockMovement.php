@@ -17,7 +17,7 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property string $id
  * @property string $organization_id
  * @property string $branch_id
- * @property string $medicine_id
+ * @property string $item_id
  * @property string $batch_id
  * @property int $quantity
  * @property MovementType $type

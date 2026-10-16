@@ -7,7 +7,8 @@
 | 1.2 Products on the site, plans sell products | Done 2026-10-16 |
 | 1.3 – 2 | Not started |
 | 3.1 Pharmacy code into module namespaces | Done 2026-10-16 |
-| 3.2 – 11 | Not started |
+| 3.2 Shared item master | Done 2026-10-16 |
+| 3.3 – 11 | Not started |
 
 Decisions accepted 2026-10-16: D1 → `docs/adr/0003-erp-workspace-application.md`,
 D2 → `docs/adr/0004-companies-as-organizations.md`.
@@ -118,3 +119,44 @@ together with `ignoring()`; the rules use one target each.
 - Customers (Sales) and units/conversions (MasterData) are not built yet (Phase 3 master data).
 - Permission keys keep the `pharmacy.` prefix (`pharmacy.sales.create`…); renaming them is a
   catalog change on the platform and is left for when Retail joins.
+
+## Phase 3.2 — 2026-10-16 (local, Windows)
+
+The shared item master: stock, purchasing and sales point at an Inventory item, and a medicine
+is Pharmacy's details of one. Removes the one exception the Phase 3.1 boundaries allowed.
+
+**Implemented** (`pharmacy-app`, branch `erp/phase-3-pharmacy-modules`):
+- `items` (Inventory): kind, name as printed on documents, alias (generic name), unit, barcode,
+  sell price, reorder level, `restricted` (sold only with an authorisation: prescription-only),
+  `controlled`, active. `Inventory\Models\Item` with its own factory.
+- `medicines` keeps name, form and strength; its id is its item's id (foreign key). `Medicine`
+  reads and writes the moved attributes through its item (`ON_ITEM`) and saves item then medicine
+  in one transaction, keeping the item's name equal to `label()`. Pharmacy code and its pages
+  did not change apart from queries on moved columns (`active()`, `whereRelation`).
+- `medicine_id` → `item_id` on batches, stock movements and purchase order, goods receipt, sale
+  and supplier return lines, with foreign keys to `items`. `prescription_items` keeps
+  `medicine_id` (a Pharmacy table).
+- `Stock`, `Sell`, `ReceiveGoods`, `ReturnGoods`, `Purchasing`, their controllers and the home and
+  report pages take or read `Item`. `Sell(authorized: …)` replaces `prescribed:`; `Prescriptions`
+  passes the prescription's medicine ids.
+- Order, receipt and sale forms post `item_id` (3 pages, 8 lines). Page props kept their names.
+- Architecture test: the Medicine exception is gone; home and report pages may not use Pharmacy.
+
+**Data migration** `2026_10_16_100000_create_items_and_move_stock_onto_them`: every medicine
+becomes an item with the same id, so no reference changes value. `down()` puts the columns back
+from the items; it stops if an item that is not a medicine is referenced.
+
+**Tests executed:**
+- `composer ci:check`: Pest 88 passed, 1 skipped (PostgreSQL-only); PHPStan 0; Pint; `vp check`;
+  `tsc`. Before: 84 passed. New: item written with the medicine, search through the item,
+  migration up → down → up on old-shape rows.
+- Full suite on a scratch PostgreSQL database: 89 passed (the PostgreSQL-only test included).
+- Local PostgreSQL: `migrate`, `migrate:rollback --step=1`, `migrate` (no pharmacy rows there).
+- Mutation: a Sales class using `Pharmacy\Models\Medicine` fails the architecture test.
+
+**Known limitations / next slices:**
+- Units and packaging (buy by the box, sell by the tablet) are not built: an item has one unit.
+- The "needs a verified prescription" message still lives in `Sell`.
+- Page props still say `medicines` / `medicine`; the stock page shows the item's `controlled`.
+- `sales.prescription_id` still references a Pharmacy table from a Sales table.
+- Customers (Sales) and units/conversions (MasterData) are not built yet.

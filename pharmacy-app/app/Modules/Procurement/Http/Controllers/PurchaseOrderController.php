@@ -4,8 +4,8 @@ namespace App\Modules\Procurement\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Modules\Inventory\Models\Item;
 use App\Modules\MasterData\Models\Supplier;
-use App\Modules\Pharmacy\Models\Medicine;
 use App\Modules\Procurement\Actions\Purchasing;
 use App\Modules\Procurement\Models\PurchaseOrder;
 use App\Modules\Procurement\Models\PurchaseOrderLine;
@@ -53,8 +53,8 @@ class PurchaseOrderController extends Controller
     {
         return Inertia::render('purchase-orders/create', [
             'suppliers' => Supplier::query()->where('active', true)->orderBy('name')->get(['id', 'name']),
-            'medicines' => Medicine::query()->where('active', true)->orderBy('name')->get()
-                ->map(fn (Medicine $medicine) => ['id' => $medicine->id, 'label' => $medicine->label(), 'unit' => $medicine->unit]),
+            'medicines' => Item::query()->where('active', true)->orderBy('name')->get()
+                ->map(fn (Item $item) => ['id' => $item->id, 'label' => $item->name, 'unit' => $item->unit]),
         ]);
     }
 
@@ -65,7 +65,7 @@ class PurchaseOrderController extends Controller
             'expected_on' => ['nullable', 'date', 'after_or_equal:today'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'lines' => ['required', 'array', 'min:1', 'max:200'],
-            'lines.*.medicine_id' => ['required', 'uuid', 'distinct', Rule::exists('medicines', 'id')->where('organization_id', $this->organizationId())],
+            'lines.*.item_id' => ['required', 'uuid', 'distinct', Rule::exists('items', 'id')->where('organization_id', $this->organizationId())],
             'lines.*.quantity' => ['required', 'integer', 'min:1', 'max:1000000'],
             'lines.*.unit_cost' => ['required', 'string', Money::rule()],
         ]);
@@ -75,7 +75,7 @@ class PurchaseOrderController extends Controller
             branchId: $this->branch->id(),
             supplier: Supplier::query()->findOrFail((string) $validated['supplier_id']),
             lines: array_values(array_map(fn (array $line) => [
-                'medicine_id' => $line['medicine_id'],
+                'item_id' => $line['item_id'],
                 'quantity' => (int) $line['quantity'],
                 'unit_cost_minor' => Money::toMinor($line['unit_cost']),
             ], $validated['lines'])),
@@ -89,7 +89,7 @@ class PurchaseOrderController extends Controller
     public function show(PurchaseOrder $order): Response
     {
         $this->ensureHere($order);
-        $order->load(['supplier:id,name', 'lines.medicine']);
+        $order->load(['supplier:id,name', 'lines.item']);
 
         return Inertia::render('purchase-orders/show', [
             'order' => [
@@ -102,8 +102,8 @@ class PurchaseOrderController extends Controller
                 'totalMinor' => $order->totalMinor(),
                 'lines' => $order->lines->map(fn (PurchaseOrderLine $line) => [
                     'id' => $line->id,
-                    'medicine' => $line->medicine->label(),
-                    'unit' => $line->medicine->unit,
+                    'medicine' => $line->item->name,
+                    'unit' => $line->item->unit,
                     'ordered' => $line->quantity_ordered,
                     'received' => $line->quantity_received,
                     'unitCostMinor' => $line->unit_cost_minor,
