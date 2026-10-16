@@ -1,13 +1,13 @@
 <?php
 
-use App\Enums\PrescriptionStatus;
-use App\Models\Batch;
-use App\Models\Medicine;
-use App\Models\Prescription;
-use App\Models\Sale;
 use App\Models\User;
 use App\Models\Workspace;
-use App\Pharmacy\Stock;
+use App\Modules\Inventory\Actions\Stock;
+use App\Modules\Inventory\Models\Batch;
+use App\Modules\Pharmacy\Enums\PrescriptionStatus;
+use App\Modules\Pharmacy\Models\Medicine;
+use App\Modules\Pharmacy\Models\Prescription;
+use App\Modules\Sales\Models\Sale;
 use Carbon\CarbonImmutable;
 use Inertia\Testing\AssertableInertia as Assert;
 use Miles\SharedModuleKit\Envelope;

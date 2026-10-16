@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Enums\MedicineForm;
-use App\Models\Medicine;
+use App\Modules\Pharmacy\Enums\MedicineForm;
+use App\Modules\Pharmacy\Models\Medicine;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class MedicineFactory extends Factory
 {
+    protected $model = Medicine::class;
+
     /**
      * @return array<string, mixed>
      */

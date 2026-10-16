@@ -1,10 +1,10 @@
 <?php
 
-use App\Models\Batch;
-use App\Models\Medicine;
 use App\Models\User;
 use App\Models\Workspace;
-use App\Pharmacy\Stock;
+use App\Modules\Inventory\Actions\Stock;
+use App\Modules\Inventory\Models\Batch;
+use App\Modules\Pharmacy\Models\Medicine;
 use Carbon\CarbonImmutable;
 use Inertia\Testing\AssertableInertia as Assert;
 

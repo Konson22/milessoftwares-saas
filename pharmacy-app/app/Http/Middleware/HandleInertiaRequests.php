@@ -2,9 +2,9 @@
 
 namespace App\Http\Middleware;
 
-use App\Pharmacy\Branches;
-use App\Pharmacy\CurrentBranch;
-use App\Pharmacy\Money;
+use App\Support\Branches;
+use App\Support\CurrentBranch;
+use App\Support\Money;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Miles\PlatformClient\Access\CurrentAccess;

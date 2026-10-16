@@ -1,14 +1,14 @@
 <?php
 
-use App\Enums\PurchaseOrderStatus;
-use App\Models\Batch;
-use App\Models\GoodsReceipt;
-use App\Models\Medicine;
-use App\Models\PurchaseOrder;
-use App\Models\StockMovement;
-use App\Models\Supplier;
-use App\Models\SupplierReturn;
 use App\Models\Workspace;
+use App\Modules\Inventory\Models\Batch;
+use App\Modules\Inventory\Models\StockMovement;
+use App\Modules\MasterData\Models\Supplier;
+use App\Modules\Pharmacy\Models\Medicine;
+use App\Modules\Procurement\Enums\PurchaseOrderStatus;
+use App\Modules\Procurement\Models\GoodsReceipt;
+use App\Modules\Procurement\Models\PurchaseOrder;
+use App\Modules\Procurement\Models\SupplierReturn;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
 use Miles\SharedModuleKit\Envelope;

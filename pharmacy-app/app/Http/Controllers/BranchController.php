@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Pharmacy\Branches;
+use App\Support\Branches;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;

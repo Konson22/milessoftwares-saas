@@ -1,0 +1,25 @@
+<?php
+
+namespace App\Modules\Pharmacy\Enums;
+
+enum PrescriptionStatus: string
+{
+    case Recorded = 'recorded';
+    case Verified = 'verified';
+    case PartlyDispensed = 'partly_dispensed';
+    case Dispensed = 'dispensed';
+    case Rejected = 'rejected';
+    case Cancelled = 'cancelled';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::Recorded => 'Waiting for a pharmacist',
+            self::Verified => 'Verified',
+            self::PartlyDispensed => 'Partly dispensed',
+            self::Dispensed => 'Dispensed',
+            self::Rejected => 'Rejected',
+            self::Cancelled => 'Cancelled',
+        };
+    }
+}

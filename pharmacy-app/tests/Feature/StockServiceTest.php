@@ -1,13 +1,13 @@
 <?php
 
-use App\Enums\AdjustmentReason;
-use App\Enums\MovementType;
-use App\Models\Batch;
-use App\Models\Medicine;
-use App\Models\StockMovement;
 use App\Models\User;
-use App\Pharmacy\InsufficientStock;
-use App\Pharmacy\Stock;
+use App\Modules\Inventory\Actions\InsufficientStock;
+use App\Modules\Inventory\Actions\Stock;
+use App\Modules\Inventory\Enums\AdjustmentReason;
+use App\Modules\Inventory\Enums\MovementType;
+use App\Modules\Inventory\Models\Batch;
+use App\Modules\Inventory\Models\StockMovement;
+use App\Modules\Pharmacy\Models\Medicine;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;

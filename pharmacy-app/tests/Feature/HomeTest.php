@@ -1,11 +1,11 @@
 <?php
 
-use App\Enums\PaymentMethod;
-use App\Models\Medicine;
 use App\Models\User;
 use App\Models\Workspace;
-use App\Pharmacy\Sell;
-use App\Pharmacy\Stock;
+use App\Modules\Inventory\Actions\Stock;
+use App\Modules\Pharmacy\Models\Medicine;
+use App\Modules\Sales\Actions\Sell;
+use App\Modules\Sales\Enums\PaymentMethod;
 use Carbon\CarbonImmutable;
 use Inertia\Testing\AssertableInertia as Assert;
 

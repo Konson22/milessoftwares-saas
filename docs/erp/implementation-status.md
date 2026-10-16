@@ -5,7 +5,9 @@
 | 0 Audit | Done 2026-10-16 |
 | 1.1 Product catalog foundation | Done 2026-10-16 (`88eb513`) |
 | 1.2 Products on the site, plans sell products | Done 2026-10-16 |
-| 1.3 – 11 | Not started |
+| 1.3 – 2 | Not started |
+| 3.1 Pharmacy code into module namespaces | Done 2026-10-16 |
+| 3.2 – 11 | Not started |
 
 Decisions accepted 2026-10-16: D1 → `docs/adr/0003-erp-workspace-application.md`,
 D2 → `docs/adr/0004-companies-as-organizations.md`.
@@ -77,3 +79,42 @@ and D2 (accepted).
 - The contact form does not record which product the visitor asked about.
 
 **Next:** Phase 1.3, subscription lapse behaviour (grace / read-only window), then Phase 2.
+
+## Phase 3.1 — 2026-10-16 (local, Windows)
+
+Taken ahead of 1.3 and 2 at the owner's request: the code reorganisation ADR-0003 schedules for
+Phase 3, with no behaviour change.
+
+**Implemented** (`pharmacy-app`, branch `erp/phase-3-pharmacy-modules`):
+- 41 classes moved (git history kept) into `app/Modules/{MasterData, Inventory, Procurement,
+  Sales, Pharmacy}` (`Models`, `Enums`, `Actions`, `Http/Controllers`); branch context, money and
+  document numbers into `app/Support`; branch, home and report pages stay in `app/Http`.
+- `VoidSale` no longer calls Pharmacy: it dispatches `Sales\Events\SaleVoided` inside its
+  transaction; `Pharmacy\Listeners\ReturnVoidedSaleToPrescription` reopens the prescription.
+- `tests/Unit/ArchitectureTest.php` (10 rules) holds the boundaries. One listed exception:
+  shared modules may use `Pharmacy\Models\Medicine`, still the item every batch and line points at.
+- Medicine's factory is linked explicitly (`#[UseFactory]`, `$model`): the name guess no longer
+  works outside `App\Models`.
+
+**Unchanged:** tables and migrations, routes, route names, permission keys, Inertia pages,
+events sent to Finance.
+
+**Tests executed:**
+- Pharmacy `composer ci:check`: Pest 84 passed, 1 skipped (PostgreSQL-only, as before); PHPStan
+  0 errors; Pint; `vp check`; `tsc`. Before the move: 74 passed, 1 skipped (the 10 new ones are
+  architecture rules).
+- Mutation checks: unregistering the `SaleVoided` listener fails 2 prescription tests; a Sales
+  class using `Pharmacy\Actions\Prescriptions` fails the architecture test.
+- Live: the running app boots, all 40 routes resolve to the module controllers, guests are sent
+  to sign in.
+
+**Found on the way:** Pest 5.3 lets violations through when `arch()` gets an array of targets
+together with `ignoring()`; the rules use one target each.
+
+**Known limitations / next slices:**
+- Shared item master (Inventory item with units/packaging; Medicine becomes Pharmacy's details on
+  it) removes the exception above. Needs a data migration.
+- `sales.prescription_id` still references a Pharmacy table from a Sales table.
+- Customers (Sales) and units/conversions (MasterData) are not built yet (Phase 3 master data).
+- Permission keys keep the `pharmacy.` prefix (`pharmacy.sales.create`…); renaming them is a
+  catalog change on the platform and is left for when Retail joins.

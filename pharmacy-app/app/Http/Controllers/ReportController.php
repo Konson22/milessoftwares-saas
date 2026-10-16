@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\PaymentMethod;
-use App\Models\Batch;
-use App\Models\Medicine;
-use App\Models\Sale;
-use App\Models\SaleLine;
-use App\Pharmacy\CurrentBranch;
+use App\Modules\Inventory\Models\Batch;
+use App\Modules\Pharmacy\Models\Medicine;
+use App\Modules\Sales\Enums\PaymentMethod;
+use App\Modules\Sales\Models\Sale;
+use App\Modules\Sales\Models\SaleLine;
+use App\Support\CurrentBranch;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;

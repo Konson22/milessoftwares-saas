@@ -1,17 +1,17 @@
 <?php
 
 use App\Http\Controllers\BranchController;
-use App\Http\Controllers\ControlledRegisterController;
-use App\Http\Controllers\GoodsReceiptController;
 use App\Http\Controllers\HomeController;
-use App\Http\Controllers\MedicineController;
-use App\Http\Controllers\PrescriptionController;
-use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\ReportController;
-use App\Http\Controllers\SaleController;
-use App\Http\Controllers\StockController;
-use App\Http\Controllers\SupplierController;
-use App\Http\Controllers\SupplierReturnController;
+use App\Modules\Inventory\Http\Controllers\StockController;
+use App\Modules\MasterData\Http\Controllers\SupplierController;
+use App\Modules\Pharmacy\Http\Controllers\ControlledRegisterController;
+use App\Modules\Pharmacy\Http\Controllers\MedicineController;
+use App\Modules\Pharmacy\Http\Controllers\PrescriptionController;
+use App\Modules\Procurement\Http\Controllers\GoodsReceiptController;
+use App\Modules\Procurement\Http\Controllers\PurchaseOrderController;
+use App\Modules\Procurement\Http\Controllers\SupplierReturnController;
+use App\Modules\Sales\Http\Controllers\SaleController;
 use Illuminate\Support\Facades\Route;
 use Miles\PlatformClient\PlatformConfig;
 

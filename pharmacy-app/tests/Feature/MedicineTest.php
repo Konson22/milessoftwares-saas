@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Medicine;
 use App\Models\Workspace;
+use App\Modules\Pharmacy\Models\Medicine;
 use Inertia\Testing\AssertableInertia as Assert;
 
 function medicinePayload(array $overrides = []): array

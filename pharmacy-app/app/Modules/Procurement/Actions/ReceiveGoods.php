@@ -1,0 +1,150 @@
+<?php
+
+namespace App\Modules\Procurement\Actions;
+
+use App\Models\User;
+use App\Modules\Inventory\Actions\Stock;
+use App\Modules\Inventory\Enums\MovementType;
+use App\Modules\MasterData\Models\Supplier;
+use App\Modules\Pharmacy\Models\Medicine;
+use App\Modules\Procurement\Enums\PurchaseOrderStatus;
+use App\Modules\Procurement\Models\GoodsReceipt;
+use App\Modules\Procurement\Models\PurchaseOrder;
+use App\Modules\Procurement\Models\PurchaseOrderLine;
+use App\Support\DocumentNumbers;
+use App\Support\Money;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use Miles\PlatformClient\Events\Outbox;
+
+/**
+ * Goods arriving from a supplier into a branch: one goods received note,
+ * each line into stock (a batch), the purchase order's received quantities,
+ * and one finance.bill.received for Finance. All in one transaction:
+ * nothing is half received.
+ */
+class ReceiveGoods
+{
+    public function __construct(
+        private readonly Stock $stock,
+        private readonly DocumentNumbers $numbers,
+        private readonly Outbox $outbox,
+    ) {}
+
+    /**
+     * @param  list<array{medicine_id: string, batch_number: string, expires_on: string, quantity: int, unit_cost_minor: int, purchase_order_line_id?: string|null}>  $lines
+     *
+     * @throws ValidationException
+     */
+    public function handle(User $by, string $branchId, Supplier $supplier, ?PurchaseOrder $order, ?string $supplierReference, CarbonImmutable $receivedOn, array $lines): GoodsReceipt
+    {
+        return DB::transaction(function () use ($by, $branchId, $supplier, $order, $supplierReference, $receivedOn, $lines) {
+            if ($order !== null) {
+                $order = PurchaseOrder::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+                if ($order->branch_id !== $branchId || $order->supplier_id !== $supplier->id) {
+                    throw ValidationException::withMessages(['purchase_order_id' => 'That order is for another branch or supplier.']);
+                }
+                if (! $order->status->canReceive()) {
+                    throw ValidationException::withMessages(['purchase_order_id' => "Order {$order->number} is {$order->status->value}."]);
+                }
+            }
+
+            $receipt = GoodsReceipt::query()->create([
+                'branch_id' => $branchId,
+                'number' => $this->numbers->next('goods_receipt', 'GRN'),
+                'supplier_id' => $supplier->id,
+                'purchase_order_id' => $order?->id,
+                'supplier_reference' => $supplierReference,
+                'received_on' => $receivedOn,
+                'total_minor' => 0,
+                'received_by' => $by->id,
+            ]);
+
+            $total = 0;
+            $billLines = [];
+
+            foreach ($lines as $index => $line) {
+                $medicine = Medicine::query()->find($line['medicine_id'])
+                    ?? throw ValidationException::withMessages(["lines.{$index}.medicine_id" => 'Unknown medicine.']);
+
+                $orderLine = null;
+                if (! empty($line['purchase_order_line_id'])) {
+                    // Only lines of this order, locked: never a line found by id alone.
+                    $orderLine = $order?->lines()->whereKey($line['purchase_order_line_id'])->lockForUpdate()->first()
+                        ?? throw ValidationException::withMessages(["lines.{$index}.purchase_order_line_id" => 'Not a line of this order.']);
+
+                    if ($orderLine->medicine_id !== $medicine->id) {
+                        throw ValidationException::withMessages(["lines.{$index}.medicine_id" => 'The order line is for another medicine.']);
+                    }
+                    if ($line['quantity'] > $orderLine->remaining()) {
+                        throw ValidationException::withMessages(["lines.{$index}.quantity" => "Only {$orderLine->remaining()} still expected on the order."]);
+                    }
+                }
+
+                $batch = $this->stock->add(
+                    medicine: $medicine,
+                    branchId: $branchId,
+                    batchNumber: $line['batch_number'],
+                    expiresOn: CarbonImmutable::parse($line['expires_on']),
+                    quantity: $line['quantity'],
+                    unitCostMinor: $line['unit_cost_minor'],
+                    user: $by,
+                    type: MovementType::Receipt,
+                    referenceType: 'goods_receipt',
+                    referenceId: $receipt->id,
+                );
+
+                $lineTotal = $line['quantity'] * $line['unit_cost_minor'];
+                $total += $lineTotal;
+
+                $receipt->lines()->create([
+                    'medicine_id' => $medicine->id,
+                    'batch_id' => $batch->id,
+                    'purchase_order_line_id' => $orderLine?->id,
+                    'batch_number' => $line['batch_number'],
+                    'expires_on' => $line['expires_on'],
+                    'quantity' => $line['quantity'],
+                    'unit_cost_minor' => $line['unit_cost_minor'],
+                    'line_total_minor' => $lineTotal,
+                ]);
+
+                if ($orderLine instanceof PurchaseOrderLine) {
+                    $orderLine->forceFill(['quantity_received' => $orderLine->quantity_received + $line['quantity']])->save();
+                }
+
+                $billLines[] = [
+                    'description' => "{$medicine->label()} (batch {$line['batch_number']})",
+                    'quantity' => $line['quantity'],
+                    'amount_minor' => $lineTotal,
+                    'expense_account' => null,
+                ];
+            }
+
+            $receipt->forceFill(['total_minor' => $total])->save();
+
+            if ($order !== null) {
+                $remaining = $order->lines()->get()->sum(fn (PurchaseOrderLine $line) => $line->remaining());
+                $order->forceFill(['status' => $remaining === 0 ? PurchaseOrderStatus::Received : PurchaseOrderStatus::PartlyReceived])->save();
+            }
+
+            // What the pharmacy owes the supplier: Finance posts it to payables.
+            $this->outbox->record('finance', 'finance.bill.received', 1, 'goods_receipt:'.$receipt->id, [
+                'bill_number' => $receipt->number,
+                'supplier_reference' => $supplierReference,
+                'supplier_name' => $supplier->name,
+                'supplier_id' => $supplier->id,
+                'branch_id' => $branchId,
+                'currency' => Money::currency(),
+                'total_minor' => $total,
+                'tax_minor' => 0,
+                'received_on' => $receivedOn->toDateString(),
+                'due_on' => null,
+                'lines' => $billLines,
+            ], $receipt->created_at);
+
+            return $receipt;
+        });
+    }
+}

@@ -2,7 +2,7 @@
 
 namespace App\Http\Middleware;
 
-use App\Pharmacy\CurrentBranch;
+use App\Support\CurrentBranch;
 use Closure;
 use Illuminate\Http\Request;
 use Miles\PlatformClient\Access\CurrentAccess;

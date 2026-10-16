@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\PrescriptionStatus;
-use App\Models\Batch;
-use App\Models\Medicine;
-use App\Models\Prescription;
-use App\Models\Sale;
-use App\Pharmacy\CurrentBranch;
+use App\Modules\Inventory\Http\Controllers\StockController;
+use App\Modules\Inventory\Models\Batch;
+use App\Modules\Pharmacy\Enums\PrescriptionStatus;
+use App\Modules\Pharmacy\Models\Medicine;
+use App\Modules\Pharmacy\Models\Prescription;
+use App\Modules\Sales\Models\Sale;
+use App\Support\CurrentBranch;
 use Carbon\CarbonImmutable;
 use Inertia\Inertia;
 use Inertia\Response;
