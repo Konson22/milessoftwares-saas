@@ -4,6 +4,7 @@ use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SecurityHeaders;
 use App\Modules\Identity\Http\Middleware\EnforceSessionState;
+use App\Modules\Identity\Http\Middleware\RequirePasswordChange;
 use App\Modules\Integration\Http\AuthenticateApplicationClient;
 use App\Sites\Admin\Http\Middleware\AdminIdleTimeout;
 use App\Sites\Admin\Http\Middleware\EnsurePlatformStaff;
@@ -70,6 +71,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(append: [
             EnforceSessionState::class,
+            RequirePasswordChange::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,

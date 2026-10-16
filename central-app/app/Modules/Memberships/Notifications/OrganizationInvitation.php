@@ -31,9 +31,13 @@ class OrganizationInvitation extends Notification implements ShouldQueue
         return ['mail'];
     }
 
+    /**
+     * The auth host's join page: new people choose a password there, people
+     * with an account are sent on to sign in and accept.
+     */
     public function acceptUrl(): string
     {
-        return PlatformHosts::url(PlatformHosts::app(), 'invitations/'.$this->token);
+        return PlatformHosts::url(PlatformHosts::auth(), 'join/'.$this->token);
     }
 
     public function toMail(object $notifiable): MailMessage

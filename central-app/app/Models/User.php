@@ -23,6 +23,9 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $suspended_at
  * @property Carbon|null $email_verified_at
  * @property string $password
+ * @property Carbon|null $password_change_required_at set: must choose a new password before anything else
+ * @property Carbon|null $temporary_password_expires_at when the temporary password stops working
+ * @property string|null $created_by_organization_id added by that organization's administrator (email not proven)
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
@@ -31,7 +34,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $updated_at
  */
 #[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
+#[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token', 'temporary_password_expires_at', 'created_by_organization_id'])]
 class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
@@ -58,6 +61,25 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
             'suspended_at' => 'datetime',
+            'password_change_required_at' => 'datetime',
+            'temporary_password_expires_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Accounts an organization's administrator added are usable there without
+     * an email check: the administrator vouched for the address. That is not
+     * proof, so the column stays empty and everything that needs a proven
+     * address (accepting another organization's invitation, the email_verified
+     * claim products receive) still reads email_verified_at itself.
+     */
+    public function hasVerifiedEmail(): bool
+    {
+        return $this->email_verified_at !== null || $this->created_by_organization_id !== null;
+    }
+
+    public function mustChangePassword(): bool
+    {
+        return $this->password_change_required_at !== null;
     }
 }

@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
@@ -53,7 +54,18 @@ class FortifyServiceProvider extends ServiceProvider
                 return null;
             }
 
-            return $user->status === 'active' ? $user : null;
+            if ($user->status !== 'active') {
+                return null;
+            }
+
+            // Only said to someone who knows the temporary password.
+            if ($user->mustChangePassword() && $user->temporary_password_expires_at?->isPast()) {
+                throw ValidationException::withMessages([
+                    Fortify::username() => __('This temporary password has expired. Ask the administrator who added you for a new one.'),
+                ]);
+            }
+
+            return $user;
         });
     }
 

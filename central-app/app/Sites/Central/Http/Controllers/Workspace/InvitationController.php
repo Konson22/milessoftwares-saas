@@ -10,7 +10,9 @@ use App\Modules\Authorization\Support\AccessResolver;
 use App\Modules\Entitlements\Models\Entitlement;
 use App\Modules\Memberships\Actions\Invitations;
 use App\Modules\Memberships\Actions\MembershipActionDenied;
+use App\Modules\Memberships\Enums\MembershipStatus;
 use App\Modules\Memberships\Models\Invitation;
+use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Structure\Models\Branch;
 use App\Modules\Structure\Models\Department;
 use App\Sites\Central\Http\Controllers\Workspace\Concerns\AuthorizesWorkspaceAdministration;
@@ -32,7 +34,7 @@ class InvitationController extends Controller
 
     public function index(Request $request): Response
     {
-        $this->authorizeAccessManagement($request, $this->access);
+        $actor = $this->authorizeAccessManagement($request, $this->access);
 
         $entitled = Entitlement::query()->current()->whereNull('feature_key')->pluck('application_id');
 
@@ -67,6 +69,22 @@ class InvitationController extends Controller
                         'scopes' => array_map(fn ($type) => $type->value, $role->allowedScopeTypes()),
                     ]))
                 ->values()
+                ->all(),
+            // People added with a temporary password who have not chosen their own yet.
+            'awaiting' => OrganizationMembership::query()
+                ->where('status', MembershipStatus::Active)
+                ->whereHas('user', fn ($query) => $query
+                    ->where('created_by_organization_id', $actor->organization_id)
+                    ->whereNotNull('password_change_required_at'))
+                ->with('user')
+                ->get()
+                ->map(fn (OrganizationMembership $membership) => [
+                    'id' => $membership->id,
+                    'name' => $membership->user->name,
+                    'email' => $membership->user->email,
+                    'expiresAt' => $membership->user->temporary_password_expires_at?->toDateString(),
+                    'expired' => $membership->user->temporary_password_expires_at?->isPast() ?? false,
+                ])
                 ->all(),
             'branches' => Branch::query()->where('status', 'active')->orderBy('name')->get(['id', 'name']),
             'departments' => Department::query()->where('status', 'active')->orderBy('name')->get(['id', 'name']),

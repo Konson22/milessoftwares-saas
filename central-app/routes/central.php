@@ -2,12 +2,15 @@
 
 use App\Modules\Identity\Http\Controllers\FirstPartySignInController;
 use App\Modules\Identity\Http\Controllers\SignOutController;
+use App\Sites\Central\Http\Controllers\Account\JoinController;
+use App\Sites\Central\Http\Controllers\Account\PasswordSetupController;
 use App\Sites\Central\Http\Controllers\Dashboard\DashboardController;
 use App\Sites\Central\Http\Controllers\Dashboard\InvitationAcceptanceController;
 use App\Sites\Central\Http\Controllers\Dashboard\OrganizationController;
 use App\Sites\Central\Http\Controllers\Dashboard\OrganizationSettingsController;
 use App\Sites\Central\Http\Controllers\Workspace\AccessController;
 use App\Sites\Central\Http\Controllers\Workspace\InvitationController;
+use App\Sites\Central\Http\Controllers\Workspace\MemberAccountController;
 use App\Sites\Central\Http\Controllers\Workspace\MemberController;
 use App\Sites\Central\Http\Controllers\Workspace\StructureController;
 use App\Sites\Central\Http\Controllers\Workspace\WorkspaceHomeController;
@@ -39,6 +42,19 @@ Route::domain(PlatformHosts::auth())->group(function () {
     // Wayfinder's generated TypeScript does not support yet.
     Route::get('/', fn () => redirect('/settings/profile'));
     Route::get('signout', SignOutController::class)->name('signout');
+
+    // First sign-in with a temporary password: choose your own.
+    Route::middleware('auth')->group(function () {
+        Route::get('password/setup', [PasswordSetupController::class, 'show'])->name('password.setup');
+        Route::post('password/setup', [PasswordSetupController::class, 'store'])->middleware('throttle:10,1')->name('password.setup.store');
+    });
+
+    // Invitation links: new people create their account here, with the
+    // token as proof of their email address.
+    Route::get('join/{token}', [JoinController::class, 'show'])
+        ->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:30,1')->name('join.show');
+    Route::post('join/{token}', [JoinController::class, 'store'])
+        ->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:10,1')->name('join.store');
 
     require __DIR__.'/settings.php';
 });
@@ -118,6 +134,10 @@ Route::domain('{tenant}.'.PlatformHosts::root())
                 Route::put('positions/{position}', [StructureController::class, 'updatePosition'])->whereUuid('position')->name('positions.update');
 
                 Route::put('members/{membership}/status', [MemberController::class, 'updateStatus'])->whereUuid('membership')->name('members.status');
+                // Adding someone directly with a temporary password.
+                Route::post('members', [MemberAccountController::class, 'store'])->middleware('throttle:30,60')->name('members.store');
+                Route::post('members/{membership}/temporary-password', [MemberAccountController::class, 'reissue'])
+                    ->whereUuid('membership')->middleware('throttle:10,60')->name('members.temporary-password');
 
                 Route::get('invitations', [InvitationController::class, 'index'])->name('invitations');
                 Route::post('invitations', [InvitationController::class, 'store'])->middleware('throttle:30,60')->name('invitations.store');
