@@ -10,7 +10,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Pages that work on one branch's stock or sales: without a chosen branch,
- * the member picks one first (or is refused when none is open to them).
+ * the member picks one first. When none is open to them, the same page says
+ * why (no branch yet, or no pharmacy role in one) instead of a bare error.
  */
 class RequireBranch
 {
@@ -27,8 +28,6 @@ class RequireBranch
         $branch = $this->branches->current($request);
 
         if ($branch === null) {
-            abort_if($this->branches->available() === [], 403, 'You have no pharmacy role in any active branch.');
-
             return redirect()->guest(route('branch.edit'));
         }
 

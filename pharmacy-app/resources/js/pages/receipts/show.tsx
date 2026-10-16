@@ -1,7 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { PageHeader } from '@/components/page-header';
-import { Panel, PanelHeader } from '@/components/panel';
-import { Button } from '@/components/ui/button';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelHeader } from '@miles/ui/components/panel';
+import { Button } from '@miles/ui/components/ui/button';
 import {
     Table,
     TableBody,
@@ -10,7 +10,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '@/components/ui/table';
+} from '@miles/ui/components/ui/table';
 import { useCanHere } from '@/lib/access';
 import { formatMoney } from '@/lib/money';
 import { show as showOrder } from '@/routes/purchase-orders';

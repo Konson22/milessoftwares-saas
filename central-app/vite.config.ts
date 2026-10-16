@@ -20,13 +20,28 @@ const platformOrigin = new RegExp(
 );
 
 export default defineConfig({
+    // @miles/ui (../packages/ui) is linked into node_modules: keep its path
+    // there so its imports (React, Inertia) resolve to this app's copies.
+    resolve: {
+        preserveSymlinks: true,
+    },
+    // Served as source, never pre-bundled, so edits to it show up at once.
+    optimizeDeps: {
+        exclude: ['@miles/ui'],
+    },
+    // The SSR bundle loads node_modules at runtime; the package is TSX
+    // source, so it is bundled instead.
+    ssr: {
+        noExternal: ['@miles/ui'],
+    },
     plugins: lazyPlugins(() => [
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],
             refresh: true,
             fonts: [
-                bunny('Instrument Sans', {
-                    weights: [400, 500, 600],
+                // Signed-in apps (@miles/ui theme).
+                bunny('Inter', {
+                    weights: [400, 500, 600, 700],
                 }),
                 // Public site.
                 bunny('IBM Plex Sans', {
@@ -62,12 +77,14 @@ export default defineConfig({
         strictPort: Boolean(env.DEV_SERVER_PORT),
         cors: { origin: platformOrigin },
         watch: {
+            // Watch @miles/ui (linked into node_modules) so edits reload.
             ignored: [
                 '**/.agents/**',
                 '**/.claude/**',
                 '**/.cursor/**',
                 '**/.junie/**',
                 '**/vendor/**',
+                '!**/node_modules/@miles/ui/**',
             ],
         },
     },

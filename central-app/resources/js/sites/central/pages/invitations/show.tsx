@@ -41,7 +41,7 @@ export default function InvitationShow({
         <>
             <Head title="Invitation" />
 
-            <div className="mx-auto max-w-md space-y-6 p-4">
+            <div className="mx-auto max-w-md space-y-6">
                 {status === 'pending' && organization ? (
                     <>
                         <h1 className="text-2xl font-semibold">

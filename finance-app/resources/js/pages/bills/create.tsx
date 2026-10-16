@@ -2,10 +2,10 @@ import { Form, Head } from '@inertiajs/react';
 import { Field, Select } from '@/components/field';
 import { LinesEditor } from '@/components/lines-editor';
 import type { AccountOption } from '@/components/lines-editor';
-import { PageHeader } from '@/components/page-header';
-import { Panel, PanelBody } from '@/components/panel';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelBody } from '@miles/ui/components/panel';
+import { Button } from '@miles/ui/components/ui/button';
+import { Input } from '@miles/ui/components/ui/input';
 import { store } from '@/routes/bills';
 
 type Props = {

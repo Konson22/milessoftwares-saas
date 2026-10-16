@@ -1,7 +1,7 @@
 import { Link } from '@inertiajs/react';
 import type { InertiaLinkProps } from '@inertiajs/react';
 import { Amount } from '@/components/amount';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge } from '@miles/ui/components/status-badge';
 import {
     Table,
     TableBody,
@@ -10,7 +10,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '@/components/ui/table';
+} from '@miles/ui/components/ui/table';
 import { sourceLabel, statusLabel, statusTone } from '@/lib/format';
 
 export type DocumentRow = {

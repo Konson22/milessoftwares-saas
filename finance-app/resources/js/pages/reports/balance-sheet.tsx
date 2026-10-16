@@ -1,11 +1,11 @@
 import { Head } from '@inertiajs/react';
 import { Amount } from '@/components/amount';
-import { PageHeader } from '@/components/page-header';
-import { Panel, PanelToolbar } from '@/components/panel';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelToolbar } from '@miles/ui/components/panel';
 import { PeriodFilter } from '@/components/period-filter';
 import { StatementSection } from '@/components/statement';
 import type { StatementRow } from '@/components/statement';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge } from '@miles/ui/components/status-badge';
 import { balanceSheet } from '@/routes/reports';
 
 type Props = {

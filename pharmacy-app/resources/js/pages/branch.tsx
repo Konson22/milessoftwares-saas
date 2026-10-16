@@ -1,17 +1,26 @@
 import { Form, Head } from '@inertiajs/react';
 import { Building2 } from 'lucide-react';
-import { EmptyState } from '@/components/empty-state';
-import { PageHeader } from '@/components/page-header';
-import { Panel, PanelBody } from '@/components/panel';
-import { Button } from '@/components/ui/button';
+import { EmptyState } from '@miles/ui/components/empty-state';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelBody } from '@miles/ui/components/panel';
+import { Button } from '@miles/ui/components/ui/button';
 import { update } from '@/routes/branch';
 
 type Props = {
     branches: { id: string; name: string; city: string | null }[];
     current: string | null;
+    /** Why there is nothing to choose, if so. */
+    reason: 'no_branches' | 'no_role' | null;
+    /** Owners only: where branches are added in the workspace. */
+    structureUrl: string | null;
 };
 
-export default function ChooseBranch({ branches, current }: Props) {
+export default function ChooseBranch({
+    branches,
+    current,
+    reason,
+    structureUrl,
+}: Props) {
     return (
         <>
             <Head title="Choose a branch" />
@@ -22,12 +31,29 @@ export default function ChooseBranch({ branches, current }: Props) {
 
             <Panel className="max-w-2xl">
                 <PanelBody>
-                    {branches.length === 0 ? (
+                    {branches.length === 0 && reason === 'no_branches' ? (
+                        <EmptyState
+                            icon={Building2}
+                            title="Your organization has no branches yet"
+                            action={
+                                structureUrl && (
+                                    <Button asChild>
+                                        <a href={structureUrl}>Add a branch</a>
+                                    </Button>
+                                )
+                            }
+                        >
+                            {structureUrl
+                                ? 'The pharmacy keeps stock and sales per branch. Add your first branch in the workspace, then come back.'
+                                : 'The pharmacy keeps stock and sales per branch. Ask your workspace administrator to add one.'}
+                        </EmptyState>
+                    ) : branches.length === 0 ? (
                         <EmptyState
                             icon={Building2}
                             title="No pharmacy role in any active branch"
                         >
-                            Ask your workspace administrator.
+                            Ask your workspace administrator for a pharmacy role
+                            in the branch you work in.
                         </EmptyState>
                     ) : (
                         <ul className="grid gap-3 sm:grid-cols-2">

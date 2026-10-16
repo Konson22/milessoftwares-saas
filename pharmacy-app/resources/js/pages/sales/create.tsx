@@ -1,12 +1,12 @@
 import { Form, Head, usePage } from '@inertiajs/react';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { PageHeader } from '@/components/page-header';
-import { Panel, PanelBody, PanelHeader } from '@/components/panel';
-import { StatusBadge } from '@/components/status-badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
+import { StatusBadge } from '@miles/ui/components/status-badge';
+import { Button } from '@miles/ui/components/ui/button';
+import { Input } from '@miles/ui/components/ui/input';
+import { Label } from '@miles/ui/components/ui/label';
 import { formatMoney } from '@/lib/money';
 import { store } from '@/routes/sales';
 

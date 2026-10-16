@@ -1,13 +1,13 @@
 import { Form, Head } from '@inertiajs/react';
 import { Truck } from 'lucide-react';
 import { useState } from 'react';
-import { EmptyState } from '@/components/empty-state';
-import { PageHeader } from '@/components/page-header';
-import { Panel, PanelBody, PanelHeader } from '@/components/panel';
-import { StatusBadge } from '@/components/status-badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { EmptyState } from '@miles/ui/components/empty-state';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
+import { StatusBadge } from '@miles/ui/components/status-badge';
+import { Button } from '@miles/ui/components/ui/button';
+import { Input } from '@miles/ui/components/ui/input';
+import { Label } from '@miles/ui/components/ui/label';
 import {
     Table,
     TableBody,
@@ -15,7 +15,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '@/components/ui/table';
+} from '@miles/ui/components/ui/table';
 import { store, update } from '@/routes/suppliers';
 
 type Supplier = {

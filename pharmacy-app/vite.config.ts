@@ -25,6 +25,15 @@ const platformOrigin = new RegExp(
 );
 
 export default defineConfig({
+    // @miles/ui (../packages/ui) is linked into node_modules: keep its path
+    // there so its imports (React, Inertia) resolve to this app's copies.
+    resolve: {
+        preserveSymlinks: true,
+    },
+    // Served as source, never pre-bundled, so edits to it show up at once.
+    optimizeDeps: {
+        exclude: ['@miles/ui'],
+    },
     plugins: lazyPlugins(() => [
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],
@@ -64,7 +73,13 @@ export default defineConfig({
         strictPort: Boolean(env.DEV_SERVER_PORT),
         cors: { origin: platformOrigin },
         watch: {
-            ignored: ['**/.claude/**', '**/.cursor/**', '**/vendor/**'],
+            // Watch @miles/ui (linked into node_modules) so edits reload.
+            ignored: [
+                '**/.claude/**',
+                '**/.cursor/**',
+                '**/vendor/**',
+                '!**/node_modules/@miles/ui/**',
+            ],
         },
     },
     lint: {

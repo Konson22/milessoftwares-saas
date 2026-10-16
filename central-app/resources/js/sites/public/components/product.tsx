@@ -1,17 +1,4 @@
-import {
-    Boxes,
-    Calculator,
-    GraduationCap,
-    Handshake,
-    LayoutGrid,
-    Pill,
-    ShoppingCart,
-    Stethoscope,
-    Users,
-    UtensilsCrossed,
-    Wallet,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { appIcon } from '@/shared/lib/app-icons';
 
 export type Product = {
     code: string;
@@ -28,23 +15,8 @@ export const statusLabel: Record<Product['status'], string | null> = {
     planned: 'Coming soon',
 };
 
-/** An icon per known application code; anything new gets a generic one. */
-const icons: Record<string, LucideIcon> = {
-    pharmacy: Pill,
-    finance: Calculator,
-    retail: ShoppingCart,
-    school: GraduationCap,
-    hr: Users,
-    payroll: Wallet,
-    inventory: Boxes,
-    crm: Handshake,
-    clinic: Stethoscope,
-    restaurant: UtensilsCrossed,
-};
-
-export function productIcon(code: string): LucideIcon {
-    return icons[code] ?? LayoutGrid;
-}
+/** The application's icon (shared with the signed-in apps). */
+export const productIcon = appIcon;
 
 /** The application's icon on a soft blue rounded square. */
 export function ProductTile({

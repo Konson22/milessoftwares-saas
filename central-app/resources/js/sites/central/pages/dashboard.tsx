@@ -29,7 +29,7 @@ export default function Dashboard({ organizations, current }: Props) {
         <>
             <Head title="Dashboard" />
 
-            <div className="flex flex-col gap-6 p-4">
+            <div className="flex flex-col gap-6">
                 {current && <CurrentOrganizationPanel current={current} />}
 
                 <div className="flex flex-wrap items-start justify-between gap-4">

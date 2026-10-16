@@ -1,12 +1,12 @@
 import { Head, Link } from '@inertiajs/react';
 import { NotebookPen } from 'lucide-react';
 import { Amount } from '@/components/amount';
-import { PageHeader } from '@/components/page-header';
-import { Panel, PanelToolbar } from '@/components/panel';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelToolbar } from '@miles/ui/components/panel';
 import { PeriodFilter } from '@/components/period-filter';
-import { SearchField } from '@/components/search-field';
-import { StatusBadge } from '@/components/status-badge';
-import { Button } from '@/components/ui/button';
+import { SearchField } from '@miles/ui/components/search-field';
+import { StatusBadge } from '@miles/ui/components/status-badge';
+import { Button } from '@miles/ui/components/ui/button';
 import {
     Table,
     TableBody,
@@ -15,7 +15,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '@/components/ui/table';
+} from '@miles/ui/components/ui/table';
 import { useCan } from '@/lib/access';
 import { sourceLabel, sourceTypeLabel } from '@/lib/format';
 import { create, index, show } from '@/routes/journals';

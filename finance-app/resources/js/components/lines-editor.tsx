@@ -1,8 +1,8 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Select } from '@/components/field';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@miles/ui/components/ui/button';
+import { Input } from '@miles/ui/components/ui/input';
 import { useAmountStep, useMoney } from '@/lib/format';
 
 export type AccountOption = { id: string; label: string; type: string };

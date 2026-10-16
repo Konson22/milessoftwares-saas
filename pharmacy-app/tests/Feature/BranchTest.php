@@ -55,8 +55,34 @@ it('leaves inactive branches out', function () {
         ->assertInertia(fn (Assert $page) => $page->where('branch.name', 'Juba'));
 });
 
-it('refuses members with no role in any active branch', function () {
+it('tells members with no role in any active branch why they cannot go on', function () {
     $this->actingAsMember('acme', ['pharmacy.sales.create'], branch: '0199a0b0-0000-7000-8000-0000000ab5e7');
 
-    $this->get($this->workspaceUrl('acme'))->assertForbidden();
+    $this->get($this->workspaceUrl('acme'))->assertRedirect($this->workspaceUrl('acme', 'branch'));
+    $this->get($this->workspaceUrl('acme', 'branch'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('branches', 0)
+            ->where('reason', 'no_role')
+            ->where('structureUrl', null));
+});
+
+it('sends the owner of an organization without branches to add one', function () {
+    $this->platform()->branches['acme'] = [];
+    $this->actingAsMember('acme', owner: true);
+
+    $this->get($this->workspaceUrl('acme'))->assertRedirect($this->workspaceUrl('acme', 'branch'));
+    $this->get($this->workspaceUrl('acme', 'branch'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('reason', 'no_branches')
+            ->where('structureUrl', 'http://'.parse_url($this->workspaceUrl('acme'), PHP_URL_HOST).'/manage/structure'));
+});
+
+it('keeps branch-only pages closed until a branch is chosen', function () {
+    $this->platform()->branches['acme'] = [];
+    $this->actingAsMember('acme', ['pharmacy.sales.create', 'pharmacy.sales.view']);
+
+    $this->get($this->workspaceUrl('acme', 'sales'))->assertRedirect($this->workspaceUrl('acme', 'branch'));
+    $this->post($this->workspaceUrl('acme', 'sales'), [])->assertRedirect($this->workspaceUrl('acme', 'branch'));
 });

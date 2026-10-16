@@ -1,10 +1,10 @@
 import { Head, Link } from '@inertiajs/react';
 import { Banknote } from 'lucide-react';
 import { Amount } from '@/components/amount';
-import { PageHeader } from '@/components/page-header';
-import { Panel, PanelHeader } from '@/components/panel';
-import { StatusBadge } from '@/components/status-badge';
-import { Button } from '@/components/ui/button';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelHeader } from '@miles/ui/components/panel';
+import { StatusBadge } from '@miles/ui/components/status-badge';
+import { Button } from '@miles/ui/components/ui/button';
 import {
     Table,
     TableBody,
@@ -14,7 +14,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '@/components/ui/table';
+} from '@miles/ui/components/ui/table';
 import { useCan } from '@/lib/access';
 import { sourceLabel, statusLabel, statusTone } from '@/lib/format';
 import { show as showJournal } from '@/routes/journals';

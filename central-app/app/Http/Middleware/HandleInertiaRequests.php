@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Modules\Administration\Enums\PlatformPermission;
 use App\Modules\Administration\Models\PlatformStaff;
+use App\Modules\Applications\Support\Launcher;
 use App\Modules\Authorization\Support\WorkspaceAbilities;
 use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Support\Hosts\HostType;
@@ -58,10 +59,15 @@ class HandleInertiaRequests extends Middleware
             'abilities' => fn () => ($membership = $request->attributes->get('membership')) instanceof OrganizationMembership
                 ? app(WorkspaceAbilities::class)->for($membership)
                 : null,
+            // Workspace hosts only: the applications the member can open, for
+            // the sidebar (same rules as the launcher on the workspace home).
+            'apps' => fn () => ($membership = $request->attributes->get('membership')) instanceof OrganizationMembership
+                && PlatformHosts::classify($request->getHost())['type'] === HostType::Workspace
+                ? app(Launcher::class)->for($membership)
+                : [],
             'tenant' => fn () => ($organization = app(TenantContext::class)->organization()) === null ? null : [
                 'displayName' => $organization->display_name,
             ],
-            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }
 

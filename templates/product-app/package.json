@@ -13,6 +13,7 @@
     "dependencies": {
         "@inertiajs/react": "^3.0.0",
         "@inertiajs/vite": "^3.0.0",
+        "@miles/ui": "file:../../packages/ui",
         "@radix-ui/react-label": "^2.1.2",
         "@radix-ui/react-slot": "^1.2.3",
         "@tailwindcss/vite": "^4.1.11",

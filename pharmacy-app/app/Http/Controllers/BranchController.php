@@ -7,6 +7,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Miles\PlatformClient\Access\CurrentAccess;
 use Miles\PlatformClient\Api\Branch;
 
 /**
@@ -14,15 +15,25 @@ use Miles\PlatformClient\Api\Branch;
  */
 class BranchController extends Controller
 {
-    public function edit(Request $request, Branches $branches): Response
+    /**
+     * With nothing to choose, the page says why: the organization has no
+     * branch yet (owners get a link to add one in the workspace), or the
+     * member has no pharmacy role in any of them.
+     */
+    public function edit(Request $request, Branches $branches, CurrentAccess $access): Response
     {
+        $available = $branches->available();
+        $isOwner = $access->get()->isOwner ?? false;
+
         return Inertia::render('branch', [
             'branches' => array_map(fn (Branch $branch) => [
                 'id' => $branch->id,
                 'name' => $branch->name,
                 'city' => $branch->city,
-            ], $branches->available()),
+            ], $available),
             'current' => $branches->current($request)?->id,
+            'reason' => $available !== [] ? null : ($branches->anyActive() ? 'no_role' : 'no_branches'),
+            'structureUrl' => $isOwner ? $request->getSchemeAndHttpHost().'/manage/structure' : null,
         ]);
     }
 

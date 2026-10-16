@@ -1,6 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { PageHeader } from '@/components/page-header';
-import { Panel } from '@/components/panel';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel } from '@miles/ui/components/panel';
 import {
     Table,
     TableBody,
@@ -9,7 +9,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '@/components/ui/table';
+} from '@miles/ui/components/ui/table';
 import { formatMoney } from '@/lib/money';
 import { show as showReceipt } from '@/routes/receipts';
 

@@ -1,5 +1,3 @@
-import type { InertiaLinkProps } from '@inertiajs/react';
-import type { LucideIcon } from 'lucide-react';
 import {
     Boxes,
     ChartColumn,
@@ -14,6 +12,7 @@ import {
     Truck,
     Undo2,
 } from 'lucide-react';
+import type { ShellNavItem } from '@miles/ui/shell/navigation';
 import { home } from '@/routes';
 import { index as controlled } from '@/routes/controlled';
 import { index as medicines } from '@/routes/medicines';
@@ -26,10 +25,7 @@ import { index as stock } from '@/routes/stock';
 import { index as supplierReturns } from '@/routes/supplier-returns';
 import { index as suppliers } from '@/routes/suppliers';
 
-export type NavItem = {
-    title: string;
-    href: NonNullable<InertiaLinkProps['href']>;
-    icon: LucideIcon;
+export type NavItem = ShellNavItem & {
     /** Shown to members holding this catalog permission (or owners); null for everyone. */
     permission: string | null;
     /**
@@ -156,10 +152,6 @@ export const navigation: NavGroup[] = [
     },
 ];
 
-function pathOf(href: NavItem['href']): string {
-    return (typeof href === 'string' ? href : href.url).split('?')[0];
-}
-
 function itemVisible(
     item: NavItem,
     can: (permission: string) => boolean,
@@ -193,32 +185,4 @@ export function visibleNavigation(
             ),
         }))
         .filter((group) => group.items.length > 0);
-}
-
-/**
- * The section a URL belongs to: the item whose path is the longest prefix
- * of it (the dashboard only on its own path).
- */
-export function activeItem(
-    groups: NavGroup[],
-    url: string,
-): { group: NavGroup; item: NavItem } | null {
-    const path = url.split('?')[0].replace(/\/$/, '');
-    const homePath = pathOf(home()).replace(/\/$/, '');
-    let best: { group: NavGroup; item: NavItem; length: number } | null = null;
-
-    for (const group of groups) {
-        for (const item of group.items) {
-            const itemPath = pathOf(item.href).replace(/\/$/, '');
-            const matches =
-                path === itemPath ||
-                (itemPath !== homePath && path.startsWith(`${itemPath}/`));
-
-            if (matches && (best === null || itemPath.length > best.length)) {
-                best = { group, item, length: itemPath.length };
-            }
-        }
-    }
-
-    return best && { group: best.group, item: best.item };
 }

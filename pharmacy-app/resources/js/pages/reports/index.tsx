@@ -1,15 +1,15 @@
 import { Form, Head, usePage } from '@inertiajs/react';
 import { Banknote, Package, TrendingUp, XCircle } from 'lucide-react';
-import { PageHeader } from '@/components/page-header';
+import { PageHeader } from '@miles/ui/components/page-header';
 import {
     Panel,
     PanelBody,
     PanelHeader,
     PanelToolbar,
-} from '@/components/panel';
-import { StatCard } from '@/components/stat-card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+} from '@miles/ui/components/panel';
+import { StatCard } from '@miles/ui/components/stat-card';
+import { Button } from '@miles/ui/components/ui/button';
+import { Input } from '@miles/ui/components/ui/input';
 import {
     Table,
     TableBody,
@@ -18,7 +18,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '@/components/ui/table';
+} from '@miles/ui/components/ui/table';
 import { formatMoney } from '@/lib/money';
 import { index } from '@/routes/reports';
 

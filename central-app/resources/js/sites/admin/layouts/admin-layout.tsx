@@ -1,92 +1,163 @@
-import { Link, usePage } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
+import {
+    AppWindow,
+    Building2,
+    CreditCard,
+    Gauge,
+    Inbox,
+    LifeBuoy,
+    Package,
+    ShieldCheck,
+    ShieldHalf,
+    UserCog,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { PropsWithChildren } from 'react';
-import { Button } from '@/shared/components/ui/button';
-import { useCurrentUrl } from '@/shared/hooks/use-current-url';
-import { cn } from '@/shared/lib/utils';
+import { AppShell } from '@miles/ui/shell/app-shell';
+import { activeItem, crumbsFor } from '@miles/ui/shell/navigation';
+import type { ShellNavGroup } from '@miles/ui/shell/navigation';
+import { QuickSearch } from '@miles/ui/shell/quick-search';
+import { ShellSidebar } from '@miles/ui/shell/sidebar';
+import { UserMenu } from '@miles/ui/shell/user-menu';
+
+type AdminItem = {
+    title: string;
+    href: string;
+    icon: LucideIcon;
+    permission?: string;
+};
 
 // Relative paths: every admin page is served on admin.<root>. Each item is
 // shown only with the permission its pages require.
-const navItems: { title: string; href: string; permission?: string }[] = [
-    { title: 'Overview', href: '/' },
+const navigation: { title: string; items: AdminItem[] }[] = [
     {
-        title: 'Organizations',
-        href: '/organizations',
-        permission: 'organizations.view',
+        title: 'Customers',
+        items: [
+            { title: 'Overview', href: '/', icon: Gauge },
+            {
+                title: 'Organizations',
+                href: '/organizations',
+                icon: Building2,
+                permission: 'organizations.view',
+            },
+            {
+                title: 'Support access',
+                href: '/support-access',
+                icon: LifeBuoy,
+                permission: 'support.request',
+            },
+            {
+                title: 'Leads',
+                href: '/leads',
+                icon: Inbox,
+                permission: 'leads.manage',
+            },
+        ],
     },
     {
-        title: 'Support access',
-        href: '/support-access',
-        permission: 'support.request',
+        title: 'Catalog',
+        items: [
+            {
+                title: 'Applications',
+                href: '/applications',
+                icon: AppWindow,
+                permission: 'registry.manage',
+            },
+            {
+                title: 'Products',
+                href: '/products',
+                icon: Package,
+                permission: 'plans.manage',
+            },
+            {
+                title: 'Plans',
+                href: '/plans',
+                icon: CreditCard,
+                permission: 'plans.manage',
+            },
+        ],
     },
     {
-        title: 'Applications',
-        href: '/applications',
-        permission: 'registry.manage',
+        title: 'Platform',
+        items: [
+            {
+                title: 'Security',
+                href: '/security',
+                icon: ShieldCheck,
+                permission: 'security.view',
+            },
+            {
+                title: 'Staff',
+                href: '/staff',
+                icon: UserCog,
+                permission: 'staff.manage',
+            },
+        ],
     },
-    { title: 'Products', href: '/products', permission: 'plans.manage' },
-    { title: 'Plans', href: '/plans', permission: 'plans.manage' },
-    { title: 'Leads', href: '/leads', permission: 'leads.manage' },
-    { title: 'Security', href: '/security', permission: 'security.view' },
-    { title: 'Staff', href: '/staff', permission: 'staff.manage' },
 ];
 
+/**
+ * The staff console (admin.<root>) in the shell every Miles app shares,
+ * marked with an amber tile so it is never mistaken for a customer
+ * workspace.
+ */
 export default function AdminLayout({ children }: PropsWithChildren) {
-    const { staff, platform, auth } = usePage().props;
-    const { isCurrentUrl, isCurrentOrParentUrl } = useCurrentUrl();
+    const { url, props } = usePage();
+    const { staff, platform, auth } = props;
     const permissions = staff?.permissions ?? [];
 
+    const groups: ShellNavGroup[] = navigation
+        .map((group) => ({
+            title: group.title,
+            items: group.items.filter(
+                (item) =>
+                    item.permission === undefined ||
+                    permissions.includes(item.permission),
+            ),
+        }))
+        .filter((group) => group.items.length > 0);
+    const active = activeItem(groups, url, '/');
+
     return (
-        <div className="flex min-h-screen flex-col bg-background text-foreground">
-            <header className="border-b bg-primary text-primary-foreground">
-                <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-3">
-                    <span className="font-semibold">
-                        Miles Global Softwares · System Administration
-                    </span>
-                    <div className="ml-auto flex items-center gap-3 text-sm">
-                        <span className="hidden sm:inline">
-                            {auth.user?.email}
-                        </span>
-                        <Button asChild size="sm" variant="secondary">
-                            <Link
-                                href={platform.logoutUrl}
-                                method="post"
-                                as="button"
-                            >
-                                Sign out
-                            </Link>
-                        </Button>
-                    </div>
-                </div>
-                <nav
-                    className="mx-auto flex max-w-6xl flex-wrap gap-1 px-4 pb-2"
-                    aria-label="Administration"
-                >
-                    {navItems
-                        .filter(
-                            (item) =>
-                                item.permission === undefined ||
-                                permissions.includes(item.permission),
-                        )
-                        .map((item) => (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className={cn(
-                                    'rounded-md px-3 py-1.5 text-sm hover:bg-primary-foreground/10',
-                                    (item.href === '/'
-                                        ? isCurrentUrl('/')
-                                        : isCurrentOrParentUrl(item.href)) &&
-                                        'bg-primary-foreground/15 font-medium',
-                                )}
-                            >
-                                {item.title}
-                            </Link>
-                        ))}
-                </nav>
-            </header>
-            <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
-                {children}
-            </main>
-        </div>
+        <AppShell
+            crumbs={crumbsFor(
+                { label: 'Administration', href: '/' },
+                active,
+                '/',
+            )}
+            actions={
+                <>
+                    <QuickSearch groups={groups} />
+                    {auth.user && (
+                        <UserMenu
+                            user={auth.user}
+                            subtitle="Staff"
+                            signOut={{
+                                label: 'Sign out',
+                                action: platform.logoutUrl,
+                                method: 'post',
+                            }}
+                        />
+                    )}
+                </>
+            }
+            sidebar={(onNavigate) => (
+                <ShellSidebar
+                    label="Administration"
+                    brand={{
+                        title: 'Administration',
+                        subtitle: 'Miles Softwares staff',
+                        icon: ShieldHalf,
+                        href: '/',
+                        tone: 'amber',
+                    }}
+                    groups={groups}
+                    active={active?.item ?? null}
+                    onNavigate={onNavigate}
+                />
+            )}
+        >
+            {children}
+        </AppShell>
     );
 }

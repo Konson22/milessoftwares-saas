@@ -1,11 +1,11 @@
 import { Form, Head, Link } from '@inertiajs/react';
 import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { PageHeader } from '@/components/page-header';
-import { Panel, PanelBody } from '@/components/panel';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelBody } from '@miles/ui/components/panel';
+import { Button } from '@miles/ui/components/ui/button';
+import { Input } from '@miles/ui/components/ui/input';
+import { Label } from '@miles/ui/components/ui/label';
 import { index, store } from '@/routes/receipts';
 
 type OrderLine = {

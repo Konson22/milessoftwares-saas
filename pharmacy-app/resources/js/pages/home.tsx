@@ -6,8 +6,8 @@ import {
     Package,
     ReceiptText,
 } from 'lucide-react';
-import { PageHeader } from '@/components/page-header';
-import { StatCard } from '@/components/stat-card';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { StatCard } from '@miles/ui/components/stat-card';
 import { formatMoney } from '@/lib/money';
 import { index as prescriptions } from '@/routes/prescriptions';
 import { index as sales } from '@/routes/sales';

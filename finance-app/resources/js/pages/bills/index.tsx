@@ -1,10 +1,10 @@
 import { Form, Head, Link } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import { DocumentsTable, StatusTabs } from '@/components/documents-table';
-import { PageHeader } from '@/components/page-header';
-import { Panel, PanelToolbar } from '@/components/panel';
-import { SearchField } from '@/components/search-field';
-import { Button } from '@/components/ui/button';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelToolbar } from '@miles/ui/components/panel';
+import { SearchField } from '@miles/ui/components/search-field';
+import { Button } from '@miles/ui/components/ui/button';
 import { useCan } from '@/lib/access';
 import { useMoney } from '@/lib/format';
 import { create, index, show } from '@/routes/bills';

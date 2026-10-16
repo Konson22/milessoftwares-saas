@@ -1,8 +1,9 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
-import { PageHeader } from '@/components/page-header';
-import { Panel } from '@/components/panel';
-import { StatusBadge, statusTone } from '@/components/status-badge';
-import { Button } from '@/components/ui/button';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel } from '@miles/ui/components/panel';
+import { StatusBadge } from '@miles/ui/components/status-badge';
+import { statusTone } from '@/lib/status';
+import { Button } from '@miles/ui/components/ui/button';
 import {
     Table,
     TableBody,
@@ -11,7 +12,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '@/components/ui/table';
+} from '@miles/ui/components/ui/table';
 import { formatMoney } from '@/lib/money';
 import { ORDER_STATUS } from '@/lib/purchasing';
 import { cancel, index, ordered } from '@/routes/purchase-orders';

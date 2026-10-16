@@ -64,6 +64,22 @@ class Branches
     }
 
     /**
+     * Whether the organization has any active branch at all, regardless of
+     * who may work in it: a new organization has none until one is added
+     * in the workspace.
+     */
+    public function anyActive(): bool
+    {
+        foreach ($this->api->branches($this->tenant->require()->id) as $branch) {
+            if ($branch->isActive()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * The branch chosen for this session, if it is still available. With
      * exactly one available branch it is chosen automatically.
      */

@@ -1,0 +1,20 @@
+{
+    "name": "@miles/ui",
+    "version": "1.0.0",
+    "private": true,
+    "description": "The signed-in look of every Miles Softwares app: theme, application shell and shared components.",
+    "type": "module",
+    "sideEffects": [
+        "*.css"
+    ],
+    "peerDependencies": {
+        "@inertiajs/react": "^3.0.0",
+        "@radix-ui/react-label": "^2.1.2",
+        "@radix-ui/react-slot": "^1.2.3",
+        "class-variance-authority": "^0.7.1",
+        "clsx": "^2.1.1",
+        "lucide-react": "^0.475.0",
+        "react": "^19.2.0",
+        "tailwind-merge": "^3.0.1"
+    }
+}

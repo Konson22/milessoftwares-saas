@@ -1,9 +1,9 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { PackageCheck } from 'lucide-react';
-import { EmptyState } from '@/components/empty-state';
-import { PageHeader } from '@/components/page-header';
-import { Panel } from '@/components/panel';
-import { Button } from '@/components/ui/button';
+import { EmptyState } from '@miles/ui/components/empty-state';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel } from '@miles/ui/components/panel';
+import { Button } from '@miles/ui/components/ui/button';
 import {
     Table,
     TableBody,
@@ -11,7 +11,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '@/components/ui/table';
+} from '@miles/ui/components/ui/table';
 import { useCanHere } from '@/lib/access';
 import { formatMoney } from '@/lib/money';
 import { create, show } from '@/routes/receipts';

@@ -1,5 +1,5 @@
 import { usePage } from '@inertiajs/react';
-import type { Tone } from '@/components/status-badge';
+import type { Tone } from '@miles/ui/components/status-badge';
 import { formatMoney } from '@/lib/money';
 
 /**

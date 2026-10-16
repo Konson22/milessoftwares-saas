@@ -93,7 +93,7 @@ foreach ($files as $file) {
         $contents = str_replace('8499', $port, $contents);
 
         // One level shallower than the template.
-        if ($relative === 'composer.json') {
+        if (in_array($relative, ['composer.json', 'package.json', 'package-lock.json'], true)) {
             $contents = str_replace('"../../packages/', '"../packages/', $contents);
         }
     }

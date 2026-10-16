@@ -8,13 +8,13 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { Amount } from '@/components/amount';
-import { EmptyState } from '@/components/empty-state';
+import { EmptyState } from '@miles/ui/components/empty-state';
 import { Field, Select } from '@/components/field';
-import { PageHeader } from '@/components/page-header';
-import { Panel, PanelBody, PanelHeader } from '@/components/panel';
-import { StatusBadge } from '@/components/status-badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
+import { StatusBadge } from '@miles/ui/components/status-badge';
+import { Button } from '@miles/ui/components/ui/button';
+import { Input } from '@miles/ui/components/ui/input';
 import {
     Table,
     TableBody,
@@ -23,7 +23,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '@/components/ui/table';
+} from '@miles/ui/components/ui/table';
 import { useCan } from '@/lib/access';
 import { sourceLabel, useMoney } from '@/lib/format';
 import { show as showAccount, store as storeAccount } from '@/routes/accounts';

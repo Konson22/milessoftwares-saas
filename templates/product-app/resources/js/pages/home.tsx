@@ -5,7 +5,7 @@ import {
     CardDescription,
     CardHeader,
     CardTitle,
-} from '@/components/ui/card';
+} from '@miles/ui/components/ui/card';
 
 type Props = {
     settings: { currency: string; timezone: string } | null;

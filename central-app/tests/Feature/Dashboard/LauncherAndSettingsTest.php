@@ -42,6 +42,27 @@ it('lists an entitled application for members who hold a role in it', function (
             ->where('modules.0.href', rtrim(home(), '/').'/retail'));
 });
 
+it('gives the workspace sidebar the same applications as the launcher, on every workspace page', function () {
+    $this->actingAs($this->cashier->user)
+        ->get(home().'members')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('apps', 1)
+            ->where('apps.0.code', 'retail')
+            ->where('apps.0.href', rtrim(home(), '/').'/retail'));
+
+    $this->actingAs($this->plainMember->user)
+        ->get(home())
+        ->assertInertia(fn (AssertableInertia $page) => $page->has('apps', 0));
+});
+
+it('shares no workspace applications on the app host', function () {
+    asCurrent($this->owner);
+
+    $this->actingAs($this->owner->user)
+        ->get(PlatformHosts::url(PlatformHosts::app(), 'dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page->has('apps', 0));
+});
+
 it('hides applications the member holds no role in', function () {
     $this->actingAs($this->plainMember->user)
         ->get(home())

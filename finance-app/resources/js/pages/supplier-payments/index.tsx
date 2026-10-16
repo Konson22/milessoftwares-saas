@@ -1,10 +1,10 @@
 import { Head, Link } from '@inertiajs/react';
 import { Banknote } from 'lucide-react';
 import { Amount } from '@/components/amount';
-import { PageHeader } from '@/components/page-header';
-import { Panel, PanelToolbar } from '@/components/panel';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelToolbar } from '@miles/ui/components/panel';
 import { PeriodFilter } from '@/components/period-filter';
-import { Button } from '@/components/ui/button';
+import { Button } from '@miles/ui/components/ui/button';
 import {
     Table,
     TableBody,
@@ -14,7 +14,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '@/components/ui/table';
+} from '@miles/ui/components/ui/table';
 import { useCan } from '@/lib/access';
 import { show as showJournal } from '@/routes/journals';
 import { create, index } from '@/routes/supplier-payments';

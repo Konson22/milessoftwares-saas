@@ -1,5 +1,5 @@
 import { useMoney } from '@/lib/format';
-import { cn } from '@/lib/utils';
+import { cn } from '@miles/ui/lib/utils';
 
 /**
  * A money amount, right-aligned in tables; blank for zero when asked.

@@ -1,6 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react';
-import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
+import { Label } from '@miles/ui/components/ui/label';
+import { cn } from '@miles/ui/lib/utils';
 
 /**
  * A labelled form control with its validation message.

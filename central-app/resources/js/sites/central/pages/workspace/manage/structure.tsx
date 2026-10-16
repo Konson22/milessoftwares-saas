@@ -1,10 +1,10 @@
 import { Form, Head, router } from '@inertiajs/react';
-import { Building2, Plus, Search } from 'lucide-react';
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { Building2, Pencil, Plus, Search } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import { EmptyState } from '@/shared/components/empty-state';
 import InputError from '@/shared/components/input-error';
 import { PageHeader } from '@/shared/components/page-header';
-import { PageToolbar } from '@/shared/components/page-toolbar';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
@@ -14,6 +14,14 @@ import {
     CardHeader,
     CardTitle,
 } from '@/shared/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/shared/components/ui/dialog';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import {
@@ -58,12 +66,20 @@ type Props = {
     positions: Position[];
 };
 
+/** Which form is open: a kind, and the record when editing one. */
+type Editing =
+    | { kind: 'branch'; record: Branch | null }
+    | { kind: 'department'; record: Department | null }
+    | { kind: 'position'; record: Position | null }
+    | null;
+
 const selectClass =
     'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs';
 
 export default function Structure({ branches, departments, positions }: Props) {
     const [branchQuery, setBranchQuery] = useState('');
-    const createBranchRef = useRef<HTMLDivElement>(null);
+    const [editing, setEditing] = useState<Editing>(null);
+    const close = () => setEditing(null);
 
     const branchName = (id: string | null) =>
         branches.find((branch) => branch.id === id)?.name;
@@ -98,15 +114,8 @@ export default function Structure({ branches, departments, positions }: Props) {
         );
     }, [branches, branchQuery]);
 
-    const focusCreateBranch = () => {
-        createBranchRef.current?.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start',
-        });
-        createBranchRef.current
-            ?.querySelector<HTMLInputElement>('input[name="name"]')
-            ?.focus();
-    };
+    const activeBranches = branches.filter((b) => b.status === 'active');
+    const activeDepartments = departments.filter((d) => d.status === 'active');
 
     return (
         <>
@@ -118,47 +127,36 @@ export default function Structure({ branches, departments, positions }: Props) {
                     description="Manage branches, departments, and positions"
                     icon={Building2}
                     actions={
-                        <Button size="sm" onClick={focusCreateBranch}>
+                        <Button
+                            size="sm"
+                            onClick={() =>
+                                setEditing({ kind: 'branch', record: null })
+                            }
+                        >
                             <Plus className="size-4" />
-                            Create branch
+                            Add branch
                         </Button>
                     }
                 />
 
                 <Card className="gap-0 overflow-hidden rounded-md py-0 shadow-none">
-                    <CardHeader className="border-b px-4 py-3">
+                    <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
                         <CardTitle className="text-sm font-semibold">
                             Branches
                         </CardTitle>
+                        <div className="relative w-full max-w-xs">
+                            <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                                value={branchQuery}
+                                onChange={(event) =>
+                                    setBranchQuery(event.target.value)
+                                }
+                                placeholder="Search name, code, or city"
+                                aria-label="Search branches"
+                                className="h-8 pl-8 text-xs"
+                            />
+                        </div>
                     </CardHeader>
-                    <div className="px-4 pt-3">
-                        <PageToolbar
-                            left={
-                                <div className="relative w-full max-w-sm">
-                                    <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                                    <Input
-                                        value={branchQuery}
-                                        onChange={(event) =>
-                                            setBranchQuery(event.target.value)
-                                        }
-                                        placeholder="Search name, code, or city"
-                                        aria-label="Search branches"
-                                        className="h-8 pl-8 text-xs"
-                                    />
-                                </div>
-                            }
-                            right={
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={focusCreateBranch}
-                                >
-                                    <Plus className="size-3.5" />
-                                    Add branch
-                                </Button>
-                            }
-                        />
-                    </div>
                     <CardContent className="p-0">
                         {filteredBranches.length === 0 ? (
                             <EmptyState
@@ -169,8 +167,24 @@ export default function Structure({ branches, departments, positions }: Props) {
                                 }
                                 description={
                                     branches.length === 0
-                                        ? 'Create a branch to organize your locations.'
+                                        ? 'Add a branch for each location you work from. Products such as Pharmacy keep stock and sales per branch.'
                                         : 'Try a different search term.'
+                                }
+                                action={
+                                    branches.length === 0 ? (
+                                        <Button
+                                            size="sm"
+                                            onClick={() =>
+                                                setEditing({
+                                                    kind: 'branch',
+                                                    record: null,
+                                                })
+                                            }
+                                        >
+                                            <Plus className="size-4" />
+                                            Add branch
+                                        </Button>
+                                    ) : undefined
                                 }
                             />
                         ) : (
@@ -203,7 +217,25 @@ export default function Structure({ branches, departments, positions }: Props) {
                                                     status={branch.status}
                                                 />
                                             </TableCell>
-                                            <TableCell className="text-right">
+                                            <TableCell className="space-x-1 text-right">
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-7 text-xs"
+                                                    onClick={() =>
+                                                        setEditing({
+                                                            kind: 'branch',
+                                                            record: branch,
+                                                        })
+                                                    }
+                                                >
+                                                    <Pencil className="size-3.5" />
+                                                    Edit
+                                                    <span className="sr-only">
+                                                        {' '}
+                                                        {branch.name}
+                                                    </span>
+                                                </Button>
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
@@ -227,53 +259,16 @@ export default function Structure({ branches, departments, positions }: Props) {
                             </Table>
                         )}
                     </CardContent>
-                    <div
-                        ref={createBranchRef}
-                        className="border-t bg-muted/20 px-4 py-4"
-                    >
-                        <p className="mb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                            Create branch
-                        </p>
-                        <Form
-                            action="/manage/branches"
-                            method="post"
-                            resetOnSuccess
-                            options={{ preserveScroll: true }}
-                            className="grid gap-3 sm:grid-cols-4 sm:items-end"
-                        >
-                            {({ errors, processing }) => (
-                                <>
-                                    <Field
-                                        label="Name"
-                                        name="name"
-                                        error={errors.name}
-                                    />
-                                    <Field
-                                        label="Code"
-                                        name="code"
-                                        error={errors.code}
-                                    />
-                                    <Field
-                                        label="City"
-                                        name="city"
-                                        error={errors.city}
-                                    />
-                                    <Button
-                                        type="submit"
-                                        size="sm"
-                                        disabled={processing}
-                                        className="sm:mb-0.5"
-                                    >
-                                        Add branch
-                                    </Button>
-                                </>
-                            )}
-                        </Form>
-                    </div>
                 </Card>
 
                 <div className="grid gap-6 lg:grid-cols-2">
-                    <Section title="Departments">
+                    <Section
+                        title="Departments"
+                        addLabel="Add department"
+                        onAdd={() =>
+                            setEditing({ kind: 'department', record: null })
+                        }
+                    >
                         <List
                             items={departments.map((department) => ({
                                 id: department.id,
@@ -288,6 +283,11 @@ export default function Structure({ branches, departments, positions }: Props) {
                                     .filter(Boolean)
                                     .join(' · '),
                                 status: department.status,
+                                onEdit: () =>
+                                    setEditing({
+                                        kind: 'department',
+                                        record: department,
+                                    }),
                                 onToggle: () =>
                                     toggleArchive(
                                         `/manage/departments/${department.id}`,
@@ -295,102 +295,15 @@ export default function Structure({ branches, departments, positions }: Props) {
                                     ),
                             }))}
                         />
-                        <Form
-                            action="/manage/departments"
-                            method="post"
-                            resetOnSuccess
-                            options={{ preserveScroll: true }}
-                            className="space-y-3"
-                        >
-                            {({ errors, processing }) => (
-                                <>
-                                    <Field
-                                        label="Name"
-                                        name="name"
-                                        error={errors.name}
-                                    />
-                                    <Field
-                                        label="Code"
-                                        name="code"
-                                        error={errors.code}
-                                    />
-                                    <div className="grid gap-1.5">
-                                        <Label htmlFor="department-branch">
-                                            Branch
-                                        </Label>
-                                        <select
-                                            id="department-branch"
-                                            name="branch_id"
-                                            className={selectClass}
-                                            defaultValue=""
-                                        >
-                                            <option value="">
-                                                All branches
-                                            </option>
-                                            {branches
-                                                .filter(
-                                                    (branch) =>
-                                                        branch.status ===
-                                                        'active',
-                                                )
-                                                .map((branch) => (
-                                                    <option
-                                                        key={branch.id}
-                                                        value={branch.id}
-                                                    >
-                                                        {branch.name}
-                                                    </option>
-                                                ))}
-                                        </select>
-                                        <InputError
-                                            message={errors.branch_id}
-                                        />
-                                    </div>
-                                    <div className="grid gap-1.5">
-                                        <Label htmlFor="department-parent">
-                                            Part of
-                                        </Label>
-                                        <select
-                                            id="department-parent"
-                                            name="parent_department_id"
-                                            className={selectClass}
-                                            defaultValue=""
-                                        >
-                                            <option value="">—</option>
-                                            {departments
-                                                .filter(
-                                                    (department) =>
-                                                        department.status ===
-                                                        'active',
-                                                )
-                                                .map((department) => (
-                                                    <option
-                                                        key={department.id}
-                                                        value={department.id}
-                                                    >
-                                                        {department.name}
-                                                    </option>
-                                                ))}
-                                        </select>
-                                        <InputError
-                                            message={
-                                                errors.parent_department_id
-                                            }
-                                        />
-                                    </div>
-                                    <Button
-                                        type="submit"
-                                        size="sm"
-                                        disabled={processing}
-                                    >
-                                        Add department
-                                    </Button>
-                                </>
-                            )}
-                        </Form>
                     </Section>
 
-                    <Section title="Positions">
+                    <Section
+                        title="Positions"
+                        addLabel="Add position"
+                        onAdd={() =>
+                            setEditing({ kind: 'position', record: null })
+                        }
+                    >
                         <List
                             items={positions.map((position) => ({
                                 id: position.id,
@@ -402,6 +315,11 @@ export default function Structure({ branches, departments, positions }: Props) {
                                     .filter(Boolean)
                                     .join(' · '),
                                 status: position.status,
+                                onEdit: () =>
+                                    setEditing({
+                                        kind: 'position',
+                                        record: position,
+                                    }),
                                 onToggle: () =>
                                     toggleArchive(
                                         `/manage/positions/${position.id}`,
@@ -409,81 +327,239 @@ export default function Structure({ branches, departments, positions }: Props) {
                                     ),
                             }))}
                         />
-                        <Form
-                            action="/manage/positions"
-                            method="post"
-                            resetOnSuccess
-                            options={{ preserveScroll: true }}
-                            className="space-y-3"
+                    </Section>
+                </div>
+            </div>
+
+            <Dialog
+                open={editing !== null}
+                onOpenChange={(open) => !open && close()}
+            >
+                <DialogContent className="sm:max-w-md">
+                    {editing?.kind === 'branch' && (
+                        <RecordForm
+                            noun="branch"
+                            record={editing.record}
+                            url="/manage/branches"
+                            onDone={close}
                         >
-                            {({ errors, processing }) => (
+                            {(errors) => (
                                 <>
                                     <Field
-                                        label="Title"
-                                        name="title"
-                                        error={errors.title}
+                                        label="Name"
+                                        name="name"
+                                        defaultValue={editing.record?.name}
+                                        error={errors.name}
+                                        autoFocus
                                     />
                                     <Field
                                         label="Code"
                                         name="code"
+                                        defaultValue={editing.record?.code}
                                         error={errors.code}
+                                        hint="Short and unique, e.g. JUB"
                                     />
-                                    <div className="grid gap-1.5">
-                                        <Label htmlFor="position-department">
-                                            Department
-                                        </Label>
-                                        <select
-                                            id="position-department"
-                                            name="department_id"
-                                            className={selectClass}
-                                            defaultValue=""
-                                        >
-                                            <option value="">—</option>
-                                            {departments
-                                                .filter(
-                                                    (department) =>
-                                                        department.status ===
-                                                        'active',
-                                                )
-                                                .map((department) => (
-                                                    <option
-                                                        key={department.id}
-                                                        value={department.id}
-                                                    >
-                                                        {department.name}
-                                                    </option>
-                                                ))}
-                                        </select>
-                                        <InputError
-                                            message={errors.department_id}
-                                        />
-                                    </div>
-                                    <Button
-                                        type="submit"
-                                        size="sm"
-                                        disabled={processing}
-                                    >
-                                        Add position
-                                    </Button>
+                                    <Field
+                                        label="City"
+                                        name="city"
+                                        defaultValue={
+                                            editing.record?.city ?? undefined
+                                        }
+                                        error={errors.city}
+                                    />
                                 </>
                             )}
-                        </Form>
-                    </Section>
-                </div>
-            </div>
+                        </RecordForm>
+                    )}
+
+                    {editing?.kind === 'department' && (
+                        <RecordForm
+                            noun="department"
+                            record={editing.record}
+                            url="/manage/departments"
+                            onDone={close}
+                        >
+                            {(errors) => (
+                                <>
+                                    <Field
+                                        label="Name"
+                                        name="name"
+                                        defaultValue={editing.record?.name}
+                                        error={errors.name}
+                                        autoFocus
+                                    />
+                                    <Field
+                                        label="Code"
+                                        name="code"
+                                        defaultValue={editing.record?.code}
+                                        error={errors.code}
+                                    />
+                                    <Select
+                                        label="Branch"
+                                        name="branch_id"
+                                        defaultValue={
+                                            editing.record?.branch_id ?? ''
+                                        }
+                                        error={errors.branch_id}
+                                        empty="All branches"
+                                        options={activeBranches.map((b) => ({
+                                            value: b.id,
+                                            label: b.name,
+                                        }))}
+                                    />
+                                    <Select
+                                        label="Part of"
+                                        name="parent_department_id"
+                                        defaultValue={
+                                            editing.record
+                                                ?.parent_department_id ?? ''
+                                        }
+                                        error={errors.parent_department_id}
+                                        empty="—"
+                                        options={activeDepartments
+                                            .filter(
+                                                (d) =>
+                                                    d.id !== editing.record?.id,
+                                            )
+                                            .map((d) => ({
+                                                value: d.id,
+                                                label: d.name,
+                                            }))}
+                                    />
+                                </>
+                            )}
+                        </RecordForm>
+                    )}
+
+                    {editing?.kind === 'position' && (
+                        <RecordForm
+                            noun="position"
+                            record={editing.record}
+                            url="/manage/positions"
+                            onDone={close}
+                        >
+                            {(errors) => (
+                                <>
+                                    <Field
+                                        label="Title"
+                                        name="title"
+                                        defaultValue={editing.record?.title}
+                                        error={errors.title}
+                                        autoFocus
+                                    />
+                                    <Field
+                                        label="Code"
+                                        name="code"
+                                        defaultValue={editing.record?.code}
+                                        error={errors.code}
+                                    />
+                                    <Select
+                                        label="Department"
+                                        name="department_id"
+                                        defaultValue={
+                                            editing.record?.department_id ?? ''
+                                        }
+                                        error={errors.department_id}
+                                        empty="—"
+                                        options={activeDepartments.map((d) => ({
+                                            value: d.id,
+                                            label: d.name,
+                                        }))}
+                                    />
+                                </>
+                            )}
+                        </RecordForm>
+                    )}
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+/**
+ * The modal's form: creates a record, or updates one (keeping its status).
+ * Closes when the server accepts it; errors stay in the modal.
+ */
+function RecordForm({
+    noun,
+    record,
+    url,
+    onDone,
+    children,
+}: {
+    noun: string;
+    record: { id: string; status: Status } | null;
+    url: string;
+    onDone: () => void;
+    children: (errors: Record<string, string>) => ReactNode;
+}) {
+    return (
+        <Form
+            action={record ? `${url}/${record.id}` : url}
+            method={record ? 'put' : 'post'}
+            options={{ preserveScroll: true }}
+            onSuccess={onDone}
+            className="space-y-4"
+        >
+            {({ errors, processing }) => (
+                <>
+                    <DialogHeader>
+                        <DialogTitle>
+                            {record ? `Edit ${noun}` : `Add ${noun}`}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {record
+                                ? `Changes apply wherever this ${noun} is used.`
+                                : `The ${noun} is available to every application in this workspace.`}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {record && (
+                        <input
+                            type="hidden"
+                            name="status"
+                            value={record.status}
+                        />
+                    )}
+                    <div className="space-y-3">{children(errors)}</div>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={onDone}
+                        >
+                            Cancel
+                        </Button>
+                        <Button type="submit" disabled={processing}>
+                            {record ? 'Save' : `Add ${noun}`}
+                        </Button>
+                    </DialogFooter>
+                </>
+            )}
+        </Form>
+    );
+}
+
+function Section({
+    title,
+    addLabel,
+    onAdd,
+    children,
+}: {
+    title: string;
+    addLabel: string;
+    onAdd: () => void;
+    children: ReactNode;
+}) {
     return (
         <Card className="gap-0 rounded-md py-0 shadow-none">
-            <CardHeader className="border-b px-4 py-3">
+            <CardHeader className="flex flex-row items-center justify-between gap-3 border-b px-4 py-3">
                 <CardTitle className="text-sm font-semibold">{title}</CardTitle>
+                <Button size="sm" variant="outline" onClick={onAdd}>
+                    <Plus className="size-3.5" />
+                    {addLabel}
+                </Button>
             </CardHeader>
-            <CardContent className="space-y-4 px-4 py-4">
-                {children}
-            </CardContent>
+            <CardContent className="px-4 py-4">{children}</CardContent>
         </Card>
     );
 }
@@ -491,20 +567,71 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 function Field({
     label,
     name,
+    defaultValue,
     error,
+    hint,
+    autoFocus,
 }: {
     label: string;
     name: string;
+    defaultValue?: string;
     error?: string;
+    hint?: string;
+    autoFocus?: boolean;
 }) {
-    const id = `field-${name}-${label}`.toLowerCase().replace(/\s+/g, '-');
+    const id = `structure-${name}`;
 
     return (
         <div className="grid gap-1.5">
-            <Label htmlFor={id} className="text-xs">
-                {label}
-            </Label>
-            <Input id={id} name={name} className="h-8 text-sm" />
+            <Label htmlFor={id}>{label}</Label>
+            <Input
+                id={id}
+                name={name}
+                defaultValue={defaultValue}
+                autoFocus={autoFocus}
+                aria-invalid={error ? true : undefined}
+            />
+            {hint && !error && (
+                <p className="text-xs text-muted-foreground">{hint}</p>
+            )}
+            <InputError message={error} />
+        </div>
+    );
+}
+
+function Select({
+    label,
+    name,
+    defaultValue,
+    error,
+    empty,
+    options,
+}: {
+    label: string;
+    name: string;
+    defaultValue: string;
+    error?: string;
+    empty: string;
+    options: { value: string; label: string }[];
+}) {
+    const id = `structure-${name}`;
+
+    return (
+        <div className="grid gap-1.5">
+            <Label htmlFor={id}>{label}</Label>
+            <select
+                id={id}
+                name={name}
+                className={selectClass}
+                defaultValue={defaultValue}
+            >
+                <option value="">{empty}</option>
+                {options.map((option) => (
+                    <option key={option.value} value={option.value}>
+                        {option.label}
+                    </option>
+                ))}
+            </select>
             <InputError message={error} />
         </div>
     );
@@ -518,17 +645,12 @@ function List({
         title: string;
         detail: string;
         status: Status;
+        onEdit: () => void;
         onToggle: () => void;
     }[];
 }) {
     if (items.length === 0) {
-        return (
-            <EmptyState
-                className="py-8"
-                title="None yet"
-                description="Add one using the form below."
-            />
-        );
+        return <EmptyState className="py-8" title="None yet" />;
     }
 
     return (
@@ -544,6 +666,10 @@ function List({
                     {item.status !== 'active' && (
                         <Badge variant="secondary">{item.status}</Badge>
                     )}
+                    <Button size="sm" variant="ghost" onClick={item.onEdit}>
+                        <Pencil className="size-3.5" />
+                        <span className="sr-only">Edit {item.title}</span>
+                    </Button>
                     <Button size="sm" variant="ghost" onClick={item.onToggle}>
                         {item.status === 'archived' ? 'Restore' : 'Archive'}
                     </Button>

@@ -1,10 +1,11 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { Printer } from 'lucide-react';
-import { PageHeader } from '@/components/page-header';
-import { Panel, PanelBody } from '@/components/panel';
-import { StatusBadge, statusTone } from '@/components/status-badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelBody } from '@miles/ui/components/panel';
+import { StatusBadge } from '@miles/ui/components/status-badge';
+import { statusTone } from '@/lib/status';
+import { Button } from '@miles/ui/components/ui/button';
+import { Input } from '@miles/ui/components/ui/input';
 import { formatMoney } from '@/lib/money';
 import { index, voidMethod as voidSale } from '@/routes/sales';
 

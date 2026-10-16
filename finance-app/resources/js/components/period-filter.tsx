@@ -1,7 +1,7 @@
 import { Form } from '@inertiajs/react';
 import type { RouteFormDefinition } from '@/wayfinder';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@miles/ui/components/ui/button';
+import { Input } from '@miles/ui/components/ui/input';
 
 /**
  * From/to dates (or a single "as of" date) for lists and statements.

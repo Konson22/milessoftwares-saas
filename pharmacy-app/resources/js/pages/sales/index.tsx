@@ -1,11 +1,12 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { ReceiptText, ShoppingCart } from 'lucide-react';
-import { EmptyState } from '@/components/empty-state';
-import { PageHeader } from '@/components/page-header';
-import { Panel, PanelToolbar } from '@/components/panel';
-import { StatusBadge, statusTone } from '@/components/status-badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { EmptyState } from '@miles/ui/components/empty-state';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelToolbar } from '@miles/ui/components/panel';
+import { StatusBadge } from '@miles/ui/components/status-badge';
+import { statusTone } from '@/lib/status';
+import { Button } from '@miles/ui/components/ui/button';
+import { Input } from '@miles/ui/components/ui/input';
 import {
     Table,
     TableBody,
@@ -13,7 +14,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '@/components/ui/table';
+} from '@miles/ui/components/ui/table';
 import { useCanHere } from '@/lib/access';
 import { formatMoney } from '@/lib/money';
 import { create, index, show } from '@/routes/sales';

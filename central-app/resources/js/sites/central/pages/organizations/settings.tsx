@@ -58,7 +58,7 @@ export default function OrganizationSettings({
         <>
             <Head title={`${organization.displayName} settings`} />
 
-            <div className="max-w-xl space-y-10 p-4">
+            <div className="max-w-xl space-y-10">
                 <Heading
                     title={organization.displayName}
                     description="Organization settings"

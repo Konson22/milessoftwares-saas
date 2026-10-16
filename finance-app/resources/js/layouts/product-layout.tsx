@@ -1,111 +1,122 @@
 import { usePage } from '@inertiajs/react';
-import {
-    useCallback,
-    useEffect,
-    useState,
-    type PropsWithChildren,
-} from 'react';
-import { AppSidebar } from '@/components/layout/app-sidebar';
-import { AppTopbar } from '@/components/layout/app-topbar';
+import { ArrowLeft, Landmark } from 'lucide-react';
+import { useCallback } from 'react';
+import type { PropsWithChildren } from 'react';
+import { AppShell } from '@miles/ui/shell/app-shell';
+import { activeItem, crumbsFor } from '@miles/ui/shell/navigation';
+import { QuickSearch } from '@miles/ui/shell/quick-search';
+import type { QuickSearchTarget } from '@miles/ui/shell/quick-search';
+import { ShellSidebar } from '@miles/ui/shell/sidebar';
+import { UserMenu } from '@miles/ui/shell/user-menu';
 import { useCan } from '@/lib/access';
-import { activeItem, visibleNavigation } from '@/lib/navigation';
-import { cn } from '@/lib/utils';
+import { visibleNavigation } from '@/lib/navigation';
+import { home } from '@/routes';
+import { index as bills } from '@/routes/bills';
+import { index as invoices } from '@/routes/invoices';
+import { index as journals } from '@/routes/journals';
+import { logout } from '@/routes/platform';
 
 /**
- * The Finance shell: navy sidebar, top bar, and the page on a light canvas.
+ * Finance in the shared shell: its sections, and searches of journals,
+ * bills and invoices.
  */
 export default function ProductLayout({ children }: PropsWithChildren) {
     const { url, props } = usePage();
-    const { flash } = props;
+    const { flash, product, workspace, user } = props;
     const can = useCan();
     const groups = visibleNavigation(can);
-    const active = activeItem(groups, url);
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-    const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+    const active = activeItem(groups, url, home());
 
-    useEffect(() => {
-        closeSidebar();
-    }, [url, closeSidebar]);
-
-    useEffect(() => {
-        if (!sidebarOpen) {
-            return;
-        }
-
-        function onKey(event: KeyboardEvent) {
-            if (event.key === 'Escape') {
-                closeSidebar();
-            }
-        }
-
-        window.addEventListener('keydown', onKey);
-
-        return () => window.removeEventListener('keydown', onKey);
-    }, [sidebarOpen, closeSidebar]);
+    const searches = useCallback(
+        (term: string): QuickSearchTarget[] =>
+            [
+                {
+                    key: 'journals',
+                    label: `Journals matching “${term}”`,
+                    permission: 'finance.journals.view',
+                    url: journals.url({ query: { search: term } }),
+                },
+                {
+                    key: 'bills',
+                    label: `Bills matching “${term}”`,
+                    permission: 'finance.payables.view',
+                    url: bills.url({ query: { search: term, status: 'all' } }),
+                },
+                {
+                    key: 'invoices',
+                    label: `Invoices matching “${term}”`,
+                    permission: 'finance.receivables.view',
+                    url: invoices.url({
+                        query: { search: term, status: 'all' },
+                    }),
+                },
+            ].filter((target) => can(target.permission)),
+        [can],
+    );
 
     return (
-        <div className="flex min-h-screen bg-background text-foreground">
-            <a
-                href="#main"
-                className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-card focus:px-3 focus:py-2"
-            >
-                Skip to content
-            </a>
-
-            {/* Desktop sidebar */}
-            <aside className="sticky top-0 hidden h-screen w-64 shrink-0 lg:block">
-                <AppSidebar groups={groups} active={active?.item ?? null} />
-            </aside>
-
-            {/* Mobile sidebar drawer */}
-            <div
-                className={cn(
-                    'fixed inset-0 z-40 lg:hidden',
-                    sidebarOpen ? 'pointer-events-auto' : 'pointer-events-none',
-                )}
-                aria-hidden={!sidebarOpen}
-            >
-                <button
-                    type="button"
-                    aria-label="Close navigation"
-                    onClick={closeSidebar}
-                    className={cn(
-                        'absolute inset-0 bg-black/40 transition-opacity',
-                        sidebarOpen ? 'opacity-100' : 'opacity-0',
-                    )}
-                />
-                <aside
-                    className={cn(
-                        'absolute inset-y-0 left-0 w-72 max-w-[85vw] shadow-xl transition-transform duration-200',
-                        sidebarOpen ? 'translate-x-0' : '-translate-x-full',
-                    )}
-                >
-                    <AppSidebar
+        <AppShell
+            flash={flash.success}
+            crumbs={crumbsFor(
+                { label: product.name, href: home().url },
+                active,
+                home(),
+            )}
+            actions={
+                <>
+                    <QuickSearch
                         groups={groups}
-                        active={active?.item ?? null}
-                        onNavigate={closeSidebar}
+                        searches={searches}
+                        placeholder="Go to a section, or search journals, bills, invoices…"
                     />
-                </aside>
-            </div>
-
-            <div className="flex min-w-0 flex-1 flex-col">
-                <AppTopbar
-                    groups={groups}
-                    active={active}
-                    onOpenSidebar={() => setSidebarOpen(true)}
-                />
-                <main id="main" className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
-                    {flash.success && (
-                        <p
-                            role="status"
-                            className="mb-5 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800"
-                        >
-                            {flash.success}
-                        </p>
+                    {user && (
+                        <UserMenu
+                            user={user}
+                            subtitle={workspace?.name}
+                            links={
+                                workspace
+                                    ? [
+                                          {
+                                              label: `${workspace.name} home`,
+                                              href: workspace.url,
+                                              icon: ArrowLeft,
+                                              external: true,
+                                          },
+                                      ]
+                                    : []
+                            }
+                            signOut={{
+                                label: `Sign out of ${product.name}`,
+                                ...logout.form(),
+                            }}
+                        />
                     )}
-                    {children}
-                </main>
-            </div>
-        </div>
+                </>
+            }
+            sidebar={(onNavigate) => (
+                <ShellSidebar
+                    label={product.name}
+                    back={
+                        workspace
+                            ? {
+                                  label: `${workspace.name} home`,
+                                  href: workspace.url,
+                              }
+                            : undefined
+                    }
+                    brand={{
+                        title: product.name,
+                        subtitle: workspace?.name,
+                        icon: Landmark,
+                        href: home(),
+                    }}
+                    groups={groups}
+                    active={active?.item ?? null}
+                    onNavigate={onNavigate}
+                />
+            )}
+        >
+            {children}
+        </AppShell>
     );
 }

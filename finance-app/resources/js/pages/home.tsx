@@ -7,12 +7,12 @@ import {
     TrendingUp,
 } from 'lucide-react';
 import { Amount } from '@/components/amount';
-import { EmptyState } from '@/components/empty-state';
-import { PageHeader } from '@/components/page-header';
-import { Panel, PanelHeader } from '@/components/panel';
-import { StatCard } from '@/components/stat-card';
-import { StatusBadge } from '@/components/status-badge';
-import { Button } from '@/components/ui/button';
+import { EmptyState } from '@miles/ui/components/empty-state';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelHeader } from '@miles/ui/components/panel';
+import { StatCard } from '@miles/ui/components/stat-card';
+import { StatusBadge } from '@miles/ui/components/status-badge';
+import { Button } from '@miles/ui/components/ui/button';
 import {
     Table,
     TableBody,
@@ -20,7 +20,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '@/components/ui/table';
+} from '@miles/ui/components/ui/table';
 import { useCan } from '@/lib/access';
 import { sourceLabel, useMoney } from '@/lib/format';
 import { index as banking } from '@/routes/banking';

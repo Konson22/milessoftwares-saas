@@ -1,10 +1,10 @@
 import { Form, Head, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { PageHeader } from '@/components/page-header';
-import { Panel, PanelBody } from '@/components/panel';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelBody } from '@miles/ui/components/panel';
+import { Button } from '@miles/ui/components/ui/button';
+import { Input } from '@miles/ui/components/ui/input';
+import { Label } from '@miles/ui/components/ui/label';
 import {
     Table,
     TableBody,
@@ -12,7 +12,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '@/components/ui/table';
+} from '@miles/ui/components/ui/table';
 import { formatMoney } from '@/lib/money';
 import { store } from '@/routes/supplier-returns';
 

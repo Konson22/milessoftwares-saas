@@ -101,7 +101,7 @@ export default function CreateOrganization({
         <>
             <Head title="New organization" />
 
-            <div className="max-w-xl space-y-6 p-4">
+            <div className="max-w-xl space-y-6">
                 <Heading
                     title="New organization"
                     description="Your organization gets its own workspace address. You become its owner."

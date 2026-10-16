@@ -18,12 +18,18 @@ declare module '@inertiajs/core' {
                 logoutUrl: string;
             };
             tenant: { displayName: string } | null;
+            /** Workspace hosts: applications the member can open. */
+            apps: {
+                code: string;
+                name: string;
+                description: string | null;
+                href: string;
+            }[];
             abilities: {
                 manageStructure: boolean;
                 manageAccess: boolean;
             } | null;
             staff: { permissions: string[] } | null;
-            sidebarOpen: boolean;
             [key: string]: unknown;
         };
     }

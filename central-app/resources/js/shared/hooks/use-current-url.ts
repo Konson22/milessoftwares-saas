@@ -46,14 +46,11 @@ export function useCurrentUrl(): UseCurrentUrlReturn {
         const comparePath = (path: string): boolean =>
             startsWith ? urlToCompare.startsWith(path) : path === urlToCompare;
 
-        if (!urlString.startsWith('http')) {
-            return comparePath(urlString);
-        }
-
+        // Paths, absolute URLs and the scheme-relative URLs Wayfinder makes
+        // for host-bound routes (//auth.<root>/settings/profile) all compare
+        // by path.
         try {
-            const absoluteUrl = new URL(urlString);
-
-            return comparePath(absoluteUrl.pathname);
+            return comparePath(new URL(urlString, 'http://localhost').pathname);
         } catch {
             return false;
         }

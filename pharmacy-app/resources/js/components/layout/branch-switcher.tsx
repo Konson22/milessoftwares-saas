@@ -1,8 +1,8 @@
 import { Form, usePage } from '@inertiajs/react';
 import { Building2, Check, ChevronDown } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
-import { useDismiss } from '@/lib/use-dismiss';
-import { cn } from '@/lib/utils';
+import { useDismiss } from '@miles/ui/lib/use-dismiss';
+import { cn } from '@miles/ui/lib/utils';
 import { update } from '@/routes/branch';
 
 const PILL =

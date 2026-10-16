@@ -30,7 +30,7 @@ export default function OrganizationSubscription({
         <>
             <Head title={`${organization.displayName} subscription`} />
 
-            <div className="max-w-2xl space-y-10 p-4">
+            <div className="max-w-2xl space-y-10">
                 <Heading
                     title="Subscription"
                     description="Your plans and the applications they include. To change your plan, contact Miles Global Softwares."

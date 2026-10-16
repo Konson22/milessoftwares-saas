@@ -2,19 +2,19 @@ import { Form, Head, Link } from '@inertiajs/react';
 import { ListTree, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Amount } from '@/components/amount';
-import { EmptyState } from '@/components/empty-state';
+import { EmptyState } from '@miles/ui/components/empty-state';
 import { Field, Select } from '@/components/field';
-import { PageHeader } from '@/components/page-header';
+import { PageHeader } from '@miles/ui/components/page-header';
 import {
     Panel,
     PanelBody,
     PanelHeader,
     PanelToolbar,
-} from '@/components/panel';
-import { SearchField } from '@/components/search-field';
-import { StatusBadge } from '@/components/status-badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+} from '@miles/ui/components/panel';
+import { SearchField } from '@miles/ui/components/search-field';
+import { StatusBadge } from '@miles/ui/components/status-badge';
+import { Button } from '@miles/ui/components/ui/button';
+import { Input } from '@miles/ui/components/ui/input';
 import {
     Table,
     TableBody,
@@ -23,7 +23,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '@/components/ui/table';
+} from '@miles/ui/components/ui/table';
 import { useCan } from '@/lib/access';
 import { show, store, update } from '@/routes/accounts';
 
