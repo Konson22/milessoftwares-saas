@@ -17,6 +17,10 @@ class SeoController extends Controller
             $paths[] = 'products/'.$product['code'];
         }
 
+        foreach ($catalog->erpProducts() as $product) {
+            $paths[] = 'erp/'.$product['code'];
+        }
+
         $urls = array_map(
             fn (string $path) => '<url><loc>'.e(PlatformHosts::url(PlatformHosts::root(), $path)).'</loc></url>',
             $paths,

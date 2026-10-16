@@ -3,8 +3,10 @@
 namespace App\Modules\Subscriptions\Models;
 
 use App\Modules\Applications\Models\Application;
+use App\Modules\Products\Models\ErpProduct;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
@@ -12,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * Platform-owned; edited on admin.<root> only.
  *
  * @property string $id
+ * @property string|null $erp_product_id
  * @property string $code
  * @property string $name
  * @property string|null $description
@@ -43,5 +46,15 @@ class Plan extends Model
     public function applications(): BelongsToMany
     {
         return $this->belongsToMany(Application::class, 'plan_applications');
+    }
+
+    /**
+     * The ERP product the plan sells, if any.
+     *
+     * @return BelongsTo<ErpProduct, $this>
+     */
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(ErpProduct::class, 'erp_product_id');
     }
 }

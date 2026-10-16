@@ -7,11 +7,14 @@ use App\Modules\Administration\Models\PlatformStaff;
 use App\Modules\Applications\Enums\ApplicationKind;
 use App\Modules\Applications\Models\Application;
 use App\Modules\Audit\AuditLogger;
+use App\Modules\Products\Models\ErpProduct;
+use App\Modules\Products\Support\ProductPlans;
 use App\Modules\Subscriptions\Models\Plan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -22,8 +25,10 @@ class PlanController extends Controller
     public function index(): Response
     {
         return Inertia::render('admin/plans/index', [
-            'plans' => Plan::query()->with('applications:id,name')->orderBy('name')->get()->map(fn (Plan $plan) => [
+            'plans' => Plan::query()->with(['applications:id,name', 'product:id,name'])->orderBy('name')->get()->map(fn (Plan $plan) => [
                 'id' => $plan->id,
+                'productId' => $plan->erp_product_id,
+                'product' => $plan->product?->name,
                 'code' => $plan->code,
                 'name' => $plan->name,
                 'description' => $plan->description,
@@ -40,6 +45,11 @@ class PlanController extends Controller
                 ->where('kind', '!=', ApplicationKind::Platform->value)
                 ->orderBy('name')
                 ->get(['id', 'name']),
+            'products' => ErpProduct::query()->orderBy('sort_order')->orderBy('name')->get()->map(fn (ErpProduct $product) => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'status' => $product->status->value,
+            ])->all(),
         ]);
     }
 
@@ -74,12 +84,18 @@ class PlanController extends Controller
     }
 
     /**
-     * @return array{code: string, name: string, description?: string|null, billing_interval: string, price_minor: int, currency: string, trial_days: int, is_public?: bool, status: string, application_ids: list<string>}
+     * A plan selling an ERP product must cover what the product requires
+     * and nothing outside it (ProductPlans).
+     *
+     * @return array{erp_product_id?: string|null, code: string, name: string, description?: string|null, billing_interval: string, price_minor: int, currency: string, trial_days: int, is_public?: bool, status: string, application_ids: list<string>}
+     *
+     * @throws ValidationException
      */
     private function validatePlan(Request $request, ?Plan $plan = null): array
     {
-        /** @var array{code: string, name: string, description?: string|null, billing_interval: string, price_minor: int, currency: string, trial_days: int, is_public?: bool, status: string, application_ids: list<string>} */
-        return $request->validate([
+        /** @var array{erp_product_id?: string|null, code: string, name: string, description?: string|null, billing_interval: string, price_minor: int, currency: string, trial_days: int, is_public?: bool, status: string, application_ids: list<string>} $validated */
+        $validated = $request->validate([
+            'erp_product_id' => ['nullable', 'uuid', Rule::exists('erp_products', 'id')],
             'code' => ['required', 'string', 'max:64', 'regex:/^[a-z][a-z0-9_-]*$/', Rule::unique('plans', 'code')->ignore($plan?->id)],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
@@ -89,9 +105,20 @@ class PlanController extends Controller
             'trial_days' => ['required', 'integer', 'between:0,365'],
             'is_public' => ['sometimes', 'boolean'],
             'status' => ['required', Rule::in(['draft', 'active', 'retired'])],
-            'application_ids' => ['required', 'array', 'min:1'],
+            'application_ids' => ['required', 'array', 'list', 'min:1'],
             'application_ids.*' => ['uuid', Rule::exists('applications', 'id')->whereNot('kind', ApplicationKind::Platform->value)],
         ]);
+
+        if (isset($validated['erp_product_id'])) {
+            $product = ErpProduct::query()->with('applications:id')->findOrFail($validated['erp_product_id']);
+            $problems = ProductPlans::problems($product->name, $product->status, $product->requirements(), $validated['application_ids'], $validated['status']);
+
+            if ($problems !== []) {
+                throw ValidationException::withMessages($problems);
+            }
+        }
+
+        return $validated;
     }
 
     /**
@@ -103,6 +130,7 @@ class PlanController extends Controller
         $applicationCount = count((array) $validated['application_ids']);
 
         return [
+            'erp_product_id' => $validated['erp_product_id'] ?? null,
             'code' => $validated['code'],
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,

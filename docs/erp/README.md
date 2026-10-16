@@ -5,7 +5,7 @@ The ERP transformation (`MASTER-PLAN.md`). Existing platform docs are reused rat
 | Required document | Where |
 | --- | --- |
 | architecture-audit | [architecture-audit.md](architecture-audit.md) (inventory, versions, capability audit, reuse matrix, risk register) |
-| target-architecture | [../architecture.md](../architecture.md) + decisions D1/D2 in [domain-ownership.md](domain-ownership.md) |
+| target-architecture | [../architecture.md](../architecture.md), [ADR-0003](../adr/0003-erp-workspace-application.md), [ADR-0004](../adr/0004-companies-as-organizations.md) |
 | product-catalog | [product-catalog.md](product-catalog.md) |
 | module-registry | `applications` registry: [../architecture.md](../architecture.md) §2–3, [../integration.md](../integration.md) |
 | domain-ownership | [domain-ownership.md](domain-ownership.md) |

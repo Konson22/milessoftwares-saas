@@ -23,7 +23,7 @@ another owner's tables. Platform-side ownership is unchanged from `docs/architec
 | HR, payroll | — | ❌ | contracts only | Phase 10 |
 | Audit (platform) | central-app `Audit` | ✅ | admin | products keep their own operational history |
 
-## Decision D1 — where shared Inventory, Procurement and Sales live (owner decision needed before Phase 3)
+## Decision D1 — where shared Inventory, Procurement and Sales live (accepted: ADR-0003)
 
 The brief forbids a second inventory/procurement engine and prefers a modular monolith for
 business transactions. Today the only engine is inside `pharmacy-app`.
@@ -37,7 +37,7 @@ business transactions. Today the only engine is inside `pharmacy-app`.
    same kinds of records, plus package-version drift.
 3. Separate inventory service: rejected by the brief (no microservices without need).
 
-## Decision D2 — companies inside a tenant (needed before Retail/NGO onboarding)
+## Decision D2 — companies inside a tenant (accepted: ADR-0004)
 
 The platform treats an organization as one legal entity with branches. The brief's
 Tenant → Company → Branch needs either (a) one organization per company, grouped under a parent

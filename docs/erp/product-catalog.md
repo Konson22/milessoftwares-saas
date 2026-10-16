@@ -46,13 +46,19 @@ Pharmacy is `pilot`, not `available`: see the gaps in `pharmacy-requirements.md`
 
 ## Selling a product (today, no new UI)
 
-Create a bundle plan in admin covering the product's required applications; assigning the plan
-derives the entitlements, and `ProductAccess` then reports the product. A plan ↔ product link
-and a check that a product plan covers every required application are slice 2.
+Create a plan in admin (Plans → ERP product) covering the product's required applications;
+assigning the plan derives the entitlements, and `ProductAccess` then reports the product. The
+plan must include every required application, nothing outside the product, and can be active
+only for a pilot or available product (`ProductPlans`). `platform:erp-products` refuses a
+catalog change that would break a non-retired plan.
 
-## Next slices (Phase 1)
+## Public site
 
-2. Public site and pricing read `erp_products` (status badges: available / pilot / coming soon);
-   `plans.erp_product_id` (nullable, additive) with the coverage check; admin read-only product list.
+Home page "ERP products" section and `/erp/{code}` pages, read from `erp_products`. Badges:
+Pilot, Coming soon; available products carry none; retired ones are not shown. Every product's
+call to action is Contact until product-level trials exist.
+
+## Next slice (Phase 1)
+
 3. Subscription lapse behaviour: grace and read-only window (`entitlements` stay the input),
    documented and exposed in the effective-access API.

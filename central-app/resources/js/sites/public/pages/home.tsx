@@ -8,6 +8,8 @@ import {
     ShieldCheck,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { ErpStatusBadge } from '@/sites/public/components/erp-product';
+import type { ErpProduct } from '@/sites/public/components/erp-product';
 import FaqList from '@/sites/public/components/faq';
 import PageHero, {
     Accent,
@@ -36,6 +38,7 @@ import WorkspacePreview from '@/sites/public/components/workspace-preview';
 
 type Props = {
     products: Product[];
+    erpProducts: ErpProduct[];
     trialDays: number;
     canonical: string;
 };
@@ -65,6 +68,7 @@ const features: { icon: LucideIcon; title: string; body: string }[] = [
 
 export default function MarketingHome({
     products,
+    erpProducts,
     trialDays,
     canonical,
 }: Props) {
@@ -188,6 +192,68 @@ export default function MarketingHome({
                     ))}
                 </ul>
             </section>
+
+            {erpProducts.length > 0 && (
+                <section
+                    id="erp"
+                    aria-labelledby="erp-heading"
+                    className="mx-auto max-w-7xl scroll-mt-20 px-4 pb-24 sm:px-6"
+                >
+                    <SectionHeading
+                        id="erp-heading"
+                        label="ERP products"
+                        title={
+                            <>
+                                An ERP for <Accent>your industry</Accent>
+                            </>
+                        }
+                        lead="Each product brings together the applications a business of that kind needs, on one set of books."
+                    />
+                    <ul className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                        {erpProducts.map((product) => (
+                            <li
+                                key={product.code}
+                                className={`${card} flex flex-col p-6`}
+                            >
+                                <div className="flex items-start gap-3">
+                                    <h3 className={`text-xl ${display}`}>
+                                        <Link
+                                            href={`/erp/${product.code}`}
+                                            className="hover:text-brand-blue"
+                                        >
+                                            {product.name}
+                                        </Link>
+                                    </h3>
+                                    <span className="ml-auto">
+                                        <ErpStatusBadge
+                                            status={product.status}
+                                        />
+                                    </span>
+                                </div>
+                                {product.tagline && (
+                                    <p className="mt-3 flex-1 text-sm text-slate-600">
+                                        {product.tagline}
+                                    </p>
+                                )}
+                                <Link
+                                    href={`/erp/${product.code}`}
+                                    className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-brand-blue hover:underline"
+                                >
+                                    Learn more
+                                    <span className="sr-only">
+                                        {' '}
+                                        about {product.name}
+                                    </span>
+                                    <ArrowRight
+                                        className="size-4"
+                                        aria-hidden
+                                    />
+                                </Link>
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            )}
 
             <section
                 id="products"

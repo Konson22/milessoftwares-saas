@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import MarketingLayout from '@/sites/public/layouts/marketing-layout';
 import Contact from './contact';
+import ErpProductPage from './erp-product';
 import MarketingHome from './home';
 import Pricing from './pricing';
 import ProductPage from './product';
@@ -66,6 +67,40 @@ const plan = {
     trialDays: 14,
     isBundle: false,
     applications: ['Retail'],
+    product: null,
+};
+
+const erpProduct = {
+    code: 'pharmacy',
+    name: 'Miles Pharmacy ERP',
+    tagline: 'Medicines and the books.',
+    description: null,
+    status: 'pilot' as const,
+    applications: [
+        {
+            code: 'pharmacy',
+            name: 'Pharmacy',
+            requirement: 'required' as const,
+            listed: true,
+        },
+        {
+            code: 'hr',
+            name: 'HR',
+            requirement: 'optional' as const,
+            listed: false,
+        },
+    ],
+};
+
+const productPlan = {
+    ...plan,
+    code: 'pharmacy-std',
+    name: 'Pharmacy Standard',
+    product: {
+        code: 'pharmacy',
+        name: 'Miles Pharmacy ERP',
+        status: 'pilot' as const,
+    },
 };
 
 const pages: [string, ReactNode][] = [
@@ -79,6 +114,15 @@ const pages: [string, ReactNode][] = [
                     ...product,
                     code: 'school',
                     name: 'School',
+                    status: 'planned',
+                },
+            ]}
+            erpProducts={[
+                erpProduct,
+                {
+                    ...erpProduct,
+                    code: 'ngo',
+                    name: 'Miles NGO ERP',
                     status: 'planned',
                 },
             ]}
@@ -97,10 +141,23 @@ const pages: [string, ReactNode][] = [
         />,
     ],
     [
+        'erp product',
+        <ErpProductPage
+            key="erp-product"
+            product={erpProduct}
+            plans={[productPlan]}
+            canonical="https://example.test/erp/pharmacy"
+        />,
+    ],
+    [
         'pricing',
         <Pricing
             key="pricing"
-            plans={[plan, { ...plan, code: 'all', isBundle: true }]}
+            plans={[
+                plan,
+                { ...plan, code: 'all', isBundle: true },
+                productPlan,
+            ]}
             trialDays={60}
             canonical="https://example.test/pricing"
         />,

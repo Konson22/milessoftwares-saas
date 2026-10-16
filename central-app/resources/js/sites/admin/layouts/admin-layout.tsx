@@ -23,6 +23,7 @@ const navItems: { title: string; href: string; permission?: string }[] = [
         href: '/applications',
         permission: 'registry.manage',
     },
+    { title: 'Products', href: '/products', permission: 'plans.manage' },
     { title: 'Plans', href: '/plans', permission: 'plans.manage' },
     { title: 'Leads', href: '/leads', permission: 'leads.manage' },
     { title: 'Security', href: '/security', permission: 'security.view' },

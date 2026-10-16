@@ -24,6 +24,7 @@ Route::domain(PlatformHosts::root())->group(function () {
 
     Route::name('marketing.')->group(function () {
         Route::get('products/{code}', [PageController::class, 'product'])->where('code', '[a-z][a-z0-9_]*')->name('product');
+        Route::get('erp/{code}', [PageController::class, 'erpProduct'])->where('code', '[a-z][a-z0-9_]*')->name('erp-product');
         Route::get('pricing', [PageController::class, 'pricing'])->name('pricing');
 
         // Choose an application and start its free trial (a new workspace).

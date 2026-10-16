@@ -7,6 +7,8 @@ import { Label } from '@/shared/components/ui/label';
 
 type Plan = {
     id: string;
+    productId: string | null;
+    product: string | null;
     code: string;
     name: string;
     description: string | null;
@@ -20,15 +22,18 @@ type Plan = {
     applications: string[];
 };
 
+type ProductOption = { id: string; name: string; status: string };
+
 type Props = {
     plans: Plan[];
     applications: { id: string; name: string }[];
+    products: ProductOption[];
 };
 
 const selectClass =
     'h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm';
 
-export default function PlansIndex({ plans, applications }: Props) {
+export default function PlansIndex({ plans, applications, products }: Props) {
     return (
         <>
             <Head title="Plans" />
@@ -71,6 +76,7 @@ export default function PlansIndex({ plans, applications }: Props) {
                                 {plan.currency}{' '}
                                 {(plan.priceMinor / 100).toFixed(2)} /{' '}
                                 {plan.billingInterval}
+                                {plan.product && ` · ${plan.product}`}
                                 {plan.trialDays > 0 &&
                                     ` · ${plan.trialDays}-day trial`}{' '}
                                 · {plan.applications.join(', ')}
@@ -84,6 +90,7 @@ export default function PlansIndex({ plans, applications }: Props) {
                                     method="put"
                                     plan={plan}
                                     applications={applications}
+                                    products={products}
                                 />
                             </details>
                         </li>
@@ -96,6 +103,7 @@ export default function PlansIndex({ plans, applications }: Props) {
                         action="/plans"
                         method="post"
                         applications={applications}
+                        products={products}
                     />
                 </section>
             </div>
@@ -108,11 +116,13 @@ function PlanForm({
     method,
     plan,
     applications,
+    products,
 }: {
     action: string;
     method: 'post' | 'put';
     plan?: Plan;
     applications: { id: string; name: string }[];
+    products: ProductOption[];
 }) {
     const id = (field: string) => `${plan?.id ?? 'new'}-${field}`;
 
@@ -212,6 +222,23 @@ function PlanForm({
                                 <option>retired</option>
                             </select>
                         </div>
+                    </div>
+                    <div className="grid gap-1.5">
+                        <Label htmlFor={id('product')}>ERP product</Label>
+                        <select
+                            id={id('product')}
+                            name="erp_product_id"
+                            defaultValue={plan?.productId ?? ''}
+                            className={selectClass}
+                        >
+                            <option value="">None (applications only)</option>
+                            {products.map((product) => (
+                                <option key={product.id} value={product.id}>
+                                    {product.name} ({product.status})
+                                </option>
+                            ))}
+                        </select>
+                        <InputError message={errors.erp_product_id} />
                     </div>
                     <fieldset className="space-y-1">
                         <legend className="text-sm font-medium">

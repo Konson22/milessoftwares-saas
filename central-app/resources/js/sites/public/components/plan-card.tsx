@@ -1,5 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { ArrowRight, Check } from 'lucide-react';
+import { erpCallToAction } from '@/sites/public/components/erp-product';
+import type { ErpProduct } from '@/sites/public/components/erp-product';
 import { button, card } from '@/sites/public/components/styles';
 
 export type Plan = {
@@ -11,6 +13,11 @@ export type Plan = {
     trialDays: number;
     isBundle: boolean;
     applications: string[];
+    product: {
+        code: string;
+        name: string;
+        status: ErpProduct['status'];
+    } | null;
 };
 
 const per: Record<Plan['interval'], string> = {
@@ -25,7 +32,9 @@ const per: Record<Plan['interval'], string> = {
  * card, outlined in the accent.
  *
  * Every plan starts the same way: a free trial of the application from a
- * new workspace (/start); billing follows once it ends.
+ * new workspace (/start); billing follows once it ends. A plan that sells
+ * an ERP product starts with a conversation instead: a trial covers one
+ * application, and the product needs several.
  */
 export default function PlanCard({
     plan,
@@ -50,6 +59,17 @@ export default function PlanCard({
                     </span>
                 )}
             </div>
+            {plan.product && (
+                <p className="mt-2 text-sm font-semibold">
+                    <Link
+                        href={`/erp/${plan.product.code}`}
+                        className="text-brand-blue hover:underline"
+                    >
+                        {plan.product.name}
+                    </Link>
+                    {plan.product.status === 'pilot' && ' · Pilot'}
+                </p>
+            )}
             {plan.description && (
                 <p className="mt-2 text-sm text-slate-600">
                     {plan.description}
@@ -65,14 +85,25 @@ export default function PlanCard({
                     </span>
                 )}
             </p>
-            <Link
-                href="/start"
-                className={`mt-7 ${featured ? button.primary : button.outline}`}
-            >
-                Start free trial
-                <span className="sr-only"> of {plan.name}</span>
-                <ArrowRight className="size-4" aria-hidden />
-            </Link>
+            {plan.product ? (
+                <Link
+                    href="/contact"
+                    className={`mt-7 ${featured ? button.primary : button.outline}`}
+                >
+                    {erpCallToAction[plan.product.status]}
+                    <span className="sr-only"> about {plan.name}</span>
+                    <ArrowRight className="size-4" aria-hidden />
+                </Link>
+            ) : (
+                <Link
+                    href="/start"
+                    className={`mt-7 ${featured ? button.primary : button.outline}`}
+                >
+                    Start free trial
+                    <span className="sr-only"> of {plan.name}</span>
+                    <ArrowRight className="size-4" aria-hidden />
+                </Link>
+            )}
             <div className="mt-8 border-t border-site-line pt-7">
                 <p className="text-sm font-semibold">Includes</p>
                 <ul className="mt-4 space-y-3 text-sm">

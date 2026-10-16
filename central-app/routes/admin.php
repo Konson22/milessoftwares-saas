@@ -82,6 +82,7 @@ Route::domain(PlatformHosts::admin())
 
         Route::middleware('staff.can:plans.manage')->group(function () {
             Route::get('plans', [Admin\PlanController::class, 'index'])->name('plans.index');
+            Route::get('products', [Admin\ProductController::class, 'index'])->name('products.index');
             Route::post('plans', [Admin\PlanController::class, 'store'])->name('plans.store');
             Route::put('plans/{plan}', [Admin\PlanController::class, 'update'])->whereUuid('plan')->name('plans.update');
         });

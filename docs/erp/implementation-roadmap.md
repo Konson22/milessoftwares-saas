@@ -7,7 +7,7 @@ check and build green; migrations rolled back and forward on the test DB; result
 | Phase | Scope | Measurable acceptance criteria |
 | --- | --- | --- |
 | 0 Audit | this folder | inventory, ownership, risks, plan written ✅ |
-| 1 Product catalog | 1.1 products + derived access ✅ · 1.2 site/pricing/admin read products, plan ↔ product · 1.3 grace/read-only | 1.1: catalog sync idempotent, release rules enforced, product access only with all required entitlements, cross-tenant test · 1.2: no product shown as available unless `status=available`; product plan cannot omit a required application · 1.3: lapsed org can read and export, cannot post (tests in a product) |
+| 1 Product catalog | 1.1 products + derived access ✅ · 1.2 site/pricing/admin read products, plan ↔ product ✅ · 1.3 grace/read-only | 1.1: catalog sync idempotent, release rules enforced, product access only with all required entitlements, cross-tenant test · 1.2: no product shown as available unless `status=available`; product plan cannot omit a required application · 1.3: lapsed org can read and export, cannot post (tests in a product) |
 | 2 Workspace foundation | entitlement-filtered navigation across apps, branch context shared via platform, reusable layout from `templates/product-app` | navigation hides unentitled/unpermitted items and every hidden route still 403/404s (route sweep per app) |
 | 3 Master data | **after decision D1**: units/conversions, customers, suppliers under shared modules | one supplier record per org per party; pharmacy flows unchanged (existing tests green) |
 | 4 Finance | periods & closing, bank reconciliation, FX design | posting into a closed period refused at DB level; reconciliation matches statement lines |
@@ -19,13 +19,14 @@ check and build green; migrations rolled back and forward on the test DB; result
 | 10 Other products | Retail → Finance standalone GA → Education → NGO, one at a time | each starts at `planned`, moves to `pilot` only with its own acceptance list |
 | 11 Mobile/offline | Expo, offline POS, SUNMI | after Phase 9 pilot; sync idempotency proven |
 
-## Open owner decisions
+## Decisions
 
-- **D1** shared engine location (recommended: grow `pharmacy-app` into the ERP workspace app).
-- **D2** companies within a tenant (recommended: one organization per company).
-- Commit the pending public-site work before Phase 1.2 (both touch `MarketingCatalog`).
+- **D1** accepted: [ADR-0003](../adr/0003-erp-workspace-application.md) (grow `pharmacy-app`
+  into the ERP workspace application; the code reorganisation starts in Phase 3).
+- **D2** accepted: [ADR-0004](../adr/0004-companies-as-organizations.md) (a company is an
+  organization).
 
 ## Recommended next slice
 
-Phase 1.2: public site product directory and pricing read `erp_products` with honest status
-badges, plus nullable `plans.erp_product_id` with the required-application coverage check.
+Phase 1.3: subscription lapse behaviour, a grace and read-only window exposed in the
+effective-access API, with products refusing writes while read-only.

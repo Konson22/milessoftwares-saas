@@ -6,6 +6,7 @@ use App\Modules\Applications\Enums\ApplicationKind;
 use App\Modules\Applications\Models\Application;
 use App\Modules\Products\Enums\ProductStatus;
 use App\Modules\Products\Models\ErpProduct;
+use App\Modules\Subscriptions\Models\Plan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -71,6 +72,8 @@ final class ProductCatalog
             throw ValidationException::withMessages($errors);
         }
 
+        $this->guardPlans($product, $status, $links);
+
         $model = DB::transaction(function () use ($product, $links): ErpProduct {
             $model = ErpProduct::query()->where('code', $product['code'])->first() ?? new ErpProduct;
             $model->forceFill([
@@ -88,6 +91,34 @@ final class ProductCatalog
         });
 
         return ['product' => $model, 'unregistered' => $unregistered];
+    }
+
+    /**
+     * Plans already selling the product must still fit it after the change:
+     * a new required application or a step back to planned would leave
+     * them granting something other than the product.
+     *
+     * @param  array{code: string, name: string}  $product
+     * @param  array<string, array{requirement: string}>  $links
+     *
+     * @throws ValidationException
+     */
+    private function guardPlans(array $product, ProductStatus $status, array $links): void
+    {
+        $existing = ErpProduct::query()->where('code', $product['code'])->first();
+        if ($existing === null) {
+            return;
+        }
+
+        $requirements = array_map(fn (array $link) => $link['requirement'], $links);
+
+        foreach (Plan::query()->where('erp_product_id', $existing->id)->where('status', '!=', 'retired')->with('applications:id')->orderBy('code')->get() as $plan) {
+            $problems = ProductPlans::problems($product['name'], $status, $requirements, array_values($plan->applications->pluck('id')->all()), $plan->status);
+
+            if ($problems !== []) {
+                throw ValidationException::withMessages(['plans' => "Plan {$plan->code} would no longer fit: ".implode(' ', $problems).' Change or retire the plan first.']);
+            }
+        }
     }
 
     /**

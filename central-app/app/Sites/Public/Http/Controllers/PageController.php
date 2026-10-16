@@ -21,8 +21,25 @@ class PageController extends Controller
     {
         return Inertia::render('public/home', [
             'products' => $this->catalog->products(),
+            'erpProducts' => $this->catalog->erpProducts(),
             'trialDays' => $this->trialDays(),
             'canonical' => PlatformHosts::url(PlatformHosts::root()),
+        ]);
+    }
+
+    /**
+     * An ERP product (Miles Pharmacy ERP, ...): the applications it is made
+     * of and the plans that sell it.
+     */
+    public function erpProduct(string $code): Response
+    {
+        $product = $this->catalog->erpProduct($code);
+        abort_if($product === null, 404);
+
+        return Inertia::render('public/erp-product', [
+            'product' => $product,
+            'plans' => $this->catalog->plans(productCode: $code),
+            'canonical' => PlatformHosts::url(PlatformHosts::root(), "erp/{$code}"),
         ]);
     }
 

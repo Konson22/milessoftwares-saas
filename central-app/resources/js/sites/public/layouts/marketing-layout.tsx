@@ -9,6 +9,7 @@ import { login, register } from '@/routes';
 // Relative paths on the apex host; sign-in and registration live on the
 // auth host, so those are plain links.
 const nav = [
+    { title: 'ERP products', href: '/#erp' },
     { title: 'Applications', href: '/#products' },
     { title: 'How it works', href: '/#how-it-works' },
     { title: 'Pricing', href: '/pricing' },
@@ -175,6 +176,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                     <FooterColumn
                         title="Explore"
                         links={[
+                            { title: 'ERP products', href: '/#erp' },
                             { title: 'Applications', href: '/#products' },
                             { title: 'How it works', href: '/#how-it-works' },
                             { title: 'Pricing', href: '/pricing' },
