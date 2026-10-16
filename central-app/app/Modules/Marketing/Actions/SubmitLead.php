@@ -20,16 +20,6 @@ final class SubmitLead
     public function __construct(private readonly SpamGuard $spam) {}
 
     /**
-     * @param  array{name: string, email: string, company?: string|null, phone?: string|null, country_code?: string|null, application_id?: string|null, preferred_contact_time?: string|null, message?: string|null}  $data
-     */
-    public function demo(Request $request, array $data): DemoRequest
-    {
-        $lead = new DemoRequest;
-
-        return $this->store($request, $lead, $data, 'demo request');
-    }
-
-    /**
      * @param  array{name: string, email: string, company?: string|null, phone?: string|null, country_code?: string|null, subject?: string|null, message?: string|null}  $data
      */
     public function contact(Request $request, array $data): ContactMessage

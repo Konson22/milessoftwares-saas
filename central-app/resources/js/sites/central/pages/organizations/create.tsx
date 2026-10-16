@@ -20,6 +20,12 @@ type Props = {
         default_currency: string;
         timezone: string;
     };
+    /** Applications the new workspace can try free; selected comes from ?app=. */
+    trial: {
+        days: number;
+        applications: { code: string; name: string; tagline: string | null }[];
+        selected: string | null;
+    };
 };
 
 type Availability =
@@ -81,7 +87,11 @@ function useSlugAvailability(slug: string): Availability {
     return slug === '' ? { state: 'idle' } : availability;
 }
 
-export default function CreateOrganization({ rootDomain, defaults }: Props) {
+export default function CreateOrganization({
+    rootDomain,
+    defaults,
+    trial,
+}: Props) {
     const [displayName, setDisplayName] = useState('');
     const [slug, setSlug] = useState('');
     const [slugEdited, setSlugEdited] = useState(false);
@@ -220,6 +230,13 @@ export default function CreateOrganization({ rootDomain, defaults }: Props) {
                                 <InputError message={errors.contact_email} />
                             </div>
 
+                            {trial.applications.length > 0 && (
+                                <TrialChoice
+                                    trial={trial}
+                                    error={errors.trial_application}
+                                />
+                            )}
+
                             <Button
                                 type="submit"
                                 disabled={
@@ -235,6 +252,60 @@ export default function CreateOrganization({ rootDomain, defaults }: Props) {
                 </Form>
             </div>
         </>
+    );
+}
+
+function TrialChoice({
+    trial,
+    error,
+}: {
+    trial: Props['trial'];
+    error?: string;
+}) {
+    const options = [
+        ...trial.applications,
+        { code: '', name: 'Not now', tagline: 'Add applications later.' },
+    ];
+
+    return (
+        <fieldset className="grid gap-2">
+            <legend className="text-sm font-medium">
+                Free trial ({trial.days} days)
+            </legend>
+            <p className="text-sm text-muted-foreground">
+                Choose an application to try free. No payment details are
+                needed.
+            </p>
+            <div className="mt-1 grid gap-2 sm:grid-cols-2">
+                {options.map((option) => (
+                    <label
+                        key={option.code || 'none'}
+                        className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
+                    >
+                        <input
+                            type="radio"
+                            name="trial_application"
+                            value={option.code}
+                            defaultChecked={
+                                option.code === (trial.selected ?? '')
+                            }
+                            className="mt-0.5 accent-primary"
+                        />
+                        <span>
+                            <span className="block font-medium">
+                                {option.name}
+                            </span>
+                            {option.tagline && (
+                                <span className="block text-muted-foreground">
+                                    {option.tagline}
+                                </span>
+                            )}
+                        </span>
+                    </label>
+                ))}
+            </div>
+            <InputError message={error} />
+        </fieldset>
     );
 }
 

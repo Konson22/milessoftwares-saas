@@ -13,6 +13,31 @@
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
 
+    /* Brand colours, sampled from the logo (public/images/logo-*.png):
+       navy wordmark, blue → cyan and teal → green tiles, gold accent. */
+    --color-brand-ink: #050f2b;
+    --color-brand-navy: #0a1f4e;
+    --color-brand-navy-light: #13306f;
+    --color-brand-blue: #0b5bd6;
+    --color-brand-blue-dark: #0a47a8;
+    --color-brand-cyan: #06c8ea;
+    --color-brand-teal: #0e8f80;
+    --color-brand-green: #16b364;
+    --color-brand-gold: #f2b631;
+    --color-brand-gold-light: #f7cd5c;
+    --color-brand-gold-dark: #c98a10;
+
+    /* Public site (always light): white and cool-grey sections, a pale
+       blue wash behind the hero, near-black ink and the brand blue.
+       site-black is the app sidebar in the home page's drawing. */
+    --color-site-ink: #0b1220;
+    --color-site-wash: #edf1ff;
+    --color-site-soft: #f8fafb;
+    --color-site-line: #e4e8ee;
+    --color-site-black: #070707;
+    --font-public:
+        'IBM Plex Sans', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);

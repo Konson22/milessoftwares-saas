@@ -1,6 +1,6 @@
-import { Check } from 'lucide-react';
-import { button } from '@/sites/public/components/styles';
-import { register } from '@/routes';
+import { Link } from '@inertiajs/react';
+import { ArrowRight, Check } from 'lucide-react';
+import { button, card } from '@/sites/public/components/styles';
 
 export type Plan = {
     code: string;
@@ -14,15 +14,18 @@ export type Plan = {
 };
 
 const per: Record<Plan['interval'], string> = {
-    monthly: 'per month',
-    yearly: 'per year',
+    monthly: '/ month',
+    yearly: '/ year',
     custom: 'billed by agreement',
 };
 
 /**
  * headingLevel keeps the outline intact: h2 directly under a page title,
- * h3 inside a section that already has an h2. Bundles stand out with a
- * brand border and glow.
+ * h3 inside a section that already has an h2. Bundles are the highlighted
+ * card, outlined in the accent.
+ *
+ * Every plan starts the same way: a free trial of the application from a
+ * new workspace (/start); billing follows once it ends.
  */
 export default function PlanCard({
     plan,
@@ -31,46 +34,51 @@ export default function PlanCard({
     plan: Plan;
     headingLevel?: 'h2' | 'h3';
 }) {
+    const featured = plan.isBundle;
+
     return (
         <li
-            className={`relative flex flex-col rounded-2xl border bg-card p-7 shadow-sm ${plan.isBundle ? 'border-primary shadow-xl ring-1 shadow-primary/15 ring-primary' : ''}`}
+            className={`${card} relative flex flex-col p-8 ${featured ? 'border-brand-blue ring-1 ring-brand-blue' : ''}`}
         >
-            {plan.isBundle && (
-                <span className="absolute -top-3 left-7 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground shadow-md shadow-primary/30">
-                    Bundle
-                </span>
-            )}
-            <Heading className="text-lg font-semibold">{plan.name}</Heading>
+            <div className="flex items-start justify-between gap-4">
+                <Heading className="text-xl font-bold tracking-tight">
+                    {plan.name}
+                </Heading>
+                {featured && (
+                    <span className="rounded-full bg-brand-blue px-3 py-1 text-xs font-semibold text-white">
+                        Bundle
+                    </span>
+                )}
+            </div>
             {plan.description && (
-                <p className="mt-2 text-sm text-muted-foreground">
+                <p className="mt-2 text-sm text-slate-600">
                     {plan.description}
                 </p>
             )}
-            <p className="mt-6 flex flex-wrap items-baseline gap-x-2">
-                <span className="text-4xl font-semibold tracking-tight tabular-nums">
+            <p className="mt-8 flex flex-wrap items-baseline gap-x-2">
+                <span className="text-4xl font-bold tracking-tight tabular-nums">
                     {plan.price}
                 </span>
                 {plan.price !== 'Free' && (
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-sm text-slate-600">
                         {per[plan.interval]}
                     </span>
                 )}
             </p>
-            <a
-                href={register.url()}
-                className={`mt-6 ${plan.isBundle ? button.primary : button.outline} py-2.5`}
+            <Link
+                href="/start"
+                className={`mt-7 ${featured ? button.primary : button.outline}`}
             >
-                {plan.trialDays > 0
-                    ? `Start a ${plan.trialDays}-day trial`
-                    : 'Get started'}
-                <span className="sr-only"> with {plan.name}</span>
-            </a>
-            <div className="mt-7 border-t pt-6">
-                <p className="text-sm font-medium">Includes</p>
-                <ul className="mt-3 space-y-2.5 text-sm">
+                Start free trial
+                <span className="sr-only"> of {plan.name}</span>
+                <ArrowRight className="size-4" aria-hidden />
+            </Link>
+            <div className="mt-8 border-t border-site-line pt-7">
+                <p className="text-sm font-semibold">Includes</p>
+                <ul className="mt-4 space-y-3 text-sm">
                     {plan.applications.map((application) => (
                         <li key={application} className="flex gap-2.5">
-                            <span className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                            <span className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
                                 <Check className="size-3" aria-hidden />
                             </span>
                             {application}

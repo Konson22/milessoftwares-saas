@@ -35,6 +35,19 @@ final class MarketingCatalog
     }
 
     /**
+     * Listed applications a new workspace can try today: released or in
+     * beta, not merely announced.
+     *
+     * @return list<array{code: string, name: string, tagline: string|null, description: string|null, status: string, features: list<string>}>
+     */
+    public function trialable(): array
+    {
+        $open = [ApplicationStatus::Available->value, ApplicationStatus::Beta->value];
+
+        return array_values(array_filter($this->products(), fn (array $product) => in_array($product['status'], $open, true)));
+    }
+
+    /**
      * @return array{code: string, name: string, tagline: string|null, description: string|null, status: string, features: list<string>}|null
      */
     public function product(string $code): ?array

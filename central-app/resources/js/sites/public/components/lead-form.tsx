@@ -100,7 +100,11 @@ export default function LeadForm({
                         }
                     />
 
-                    <Button type="submit" disabled={processing}>
+                    <Button
+                        type="submit"
+                        disabled={processing}
+                        className="h-12 rounded-full bg-brand-blue px-7 text-white hover:bg-brand-blue-dark"
+                    >
                         {submitLabel}
                     </Button>
                 </>

@@ -3,52 +3,21 @@
 namespace App\Sites\Public\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Applications\Enums\ApplicationKind;
-use App\Modules\Applications\Models\Application;
 use App\Modules\Marketing\Actions\SubmitLead;
-use App\Modules\Marketing\Support\MarketingCatalog;
 use App\Modules\Marketing\Support\SpamGuard;
 use App\Support\Hosts\PlatformHosts;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Demo request and contact forms. Spam is answered exactly like a real
- * submission, so the thank-you page tells a bot nothing.
+ * The contact form. Spam is answered exactly like a real submission, so the
+ * thank-you page tells a bot nothing.
  */
 class LeadController extends Controller
 {
     public function __construct(private readonly SubmitLead $leads) {}
-
-    public function demoForm(Request $request, MarketingCatalog $catalog): Response
-    {
-        return Inertia::render('public/demo', [
-            'products' => array_map(fn (array $product) => ['code' => $product['code'], 'name' => $product['name']], $catalog->products()),
-            'selected' => $request->string('product')->toString() ?: null,
-            'formToken' => SpamGuard::issueToken(),
-            'canonical' => PlatformHosts::url(PlatformHosts::root(), 'demo'),
-        ]);
-    }
-
-    public function storeDemo(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            ...$this->contactRules(),
-            'product' => ['nullable', 'string', Rule::exists('applications', 'code')->whereNot('kind', ApplicationKind::Platform->value)],
-            'preferred_contact_time' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        $this->leads->demo($request, [
-            ...$this->contactFields($validated),
-            'application_id' => isset($validated['product']) ? Application::query()->where('code', $validated['product'])->value('id') : null,
-            'preferred_contact_time' => $validated['preferred_contact_time'] ?? null,
-        ]);
-
-        return redirect()->route('marketing.thanks');
-    }
 
     public function contactForm(): Response
     {

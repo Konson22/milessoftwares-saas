@@ -1,6 +1,12 @@
+import { Link } from '@inertiajs/react';
+import { ArrowRight, Clock, Rocket } from 'lucide-react';
 import LeadForm, { Field } from '@/sites/public/components/lead-form';
-import PageHero from '@/sites/public/components/page-hero';
+import PageHero, {
+    Accent,
+    HeroBadge,
+} from '@/sites/public/components/page-hero';
 import Seo from '@/sites/public/components/seo';
+import { button, card, iconChip } from '@/sites/public/components/styles';
 
 type Props = {
     formToken: string;
@@ -17,17 +23,54 @@ export default function Contact({ formToken, canonical }: Props) {
             />
 
             <PageHero
-                padding="pt-16 pb-36 sm:pt-20 sm:pb-40"
-                className="text-center [&_h1]:mx-auto [&_p]:mx-auto"
-                title="Contact us"
-                intro="We reply within one working day."
+                padding="pt-16 pb-36 sm:pt-24 sm:pb-40"
+                eyebrow={<HeroBadge>Contact</HeroBadge>}
+                title={
+                    <>
+                        Get in <Accent>touch</Accent>
+                    </>
+                }
+                intro="Questions about an application, pricing or a partnership? Send us a message and we reply within one working day."
             />
 
             <section
                 aria-label="Message"
-                className="mx-auto max-w-3xl px-4 pb-24"
+                className="relative mx-auto -mt-24 grid max-w-7xl gap-5 px-4 pb-24 sm:px-6 lg:grid-cols-[20rem_1fr]"
             >
-                <div className="relative -mt-24 rounded-2xl border bg-card p-6 shadow-xl sm:p-10">
+                <aside className="space-y-5">
+                    <div className={`${card} p-7`}>
+                        <span className={`${iconChip} size-12`}>
+                            <Clock className="size-5" aria-hidden />
+                        </span>
+                        <p className="mt-5 text-lg font-semibold">
+                            One working day
+                        </p>
+                        <p className="mt-1 text-sm text-slate-600">
+                            Every message reaches our team, and we reply within
+                            one working day.
+                        </p>
+                    </div>
+                    <div className={`${card} p-7`}>
+                        <span className={`${iconChip} size-12`}>
+                            <Rocket className="size-5" aria-hidden />
+                        </span>
+                        <p className="mt-5 text-lg font-semibold">
+                            Rather try it yourself?
+                        </p>
+                        <p className="mt-1 text-sm text-slate-600">
+                            Every application starts with a free trial.
+                        </p>
+                        <Link
+                            href="/start"
+                            className={`mt-5 ${button.primary} py-2.5`}
+                        >
+                            Start free trial
+                            <ArrowRight className="size-4" aria-hidden />
+                        </Link>
+                    </div>
+                </aside>
+
+                <div className={`${card} p-6 sm:p-10`}>
                     <LeadForm
                         action="/contact"
                         formToken={formToken}

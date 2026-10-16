@@ -97,13 +97,15 @@ return [
     | Public site
     |--------------------------------------------------------------------------
     |
-    | Demo requests and contact messages notify this address (falls back to
-    | the mail from-address).
+    | Contact messages notify this address (falls back to the mail
+    | from-address). A new workspace may start a free trial of one
+    | application for trial_days.
     |
     */
 
     'marketing' => [
         'sales_email' => env('PLATFORM_SALES_EMAIL'),
+        'trial_days' => (int) env('PLATFORM_TRIAL_DAYS', 60),
     ],
 
     /*

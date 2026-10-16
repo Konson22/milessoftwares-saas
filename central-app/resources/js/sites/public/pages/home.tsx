@@ -2,26 +2,45 @@ import { Link } from '@inertiajs/react';
 import {
     ArrowRight,
     Building2,
+    Check,
     KeyRound,
     Receipt,
     ShieldCheck,
 } from 'lucide-react';
-import AppLogoIcon from '@/shared/components/app-logo-icon';
-import PageHero, { HeroBackdrop } from '@/sites/public/components/page-hero';
-import { productIcon, statusLabel } from '@/sites/public/components/product';
+import type { LucideIcon } from 'lucide-react';
+import FaqList from '@/sites/public/components/faq';
+import PageHero, {
+    Accent,
+    HeroBadge,
+} from '@/sites/public/components/page-hero';
+import {
+    ProductTile,
+    productIcon,
+    statusLabel,
+} from '@/sites/public/components/product';
 import type { Product } from '@/sites/public/components/product';
+import SectionHeading from '@/sites/public/components/section-heading';
+import ProductArt from '@/sites/public/components/product-art';
 import Seo from '@/sites/public/components/seo';
-import { button, textLink } from '@/sites/public/components/styles';
+import {
+    button,
+    card,
+    display,
+    iconChip,
+    textLink,
+    trialDuration,
+    trialLength,
+    trialUrl,
+} from '@/sites/public/components/styles';
 import WorkspacePreview from '@/sites/public/components/workspace-preview';
-import { register } from '@/routes';
 
 type Props = {
     products: Product[];
+    trialDays: number;
     canonical: string;
 };
 
-// What every application shares by running on the platform.
-const platform = [
+const features: { icon: LucideIcon; title: string; body: string }[] = [
     {
         icon: KeyRound,
         title: 'One sign-in',
@@ -44,9 +63,22 @@ const platform = [
     },
 ];
 
-export default function MarketingHome({ products, canonical }: Props) {
-    // The hub drawing only reads as a network with a few applications in it.
-    const showHub = products.length >= 3;
+export default function MarketingHome({
+    products,
+    trialDays,
+    canonical,
+}: Props) {
+    const trial = trialLength(trialDays);
+
+    // Facts from the registry and the trial setting, not marketing figures.
+    const stats = [
+        {
+            value: String(products.length),
+            label: 'Applications, live and coming soon',
+        },
+        { value: String(trialDays), label: 'Days free, no payment details' },
+        { value: '1', label: 'Sign-in for your whole team' },
+    ];
 
     return (
         <>
@@ -63,53 +95,119 @@ export default function MarketingHome({ products, canonical }: Props) {
             />
 
             <PageHero
-                padding="pt-20 pb-16 sm:pt-28 sm:pb-24"
+                padding="pt-16 pb-16 sm:pt-24 sm:pb-20"
                 eyebrow={
-                    <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-zinc-300">
-                        <span className="size-1.5 rounded-full bg-primary shadow-[0_0_8px] shadow-primary" />
-                        Business software by Miles Global Link Co. Ltd
-                    </p>
+                    <HeroBadge>
+                        {trial} free trial on every application
+                    </HeroBadge>
                 }
                 title={
                     <>
                         One account for{' '}
-                        <span className="bg-linear-to-r from-sky-300 via-primary to-indigo-400 bg-clip-text text-transparent">
-                            all your business software.
-                        </span>
+                        <Accent>all your business software</Accent>
                     </>
                 }
                 intro="Run every part of your organization from one workspace: one sign-in for your team, one place to manage who can do what, one subscription."
             >
-                <div className="mt-10 flex flex-wrap gap-3">
-                    <a href={register.url()} className={button.primary}>
-                        Create your workspace
+                <div className="mt-9 flex flex-wrap justify-center gap-3">
+                    <Link href="/start" className={button.primary}>
+                        Start your free trial
                         <ArrowRight className="size-4" aria-hidden />
-                    </a>
-                    <Link href="/demo" className={button.outlineDark}>
-                        Book a demo
                     </Link>
+                    <a href="#products" className={button.outline}>
+                        Explore applications
+                    </a>
                 </div>
+                <ul className="mt-7 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-slate-600">
+                    {[
+                        `Free for ${trialDuration(trialDays)}`,
+                        'No payment details',
+                        'Your whole team on one sign-in',
+                    ].map((point) => (
+                        <li key={point} className="flex items-center gap-1.5">
+                            <span className="inline-flex size-4 items-center justify-center rounded-full bg-emerald-500 text-white">
+                                <Check className="size-3" aria-hidden />
+                            </span>
+                            {point}
+                        </li>
+                    ))}
+                </ul>
+
                 {products.length > 0 && (
-                    <div className="mt-16 sm:mt-20">
+                    <div className="relative mt-14 w-full max-w-5xl sm:mt-16">
+                        <FloatingApps products={products} />
                         <WorkspacePreview products={products} />
                     </div>
                 )}
+
+                <dl className="mt-14 grid w-full max-w-4xl gap-4 sm:grid-cols-3">
+                    {stats.map((stat) => (
+                        <div
+                            key={stat.label}
+                            className={`${card} flex flex-col-reverse items-center px-6 py-6`}
+                        >
+                            <dt className="mt-1 text-sm text-slate-600">
+                                {stat.label}
+                            </dt>
+                            <dd className="text-4xl font-bold tracking-tight text-site-ink">
+                                {stat.value}
+                            </dd>
+                        </div>
+                    ))}
+                </dl>
             </PageHero>
+
+            <section
+                aria-labelledby="platform-heading"
+                className="mx-auto max-w-7xl px-4 py-24 sm:px-6"
+            >
+                <SectionHeading
+                    id="platform-heading"
+                    label="Platform"
+                    title={
+                        <>
+                            Built as <Accent>one platform</Accent>, not a pile
+                            of tools
+                        </>
+                    }
+                    lead="Every application runs on the same foundation: the same people, the same structure, the same subscription."
+                />
+                <ul className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                    {features.map(({ icon: Icon, title, body }) => (
+                        <li key={title} className={`${card} p-7 text-center`}>
+                            <span className={`${iconChip} size-14`}>
+                                <Icon className="size-6" aria-hidden />
+                            </span>
+                            <h3 className="mt-6 text-lg font-semibold">
+                                {title}
+                            </h3>
+                            <p className="mt-2 text-sm text-slate-600">
+                                {body}
+                            </p>
+                        </li>
+                    ))}
+                </ul>
+            </section>
 
             <section
                 id="products"
                 aria-labelledby="products-heading"
-                className="scroll-mt-16"
+                className="scroll-mt-20 border-y border-site-line bg-site-soft"
             >
-                <div className="mx-auto max-w-6xl px-4 py-24">
+                <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6">
                     <SectionHeading
                         id="products-heading"
-                        eyebrow="Products"
-                        title="Applications"
-                        intro="Start with the one you need and add more as you grow. They all share your team, your structure and your subscription."
+                        label="Applications"
+                        title={
+                            <>
+                                Everything your business runs on,{' '}
+                                <Accent>in one place</Accent>
+                            </>
+                        }
+                        lead="Start with the one you need and add more as you grow. They all share your team, your structure and your subscription."
                     />
                     {products.length === 0 ? (
-                        <p className="mt-10 text-muted-foreground">
+                        <p className="mt-12 text-center">
                             Our applications are being prepared.{' '}
                             <Link href="/contact" className={textLink}>
                                 Contact us
@@ -117,7 +215,7 @@ export default function MarketingHome({ products, canonical }: Props) {
                             to hear first.
                         </p>
                     ) : (
-                        <ul className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <ul className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                             {products.map((product) => (
                                 <ProductCard
                                     key={product.code}
@@ -130,62 +228,111 @@ export default function MarketingHome({ products, canonical }: Props) {
             </section>
 
             <section
-                aria-labelledby="platform-heading"
-                className="border-y bg-muted/40"
+                id="how-it-works"
+                aria-labelledby="how-heading"
+                className="mx-auto max-w-7xl scroll-mt-20 px-4 py-24 sm:px-6"
             >
-                <div
-                    className={`mx-auto grid max-w-6xl items-center gap-16 px-4 py-24 ${showHub ? 'lg:grid-cols-[1fr_26rem]' : ''}`}
-                >
-                    <div>
-                        <SectionHeading
-                            id="platform-heading"
-                            eyebrow="Platform"
-                            title="Built as one platform, not a pile of tools"
-                        />
-                        <ul
-                            className={`mt-12 grid gap-x-10 gap-y-10 sm:grid-cols-2 ${showHub ? '' : 'lg:grid-cols-4'}`}
-                        >
-                            {platform.map(({ icon: Icon, title, body }) => (
-                                <li key={title} className="flex gap-4">
-                                    <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-md shadow-primary/30">
-                                        <Icon className="size-5" aria-hidden />
-                                    </span>
-                                    <div>
-                                        <h3 className="font-semibold">
-                                            {title}
-                                        </h3>
-                                        <p className="mt-1.5 text-sm text-muted-foreground">
-                                            {body}
-                                        </p>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                    {showHub && <PlatformHub products={products} />}
+                <SectionHeading
+                    id="how-heading"
+                    label="How it works"
+                    title={
+                        <>
+                            Try any application free for{' '}
+                            <Accent>{trialDuration(trialDays)}</Accent>
+                        </>
+                    }
+                    lead="Three steps from here to working in your own workspace."
+                />
+                <ol className="mt-14 grid gap-5 md:grid-cols-3">
+                    {[
+                        {
+                            title: 'Choose an application',
+                            body: 'Pick the one your business needs first. You can add the others later.',
+                        },
+                        {
+                            title: 'Create your workspace',
+                            body: 'Sign in or create an account, then name your organization and choose its address.',
+                        },
+                        {
+                            title: `Use it free for ${trialDuration(trialDays)}`,
+                            body: 'Invite your team and start working. No payment details are needed to start.',
+                        },
+                    ].map((step, i) => (
+                        <li key={step.title} className={`${card} p-7`}>
+                            <span className="inline-flex size-11 items-center justify-center rounded-full bg-brand-blue text-lg font-bold text-white">
+                                {i + 1}
+                            </span>
+                            <h3 className="mt-6 text-lg font-semibold">
+                                {step.title}
+                            </h3>
+                            <p className="mt-2 text-sm text-slate-600">
+                                {step.body}
+                            </p>
+                        </li>
+                    ))}
+                </ol>
+                <div className="mt-12 flex justify-center">
+                    <Link href="/start" className={button.primary}>
+                        Choose your application
+                        <ArrowRight className="size-4" aria-hidden />
+                    </Link>
                 </div>
             </section>
 
-            <section aria-labelledby="cta-heading" className="px-4 py-24">
-                <div className="relative isolate mx-auto max-w-6xl overflow-hidden rounded-3xl bg-zinc-950 px-6 py-16 text-center sm:px-12 sm:py-20">
-                    <HeroBackdrop />
+            <section
+                aria-labelledby="faq-heading"
+                className="border-t border-site-line bg-site-soft"
+            >
+                <div className="mx-auto grid max-w-7xl gap-12 px-4 py-24 sm:px-6 lg:grid-cols-[1fr_1.5fr] lg:gap-16">
+                    <div>
+                        <SectionHeading
+                            id="faq-heading"
+                            label="FAQs"
+                            title="Common questions"
+                            align="left"
+                        />
+                        <p className="mt-6 max-w-sm text-slate-600">
+                            Something else on your mind?{' '}
+                            <Link href="/contact" className={textLink}>
+                                Ask us
+                            </Link>{' '}
+                            and we reply within one working day.
+                        </p>
+                    </div>
+                    <FaqList trialDays={trialDays} />
+                </div>
+            </section>
+
+            <section
+                aria-labelledby="cta-heading"
+                className="px-4 py-24 sm:px-6"
+            >
+                <div className="relative isolate mx-auto max-w-7xl overflow-hidden rounded-3xl bg-linear-to-br from-brand-blue to-brand-blue-dark px-6 py-16 text-center text-white sm:px-12 sm:py-20">
+                    <div
+                        aria-hidden
+                        className="absolute -top-24 -right-24 -z-10 size-72 rounded-full border-[40px] border-white/10"
+                    />
+                    <div
+                        aria-hidden
+                        className="absolute -bottom-32 -left-20 -z-10 size-80 rounded-full border-[40px] border-white/5"
+                    />
                     <h2
                         id="cta-heading"
-                        className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl"
+                        className="mx-auto max-w-3xl text-3xl font-bold tracking-tight text-balance sm:text-5xl"
                     >
                         Ready to bring your business together?
                     </h2>
-                    <p className="mx-auto mt-4 max-w-xl text-zinc-400">
-                        Create a workspace for your organization, or talk to us
-                        and we will walk you through it.
+                    <p className="mx-auto mt-5 max-w-xl text-white/85">
+                        Start a {trial} free trial today, or talk to us and we
+                        will walk you through it.
                     </p>
-                    <div className="mt-10 flex flex-wrap justify-center gap-3">
-                        <a href={register.url()} className={button.light}>
-                            Create your workspace
+                    <div className="mt-9 flex flex-wrap justify-center gap-3">
+                        <Link href="/start" className={button.light}>
+                            Start your free trial
                             <ArrowRight className="size-4" aria-hidden />
-                        </a>
-                        <Link href="/pricing" className={button.outlineDark}>
-                            See pricing
+                        </Link>
+                        <Link href="/contact" className={button.outlineDark}>
+                            Talk to us
                         </Link>
                     </div>
                 </div>
@@ -194,161 +341,120 @@ export default function MarketingHome({ products, canonical }: Props) {
     );
 }
 
-function SectionHeading({
-    id,
-    eyebrow,
-    title,
-    intro,
-}: {
-    id: string;
-    eyebrow: string;
-    title: string;
-    intro?: string;
-}) {
-    return (
-        <>
-            <p className="text-sm font-semibold tracking-wide text-primary uppercase">
-                {eyebrow}
-            </p>
-            <h2
-                id={id}
-                className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl"
-            >
-                {title}
-            </h2>
-            {intro && (
-                <p className="mt-4 max-w-xl text-lg text-pretty text-muted-foreground">
-                    {intro}
-                </p>
-            )}
-        </>
-    );
-}
-
-function ProductCard({ product }: { product: Product }) {
-    const Icon = productIcon(product.code);
-
-    return (
-        <li className="group relative flex flex-col overflow-hidden rounded-2xl border bg-card p-6 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring">
-            <div
-                aria-hidden
-                className="pointer-events-none absolute -top-24 -right-24 size-48 rounded-full bg-primary/10 opacity-0 blur-2xl transition-opacity group-hover:opacity-100"
-            />
-            <div className="flex items-start justify-between gap-2">
-                <span className="inline-flex size-12 items-center justify-center rounded-xl bg-linear-to-br from-primary to-indigo-600 text-white shadow-md shadow-primary/25">
-                    <Icon className="size-6" aria-hidden />
-                </span>
-                {statusLabel[product.status] && (
-                    <span className="rounded-full border px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                        {statusLabel[product.status]}
-                    </span>
-                )}
-            </div>
-            <h3 className="mt-6 text-lg font-semibold">
-                {/* The whole card is clickable through this link. */}
-                <Link
-                    href={`/products/${product.code}`}
-                    className="after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none"
-                >
-                    {product.name}
-                </Link>
-            </h3>
-            <p className="mt-2 flex-1 text-sm text-muted-foreground">
-                {product.tagline ?? product.description}
-            </p>
-            <span
-                aria-hidden
-                className="mt-6 inline-flex items-center gap-1 text-sm font-medium text-primary"
-            >
-                Learn more
-                <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
-            </span>
-        </li>
-    );
-}
-
 /**
- * The applications arranged around the workspace they share. Decorative:
- * the section's text says the same thing.
+ * Application names in small white pills, floating at the edges of the
+ * workspace drawing on wide screens. Decorative: the same list is in the
+ * applications section.
  */
-function PlatformHub({ products }: { products: Product[] }) {
-    const apps = products.slice(0, 6);
+function FloatingApps({ products }: { products: Product[] }) {
+    const spots = [
+        '-top-6 -left-10 -rotate-6',
+        'top-1/3 -right-14 rotate-3',
+        '-bottom-6 left-1/4 rotate-2',
+        'top-1/2 -left-16 -rotate-3',
+    ];
 
     return (
-        <div
-            aria-hidden
-            className="relative mx-auto aspect-square w-full max-w-sm"
-        >
-            <svg
-                viewBox="0 0 100 100"
-                className="absolute inset-0 size-full text-primary/30"
-            >
-                <circle
-                    cx="50"
-                    cy="50"
-                    r="38"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="0.3"
-                    strokeDasharray="1 1.5"
-                />
-                <circle
-                    cx="50"
-                    cy="50"
-                    r="22"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="0.3"
-                />
-                {apps.map((product, i) => {
-                    const [x, y] = orbit(i, apps.length);
-
-                    return (
-                        <line
-                            key={product.code}
-                            x1="50"
-                            y1="50"
-                            x2={x}
-                            y2={y}
-                            stroke="currentColor"
-                            strokeWidth="0.4"
-                        />
-                    );
-                })}
-            </svg>
-            <div className="absolute top-1/2 left-1/2 flex size-24 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-3xl border bg-background shadow-2xl ring-8 shadow-primary/20 ring-primary/5">
-                <AppLogoIcon className="size-12" alt="" />
-            </div>
-            {apps.map((product, i) => {
-                const [x, y] = orbit(i, apps.length);
+        <div aria-hidden className="hidden lg:block">
+            {products.slice(0, spots.length).map((product, i) => {
                 const Icon = productIcon(product.code);
 
                 return (
-                    <div
+                    <span
                         key={product.code}
-                        className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
-                        style={{ left: `${x}%`, top: `${y}%` }}
+                        className={`absolute z-10 inline-flex items-center gap-2 rounded-full border border-site-line bg-white py-1.5 pr-4 pl-1.5 text-sm font-semibold shadow-lg shadow-site-ink/10 ${spots[i]}`}
                     >
-                        <span className="inline-flex size-12 items-center justify-center rounded-xl border bg-background text-primary shadow-lg">
-                            <Icon className="size-5" />
+                        <span className={`${iconChip} size-7 rounded-full`}>
+                            <Icon className="size-3.5" />
                         </span>
-                        {/* Background so the spoke behind it doesn't strike through. */}
-                        <span className="rounded bg-background px-1.5 text-xs font-medium whitespace-nowrap text-muted-foreground">
-                            {product.name}
-                        </span>
-                    </div>
+                        {product.name}
+                    </span>
                 );
             })}
         </div>
     );
 }
 
-/** Position of the i-th of n points on the outer ring, starting at the top. */
-function orbit(i: number, n: number): [number, number] {
-    const angle = (i / n) * 2 * Math.PI - Math.PI / 2;
+function ProductCard({ product }: { product: Product }) {
+    const trialable = product.status !== 'planned';
+    const href = `/products/${product.code}`;
 
-    // Rounded so server and browser render identical markup.
-    const round = (value: number) => Math.round(value * 100) / 100;
-
-    return [round(50 + 38 * Math.cos(angle)), round(50 + 38 * Math.sin(angle))];
+    return (
+        <li className={`${card} group flex flex-col overflow-hidden`}>
+            <ProductArt code={product.code} />
+            <div className="flex flex-1 flex-col p-6">
+                <div className="flex items-center gap-3">
+                    <ProductTile code={product.code} size="sm" />
+                    <h3 className={`text-xl ${display}`}>
+                        <Link href={href} className="hover:text-brand-blue">
+                            {product.name}
+                        </Link>
+                    </h3>
+                    {statusLabel[product.status] && (
+                        <span
+                            className={`ml-auto shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${product.status === 'beta' ? 'bg-brand-blue/10 text-brand-blue' : 'bg-amber-100 text-amber-800'}`}
+                        >
+                            {statusLabel[product.status]}
+                        </span>
+                    )}
+                </div>
+                <div className="flex-1">
+                    {product.tagline && (
+                        <p className="mt-4 font-semibold">{product.tagline}</p>
+                    )}
+                    {product.description && (
+                        <p className="mt-1.5 text-sm text-slate-600">
+                            {product.description}
+                        </p>
+                    )}
+                    {product.features.length > 0 && (
+                        <ul className="mt-5 space-y-2 text-sm">
+                            {product.features.slice(0, 3).map((feature) => (
+                                <li key={feature} className="flex gap-2">
+                                    <Check
+                                        className="mt-0.5 size-4 shrink-0 text-emerald-500"
+                                        aria-hidden
+                                    />
+                                    {feature}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+                <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-site-line pt-5 text-sm font-semibold">
+                    {trialable ? (
+                        <a
+                            href={trialUrl(product.code)}
+                            className="inline-flex items-center gap-1 text-brand-blue hover:underline"
+                        >
+                            Start free trial
+                            <span className="sr-only"> of {product.name}</span>
+                            <ArrowRight
+                                className="size-4 transition-transform group-hover:translate-x-0.5"
+                                aria-hidden
+                            />
+                        </a>
+                    ) : (
+                        <Link
+                            href="/contact"
+                            className="inline-flex items-center gap-1 text-brand-blue hover:underline"
+                        >
+                            Notify me
+                            <span className="sr-only">
+                                {' '}
+                                when {product.name} launches
+                            </span>
+                        </Link>
+                    )}
+                    <Link
+                        href={href}
+                        className="text-slate-600 hover:text-site-ink"
+                    >
+                        Learn more
+                        <span className="sr-only"> about {product.name}</span>
+                    </Link>
+                </div>
+            </div>
+        </li>
+    );
 }

@@ -1,25 +1,38 @@
 import { Link } from '@inertiajs/react';
-import { ArrowLeft, Check } from 'lucide-react';
-import PageHero from '@/sites/public/components/page-hero';
+import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import PageHero, { Accent } from '@/sites/public/components/page-hero';
 import PlanCard from '@/sites/public/components/plan-card';
 import type { Plan } from '@/sites/public/components/plan-card';
-import { productIcon, statusLabel } from '@/sites/public/components/product';
+import { ProductTile, statusLabel } from '@/sites/public/components/product';
 import type { Product } from '@/sites/public/components/product';
+import SectionHeading from '@/sites/public/components/section-heading';
 import Seo from '@/sites/public/components/seo';
-import { button } from '@/sites/public/components/styles';
+import {
+    button,
+    card,
+    trialDuration,
+    trialLength,
+    trialUrl,
+} from '@/sites/public/components/styles';
 
 type Props = {
     product: Product;
     plans: Plan[];
+    trialDays: number;
     canonical: string;
 };
 
-export default function ProductPage({ product, plans, canonical }: Props) {
+export default function ProductPage({
+    product,
+    plans,
+    trialDays,
+    canonical,
+}: Props) {
     const summary =
         product.tagline ??
         product.description ??
         `${product.name} by Miles Global Softwares.`;
-    const Icon = productIcon(product.code);
+    const trialable = product.status !== 'planned';
 
     return (
         <>
@@ -42,42 +55,45 @@ export default function ProductPage({ product, plans, canonical }: Props) {
                     <>
                         <Link
                             href="/#products"
-                            className="inline-flex items-center gap-1 text-sm text-zinc-400 transition-colors hover:text-white"
+                            className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 transition-colors hover:text-brand-blue"
                         >
                             <ArrowLeft className="size-4" aria-hidden />
                             All applications
                         </Link>
                         <div className="mt-8 mb-6 flex items-center gap-3">
-                            <span className="inline-flex size-14 items-center justify-center rounded-2xl bg-linear-to-br from-primary to-indigo-600 text-white shadow-lg shadow-primary/40">
-                                <Icon className="size-7" aria-hidden />
-                            </span>
+                            <ProductTile code={product.code} size="lg" />
                             {statusLabel[product.status] && (
-                                <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-zinc-200">
+                                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
                                     {statusLabel[product.status]}
                                 </span>
                             )}
                         </div>
                     </>
                 }
-                title={product.name}
+                title={<Accent>{product.name}</Accent>}
                 intro={product.tagline}
             >
                 {product.description && (
-                    <p className="mt-4 max-w-2xl text-zinc-300">
+                    <p className="mt-3 max-w-2xl text-slate-600">
                         {product.description}
                     </p>
                 )}
-                <div className="mt-10 flex flex-wrap gap-3">
-                    <Link
-                        href={`/demo?product=${product.code}`}
-                        className={button.primary}
-                    >
-                        {product.status === 'planned'
-                            ? 'Tell me when it launches'
-                            : `Book a ${product.name} demo`}
-                    </Link>
-                    {product.status !== 'planned' && plans.length > 0 && (
-                        <a href="#plans" className={button.outlineDark}>
+                <div className="mt-9 flex flex-wrap justify-center gap-3">
+                    {trialable ? (
+                        <a
+                            href={trialUrl(product.code)}
+                            className={button.primary}
+                        >
+                            Start {trialLength(trialDays)} free trial
+                            <ArrowRight className="size-4" aria-hidden />
+                        </a>
+                    ) : (
+                        <Link href="/contact" className={button.primary}>
+                            Tell me when it launches
+                        </Link>
+                    )}
+                    {trialable && plans.length > 0 && (
+                        <a href="#plans" className={button.outline}>
                             See plans
                         </a>
                     )}
@@ -85,17 +101,29 @@ export default function ProductPage({ product, plans, canonical }: Props) {
             </PageHero>
 
             {product.features.length > 0 && (
-                <section aria-label="Features" className="relative">
-                    <ul className="mx-auto grid max-w-6xl gap-4 px-4 py-20 sm:grid-cols-2 lg:grid-cols-3">
+                <section
+                    aria-labelledby="features-heading"
+                    className="mx-auto max-w-7xl px-4 py-24 sm:px-6"
+                >
+                    <SectionHeading
+                        id="features-heading"
+                        label="Features"
+                        title={
+                            <>
+                                What <Accent>{product.name}</Accent> does
+                            </>
+                        }
+                    />
+                    <ul className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                         {product.features.map((feature) => (
                             <li
                                 key={feature}
-                                className="flex items-start gap-3 rounded-2xl border bg-card p-5 shadow-sm"
+                                className={`${card} flex items-start gap-4 p-6`}
                             >
-                                <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                    <Check className="size-4" aria-hidden />
+                                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
+                                    <Check className="size-5" aria-hidden />
                                 </span>
-                                <span className="pt-1 font-medium">
+                                <span className="pt-2 font-semibold">
                                     {feature}
                                 </span>
                             </li>
@@ -108,20 +136,52 @@ export default function ProductPage({ product, plans, canonical }: Props) {
                 <section
                     id="plans"
                     aria-labelledby="plans-heading"
-                    className="scroll-mt-16 border-t bg-muted/40"
+                    className="scroll-mt-20 border-y border-site-line bg-site-soft"
                 >
-                    <div className="mx-auto max-w-6xl px-4 py-20">
-                        <h2
+                    <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6">
+                        <SectionHeading
                             id="plans-heading"
-                            className="text-3xl font-semibold tracking-tight"
-                        >
-                            Plans that include {product.name}
-                        </h2>
-                        <ul className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                            label="Pricing"
+                            title={`Plans that include ${product.name}`}
+                        />
+                        <ul className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                             {plans.map((plan) => (
                                 <PlanCard key={plan.code} plan={plan} />
                             ))}
                         </ul>
+                    </div>
+                </section>
+            )}
+
+            {trialable && (
+                <section
+                    aria-labelledby="try-heading"
+                    className="px-4 py-24 sm:px-6"
+                >
+                    <div className="relative isolate mx-auto flex max-w-7xl flex-col items-center gap-6 overflow-hidden rounded-3xl bg-linear-to-br from-brand-blue to-brand-blue-dark px-6 py-16 text-center text-white sm:px-12">
+                        <div
+                            aria-hidden
+                            className="absolute -top-24 -right-24 -z-10 size-72 rounded-full border-[40px] border-white/10"
+                        />
+                        <h2
+                            id="try-heading"
+                            className="text-3xl font-bold tracking-tight text-balance sm:text-5xl"
+                        >
+                            Try {product.name} free for{' '}
+                            {trialDuration(trialDays)}
+                        </h2>
+                        <p className="max-w-xl text-white/85">
+                            Create your workspace and start today. No payment
+                            details are needed.
+                        </p>
+                        <a
+                            href={trialUrl(product.code)}
+                            className={button.light}
+                        >
+                            Start free trial
+                            <span className="sr-only"> of {product.name}</span>
+                            <ArrowRight className="size-4" aria-hidden />
+                        </a>
                     </div>
                 </section>
             )}

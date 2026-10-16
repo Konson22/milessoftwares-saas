@@ -11,7 +11,7 @@ class SeoController extends Controller
 {
     public function sitemap(MarketingCatalog $catalog): Response
     {
-        $paths = ['', 'pricing', 'demo', 'contact'];
+        $paths = ['', 'start', 'pricing', 'contact'];
 
         foreach ($catalog->products() as $product) {
             $paths[] = 'products/'.$product['code'];

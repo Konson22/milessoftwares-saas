@@ -1,37 +1,37 @@
 import type { ReactNode } from 'react';
+import { display, eyebrow } from '@/sites/public/components/styles';
 
 /**
- * The dark band every public page opens with, carrying the page's h1.
- * It stays dark in both themes; the header above it is dark too, so the
- * two read as one surface.
+ * The band public pages open with, carrying the page's h1: centred, on a
+ * pale blue wash that fades to white.
  */
 export default function PageHero({
-    eyebrow,
+    eyebrow: badge,
     title,
     intro,
     children,
-    className = '',
-    padding = 'pt-16 pb-20 sm:pt-20 sm:pb-24',
+    padding = 'pt-16 pb-20 sm:pt-24 sm:pb-24',
 }: {
     eyebrow?: ReactNode;
     title: ReactNode;
     intro?: ReactNode;
     children?: ReactNode;
-    className?: string;
     padding?: string;
 }) {
     return (
-        <section
-            className={`relative isolate overflow-hidden bg-zinc-950 text-zinc-300 ${className}`}
-        >
+        <section className="relative isolate overflow-hidden bg-linear-to-b from-site-wash to-white">
             <HeroBackdrop />
-            <div className={`mx-auto max-w-6xl px-4 ${padding}`}>
-                {eyebrow}
-                <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-balance text-white sm:text-5xl">
+            <div
+                className={`mx-auto flex max-w-7xl flex-col items-center px-4 text-center sm:px-6 ${padding}`}
+            >
+                {badge}
+                <h1
+                    className={`max-w-4xl text-4xl leading-[1.1] sm:text-6xl ${display}`}
+                >
                     {title}
                 </h1>
                 {intro && (
-                    <p className="mt-5 max-w-xl text-lg text-pretty text-zinc-400">
+                    <p className="mt-6 max-w-2xl text-lg text-pretty text-slate-600">
                         {intro}
                     </p>
                 )}
@@ -41,16 +41,27 @@ export default function PageHero({
     );
 }
 
-/** Grid lines and a brand glow behind the dark band. */
+/** A faint grid fading out from the top, under the wash. */
 export function HeroBackdrop() {
     return (
         <div
             aria-hidden
-            className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
-        >
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,rgb(255_255_255/0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgb(255_255_255/0.05)_1px,transparent_1px)] mask-[radial-gradient(ellipse_70%_60%_at_50%_0%,black,transparent)] bg-size-[48px_48px]" />
-            <div className="absolute -top-48 left-1/2 h-112 w-4xl -translate-x-1/2 rounded-full bg-primary/30 blur-[120px]" />
-            <div className="absolute inset-x-0 bottom-0 h-px bg-linear-to-r from-transparent via-white/15 to-transparent" />
-        </div>
+            className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(to_right,rgb(11_91_214/0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgb(11_91_214/0.06)_1px,transparent_1px)] mask-[radial-gradient(ellipse_70%_60%_at_50%_0%,black,transparent)] bg-size-[48px_48px]"
+        />
+    );
+}
+
+/** The highlighted phrase of a heading, in the brand blue. */
+export function Accent({ children }: { children: ReactNode }) {
+    return <span className="text-brand-blue">{children}</span>;
+}
+
+/** Pill above a hero title, with a blue dot. */
+export function HeroBadge({ children }: { children: ReactNode }) {
+    return (
+        <p className={`mb-7 ${eyebrow}`}>
+            <span className="size-2 rounded-full bg-brand-blue" />
+            {children}
+        </p>
     );
 }

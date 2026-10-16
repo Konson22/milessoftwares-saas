@@ -26,9 +26,12 @@ Route::domain(PlatformHosts::root())->group(function () {
         Route::get('products/{code}', [PageController::class, 'product'])->where('code', '[a-z][a-z0-9_]*')->name('product');
         Route::get('pricing', [PageController::class, 'pricing'])->name('pricing');
 
+        // Choose an application and start its free trial (a new workspace).
+        Route::get('start', [PageController::class, 'start'])->name('start');
+        // Demo requests were replaced by self-serve trials; keep old links working.
+        Route::get('demo', fn () => redirect()->route('marketing.start', status: 301));
+
         // Public forms: rate limited per IP in front of the spam checks.
-        Route::get('demo', [LeadController::class, 'demoForm'])->name('demo');
-        Route::post('demo', [LeadController::class, 'storeDemo'])->middleware('throttle:5,60')->name('demo.store');
         Route::get('contact', [LeadController::class, 'contactForm'])->name('contact');
         Route::post('contact', [LeadController::class, 'storeContact'])->middleware('throttle:5,60')->name('contact.store');
         Route::inertia('thanks', 'public/thanks')->name('thanks');

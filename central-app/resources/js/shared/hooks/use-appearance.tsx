@@ -70,8 +70,29 @@ const mediaQuery = (): MediaQueryList | null => {
 
 const handleSystemThemeChange = (): void => applyTheme(currentAppearance);
 
+/** Set by the server on pages with a fixed theme (the public site). */
+const forcedAppearance = (): ResolvedAppearance | null => {
+    if (typeof document === 'undefined') {
+        return null;
+    }
+
+    const forced = document.documentElement.dataset.forcedAppearance;
+
+    return forced === 'light' || forced === 'dark' ? forced : null;
+};
+
 export function initializeTheme(): void {
     if (typeof window === 'undefined') {
+        return;
+    }
+
+    // A fixed theme leaves the visitor's saved preference untouched for
+    // the pages that follow it.
+    const forced = forcedAppearance();
+
+    if (forced) {
+        applyTheme(forced);
+
         return;
     }
 

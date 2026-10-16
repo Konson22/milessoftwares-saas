@@ -71,6 +71,17 @@ it('lists released and upcoming products from the registry', function () {
             ->where('products.0.tagline', 'Sell more, count less.'));
 });
 
+it('always shows the public site in the light theme', function () {
+    $this->withUnencryptedCookie('appearance', 'dark')->get(site())
+        ->assertOk()
+        ->assertSee('data-forced-appearance="light"', false)
+        ->assertDontSee('class="dark"', false);
+
+    $this->withUnencryptedCookie('appearance', 'dark')->get(PlatformHosts::url(PlatformHosts::auth(), 'login'))
+        ->assertSee('class="dark"', false)
+        ->assertDontSee('data-forced-appearance', false);
+});
+
 it('shows a product page with only its public active plans', function () {
     $this->get(site('products/retail'))
         ->assertOk()
@@ -97,6 +108,8 @@ it('publishes a sitemap and robots rules', function () {
         ->assertOk()
         ->assertHeader('Content-Type', 'application/xml')
         ->assertSee(site('products/retail'), false)
+        ->assertSee(site('start'), false)
+        ->assertDontSee(site('demo'), false)
         ->assertSee(site('pricing'), false)
         ->assertDontSee('products/platform', false);
 
@@ -105,23 +118,37 @@ it('publishes a sitemap and robots rules', function () {
     $this->get(PlatformHosts::url(PlatformHosts::admin(), 'robots.txt'))->assertSee('Disallow: /', false);
 });
 
-it('stores a demo request and tells sales', function () {
-    $this->post(site('demo'), humanSubmission(['product' => 'retail', 'preferred_contact_time' => 'Mornings']))
-        ->assertRedirect(site('thanks'));
+it('offers a free trial of released and beta applications only', function () {
+    config(['platform.marketing.trial_days' => 60]);
 
-    $lead = DemoRequest::query()->sole();
-    expect($lead->status)->toBe('new')
-        ->and($lead->email)->toBe('amina@example.test')
-        ->and($lead->application_id)->toBe($this->retail->id);
+    $this->get(site('start'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('public/start')
+            ->where('trialDays', 60)
+            ->where('selected', null)
+            ->where('products', fn ($products) => collect($products)->pluck('code')->all() === ['retail']));
 
-    Notification::assertSentTo(new AnonymousNotifiable, LeadReceived::class, fn (LeadReceived $mail, $channels, $notifiable) => $notifiable->routes['mail'] === 'sales@milessoftwares.test' && $mail->leadId === $lead->id);
+    $this->get(site('start?app=retail'))->assertInertia(fn (AssertableInertia $page) => $page->where('selected', 'retail'));
+    $this->get(site('start?app=school'))->assertInertia(fn (AssertableInertia $page) => $page->where('selected', null));
+});
+
+it('sends old demo links to the free trial', function () {
+    $this->get(site('demo'))->assertRedirect(site('start'))->assertStatus(301);
+    $this->post(site('demo'), humanSubmission())->assertMethodNotAllowed();
+
+    expect(DemoRequest::query()->count())->toBe(0);
 });
 
 it('stores a contact message and tells sales', function () {
     $this->post(site('contact'), humanSubmission(['subject' => 'Partnership']))->assertRedirect(site('thanks'));
 
-    expect(ContactMessage::query()->sole()->subject)->toBe('Partnership');
-    Notification::assertSentTimes(LeadReceived::class, 1);
+    $lead = ContactMessage::query()->sole();
+    expect($lead->subject)->toBe('Partnership')
+        ->and($lead->status)->toBe('new')
+        ->and($lead->email)->toBe('amina@example.test');
+
+    Notification::assertSentTo(new AnonymousNotifiable, LeadReceived::class, fn (LeadReceived $mail, $channels, $notifiable) => $notifiable->routes['mail'] === 'sales@milessoftwares.test' && $mail->leadId === $lead->id);
 });
 
 it('quietly files bot submissions as spam', function (Closure $tamper) {
@@ -155,10 +182,10 @@ it('treats day-old forms as automated', function () {
 });
 
 it('validates genuine submissions', function () {
-    $this->post(site('demo'), humanSubmission(['email' => 'not-an-email', 'product' => 'platform']))
-        ->assertSessionHasErrors(['email', 'product']);
+    $this->post(site('contact'), humanSubmission(['email' => 'not-an-email', 'name' => '']))
+        ->assertSessionHasErrors(['email', 'name']);
 
-    expect(DemoRequest::query()->count())->toBe(0);
+    expect(ContactMessage::query()->count())->toBe(0);
 });
 
 it('rate limits each address', function () {
@@ -172,12 +199,12 @@ it('rate limits each address', function () {
 });
 
 it('shows leads to sales staff only', function () {
-    $this->post(site('demo'), humanSubmission());
+    $this->post(site('contact'), humanSubmission());
 
     $this->actingAs($this->staffWith(['sales'])->user)
         ->get($this->adminUrl('/leads'))
         ->assertOk()
-        ->assertInertia(fn (AssertableInertia $page) => $page->has('demoRequests', 1));
+        ->assertInertia(fn (AssertableInertia $page) => $page->has('contactMessages', 1));
 
     $this->actingAs($this->staffWith(['support_agent'])->user)->get($this->adminUrl('/leads'))->assertForbidden();
 });

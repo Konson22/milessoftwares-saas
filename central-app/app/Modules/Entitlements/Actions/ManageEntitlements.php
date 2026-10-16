@@ -2,6 +2,7 @@
 
 namespace App\Modules\Entitlements\Actions;
 
+use App\Models\User;
 use App\Modules\Administration\Models\PlatformStaff;
 use App\Modules\Applications\Models\Application;
 use App\Modules\Applications\Support\TenantRedirectUris;
@@ -101,6 +102,37 @@ final class ManageEntitlements
             'valid_until' => $validUntil?->toIso8601String(),
             'reason' => $reason,
         ]);
+
+        return $entitlement;
+    }
+
+    /**
+     * Self-serve: the owner of a new workspace tries one application free
+     * for the configured number of days. One trial per application, ever,
+     * so ending and restarting never extends it.
+     */
+    public function startTrial(Organization $organization, Application $application, User $owner): Entitlement
+    {
+        $days = (int) config('platform.marketing.trial_days');
+
+        $entitlement = $this->tenant->run($organization, function () use ($application, $days): Entitlement {
+            $tried = Entitlement::query()
+                ->where('application_id', $application->id)
+                ->where('source', 'trial')
+                ->exists();
+
+            if ($tried) {
+                throw new RuntimeException("This organization has already tried {$application->name}.");
+            }
+
+            return $this->writeEntitlement($application->id, null, null, 'trial', now()->addDays($days), null);
+        });
+
+        $this->afterEntitlementChange($organization, [$application->id], provision: true);
+        $this->audit->record('entitlement.trial_started', $entitlement, [
+            'application' => $application->code,
+            'valid_until' => $entitlement->valid_until?->toIso8601String(),
+        ], actor: $owner, organizationId: $organization->id);
 
         return $entitlement;
     }

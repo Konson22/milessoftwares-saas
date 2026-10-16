@@ -5,16 +5,17 @@ import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import MarketingLayout from '@/sites/public/layouts/marketing-layout';
 import Contact from './contact';
-import Demo from './demo';
 import MarketingHome from './home';
 import Pricing from './pricing';
 import ProductPage from './product';
+import Start from './start';
 import Thanks from './thanks';
 
 // Inertia's components need a running app; for checking markup they are
 // replaced with their plain HTML equivalents.
 vi.mock('@inertiajs/react', () => ({
     Head: () => null,
+    usePage: () => ({ url: '/pricing' }),
     Link: ({
         href,
         children,
@@ -81,6 +82,7 @@ const pages: [string, ReactNode][] = [
                     status: 'planned',
                 },
             ]}
+            trialDays={60}
             canonical="https://example.test/"
         />,
     ],
@@ -90,6 +92,7 @@ const pages: [string, ReactNode][] = [
             key="product"
             product={product}
             plans={[plan]}
+            trialDays={60}
             canonical="https://example.test/products/retail"
         />,
     ],
@@ -97,18 +100,22 @@ const pages: [string, ReactNode][] = [
         'pricing',
         <Pricing
             key="pricing"
-            plans={[plan]}
+            plans={[plan, { ...plan, code: 'all', isBundle: true }]}
+            trialDays={60}
             canonical="https://example.test/pricing"
         />,
     ],
     [
-        'demo',
-        <Demo
-            key="demo"
-            products={[{ code: 'retail', name: 'Retail' }]}
-            selected={null}
-            formToken="t"
-            canonical="https://example.test/demo"
+        'start',
+        <Start
+            key="start"
+            products={[
+                product,
+                { ...product, code: 'pharmacy', name: 'Pharmacy' },
+            ]}
+            selected="pharmacy"
+            trialDays={60}
+            canonical="https://example.test/start"
         />,
     ],
     [

@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { ArrowRight, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import type { PropsWithChildren } from 'react';
@@ -9,9 +9,9 @@ import { login, register } from '@/routes';
 // Relative paths on the apex host; sign-in and registration live on the
 // auth host, so those are plain links.
 const nav = [
-    { title: 'Products', href: '/#products' },
+    { title: 'Applications', href: '/#products' },
+    { title: 'How it works', href: '/#how-it-works' },
     { title: 'Pricing', href: '/pricing' },
-    { title: 'Book a demo', href: '/demo' },
     { title: 'Contact', href: '/contact' },
 ];
 
@@ -19,69 +19,91 @@ function Brand() {
     return (
         <Link
             href="/"
-            className="flex items-center gap-2.5 font-semibold tracking-tight text-white"
+            className="flex items-center gap-2.5 text-lg font-bold tracking-tight text-site-ink"
         >
             {/* Decorative: the name beside it is the link text. */}
-            <AppLogoIcon className="size-8" alt="" />
-            Miles Global Softwares
+            <AppLogoIcon className="size-9" alt="" />
+            Miles Softwares
         </Link>
     );
 }
 
+/** The current page, for aria-current and the highlighted nav item. */
+function useCurrentPath(): string {
+    const { url } = usePage();
+
+    return url.split('?')[0];
+}
+
 /**
- * Header and footer are dark in both themes so they frame the dark band
- * each page opens with; the content between follows the visitor's theme.
+ * The public site is always light (see HandleAppearance): a slim dark
+ * announcement bar, a white header, white and cool-grey sections, and a
+ * cool-grey footer.
  */
 export default function MarketingLayout({ children }: PropsWithChildren) {
     const [menuOpen, setMenuOpen] = useState(false);
+    const path = useCurrentPath();
 
     return (
-        <div className="flex min-h-screen flex-col overflow-x-clip bg-background text-foreground">
+        <div className="flex min-h-screen flex-col overflow-x-clip bg-white font-public text-site-ink">
             <a
                 href="#main"
-                className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-background focus:px-3 focus:py-2"
+                className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2"
             >
                 Skip to content
             </a>
-            <header className="sticky top-0 z-40 border-b border-white/10 bg-zinc-950 text-zinc-300">
+            <p className="bg-site-ink px-4 py-2.5 text-center text-sm text-slate-300">
+                Every application starts with a free trial, no payment details
+                needed.{' '}
+                <Link
+                    href="/start"
+                    className="inline-flex items-center gap-1 font-semibold text-white hover:underline"
+                >
+                    Start yours
+                    <ArrowRight className="size-3.5" aria-hidden />
+                </Link>
+            </p>
+            <header className="sticky top-0 z-40 border-b border-site-line bg-white/90 backdrop-blur-lg">
                 <nav
                     aria-label="Main"
-                    className="mx-auto flex h-16 max-w-6xl items-center gap-10 px-4"
+                    className="mx-auto flex h-18 max-w-7xl items-center gap-8 px-4 sm:px-6"
                 >
                     <Brand />
-                    <ul className="hidden gap-1 text-sm md:flex">
+                    <ul className="mx-auto hidden gap-1 text-[15px] font-medium text-slate-600 lg:flex">
                         {nav.map((item) => (
                             <li key={item.href}>
                                 <Link
                                     href={item.href}
-                                    className="rounded-md px-3 py-2 transition-colors hover:bg-white/5 hover:text-white"
+                                    aria-current={
+                                        item.href === path ? 'page' : undefined
+                                    }
+                                    className="rounded-lg px-3.5 py-2 transition-colors hover:text-brand-blue aria-[current=page]:text-brand-blue"
                                 >
                                     {item.title}
                                 </Link>
                             </li>
                         ))}
                     </ul>
-                    <div className="ml-auto hidden items-center gap-2 text-sm md:flex">
+                    <div className="hidden items-center gap-3 lg:flex">
                         <a
                             href={login.url()}
-                            className="rounded-md px-3 py-2 transition-colors hover:bg-white/5 hover:text-white"
+                            className={`${button.outline} py-2.5`}
                         >
                             Sign in
                         </a>
-                        <a
-                            href={register.url()}
-                            className="group inline-flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 font-medium text-zinc-950 transition-colors hover:bg-zinc-200"
+                        <Link
+                            href="/start"
+                            aria-current={
+                                path === '/start' ? 'page' : undefined
+                            }
+                            className={`${button.primary} py-2.5`}
                         >
-                            Get started
-                            <ArrowRight
-                                className="size-3.5 transition-transform group-hover:translate-x-0.5"
-                                aria-hidden
-                            />
-                        </a>
+                            Start free trial
+                        </Link>
                     </div>
                     <button
                         type="button"
-                        className="ml-auto rounded-md p-2 text-white hover:bg-white/10 md:hidden"
+                        className="ml-auto inline-flex size-10 items-center justify-center rounded-lg border border-site-line text-site-ink hover:bg-site-soft lg:hidden"
                         aria-expanded={menuOpen}
                         aria-controls="mobile-menu"
                         onClick={() => setMenuOpen((open) => !open)}
@@ -97,59 +119,71 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                 <div
                     id="mobile-menu"
                     hidden={!menuOpen}
-                    className="border-t border-white/10 md:hidden"
+                    className="border-t border-site-line lg:hidden"
                 >
-                    <ul className="mx-auto max-w-6xl space-y-1 px-4 py-3">
+                    <ul className="mx-auto max-w-7xl space-y-1 px-4 py-3 sm:px-6">
                         {nav.map((item) => (
                             <li key={item.href}>
                                 <Link
                                     href={item.href}
+                                    aria-current={
+                                        item.href === path ? 'page' : undefined
+                                    }
                                     onClick={() => setMenuOpen(false)}
-                                    className="block rounded-md px-3 py-2.5 hover:bg-white/5 hover:text-white"
+                                    className="block rounded-lg px-3 py-2.5 font-medium text-slate-700 hover:bg-site-soft aria-[current=page]:bg-brand-blue/10 aria-[current=page]:text-brand-blue"
                                 >
                                     {item.title}
                                 </Link>
                             </li>
                         ))}
                     </ul>
-                    <div className="mx-auto flex max-w-6xl gap-2 px-4 pb-4 text-sm">
+                    <div className="mx-auto flex max-w-7xl gap-2 px-4 pb-4 sm:px-6">
                         <a
                             href={login.url()}
-                            className={`flex-1 ${button.outlineDark} py-2.5`}
+                            className={`flex-1 ${button.outline} py-2.5`}
                         >
                             Sign in
                         </a>
-                        <a
-                            href={register.url()}
-                            className={`flex-1 ${button.light} py-2.5`}
+                        <Link
+                            href="/start"
+                            onClick={() => setMenuOpen(false)}
+                            className={`flex-1 ${button.primary} py-2.5`}
                         >
-                            Get started
-                        </a>
+                            Start free trial
+                        </Link>
                     </div>
                 </div>
             </header>
             <main id="main" className="flex-1">
                 {children}
             </main>
-            <footer className="relative isolate overflow-hidden bg-zinc-950 text-sm text-zinc-400">
-                <div
-                    aria-hidden
-                    className="absolute -bottom-40 left-1/2 -z-10 h-80 w-3xl -translate-x-1/2 rounded-full bg-primary/15 blur-[120px]"
-                />
-                <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="lg:col-span-2">
+            <footer className="border-t border-site-line bg-site-soft text-sm text-slate-600">
+                <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:grid-cols-2 sm:px-6 lg:grid-cols-[2fr_1fr_1fr_1fr]">
+                    <div>
                         <Brand />
-                        <p className="mt-4 max-w-xs">
+                        <p className="mt-5 max-w-xs leading-relaxed">
                             Business software for growing organizations, on one
                             account and one subscription.
                         </p>
+                        <Link
+                            href="/start"
+                            className={`mt-6 ${button.primary} py-2.5`}
+                        >
+                            Start free trial
+                        </Link>
                     </div>
                     <FooterColumn
                         title="Explore"
                         links={[
                             { title: 'Applications', href: '/#products' },
+                            { title: 'How it works', href: '/#how-it-works' },
                             { title: 'Pricing', href: '/pricing' },
-                            { title: 'Book a demo', href: '/demo' },
+                        ]}
+                    />
+                    <FooterColumn
+                        title="Get started"
+                        links={[
+                            { title: 'Start free trial', href: '/start' },
                             { title: 'Contact', href: '/contact' },
                         ]}
                     />
@@ -162,15 +196,15 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                                 external: true,
                             },
                             {
-                                title: 'Create a workspace',
+                                title: 'Create an account',
                                 href: register.url(),
                                 external: true,
                             },
                         ]}
                     />
                 </div>
-                <div className="border-t border-white/10">
-                    <p className="mx-auto max-w-6xl px-4 py-6 text-zinc-500">
+                <div className="border-t border-site-line">
+                    <p className="mx-auto max-w-7xl px-4 py-6 text-slate-500 sm:px-6">
                         © {new Date().getFullYear()} Miles Global Link Co. Ltd
                     </p>
                 </div>
@@ -186,11 +220,11 @@ function FooterColumn({
     title: string;
     links: { title: string; href: string; external?: boolean }[];
 }) {
-    const linkClass = 'transition-colors hover:text-white';
+    const linkClass = 'transition-colors hover:text-brand-blue';
 
     return (
         <div>
-            <h2 className="font-medium text-white">{title}</h2>
+            <h2 className="font-semibold text-site-ink">{title}</h2>
             <ul className="mt-4 space-y-3">
                 {links.map((link) => (
                     <li key={link.href}>
