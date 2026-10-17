@@ -11,6 +11,7 @@ import {
     ShoppingCart,
     Truck,
     Undo2,
+    Wallet,
 } from 'lucide-react';
 import type { ShellNavItem } from '@miles/ui/shell/navigation';
 import { home } from '@/routes';
@@ -23,6 +24,7 @@ import { index as reports } from '@/routes/reports';
 import { create as counter, index as sales } from '@/routes/sales';
 import { index as stock } from '@/routes/stock';
 import { index as supplierReturns } from '@/routes/supplier-returns';
+import { index as tills } from '@/routes/tills';
 import { index as suppliers } from '@/routes/suppliers';
 
 export type NavItem = ShellNavItem & {
@@ -68,6 +70,13 @@ export const navigation: NavGroup[] = [
                 href: sales(),
                 icon: ReceiptText,
                 permission: 'pharmacy.sales.view',
+                scope: 'branch',
+            },
+            {
+                title: 'Tills',
+                href: tills(),
+                icon: Wallet,
+                permission: 'pharmacy.sales.create',
                 scope: 'branch',
             },
             {

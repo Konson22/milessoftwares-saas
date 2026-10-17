@@ -27,6 +27,14 @@ beforeEach(function () {
     });
 });
 
+/**
+ * Signs in someone who sells here, with their till open.
+ */
+function seller(array $permissions, string $branch): void
+{
+    test()->openTill(test()->actingAsMember('acme', $permissions, branch: $branch), $branch);
+}
+
 function counterSale(array $lines, array $extra = [])
 {
     return test()->post(test()->workspaceUrl('acme', 'sales'), [
@@ -39,7 +47,7 @@ function counterSale(array $lines, array $extra = [])
 
 describe('submitting a sale twice', function () {
     it('records one sale for one basket, however often it is sent', function () {
-        $this->actingAsMember('acme', ['pharmacy.sales.create', 'pharmacy.sales.view'], branch: $this->juba);
+        seller(['pharmacy.sales.create', 'pharmacy.sales.view'], $this->juba);
         $key = (string) Str::uuid();
 
         $first = counterSale([['item_id' => $this->para->id, 'quantity' => 4]], ['submission_id' => $key]);
@@ -54,7 +62,7 @@ describe('submitting a sale twice', function () {
     });
 
     it('records separate sales for separate baskets', function () {
-        $this->actingAsMember('acme', ['pharmacy.sales.create'], branch: $this->juba);
+        seller(['pharmacy.sales.create'], $this->juba);
 
         counterSale([['item_id' => $this->para->id, 'quantity' => 1]], ['submission_id' => (string) Str::uuid()]);
         counterSale([['item_id' => $this->para->id, 'quantity' => 1]], ['submission_id' => (string) Str::uuid()]);
@@ -66,7 +74,7 @@ describe('submitting a sale twice', function () {
 
 describe('discounts', function () {
     it('takes a discount off the line, shares it across batches, and books the net amount in Finance', function () {
-        $this->actingAsMember('acme', ['pharmacy.sales.create', 'pharmacy.sales.discount'], branch: $this->juba);
+        seller(['pharmacy.sales.create', 'pharmacy.sales.discount'], $this->juba);
 
         // 5 × 2.50 = 12.50; 10% off = 1.25, from batches of 3 and 2.
         counterSale([['item_id' => $this->para->id, 'quantity' => 5, 'discount_percent' => 10]])->assertSessionHasNoErrors();
@@ -84,7 +92,7 @@ describe('discounts', function () {
     });
 
     it('refuses more than the allowed discount, and any discount without the permission', function (array $permissions, int $percent, string $message) {
-        $this->actingAsMember('acme', ['pharmacy.sales.create', ...$permissions], branch: $this->juba);
+        seller(['pharmacy.sales.create', ...$permissions], $this->juba);
 
         counterSale([['item_id' => $this->para->id, 'quantity' => 1, 'discount_percent' => $percent]])
             ->assertSessionHasErrors(['items.0.discount_percent' => $message]);
@@ -96,17 +104,17 @@ describe('discounts', function () {
     ]);
 
     it('tells the counter how much this member may take off', function () {
-        $this->actingAsMember('acme', ['pharmacy.sales.create', 'pharmacy.sales.discount'], branch: $this->juba);
+        seller(['pharmacy.sales.create', 'pharmacy.sales.discount'], $this->juba);
         $this->get($this->workspaceUrl('acme', 'sales/create'))->assertInertia(fn (Assert $page) => $page->where('maxDiscountPercent', 20));
 
-        $this->actingAsMember('acme', ['pharmacy.sales.create'], branch: $this->juba);
+        seller(['pharmacy.sales.create'], $this->juba);
         $this->get($this->workspaceUrl('acme', 'sales/create'))->assertInertia(fn (Assert $page) => $page->where('maxDiscountPercent', 0));
     });
 });
 
 describe('receipts', function () {
     it('prints one line per medicine, with the discount and the change', function () {
-        $this->actingAsMember('acme', ['pharmacy.sales.create', 'pharmacy.sales.view', 'pharmacy.sales.discount'], branch: $this->juba);
+        seller(['pharmacy.sales.create', 'pharmacy.sales.view', 'pharmacy.sales.discount'], $this->juba);
         counterSale([['item_id' => $this->para->id, 'quantity' => 5, 'discount_percent' => 10]]);
         $sale = $this->asTenant('acme', fn () => Sale::query()->sole());
 
@@ -122,7 +130,7 @@ describe('receipts', function () {
     });
 
     it('never prints another branch\'s receipt', function () {
-        $this->actingAsMember('acme', ['pharmacy.sales.create'], branch: $this->juba);
+        seller(['pharmacy.sales.create'], $this->juba);
         counterSale([['item_id' => $this->para->id, 'quantity' => 1]]);
         $sale = $this->asTenant('acme', fn () => Sale::query()->sole());
 

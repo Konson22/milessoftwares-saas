@@ -25,6 +25,9 @@ use Miles\PlatformClient\Events\Outbox;
  * Restricted items (prescription-only medicines) are only sold when the
  * industry module has authorized them for this sale ($authorized).
  *
+ * The money goes into the seller's open till at the branch; without one
+ * nothing is sold.
+ *
  * A sale submitted with a $submissionId that was already used is that
  * sale again, not a second one (a double click, a retried request).
  */
@@ -34,6 +37,7 @@ class Sell
         private readonly Stock $stock,
         private readonly DocumentNumbers $numbers,
         private readonly Outbox $outbox,
+        private readonly Tills $tills,
     ) {}
 
     /**
@@ -89,6 +93,8 @@ class Sell
         ?string $submissionId,
     ): Sale {
         return DB::transaction(function () use ($by, $branchId, $items, $method, $paymentReference, $tenderedMinor, $customerName, $authorized, $maxDiscountPercent, $submissionId) {
+            $till = $this->tills->requireOpen($by, $branchId);
+
             // Price and check everything before touching stock.
             $priced = [];
             $total = 0;
@@ -145,6 +151,7 @@ class Sell
                 'sold_by' => $by->id,
                 'sold_at' => now(),
                 'submission_id' => $submissionId,
+                'till_session_id' => $till->id,
             ]);
 
             $invoiceLines = [];

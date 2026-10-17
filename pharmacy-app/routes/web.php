@@ -12,6 +12,7 @@ use App\Modules\Procurement\Http\Controllers\GoodsReceiptController;
 use App\Modules\Procurement\Http\Controllers\PurchaseOrderController;
 use App\Modules\Procurement\Http\Controllers\SupplierReturnController;
 use App\Modules\Sales\Http\Controllers\SaleController;
+use App\Modules\Sales\Http\Controllers\TillController;
 use Illuminate\Support\Facades\Route;
 use Miles\PlatformClient\PlatformConfig;
 
@@ -67,6 +68,14 @@ Route::prefix(app(PlatformConfig::class)->path())
                 Route::get('sales/{sale}', [SaleController::class, 'show'])->whereUuid('sale')->name('sales.show');
                 Route::get('sales/{sale}/receipt', [SaleController::class, 'receipt'])->whereUuid('sale')->name('sales.receipt');
             });
+            // Tills: cashiers their own, managers everyone's.
+            Route::post('tills', [TillController::class, 'store'])->middleware('branch.can:pharmacy.sales.create')->name('tills.store');
+            Route::middleware('branch.can:pharmacy.sales.create,pharmacy.tills.manage')->group(function () {
+                Route::get('tills', [TillController::class, 'index'])->name('tills.index');
+                Route::get('tills/{till}', [TillController::class, 'show'])->whereUuid('till')->name('tills.show');
+                Route::post('tills/{till}/close', [TillController::class, 'close'])->whereUuid('till')->name('tills.close');
+            });
+
             Route::post('sales/{sale}/void', [SaleController::class, 'void'])
                 ->whereUuid('sale')
                 ->middleware('branch.can:pharmacy.sales.void')

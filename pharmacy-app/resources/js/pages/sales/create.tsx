@@ -1,4 +1,4 @@
-import { Form, Head, usePage } from '@inertiajs/react';
+import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { PageHeader } from '@miles/ui/components/page-header';
@@ -9,6 +9,7 @@ import { Input } from '@miles/ui/components/ui/input';
 import { Label } from '@miles/ui/components/ui/label';
 import { formatMoney } from '@/lib/money';
 import { store } from '@/routes/sales';
+import { show as showTill, store as openTill } from '@/routes/tills';
 
 type Medicine = {
     id: string;
@@ -26,6 +27,8 @@ type Props = {
     paymentMethods: { value: string; label: string }[];
     /** 0 when this member may not give discounts. */
     maxDiscountPercent: number;
+    /** The seller's open till here; nothing is sold without one. */
+    till: { id: string; number: string } | null;
 };
 
 type BasketLine = { medicine: Medicine; quantity: number; discount: number };
@@ -45,6 +48,7 @@ export default function Counter({
     medicines,
     paymentMethods,
     maxDiscountPercent,
+    till,
 }: Props) {
     const { currency, branch } = usePage().props;
     const money = (minor: number) => formatMoney(minor, currency ?? 'USD');
@@ -136,10 +140,61 @@ export default function Counter({
             ),
         );
 
+    if (till === null) {
+        return (
+            <>
+                <Head title="Counter" />
+                <PageHeader title="Counter" description={branch?.name} />
+                <Panel className="max-w-md">
+                    <PanelHeader title="Open your till first" />
+                    <PanelBody>
+                        <Form
+                            {...openTill.form()}
+                            className="flex flex-wrap items-end gap-2"
+                        >
+                            {({ errors, processing }) => (
+                                <>
+                                    <div className="grid gap-1.5">
+                                        <Label htmlFor="opening_float">
+                                            Cash in the drawer to start
+                                        </Label>
+                                        <Input
+                                            id="opening_float"
+                                            name="opening_float"
+                                            inputMode="decimal"
+                                            defaultValue="0"
+                                            className="w-44"
+                                        />
+                                        {errors.opening_float && (
+                                            <p className="text-sm text-destructive">
+                                                {errors.opening_float}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <Button type="submit" disabled={processing}>
+                                        Open till
+                                    </Button>
+                                </>
+                            )}
+                        </Form>
+                    </PanelBody>
+                </Panel>
+            </>
+        );
+    }
+
     return (
         <>
             <Head title="Counter" />
-            <PageHeader title="Counter" description={branch?.name} />
+            <PageHeader
+                title="Counter"
+                description={branch?.name}
+                actions={
+                    <Button variant="outline" size="sm" asChild>
+                        <Link href={showTill(till.id)}>Till {till.number}</Link>
+                    </Button>
+                }
+            />
 
             <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
                 <Panel>

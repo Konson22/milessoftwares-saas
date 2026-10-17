@@ -4,6 +4,7 @@ namespace App\Modules\Sales\Actions;
 
 use App\Models\User;
 use App\Modules\Inventory\Actions\Stock;
+use App\Modules\Sales\Enums\PaymentMethod;
 use App\Modules\Sales\Events\SaleVoided;
 use App\Modules\Sales\Models\Sale;
 use App\Modules\Sales\Models\SaleLine;
@@ -15,7 +16,8 @@ use Miles\PlatformClient\Events\Outbox;
 /**
  * Cancels a sale: its stock goes back into the batches it came from, the
  * payment is refunded the same way, and Finance reverses both
- * (finance.invoice.voided). A sale is voided once.
+ * (finance.invoice.voided). A sale is voided once. Cash given back comes
+ * out of the open till of whoever voids it.
  */
 class VoidSale
 {
@@ -23,6 +25,7 @@ class VoidSale
         private readonly Stock $stock,
         private readonly Outbox $outbox,
         private readonly Dispatcher $events,
+        private readonly Tills $tills,
     ) {}
 
     public function handle(Sale $sale, User $by, string $reason): Sale
@@ -34,6 +37,10 @@ class VoidSale
                 throw ValidationException::withMessages(['reason' => "Sale {$locked->number} is already voided."]);
             }
 
+            $till = $locked->payment_method === PaymentMethod::Cash && $locked->total_minor > 0
+                ? $this->tills->requireOpen($by, $locked->branch_id, 'reason')
+                : $this->tills->openFor($by, $locked->branch_id);
+
             foreach ($locked->lines()->with('batch')->get() as $line) {
                 /** @var SaleLine $line */
                 $this->stock->putBack($line->batch, $line->quantity, $by, 'sale', $locked->id);
@@ -44,6 +51,7 @@ class VoidSale
                 'voided_by' => $by->id,
                 'voided_at' => now(),
                 'void_reason' => $reason,
+                'void_till_session_id' => $till?->id,
             ])->save();
 
             // Industry modules undo their part (a dispensed prescription can

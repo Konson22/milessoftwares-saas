@@ -8,6 +8,7 @@ use App\Modules\Inventory\Actions\InsufficientStock;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Item;
 use App\Modules\Sales\Actions\Sell;
+use App\Modules\Sales\Actions\Tills;
 use App\Modules\Sales\Actions\VoidSale;
 use App\Modules\Sales\Enums\PaymentMethod;
 use App\Modules\Sales\Models\Sale;
@@ -62,8 +63,10 @@ class SaleController extends Controller
     /**
      * The counter: what can be sold here today, with prices.
      */
-    public function create(): Response
+    public function create(Request $request, Tills $tills): Response
     {
+        $till = $tills->openFor($this->user($request), $this->branch->id());
+
         $sellable = Batch::query()
             ->where('branch_id', $this->branch->id())
             ->where('quantity_on_hand', '>', 0)
@@ -88,6 +91,7 @@ class SaleController extends Controller
                     'prescriptionOnly' => $item->restricted,
                 ]),
             'maxDiscountPercent' => $this->maxDiscountPercent(),
+            'till' => $till === null ? null : ['id' => $till->id, 'number' => $till->number],
             'paymentMethods' => array_map(fn (PaymentMethod $method) => ['value' => $method->value, 'label' => $method->label()], PaymentMethod::cases()),
         ]);
     }

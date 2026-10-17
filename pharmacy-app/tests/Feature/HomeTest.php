@@ -5,6 +5,7 @@ use App\Models\Workspace;
 use App\Modules\Inventory\Actions\Stock;
 use App\Modules\Pharmacy\Models\Medicine;
 use App\Modules\Sales\Actions\Sell;
+use App\Modules\Sales\Actions\Tills;
 use App\Modules\Sales\Enums\PaymentMethod;
 use Carbon\CarbonImmutable;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -19,6 +20,7 @@ beforeEach(function () {
         $para = Medicine::factory()->create(['reorder_level' => 50, 'sell_price_minor' => 250]);
         Medicine::factory()->create(['reorder_level' => 0]); // none in stock, nothing to reorder
         app(Stock::class)->add($para->item, $this->juba, 'P-1', CarbonImmutable::parse('2026-11-30'), 40, 100, $keeper);
+        app(Tills::class)->open($keeper, $this->juba, 0);
         app(Sell::class)->handle($keeper, $this->juba, [['item_id' => $para->id, 'quantity' => 4]], PaymentMethod::MobileMoney);
     });
 });

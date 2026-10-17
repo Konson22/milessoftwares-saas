@@ -33,7 +33,8 @@ beforeEach(function () {
 
 function cashier(string $branch, array $extra = []): void
 {
-    test()->actingAsMember('acme', ['pharmacy.sales.create', 'pharmacy.sales.view', ...$extra], branch: $branch);
+    $user = test()->actingAsMember('acme', ['pharmacy.sales.create', 'pharmacy.sales.view', ...$extra], branch: $branch);
+    test()->openTill($user, $branch);
 }
 
 function sell(array $items, string $method = 'cash', ?string $tendered = '50.00')

@@ -31,10 +31,11 @@ beforeEach(function () {
 
 function pharmacist(string $branch): void
 {
-    test()->actingAsMember('acme', [
+    $user = test()->actingAsMember('acme', [
         'pharmacy.prescriptions.view', 'pharmacy.prescriptions.record', 'pharmacy.prescriptions.verify',
         'pharmacy.sales.create', 'pharmacy.sales.view', 'pharmacy.sales.void', 'pharmacy.controlled.view',
     ], branch: $branch);
+    test()->openTill($user, $branch);
 }
 
 function recordPrescription(array $overrides = []): Prescription

@@ -10,7 +10,8 @@
 | 3.2 Shared item master | Done 2026-10-16 |
 | 3.3 Units and packaging | Done 2026-10-17 |
 | 3.4 Counter: one sale per submission, discounts, receipts | Done 2026-10-18 |
-| 3.5 – 11 | Not started |
+| 3.5 Cashier tills and reconciliation | Done 2026-10-18 |
+| 3.6 – 11 | Not started |
 
 Decisions accepted 2026-10-16: D1 → `docs/adr/0003-erp-workspace-application.md`,
 D2 → `docs/adr/0004-companies-as-organizations.md`.
@@ -228,3 +229,32 @@ are validated, and the customer gets a printed receipt.
 
 **Known limitations:** the discount limit is one setting for the whole installation, not per
 workspace or role; discounts are percent per line only (no amount off, no whole-basket discount).
+
+## Phase 3.5 — 2026-10-18 (local, Windows)
+
+Cashier sessions: every counter sale is taken into a till, and each till is counted at closing
+against what it should hold.
+
+**Implemented** (`pharmacy-app`, branch `erp/phase-3-pharmacy-modules`):
+- Migration `2026_10_18_110000_create_till_sessions` (additive): `till_sessions` (number `T-00001`,
+  opening float, expected and counted cash fixed at closing, note), one open till per person per
+  branch (partial unique index); `sales.till_session_id` and `sales.void_till_session_id`.
+- `Sales\Actions\Tills`: open, close (a count that differs needs a note), summary (takings per
+  method, cash given back, cash it should hold = float + cash taken − cash refunds).
+- `Sell` refuses without the seller's open till (counter and prescription dispensing alike).
+  `VoidSale` gives cash back from the voider's open till and refuses a cash void without one.
+- Pages `tills` (open yours; the day's tills with expected, counted, over/short) and `tills/{till}`
+  (breakdown, count and close). The counter asks to open a till first. Menu: Counter → Tills.
+- Permission `pharmacy.tills.manage` (Pharmacy Manager; catalog 1.3.0): see and close every
+  cashier's till in the branch (the cashier reconciliation). `branch.can` takes several
+  permissions (any one).
+
+**Tests executed:**
+- Pharmacy: Pest 108 passed, 1 skipped; PHPStan 0; Pint; `vp check`; `tsc`. New `TillTest` (5);
+  existing tests open a till before selling.
+- Local PostgreSQL: `migrate`, `migrate:rollback --step=1`, `migrate`.
+- Mutation: leaving refunds out of the expected cash fails the till test.
+
+**Known limitations:** over/short is recorded in the pharmacy only; it is not posted to Finance
+(no event for cash differences yet). Cash moved into or out of a drawer during the day (a
+pay-out, a safe drop) is not recorded.

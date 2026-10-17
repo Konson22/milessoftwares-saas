@@ -16,6 +16,7 @@ import {
     TableRow,
 } from '@miles/ui/components/ui/table';
 import { formatMoney } from '@/lib/money';
+import { index as tills } from '@/routes/tills';
 import {
     cancel,
     dispense,
@@ -125,6 +126,14 @@ export default function ShowPrescription({
             />
             {errors.status && (
                 <p className="mb-4 text-sm text-destructive">{errors.status}</p>
+            )}
+            {errors.till && (
+                <p className="mb-4 text-sm text-destructive">
+                    {errors.till}{' '}
+                    <Link href={tills()} className="underline">
+                        Open a till
+                    </Link>
+                </p>
             )}
 
             <Panel className="mb-5 max-w-3xl">

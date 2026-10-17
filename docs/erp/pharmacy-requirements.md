@@ -18,7 +18,7 @@ Against `MASTER-PLAN.md` §7, from reading `pharmacy-app` and `finance-app` (202
 | Discounts (validated) | ✅ | percent per line, `pharmacy.sales.discount`, capped (Phase 3.4) |
 | Printable receipts | ✅ | `sales/{sale}/receipt`, 80 mm (Phase 3.4) |
 | Sales returns (partial) | 🟠 | whole-sale void only |
-| Cashier sessions / till reconciliation | ❌ | |
+| Cashier sessions / till reconciliation | ✅ | `tills`, count at closing; over/short not posted to Finance (Phase 3.5) |
 | Idempotent sale submission | ✅ | `submission_id` per basket (Phase 3.4) |
 | Accounting posting (revenue, payment, COGS, voids) | ✅ | events to Finance |
 | Prescriptions, pharmacist verification, partial dispensing | ✅ | |

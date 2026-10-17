@@ -14,6 +14,8 @@ const STATUS_TONES: Record<string, Tone> = {
     partly_dispensed: 'warning',
     dispensed: 'success',
     rejected: 'danger',
+    open: 'info',
+    closed: 'neutral',
 };
 
 export function statusTone(status: string): Tone {

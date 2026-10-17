@@ -5,6 +5,7 @@ use App\Models\Workspace;
 use App\Modules\Inventory\Actions\Stock;
 use App\Modules\Pharmacy\Models\Medicine;
 use App\Modules\Sales\Actions\Sell;
+use App\Modules\Sales\Actions\Tills;
 use App\Modules\Sales\Actions\VoidSale;
 use App\Modules\Sales\Enums\PaymentMethod;
 use Carbon\CarbonImmutable;
@@ -17,6 +18,8 @@ beforeEach(function () {
 
     $this->asTenant('acme', function () {
         $keeper = User::factory()->create();
+        app(Tills::class)->open($keeper, $this->juba, 0);
+        app(Tills::class)->open($keeper, $this->malakal, 0);
         $this->para = Medicine::factory()->create(['sell_price_minor' => 250]);
         $sell = fn (string $branch, int $quantity, PaymentMethod $method) => app(Sell::class)->handle($keeper, $branch, [['item_id' => $this->para->id, 'quantity' => $quantity]], $method, tenderedMinor: $method === PaymentMethod::Cash ? 10_000 : null);
 
