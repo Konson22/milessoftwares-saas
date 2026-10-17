@@ -19,6 +19,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $unit_price_minor
  * @property int $discount_minor
  * @property int $line_total_minor
+ * @property string|null $pack_name sold by the pack: its name, size and price as sold
+ * @property int $units_per_pack
+ * @property int|null $pack_price_minor
  * @property-read Item $item
  * @property-read Batch $batch
  */
@@ -37,6 +40,8 @@ class SaleLine extends Model
             'unit_price_minor' => 'integer',
             'discount_minor' => 'integer',
             'line_total_minor' => 'integer',
+            'units_per_pack' => 'integer',
+            'pack_price_minor' => 'integer',
         ];
     }
 

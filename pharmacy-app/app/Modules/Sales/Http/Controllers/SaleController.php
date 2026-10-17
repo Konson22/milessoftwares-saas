@@ -5,8 +5,10 @@ namespace App\Modules\Sales\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Inventory\Actions\InsufficientStock;
+use App\Modules\Inventory\Enums\StorageCondition;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Item;
+use App\Modules\Inventory\Models\ItemPack;
 use App\Modules\Sales\Actions\ReturnSale;
 use App\Modules\Sales\Actions\Sell;
 use App\Modules\Sales\Actions\Tills;
@@ -88,6 +90,7 @@ class SaleController extends Controller
         return Inertia::render('sales/create', [
             'medicines' => Item::query()
                 ->where('active', true)
+                ->with('packs')
                 ->orderBy('name')
                 ->get()
                 ->map(fn (Item $item) => [
@@ -99,6 +102,15 @@ class SaleController extends Controller
                     'priceMinor' => $item->sell_price_minor,
                     'available' => (int) ($sellable[$item->id] ?? 0),
                     'prescriptionOnly' => $item->restricted,
+                    'category' => $item->category,
+                    // How it must be kept, when that matters at the counter.
+                    'storage' => $item->storage === StorageCondition::Room ? null : $item->storage->short(),
+                    'packs' => $item->packs->map(fn (ItemPack $pack) => [
+                        'id' => $pack->id,
+                        'name' => $pack->name,
+                        'units' => $pack->units,
+                        'priceMinor' => $pack->sellPrice($item),
+                    ])->values(),
                 ]),
             'maxDiscountPercent' => $this->maxDiscountPercent(),
             'till' => $till === null ? null : ['id' => $till->id, 'number' => $till->number],
@@ -113,6 +125,7 @@ class SaleController extends Controller
             'items.*.item_id' => ['required', 'uuid', 'distinct'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:100000'],
             'items.*.discount_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'items.*.pack_id' => ['nullable', 'uuid'],
             'submission_id' => ['nullable', 'uuid'],
             'payment_method' => ['required', Rule::enum(PaymentMethod::class)],
             'payment_reference' => ['nullable', 'string', 'max:64'],
@@ -128,6 +141,7 @@ class SaleController extends Controller
                     'item_id' => (string) $item['item_id'],
                     'quantity' => (int) $item['quantity'],
                     'discount_percent' => (int) ($item['discount_percent'] ?? 0),
+                    'pack_id' => isset($item['pack_id']) ? (string) $item['pack_id'] : null,
                 ], $validated['items'])),
                 method: PaymentMethod::from($validated['payment_method']),
                 paymentReference: $validated['payment_reference'] ?? null,
@@ -179,6 +193,9 @@ class SaleController extends Controller
                     'unitPriceMinor' => $line->unit_price_minor,
                     'discountMinor' => $line->discount_minor,
                     'lineTotalMinor' => $line->line_total_minor,
+                    'packName' => $line->pack_name,
+                    'unitsPerPack' => $line->units_per_pack,
+                    'packPriceMinor' => $line->pack_price_minor,
                     'returned' => $returned->get($line->id, 0),
                 ]),
                 'returns' => $sale->returns->map(fn (SaleReturn $return) => [
@@ -257,10 +274,12 @@ class SaleController extends Controller
                 'paymentReference' => $sale->payment_reference,
                 'tenderedMinor' => $sale->amount_tendered_minor,
                 'changeMinor' => $sale->change_minor,
+                // Sold by the pack: so many packs at the pack's price.
                 'lines' => $sale->lines->groupBy('item_id')->map(fn ($lines) => [
                     'medicine' => $lines->first()->item->name,
-                    'quantity' => (int) $lines->sum('quantity'),
-                    'unitPriceMinor' => $lines->first()->unit_price_minor,
+                    'pack' => $lines->first()->pack_name === null ? null : "{$lines->first()->pack_name} of {$lines->first()->units_per_pack}",
+                    'quantity' => intdiv((int) $lines->sum('quantity'), $lines->first()->units_per_pack),
+                    'unitPriceMinor' => $lines->first()->pack_price_minor ?? $lines->first()->unit_price_minor,
                     'discountMinor' => (int) $lines->sum('discount_minor'),
                     'lineTotalMinor' => (int) $lines->sum('line_total_minor'),
                 ])->values(),

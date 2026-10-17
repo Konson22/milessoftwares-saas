@@ -5,7 +5,7 @@ Against `MASTER-PLAN.md` §7, from reading `pharmacy-app` and `finance-app` (202
 | Requirement | State | Evidence / gap |
 | --- | --- | --- |
 | Medicine details: generic/brand, strength, form, unit, barcode, Rx-only, controlled | ✅ | `medicines` table |
-| Packaging (pack ↔ unit conversions), storage requirements, category | 🟠 | packs per item, bought in packs (Phase 3.3); no category/storage, POS sells units only |
+| Packaging (pack ↔ unit conversions), storage requirements, category | ✅ | packs bought (3.3) and sold at the counter with their own price; item category and storage condition (Phase 3.9) |
 | Batch number, expiry, unit cost per branch | ✅ | `batches` |
 | FEFO allocation, expired stock blocked at sale | ✅ | `Stock` orders by `expires_on`, excludes expired |
 | Quarantine / recall status | ✅ | batch status blocks sale; quarantine releasable, recall final (Phase 3.7) |

@@ -20,6 +20,8 @@ type Props = {
         changeMinor: number | null;
         lines: {
             medicine: string;
+            /** Sold by the pack: "box of 30"; quantity is then packs. */
+            pack: string | null;
             quantity: number;
             unitPriceMinor: number;
             discountMinor: number;
@@ -87,7 +89,8 @@ export default function Receipt({ sale }: Props) {
                                 <td className="py-1">
                                     {line.medicine}
                                     <span className="block">
-                                        {line.quantity} ×{' '}
+                                        {line.quantity}
+                                        {line.pack && ` ${line.pack}`} ×{' '}
                                         {money(line.unitPriceMinor)}
                                         {line.discountMinor > 0 &&
                                             ` less ${money(line.discountMinor)}`}

@@ -63,7 +63,7 @@ it('keeps the packs a medicine is bought in', function () {
     $cipro = $this->asTenant('acme', fn () => Medicine::query()->where('name', 'Cipro')->sole());
 
     $this->get($this->workspaceUrl('acme', "medicines/{$cipro->id}/edit"))
-        ->assertInertia(fn (AssertableInertia $page) => $page->where('medicine.packs', [['name' => 'strip', 'units' => 10], ['name' => 'box', 'units' => 100]]));
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('medicine.packs', [['name' => 'strip', 'units' => 10, 'sellPrice' => ''], ['name' => 'box', 'units' => 100, 'sellPrice' => '']]));
 
     // Matched by name: the strip changes size, the box goes, a blister arrives.
     $this->put($this->workspaceUrl('acme', "medicines/{$cipro->id}"), medicineWithPacks([['name' => 'strip', 'units' => 14], ['name' => 'blister', 'units' => 7]]))

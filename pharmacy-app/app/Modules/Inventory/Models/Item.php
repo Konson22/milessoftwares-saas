@@ -2,6 +2,7 @@
 
 namespace App\Modules\Inventory\Models;
 
+use App\Modules\Inventory\Enums\StorageCondition;
 use Database\Factories\ItemFactory;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -24,6 +25,8 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property string|null $alias
  * @property string $unit
  * @property string|null $barcode
+ * @property string|null $category
+ * @property StorageCondition $storage
  * @property int $sell_price_minor
  * @property int $reorder_level
  * @property bool $restricted
@@ -42,6 +45,8 @@ class Item extends Model
 
     protected $guarded = ['organization_id'];
 
+    protected $attributes = ['storage' => 'room'];
+
     protected function casts(): array
     {
         return [
@@ -50,6 +55,7 @@ class Item extends Model
             'restricted' => 'boolean',
             'controlled' => 'boolean',
             'active' => 'boolean',
+            'storage' => StorageCondition::class,
         ];
     }
 

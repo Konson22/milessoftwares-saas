@@ -37,6 +37,9 @@ type Props = {
             unitPriceMinor: number;
             discountMinor: number;
             lineTotalMinor: number;
+            packName: string | null;
+            unitsPerPack: number;
+            packPriceMinor: number | null;
             returned: number;
         }[];
         returns: {
@@ -122,9 +125,10 @@ export default function ShowSale({ sale, canVoid, canReturn }: Props) {
                                     <td className="py-1.5">
                                         {line.medicine}
                                         <span className="block text-xs text-muted-foreground">
-                                            {line.quantity} ×{' '}
-                                            {money(line.unitPriceMinor)} · batch{' '}
-                                            {line.batchNumber}, exp{' '}
+                                            {line.packName
+                                                ? `${line.quantity} from ${line.packName}s of ${line.unitsPerPack} at ${money(line.packPriceMinor ?? 0)}`
+                                                : `${line.quantity} × ${money(line.unitPriceMinor)}`}{' '}
+                                            · batch {line.batchNumber}, exp{' '}
                                             {line.expiresOn}
                                             {line.discountMinor > 0 &&
                                                 ` · less ${money(line.discountMinor)}`}

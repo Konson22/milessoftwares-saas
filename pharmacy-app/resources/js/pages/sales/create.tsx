@@ -20,6 +20,10 @@ type Medicine = {
     priceMinor: number;
     available: number;
     prescriptionOnly: boolean;
+    category: string | null;
+    /** How it must be kept, when that is not room temperature. */
+    storage: string | null;
+    packs: { id: string; name: string; units: number; priceMinor: number }[];
 };
 
 type Props = {
@@ -31,10 +35,23 @@ type Props = {
     till: { id: string; number: string } | null;
 };
 
-type BasketLine = { medicine: Medicine; quantity: number; discount: number };
+/** Quantity counts packs when a pack is chosen, units otherwise. */
+type BasketLine = {
+    medicine: Medicine;
+    packId: string | null;
+    quantity: number;
+    discount: number;
+};
+
+const packOf = (line: BasketLine) =>
+    line.medicine.packs.find((pack) => pack.id === line.packId) ?? null;
+
+const maxQuantity = (line: BasketLine) =>
+    Math.floor(line.medicine.available / (packOf(line)?.units ?? 1));
 
 const lineTotal = (line: BasketLine) => {
-    const gross = line.quantity * line.medicine.priceMinor;
+    const gross =
+        line.quantity * (packOf(line)?.priceMinor ?? line.medicine.priceMinor);
 
     return gross - Math.round((gross * line.discount) / 100);
 };
@@ -71,6 +88,7 @@ export default function Counter({
                 (m) =>
                     m.label.toLowerCase().includes(term) ||
                     m.genericName.toLowerCase().includes(term) ||
+                    (m.category?.toLowerCase().includes(term) ?? false) ||
                     m.barcode === search.trim(),
             )
             .slice(0, 8);
@@ -95,14 +113,17 @@ export default function Counter({
                               ...line,
                               quantity: Math.min(
                                   line.quantity + 1,
-                                  medicine.available,
+                                  maxQuantity(line),
                               ),
                           }
                         : line,
                 );
             }
 
-            return [...lines, { medicine, quantity: 1, discount: 0 }];
+            return [
+                ...lines,
+                { medicine, packId: null, quantity: 1, discount: 0 },
+            ];
         });
         setSearch('');
     };
@@ -115,9 +136,18 @@ export default function Counter({
                           ...line,
                           quantity: Math.max(
                               1,
-                              Math.min(quantity, line.medicine.available),
+                              Math.min(quantity, maxQuantity(line)),
                           ),
                       }
+                    : line,
+            ),
+        );
+
+    const setPack = (id: string, packId: string | null) =>
+        setBasket((lines) =>
+            lines.map((line) =>
+                line.medicine.id === id
+                    ? { ...line, packId, quantity: 1 }
                     : line,
             ),
         );
@@ -236,6 +266,11 @@ export default function Counter({
                                                         Needs prescription
                                                     </StatusBadge>
                                                 )}
+                                                {medicine.storage && (
+                                                    <StatusBadge tone="warning">
+                                                        {medicine.storage}
+                                                    </StatusBadge>
+                                                )}
                                                 <span className="ml-auto tabular-nums">
                                                     {money(medicine.priceMinor)}{' '}
                                                     · {medicine.available}{' '}
@@ -263,6 +298,47 @@ export default function Counter({
                                         <span className="font-medium">
                                             {line.medicine.label}
                                         </span>
+                                        {line.medicine.packs.length > 0 && (
+                                            <select
+                                                value={line.packId ?? ''}
+                                                onChange={(event) =>
+                                                    setPack(
+                                                        line.medicine.id,
+                                                        event.target.value ||
+                                                            null,
+                                                    )
+                                                }
+                                                aria-label={`Sell ${line.medicine.label} by`}
+                                                className="h-8 rounded-md border bg-transparent px-2"
+                                            >
+                                                <option value="">
+                                                    {line.medicine.unit} ·{' '}
+                                                    {money(
+                                                        line.medicine
+                                                            .priceMinor,
+                                                    )}
+                                                </option>
+                                                {line.medicine.packs.map(
+                                                    (pack) => (
+                                                        <option
+                                                            key={pack.id}
+                                                            value={pack.id}
+                                                            disabled={
+                                                                pack.units >
+                                                                line.medicine
+                                                                    .available
+                                                            }
+                                                        >
+                                                            {pack.name} of{' '}
+                                                            {pack.units} ·{' '}
+                                                            {money(
+                                                                pack.priceMinor,
+                                                            )}
+                                                        </option>
+                                                    ),
+                                                )}
+                                            </select>
+                                        )}
                                         <div className="ml-auto flex items-center gap-1">
                                             <Button
                                                 type="button"
@@ -285,7 +361,7 @@ export default function Counter({
                                             <Input
                                                 type="number"
                                                 min={1}
-                                                max={line.medicine.available}
+                                                max={maxQuantity(line)}
                                                 value={line.quantity}
                                                 onChange={(event) =>
                                                     setQuantity(
@@ -398,6 +474,13 @@ export default function Counter({
                                         name={`items[${i}][quantity]`}
                                         value={line.quantity}
                                     />
+                                    {line.packId && (
+                                        <input
+                                            type="hidden"
+                                            name={`items[${i}][pack_id]`}
+                                            value={line.packId}
+                                        />
+                                    )}
                                     {line.discount > 0 && (
                                         <input
                                             type="hidden"

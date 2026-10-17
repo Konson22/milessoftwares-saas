@@ -4,6 +4,8 @@ namespace App\Modules\Pharmacy\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Actions\ItemPacks;
+use App\Modules\Inventory\Enums\StorageCondition;
+use App\Modules\Inventory\Models\Item;
 use App\Modules\Inventory\Models\ItemPack;
 use App\Modules\Pharmacy\Enums\MedicineForm;
 use App\Modules\Pharmacy\Models\Medicine;
@@ -25,17 +27,20 @@ class MedicineController extends Controller
     public function index(Request $request): Response
     {
         $search = $request->string('search')->toString();
+        $category = $request->string('category')->toString();
         $showInactive = $request->boolean('inactive');
 
         return Inertia::render('medicines/index', [
             'medicines' => Medicine::query()
                 ->search($search)
+                ->when($category !== '', fn ($query) => $query->whereHas('item', fn ($item) => $item->where('category', $category)))
                 ->when(! $showInactive, fn ($query) => $query->active())
                 ->orderBy('name')
                 ->limit(200)
                 ->get()
                 ->map(fn (Medicine $medicine) => $this->summary($medicine)),
-            'filters' => ['search' => $search, 'inactive' => $showInactive],
+            'filters' => ['search' => $search, 'category' => $category, 'inactive' => $showInactive],
+            'categories' => $this->categories(),
             'canManage' => $request->user()?->can('pharmacy.medicines.manage') ?? false,
         ]);
     }
@@ -44,7 +49,7 @@ class MedicineController extends Controller
     {
         return Inertia::render('medicines/form', [
             'medicine' => null,
-            'forms' => $this->forms(),
+            ...$this->choices(),
         ]);
     }
 
@@ -62,9 +67,13 @@ class MedicineController extends Controller
             'medicine' => [
                 ...$this->summary($medicine),
                 'sellPrice' => Money::toMajor($medicine->sell_price_minor),
-                'packs' => $medicine->item->packs->map(fn (ItemPack $pack) => ['name' => $pack->name, 'units' => $pack->units])->values(),
+                'packs' => $medicine->item->packs->map(fn (ItemPack $pack) => [
+                    'name' => $pack->name,
+                    'units' => $pack->units,
+                    'sellPrice' => $pack->sell_price_minor === null ? '' : Money::toMajor($pack->sell_price_minor),
+                ])->values(),
             ],
-            'forms' => $this->forms(),
+            ...$this->choices(),
         ]);
     }
 
@@ -91,7 +100,7 @@ class MedicineController extends Controller
     /**
      * The medicine's attributes, and the packs its item is bought in.
      *
-     * @return array{0: array<string, mixed>, 1: list<array{name: string, units: int}>}
+     * @return array{0: array<string, mixed>, 1: list<array{name: string, units: int, sell_price_minor: int|null}>}
      */
     private function validated(Request $request, Medicine $medicine): array
     {
@@ -101,6 +110,8 @@ class MedicineController extends Controller
             'form' => ['required', Rule::enum(MedicineForm::class)],
             'strength' => ['nullable', 'string', 'max:64'],
             'unit' => ['required', 'string', 'max:32'],
+            'category' => ['nullable', 'string', 'max:64'],
+            'storage' => ['nullable', Rule::enum(StorageCondition::class)],
             'barcode' => [
                 'nullable', 'string', 'max:64',
                 Rule::unique('items', 'barcode')
@@ -115,6 +126,7 @@ class MedicineController extends Controller
             'packs' => ['array', 'max:10'],
             'packs.*.name' => ['required', 'string', 'max:32'],
             'packs.*.units' => ['required', 'integer', 'min:2', 'max:100000'],
+            'packs.*.sell_price' => ['nullable', 'string', Money::rule()],
         ]);
 
         // A controlled medicine is always prescription-only.
@@ -127,10 +139,14 @@ class MedicineController extends Controller
                 'prescription_only' => $controlled || (bool) ($validated['prescription_only'] ?? false),
                 'active' => (bool) ($validated['active'] ?? true),
                 'sell_price_minor' => Money::toMinor($validated['sell_price']),
+                // One spelling per category, whoever typed it first.
+                'category' => $this->category($validated['category'] ?? null),
+                'storage' => $validated['storage'] ?? StorageCondition::Room->value,
             ],
             array_values(array_map(fn (array $pack) => [
                 'name' => (string) $pack['name'],
                 'units' => (int) $pack['units'],
+                'sell_price_minor' => isset($pack['sell_price']) && $pack['sell_price'] !== '' ? Money::toMinor($pack['sell_price']) : null,
             ], $validated['packs'] ?? [])),
         ];
     }
@@ -148,6 +164,9 @@ class MedicineController extends Controller
             'strength' => $medicine->strength,
             'unit' => $medicine->unit,
             'barcode' => $medicine->barcode,
+            'category' => $medicine->category,
+            'storage' => $medicine->storage->value,
+            'storageLabel' => $medicine->storage->short(),
             'prescriptionOnly' => $medicine->prescription_only,
             'controlled' => $medicine->controlled,
             'sellPriceMinor' => $medicine->sell_price_minor,
@@ -157,10 +176,34 @@ class MedicineController extends Controller
     }
 
     /**
-     * @return list<array{value: string, label: string}>
+     * What the form offers: forms, storage conditions, categories in use.
+     *
+     * @return array{forms: list<array{value: string, label: string}>, storageConditions: list<array{value: string, label: string}>, categories: list<string>}
      */
-    private function forms(): array
+    private function choices(): array
     {
-        return array_map(fn (MedicineForm $form) => ['value' => $form->value, 'label' => $form->label()], MedicineForm::cases());
+        return [
+            'forms' => array_map(fn (MedicineForm $form) => ['value' => $form->value, 'label' => $form->label()], MedicineForm::cases()),
+            'storageConditions' => array_map(fn (StorageCondition $storage) => ['value' => $storage->value, 'label' => $storage->label()], StorageCondition::cases()),
+            'categories' => $this->categories(),
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function categories(): array
+    {
+        return array_values(Item::query()->whereNotNull('category')->distinct()->orderBy('category')->pluck('category')->map(fn ($category) => (string) $category)->all());
+    }
+
+    private function category(?string $typed): ?string
+    {
+        $typed = trim((string) $typed);
+        if ($typed === '') {
+            return null;
+        }
+
+        return Item::query()->whereNotNull('category')->whereRaw('LOWER(category) = ?', [mb_strtolower($typed)])->value('category') ?? $typed;
     }
 }

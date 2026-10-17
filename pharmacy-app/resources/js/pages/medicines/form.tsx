@@ -16,17 +16,21 @@ type Medicine = {
     strength: string | null;
     unit: string;
     barcode: string | null;
+    category: string | null;
+    storage: string;
     prescriptionOnly: boolean;
     controlled: boolean;
     sellPrice: string;
     reorderLevel: number;
     active: boolean;
-    packs: { name: string; units: number }[];
+    packs: { name: string; units: number; sellPrice: string }[];
 };
 
 type Props = {
     medicine: Medicine | null;
     forms: { value: string; label: string }[];
+    storageConditions: { value: string; label: string }[];
+    categories: string[];
 };
 
 function Field({
@@ -53,7 +57,12 @@ function Field({
     );
 }
 
-export default function MedicineForm({ medicine, forms }: Props) {
+export default function MedicineForm({
+    medicine,
+    forms,
+    storageConditions,
+    categories,
+}: Props) {
     const action = medicine ? update.form(medicine.id) : store.form();
     const [packs, setPacks] = useState(
         (medicine?.packs ?? []).map((pack, key) => ({ key, ...pack })),
@@ -167,6 +176,49 @@ export default function MedicineForm({ medicine, forms }: Props) {
                                     />
                                 </Field>
                                 <Field
+                                    id="category"
+                                    label="Category (e.g. Antibiotics)"
+                                    error={errors.category}
+                                >
+                                    <Input
+                                        id="category"
+                                        name="category"
+                                        list="categories"
+                                        defaultValue={medicine?.category ?? ''}
+                                    />
+                                    <datalist id="categories">
+                                        {categories.map((category) => (
+                                            <option
+                                                key={category}
+                                                value={category}
+                                            />
+                                        ))}
+                                    </datalist>
+                                </Field>
+                                <Field
+                                    id="storage"
+                                    label="Storage"
+                                    error={errors.storage}
+                                >
+                                    <select
+                                        id="storage"
+                                        name="storage"
+                                        defaultValue={
+                                            medicine?.storage ?? 'room'
+                                        }
+                                        className="h-9 rounded-md border bg-transparent px-3 text-sm"
+                                    >
+                                        {storageConditions.map((storage) => (
+                                            <option
+                                                key={storage.value}
+                                                value={storage.value}
+                                            >
+                                                {storage.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </Field>
+                                <Field
                                     id="sell_price"
                                     label="Selling price per unit"
                                     error={errors.sell_price}
@@ -201,17 +253,19 @@ export default function MedicineForm({ medicine, forms }: Props) {
 
                                 <fieldset className="grid gap-2 sm:col-span-2">
                                     <legend className="mb-1 text-sm font-medium">
-                                        Packs it is bought in
+                                        Packs
                                     </legend>
                                     <p className="text-xs text-muted-foreground">
                                         Stock is always counted in the unit
-                                        above; orders and deliveries can count
-                                        packs (a box of 30).
+                                        above; orders, deliveries and the
+                                        counter can count packs (a box of 30).
+                                        Leave the pack price empty to charge its
+                                        units at the unit price.
                                     </p>
                                     {packs.map((pack, i) => (
                                         <div
                                             key={pack.key}
-                                            className="grid items-start gap-2 sm:grid-cols-[1fr_8rem_auto]"
+                                            className="grid items-start gap-2 sm:grid-cols-[1fr_7rem_8rem_auto]"
                                         >
                                             <div>
                                                 <Input
@@ -253,6 +307,28 @@ export default function MedicineForm({ medicine, forms }: Props) {
                                                     </p>
                                                 )}
                                             </div>
+                                            <div>
+                                                <Input
+                                                    name={`packs[${i}][sell_price]`}
+                                                    inputMode="decimal"
+                                                    defaultValue={
+                                                        pack.sellPrice
+                                                    }
+                                                    placeholder="Pack price"
+                                                    aria-label={`Selling price of pack ${i + 1}`}
+                                                />
+                                                {errors[
+                                                    `packs.${i}.sell_price`
+                                                ] && (
+                                                    <p className="text-xs text-destructive">
+                                                        {
+                                                            errors[
+                                                                `packs.${i}.sell_price`
+                                                            ]
+                                                        }
+                                                    </p>
+                                                )}
+                                            </div>
                                             <Button
                                                 type="button"
                                                 variant="ghost"
@@ -287,6 +363,7 @@ export default function MedicineForm({ medicine, forms }: Props) {
                                                     key: nextKey,
                                                     name: '',
                                                     units: 0,
+                                                    sellPrice: '',
                                                 },
                                             ]);
                                             setNextKey(nextKey + 1);

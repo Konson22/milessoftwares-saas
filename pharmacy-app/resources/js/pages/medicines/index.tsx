@@ -24,6 +24,9 @@ type Medicine = {
     form: string;
     strength: string | null;
     unit: string;
+    category: string | null;
+    storage: string;
+    storageLabel: string;
     prescriptionOnly: boolean;
     controlled: boolean;
     sellPriceMinor: number;
@@ -32,11 +35,17 @@ type Medicine = {
 
 type Props = {
     medicines: Medicine[];
-    filters: { search: string; inactive: boolean };
+    filters: { search: string; category: string; inactive: boolean };
+    categories: string[];
     canManage: boolean;
 };
 
-export default function Medicines({ medicines, filters, canManage }: Props) {
+export default function Medicines({
+    medicines,
+    filters,
+    categories,
+    canManage,
+}: Props) {
     const { currency } = usePage().props;
 
     return (
@@ -67,6 +76,21 @@ export default function Medicines({ medicines, filters, canManage }: Props) {
                             aria-label="Search medicines"
                             className="max-w-sm"
                         />
+                        {categories.length > 0 && (
+                            <select
+                                name="category"
+                                defaultValue={filters.category}
+                                aria-label="Category"
+                                className="h-9 rounded-md border bg-transparent px-2 text-sm"
+                            >
+                                <option value="">All categories</option>
+                                {categories.map((category) => (
+                                    <option key={category} value={category}>
+                                        {category}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
                         <label className="flex items-center gap-2 text-sm">
                             <input
                                 type="checkbox"
@@ -100,6 +124,7 @@ export default function Medicines({ medicines, filters, canManage }: Props) {
                             <TableRow>
                                 <TableHead>Medicine</TableHead>
                                 <TableHead>Generic</TableHead>
+                                <TableHead>Category</TableHead>
                                 <TableHead>Unit</TableHead>
                                 <TableHead className="text-right">
                                     Price
@@ -130,6 +155,9 @@ export default function Medicines({ medicines, filters, canManage }: Props) {
                                     <TableCell className="text-muted-foreground">
                                         {medicine.genericName}
                                     </TableCell>
+                                    <TableCell className="text-muted-foreground">
+                                        {medicine.category ?? '–'}
+                                    </TableCell>
                                     <TableCell>{medicine.unit}</TableCell>
                                     <TableCell className="text-right tabular-nums">
                                         {formatMoney(
@@ -150,6 +178,11 @@ export default function Medicines({ medicines, filters, canManage }: Props) {
                                                         Rx
                                                     </StatusBadge>
                                                 )}
+                                            {medicine.storage !== 'room' && (
+                                                <StatusBadge tone="warning">
+                                                    {medicine.storageLabel}
+                                                </StatusBadge>
+                                            )}
                                             {!medicine.active && (
                                                 <StatusBadge tone="neutral">
                                                     Inactive

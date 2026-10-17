@@ -8,15 +8,16 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * The packs an item is bought in. Documents copy a pack's name and size,
- * so changing or removing a pack never touches them.
+ * The packs an item is bought and sold in. Documents copy a pack's name and
+ * size (and sales its price), so changing or removing a pack never touches
+ * them.
  */
 class ItemPacks
 {
     /**
      * Makes the item's packs exactly these, matched by name.
      *
-     * @param  list<array{name: string, units: int}>  $packs
+     * @param  list<array{name: string, units: int, sell_price_minor?: int|null}>  $packs
      *
      * @throws ValidationException
      */
@@ -36,14 +37,14 @@ class ItemPacks
                 throw ValidationException::withMessages(["{$field}.{$index}.units" => 'A pack holds at least 2.']);
             }
 
-            $byName[$name] = $pack['units'];
+            $byName[$name] = ['units' => $pack['units'], 'sell_price_minor' => $pack['sell_price_minor'] ?? null];
         }
 
         DB::transaction(function () use ($item, $byName) {
             ItemPack::query()->where('item_id', $item->id)->whereNotIn('name', array_keys($byName))->delete();
 
-            foreach ($byName as $name => $units) {
-                ItemPack::query()->updateOrCreate(['item_id' => $item->id, 'name' => $name], ['units' => $units]);
+            foreach ($byName as $name => $attributes) {
+                ItemPack::query()->updateOrCreate(['item_id' => $item->id, 'name' => $name], $attributes);
             }
         });
     }

@@ -8,14 +8,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Miles\PlatformClient\Tenancy\BelongsToTenant;
 
 /**
- * A way an item is bought: a box of 30 tablets. Stock is still counted in
- * the item's unit; documents copy the pack's name and size when they use it.
+ * A way an item is bought and sold: a box of 30 tablets. Stock is still
+ * counted in the item's unit; documents copy the pack's name and size (and
+ * sales its price) when they use it.
  *
  * @property string $id
  * @property string $organization_id
  * @property string $item_id
  * @property string $name
  * @property int $units
+ * @property int|null $sell_price_minor null: its units at the item's unit price
  */
 class ItemPack extends Model
 {
@@ -28,6 +30,7 @@ class ItemPack extends Model
     {
         return [
             'units' => 'integer',
+            'sell_price_minor' => 'integer',
         ];
     }
 
@@ -37,6 +40,14 @@ class ItemPack extends Model
     public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class);
+    }
+
+    /**
+     * What one pack sells for today.
+     */
+    public function sellPrice(Item $item): int
+    {
+        return $this->sell_price_minor ?? $this->units * $item->sell_price_minor;
     }
 
     /**

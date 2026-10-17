@@ -14,7 +14,8 @@
 | 3.6 Partial sales returns | Done 2026-10-18 |
 | 3.7 Batch holds and approved disposals | Done 2026-10-18 |
 | 3.8 Profitability, purchases and cashier reports | Done 2026-10-18 |
-| 3.9 – 11 | Not started |
+| 3.9 Categories, storage and selling packs | Done 2026-10-18 |
+| 3.10 – 11 | Not started |
 
 Decisions accepted 2026-10-16: D1 → `docs/adr/0003-erp-workspace-application.md`,
 D2 → `docs/adr/0004-companies-as-organizations.md`.
@@ -346,3 +347,28 @@ The branch reports gain profitability, purchase history and cashier reconciliati
 - Mutation: leaving restocked returns in the cost fails the profitability test.
 
 **Known limitations:** no export (CSV/PDF other than the browser's print); reports are per branch.
+
+## Phase 3.9 — 2026-10-18 (local, Windows)
+
+Medicines get a category and a storage condition, and the counter sells packs.
+
+**Implemented** (`pharmacy-app`):
+- Migration `2026_10_18_140000_add_categories_storage_and_selling_packs` (additive):
+  `items.category` (indexed) and `items.storage` (room | cool | refrigerated | frozen, default
+  room), on the shared item so every module can use them; `item_packs.sell_price_minor`
+  (nullable: the pack's units at the unit price); `sale_lines.pack_name`, `units_per_pack`,
+  `pack_price_minor` (the pack as sold).
+- Medicine form: category (suggesting those in use, one spelling per category), storage, a price
+  per pack. Medicines list: category column and filter, storage badge.
+- `Sell`: a line may name one of the item's packs; quantity is then packs, stock is taken in units
+  (FEFO), the price and discount are shared over the batches in proportion. Finance gets the units
+  and "(2 box of 10)" in the description. Receipts show packs; returns stay in units at what they
+  were sold for.
+- Counter: choose unit or pack per line (packs larger than the stock are disabled), search by
+  category, storage badge.
+
+**Tests executed:**
+- Pharmacy: Pest 132 passed, 1 skipped; PHPStan 0; Pint; `vp check`; `tsc`. New
+  `CategoriesAndPackSalesTest` (5).
+- Local PostgreSQL: `migrate`, `migrate:rollback --step=1`, `migrate`.
+- Mutation: pricing pack lines by the unit price fails the pack sale test.

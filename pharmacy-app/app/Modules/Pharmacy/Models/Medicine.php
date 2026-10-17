@@ -2,6 +2,7 @@
 
 namespace App\Modules\Pharmacy\Models;
 
+use App\Modules\Inventory\Enums\StorageCondition;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Item;
 use App\Modules\Pharmacy\Enums\MedicineForm;
@@ -31,6 +32,8 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property string|null $strength
  * @property string $unit
  * @property string|null $barcode
+ * @property string|null $category
+ * @property StorageCondition $storage
  * @property bool $prescription_only
  * @property bool $controlled
  * @property int $sell_price_minor
@@ -57,6 +60,8 @@ class Medicine extends Model
         'generic_name' => 'alias',
         'unit' => 'unit',
         'barcode' => 'barcode',
+        'category' => 'category',
+        'storage' => 'storage',
         'prescription_only' => 'restricted',
         'controlled' => 'controlled',
         'sell_price_minor' => 'sell_price_minor',
@@ -65,7 +70,7 @@ class Medicine extends Model
     ];
 
     protected $fillable = [
-        'name', 'generic_name', 'form', 'strength', 'unit', 'barcode',
+        'name', 'generic_name', 'form', 'strength', 'unit', 'barcode', 'category', 'storage',
         'prescription_only', 'controlled', 'sell_price_minor', 'reorder_level', 'active',
     ];
 

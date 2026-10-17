@@ -4,6 +4,7 @@ namespace App\Modules\Sales\Actions;
 
 use App\Models\User;
 use App\Modules\Inventory\Actions\InsufficientStock;
+use App\Modules\Inventory\Actions\ItemPacks;
 use App\Modules\Inventory\Actions\Stock;
 use App\Modules\Inventory\Models\Item;
 use App\Modules\Sales\Enums\PaymentMethod;
@@ -17,7 +18,8 @@ use Miles\PlatformClient\Events\Outbox;
 
 /**
  * A sale at the counter of a branch: stock taken oldest expiry first,
- * priced at today's price less any discount, paid, and reported to Finance
+ * by the unit or by the pack (at the pack's price), priced at today's price
+ * less any discount, paid, and reported to Finance
  * as a receipt (finance.invoice.issued) and a payment
  * (finance.payment.received). All in one transaction: a sale either
  * happened completely or not at all.
@@ -38,10 +40,11 @@ class Sell
         private readonly DocumentNumbers $numbers,
         private readonly Outbox $outbox,
         private readonly Tills $tills,
+        private readonly ItemPacks $packs,
     ) {}
 
     /**
-     * @param  list<array{item_id: string, quantity: int, discount_percent?: int}>  $items
+     * @param  list<array{item_id: string, quantity: int, discount_percent?: int, pack_id?: string|null}>  $items  quantity in packs when a pack is named
      * @param  list<string>  $authorized  restricted item ids allowed in this sale (a verified prescription's)
      * @param  int  $maxDiscountPercent  the most this seller may take off a line (0: no discounts)
      *
@@ -77,7 +80,7 @@ class Sell
     }
 
     /**
-     * @param  list<array{item_id: string, quantity: int, discount_percent?: int}>  $items
+     * @param  list<array{item_id: string, quantity: int, discount_percent?: int, pack_id?: string|null}>  $items
      * @param  list<string>  $authorized
      */
     private function sell(
@@ -120,10 +123,12 @@ class Sell
                         : "You may give at most {$maxDiscountPercent}% off."]);
                 }
 
-                $gross = $line['quantity'] * $item->sell_price_minor;
+                $pack = $this->packs->find($item->id, $line['pack_id'] ?? null, "items.{$index}.pack_id");
+                $units = $pack === null ? $line['quantity'] : $line['quantity'] * $pack->units;
+                $gross = $line['quantity'] * ($pack === null ? $item->sell_price_minor : $pack->sellPrice($item));
                 $discount = intdiv($gross * $percent + 50, 100);
 
-                $priced[] = [$item, $line['quantity'], $gross, $discount];
+                $priced[] = [$item, $units, $gross, $discount, $pack, $line['quantity']];
                 $total += $gross - $discount;
                 $discountTotal += $discount;
             }
@@ -156,17 +161,21 @@ class Sell
 
             $invoiceLines = [];
 
-            foreach ($priced as [$item, $quantity, $gross, $discount]) {
+            foreach ($priced as [$item, $quantity, $gross, $discount, $pack, $packs]) {
                 // What the stock sold cost, batch by batch: Finance's cost of
-                // goods sold. The discount is shared across the batches in
-                // proportion, the last one taking what rounding leaves.
+                // goods sold. The price and the discount are shared across the
+                // batches in proportion, the last one taking what rounding
+                // leaves (by the unit, exactly each batch's units at the price).
                 $cost = 0;
                 $parts = $this->stock->take($item, $branchId, $quantity, $by, 'sale', $sale->id);
+                $grossLeft = $gross;
                 $discountLeft = $discount;
 
                 foreach ($parts as $i => $part) {
-                    $partGross = $part['quantity'] * $item->sell_price_minor;
-                    $partDiscount = $i === array_key_last($parts) ? $discountLeft : intdiv($discount * $part['quantity'], $quantity);
+                    $last = $i === array_key_last($parts);
+                    $partGross = $last ? $grossLeft : intdiv($gross * $part['quantity'], $quantity);
+                    $partDiscount = $last ? $discountLeft : intdiv($discount * $part['quantity'], $quantity);
+                    $grossLeft -= $partGross;
                     $discountLeft -= $partDiscount;
 
                     $cost += $part['quantity'] * $part['batch']->unit_cost_minor;
@@ -177,11 +186,14 @@ class Sell
                         'unit_price_minor' => $item->sell_price_minor,
                         'discount_minor' => $partDiscount,
                         'line_total_minor' => $partGross - $partDiscount,
+                        'pack_name' => $pack?->name,
+                        'units_per_pack' => $pack->units ?? 1,
+                        'pack_price_minor' => $pack?->sellPrice($item),
                     ]);
                 }
 
                 $invoiceLines[] = [
-                    'description' => $item->name,
+                    'description' => $pack === null ? $item->name : "{$item->name} ({$packs} {$pack->label()})",
                     'quantity' => $quantity,
                     'amount_minor' => $gross - $discount,
                     'revenue_account' => null,
