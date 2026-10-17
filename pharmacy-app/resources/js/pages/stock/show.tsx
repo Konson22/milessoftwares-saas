@@ -1,4 +1,5 @@
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 import { PageHeader } from '@miles/ui/components/page-header';
 import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
 import { StatusBadge } from '@miles/ui/components/status-badge';
@@ -15,7 +16,8 @@ import {
     TableRow,
 } from '@miles/ui/components/ui/table';
 import { formatMoney } from '@/lib/money';
-import { adjust, index, opening } from '@/routes/stock';
+import { index as disposals, store as storeDisposal } from '@/routes/disposals';
+import { adjust, hold, index, opening, release } from '@/routes/stock';
 
 type Batch = {
     id: string;
@@ -24,6 +26,9 @@ type Batch = {
     expired: boolean;
     quantity: number;
     unitCostMinor: number;
+    status: 'available' | 'quarantined' | 'recalled';
+    holdReason: string | null;
+    heldAt: string | null;
 };
 
 type Movement = {
@@ -47,8 +52,18 @@ type Props = {
     };
     batches: Batch[];
     movements: Movement[];
+    pendingDisposals: {
+        id: string;
+        number: string;
+        batchNumber: string;
+        quantity: number;
+        reason: string;
+        requestedBy: string;
+    }[];
     reasons: { value: string; label: string }[];
+    disposalReasons: { value: string; label: string }[];
     canAdjust: boolean;
+    canHold: boolean;
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -59,16 +74,26 @@ const TYPE_LABELS: Record<string, string> = {
     sale_return: 'Customer return',
     supplier_return: 'Returned to supplier',
     adjustment: 'Adjusted',
+    disposal: 'Disposed of',
 };
 
 export default function StockShow({
     medicine,
     batches,
     movements,
+    pendingDisposals,
     reasons,
+    disposalReasons,
     canAdjust,
+    canHold,
 }: Props) {
     const { branch, currency } = usePage().props;
+    const [holdBatch, setHoldBatch] = useState(
+        batches.find((batch) => batch.status !== 'recalled')?.id ?? '',
+    );
+    const [disposeBatch, setDisposeBatch] = useState(
+        batches.find((batch) => batch.quantity > 0)?.id ?? '',
+    );
 
     return (
         <>
@@ -120,6 +145,46 @@ export default function StockShow({
                                             <StatusBadge tone="neutral">
                                                 Expired
                                             </StatusBadge>
+                                        )}
+                                        {batch.status !== 'available' && (
+                                            <span className="block text-xs">
+                                                <StatusBadge
+                                                    tone={
+                                                        batch.status ===
+                                                        'recalled'
+                                                            ? 'danger'
+                                                            : 'warning'
+                                                    }
+                                                >
+                                                    {batch.status}
+                                                </StatusBadge>{' '}
+                                                <span className="text-muted-foreground">
+                                                    {batch.holdReason}
+                                                </span>
+                                                {canHold &&
+                                                    batch.status ===
+                                                        'quarantined' && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="link"
+                                                            size="sm"
+                                                            className="h-auto px-1"
+                                                            onClick={() =>
+                                                                router.post(
+                                                                    release.url(
+                                                                        batch.id,
+                                                                    ),
+                                                                    {},
+                                                                    {
+                                                                        preserveScroll: true,
+                                                                    },
+                                                                )
+                                                            }
+                                                        >
+                                                            Release
+                                                        </Button>
+                                                    )}
+                                            </span>
                                         )}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
@@ -215,6 +280,214 @@ export default function StockShow({
                     </TableBody>
                 </Table>
             </Panel>
+
+            {(canHold || canAdjust) && batches.length > 0 && (
+                <div className="mb-5 grid gap-5 lg:grid-cols-2">
+                    {canHold && holdBatch !== '' && (
+                        <Panel>
+                            <PanelHeader
+                                title="Hold a batch back"
+                                description="Quarantined or recalled stock is not sold. A quarantined batch can be released; a recalled one goes back to the supplier or is disposed of."
+                            />
+                            <PanelBody>
+                                <Form
+                                    {...hold.form(holdBatch)}
+                                    resetOnSuccess
+                                    options={{ preserveScroll: true }}
+                                    className="grid gap-3"
+                                >
+                                    {({ errors, processing }) => (
+                                        <>
+                                            <select
+                                                value={holdBatch}
+                                                onChange={(e) =>
+                                                    setHoldBatch(e.target.value)
+                                                }
+                                                aria-label="Batch to hold"
+                                                className="h-9 rounded-md border bg-transparent px-2"
+                                            >
+                                                {batches
+                                                    .filter(
+                                                        (batch) =>
+                                                            batch.status !==
+                                                            'recalled',
+                                                    )
+                                                    .map((batch) => (
+                                                        <option
+                                                            key={batch.id}
+                                                            value={batch.id}
+                                                        >
+                                                            {batch.batchNumber}{' '}
+                                                            (exp{' '}
+                                                            {batch.expiresOn})
+                                                        </option>
+                                                    ))}
+                                            </select>
+                                            <select
+                                                name="status"
+                                                aria-label="Hold"
+                                                className="h-9 rounded-md border bg-transparent px-2"
+                                            >
+                                                <option value="quarantined">
+                                                    Quarantine
+                                                </option>
+                                                <option value="recalled">
+                                                    Recall
+                                                </option>
+                                            </select>
+                                            <Input
+                                                name="reason"
+                                                required
+                                                placeholder="Why? (e.g. recall notice number)"
+                                                aria-label="Reason for the hold"
+                                            />
+                                            {(errors.reason || errors.hold) && (
+                                                <p className="text-sm text-destructive">
+                                                    {errors.reason ??
+                                                        errors.hold}
+                                                </p>
+                                            )}
+                                            <Button
+                                                type="submit"
+                                                variant="outline"
+                                                disabled={processing}
+                                            >
+                                                Hold back from sale
+                                            </Button>
+                                        </>
+                                    )}
+                                </Form>
+                            </PanelBody>
+                        </Panel>
+                    )}
+
+                    {canAdjust && disposeBatch !== '' && (
+                        <Panel>
+                            <PanelHeader
+                                title="Dispose of stock"
+                                description="Damaged, expired or recalled stock is destroyed once someone else approves."
+                            />
+                            <PanelBody>
+                                <Form
+                                    {...storeDisposal.form(disposeBatch)}
+                                    resetOnSuccess
+                                    options={{ preserveScroll: true }}
+                                    className="grid gap-3"
+                                >
+                                    {({ errors, processing }) => (
+                                        <>
+                                            <select
+                                                value={disposeBatch}
+                                                onChange={(e) =>
+                                                    setDisposeBatch(
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                aria-label="Batch to dispose of"
+                                                className="h-9 rounded-md border bg-transparent px-2"
+                                            >
+                                                {batches
+                                                    .filter(
+                                                        (batch) =>
+                                                            batch.quantity > 0,
+                                                    )
+                                                    .map((batch) => (
+                                                        <option
+                                                            key={batch.id}
+                                                            value={batch.id}
+                                                        >
+                                                            {batch.batchNumber}{' '}
+                                                            ({batch.quantity} on
+                                                            hand)
+                                                        </option>
+                                                    ))}
+                                            </select>
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    name="quantity"
+                                                    type="number"
+                                                    min={1}
+                                                    required
+                                                    placeholder={`Quantity (${medicine.unit})`}
+                                                    aria-label="Quantity to dispose of"
+                                                    className="w-36"
+                                                />
+                                                <select
+                                                    name="reason"
+                                                    aria-label="Reason for disposal"
+                                                    className="h-9 flex-1 rounded-md border bg-transparent px-2"
+                                                >
+                                                    {disposalReasons.map(
+                                                        (reason) => (
+                                                            <option
+                                                                key={
+                                                                    reason.value
+                                                                }
+                                                                value={
+                                                                    reason.value
+                                                                }
+                                                            >
+                                                                {reason.label}
+                                                            </option>
+                                                        ),
+                                                    )}
+                                                </select>
+                                            </div>
+                                            <Input
+                                                name="note"
+                                                placeholder="Note"
+                                                aria-label="Disposal note"
+                                            />
+                                            {(errors.quantity ||
+                                                errors.note) && (
+                                                <p className="text-sm text-destructive">
+                                                    {errors.quantity ??
+                                                        errors.note}
+                                                </p>
+                                            )}
+                                            <Button
+                                                type="submit"
+                                                variant="outline"
+                                                disabled={processing}
+                                            >
+                                                Ask for approval
+                                            </Button>
+                                        </>
+                                    )}
+                                </Form>
+                                {pendingDisposals.length > 0 && (
+                                    <div className="mt-4 text-sm">
+                                        <p className="font-medium">
+                                            Waiting for approval
+                                        </p>
+                                        <ul className="mt-1 grid gap-1">
+                                            {pendingDisposals.map(
+                                                (disposal) => (
+                                                    <li key={disposal.id}>
+                                                        {disposal.number}:{' '}
+                                                        {disposal.quantity} of
+                                                        batch{' '}
+                                                        {disposal.batchNumber} (
+                                                        {disposal.reason}),
+                                                        asked by{' '}
+                                                        {disposal.requestedBy}
+                                                    </li>
+                                                ),
+                                            )}
+                                        </ul>
+                                        <Link
+                                            href={disposals()}
+                                            className="mt-1 inline-block underline"
+                                        >
+                                            All disposals
+                                        </Link>
+                                    </div>
+                                )}
+                            </PanelBody>
+                        </Panel>
+                    )}
+                </div>
+            )}
 
             {canAdjust && (
                 <Panel className="mb-5 max-w-3xl">

@@ -46,6 +46,7 @@ class HomeController extends Controller
         if ($can('pharmacy.stock.view')) {
             $sellable = Batch::query()
                 ->where('branch_id', $branch->id())
+                ->where('status', Batch::AVAILABLE)
                 ->whereDate('expires_on', '>', $today)
                 ->groupBy('item_id')
                 ->selectRaw('item_id, SUM(quantity_on_hand) AS quantity')
@@ -58,6 +59,7 @@ class HomeController extends Controller
                 'expiring' => Batch::query()
                     ->where('branch_id', $branch->id())
                     ->where('quantity_on_hand', '>', 0)
+                    ->where('status', Batch::AVAILABLE)
                     ->whereDate('expires_on', '>', $today)
                     ->whereDate('expires_on', '<=', $today->addDays(StockController::EXPIRING_DAYS))
                     ->distinct()

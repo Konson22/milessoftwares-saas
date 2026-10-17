@@ -22,6 +22,7 @@ type Row = {
     unit: string;
     sellable: number;
     expired: number;
+    held: number;
     nextExpiry: string | null;
     low: boolean;
     expiringSoon: boolean;
@@ -39,6 +40,7 @@ const FILTERS = [
     { value: 'low', label: 'Low stock' },
     { value: 'expiring', label: 'Expiring soon' },
     { value: 'expired', label: 'Expired' },
+    { value: 'held', label: 'On hold' },
 ];
 
 export default function StockIndex({ rows, filters, expiringDays }: Props) {
@@ -149,6 +151,11 @@ export default function StockIndex({ rows, filters, expiringDays }: Props) {
                                             {row.expired > 0 && (
                                                 <StatusBadge tone="neutral">
                                                     {row.expired} expired
+                                                </StatusBadge>
+                                            )}
+                                            {row.held > 0 && (
+                                                <StatusBadge tone="warning">
+                                                    {row.held} on hold
                                                 </StatusBadge>
                                             )}
                                         </div>

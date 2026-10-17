@@ -3,6 +3,7 @@
 namespace App\Modules\Pharmacy\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Inventory\Models\StockDisposal;
 use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Pharmacy\Models\Medicine;
 use App\Modules\Pharmacy\Models\Prescription;
@@ -49,6 +50,10 @@ class ControlledRegisterController extends Controller
                 ->whereIn('id', $movements->where('reference_type', 'sale_return')->pluck('reference_id')->unique())
                 ->get(['id', 'number'])
                 ->keyBy('id');
+            $disposals = StockDisposal::query()
+                ->whereIn('id', $movements->where('reference_type', 'stock_disposal')->pluck('reference_id')->unique())
+                ->get(['id', 'number'])
+                ->keyBy('id');
             $receipts = GoodsReceipt::query()
                 ->whereIn('id', $movements->where('reference_type', 'goods_receipt')->pluck('reference_id')->unique())
                 ->with('supplier:id,name')
@@ -73,6 +78,7 @@ class ControlledRegisterController extends Controller
                         'sale' => $sales->get($movement->reference_id)?->number,
                         'goods_receipt' => $receipt?->number,
                         'sale_return' => $returns->get($movement->reference_id)?->number,
+                        'stock_disposal' => $disposals->get($movement->reference_id)?->number,
                         default => null,
                     },
                     'supplier' => $receipt?->supplier->name,

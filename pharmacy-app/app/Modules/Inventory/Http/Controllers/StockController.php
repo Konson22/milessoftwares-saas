@@ -4,11 +4,14 @@ namespace App\Modules\Inventory\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Modules\Inventory\Actions\BatchHolds;
 use App\Modules\Inventory\Actions\Stock;
 use App\Modules\Inventory\Enums\AdjustmentReason;
+use App\Modules\Inventory\Enums\DisposalReason;
 use App\Modules\Inventory\Enums\MovementType;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Item;
+use App\Modules\Inventory\Models\StockDisposal;
 use App\Modules\Inventory\Models\StockMovement;
 use App\Support\CurrentBranch;
 use App\Support\Money;
@@ -16,6 +19,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Miles\PlatformClient\Access\CurrentAccess;
@@ -32,19 +36,21 @@ class StockController extends Controller
 
     public function index(Request $request): Response
     {
-        $filter = in_array($request->query('filter'), ['low', 'expiring', 'expired'], true) ? (string) $request->query('filter') : 'all';
+        $filter = in_array($request->query('filter'), ['low', 'expiring', 'expired', 'held'], true) ? (string) $request->query('filter') : 'all';
         $today = CarbonImmutable::today();
 
-        // Per item in this branch: sellable (unexpired) quantity, expired
-        // quantity, and the nearest expiry among batches with stock.
+        // Per item in this branch: sellable (unexpired, not on hold)
+        // quantity, expired quantity, unexpired quantity on hold, and the
+        // nearest expiry among sellable batches.
         $totals = Batch::query()
             ->where('branch_id', $this->branch->id())
             ->where('quantity_on_hand', '>', 0)
             ->groupBy('item_id')
             ->select('item_id')
-            ->selectRaw('SUM(CASE WHEN expires_on > ? THEN quantity_on_hand ELSE 0 END) AS sellable', [$today->toDateString()])
+            ->selectRaw("SUM(CASE WHEN expires_on > ? AND status = 'available' THEN quantity_on_hand ELSE 0 END) AS sellable", [$today->toDateString()])
             ->selectRaw('SUM(CASE WHEN expires_on <= ? THEN quantity_on_hand ELSE 0 END) AS expired', [$today->toDateString()])
-            ->selectRaw('MIN(CASE WHEN expires_on > ? THEN expires_on END) AS next_expiry', [$today->toDateString()])
+            ->selectRaw("SUM(CASE WHEN expires_on > ? AND status <> 'available' THEN quantity_on_hand ELSE 0 END) AS held", [$today->toDateString()])
+            ->selectRaw("MIN(CASE WHEN expires_on > ? AND status = 'available' THEN expires_on END) AS next_expiry", [$today->toDateString()])
             ->get()
             ->keyBy('item_id');
 
@@ -58,6 +64,7 @@ class StockController extends Controller
                 // Aggregates from the query above, not columns of the model.
                 $sellable = (int) ($total?->getAttribute('sellable') ?? 0);
                 $expired = (int) ($total?->getAttribute('expired') ?? 0);
+                $held = (int) ($total?->getAttribute('held') ?? 0);
                 $next = $total?->getAttribute('next_expiry');
                 $nextExpiry = is_string($next) ? CarbonImmutable::parse($next) : null;
 
@@ -67,6 +74,7 @@ class StockController extends Controller
                     'unit' => $item->unit,
                     'sellable' => $sellable,
                     'expired' => $expired,
+                    'held' => $held,
                     'nextExpiry' => $nextExpiry?->toDateString(),
                     'low' => $sellable <= $item->reorder_level,
                     'expiringSoon' => $nextExpiry !== null && $nextExpiry->lessThanOrEqualTo($today->addDays(self::EXPIRING_DAYS)),
@@ -77,6 +85,7 @@ class StockController extends Controller
                 'low' => $row['low'],
                 'expiring' => $row['expiringSoon'],
                 'expired' => $row['expired'] > 0,
+                'held' => $row['held'] > 0,
                 default => true,
             })
             ->values();
@@ -104,6 +113,25 @@ class StockController extends Controller
                 'expired' => $batch->isExpired($today),
                 'quantity' => $batch->quantity_on_hand,
                 'unitCostMinor' => $batch->unit_cost_minor,
+                'status' => $batch->status,
+                'holdReason' => $batch->hold_reason,
+                'heldAt' => $batch->held_at?->toIso8601String(),
+            ]);
+
+        $disposals = StockDisposal::query()
+            ->where('branch_id', $this->branch->id())
+            ->where('item_id', $item->id)
+            ->where('status', StockDisposal::PENDING)
+            ->with(['batch:id,batch_number', 'requester:id,name'])
+            ->latest('requested_at')
+            ->get()
+            ->map(fn (StockDisposal $disposal) => [
+                'id' => $disposal->id,
+                'number' => $disposal->number,
+                'batchNumber' => $disposal->batch->batch_number,
+                'quantity' => $disposal->quantity,
+                'reason' => $disposal->reason->label(),
+                'requestedBy' => $disposal->requester->name,
             ]);
 
         $movements = StockMovement::query()
@@ -119,12 +147,13 @@ class StockController extends Controller
                 'type' => $movement->type->value,
                 'quantity' => $movement->quantity,
                 'batchNumber' => $movement->batch->batch_number,
-                'reason' => $movement->reason === null ? null : AdjustmentReason::tryFrom($movement->reason)?->label(),
+                'reason' => $movement->reason === null ? null : (AdjustmentReason::tryFrom($movement->reason) ?? DisposalReason::tryFrom($movement->reason))?->label(),
                 'note' => $movement->note,
                 'by' => $movement->user->name,
             ]);
 
         $access = app(CurrentAccess::class)->get();
+        $can = fn (string $permission) => $access?->allowsIn($permission, branchId: $this->branch->id()) ?? false;
 
         return Inertia::render('stock/show', [
             'medicine' => [
@@ -136,8 +165,11 @@ class StockController extends Controller
             ],
             'batches' => $batches,
             'movements' => $movements,
+            'pendingDisposals' => $disposals,
             'reasons' => array_map(fn (AdjustmentReason $reason) => ['value' => $reason->value, 'label' => $reason->label()], AdjustmentReason::cases()),
-            'canAdjust' => $access?->allowsIn('pharmacy.stock.adjust', branchId: $this->branch->id()) ?? false,
+            'disposalReasons' => array_map(fn (DisposalReason $reason) => ['value' => $reason->value, 'label' => $reason->label()], DisposalReason::cases()),
+            'canAdjust' => $can('pharmacy.stock.adjust'),
+            'canHold' => $can('pharmacy.stock.hold'),
         ]);
     }
 
@@ -179,15 +211,44 @@ class StockController extends Controller
             'note' => ['nullable', 'string', 'max:255', Rule::requiredIf($request->input('reason') === AdjustmentReason::Other->value)],
         ]);
 
+        // Destroying stock needs a second person: it goes through a disposal.
+        $reason = AdjustmentReason::from($validated['reason']);
+        if ((int) $validated['change'] < 0 && in_array($reason, [AdjustmentReason::Damaged, AdjustmentReason::Expired], true)) {
+            throw ValidationException::withMessages(['change' => 'Damaged or expired stock leaves through a disposal, which someone else approves.']);
+        }
+
         $stock->adjust(
             $batch,
             (int) $validated['change'],
-            AdjustmentReason::from($validated['reason']),
+            $reason,
             $validated['note'] ?? null,
             $this->user($request),
         );
 
         return back()->with('success', "Batch {$batch->batch_number} adjusted.");
+    }
+
+    public function hold(Request $request, Batch $batch, BatchHolds $holds): RedirectResponse
+    {
+        abort_unless($batch->branch_id === $this->branch->id(), 404);
+
+        $validated = $request->validate([
+            'status' => ['required', Rule::in([Batch::QUARANTINED, Batch::RECALLED])],
+            'reason' => ['required', 'string', 'max:255'],
+        ]);
+
+        $holds->hold($batch, $validated['status'], $validated['reason'], $this->user($request));
+
+        return back()->with('success', "Batch {$batch->batch_number} {$validated['status']}: it will not be sold.");
+    }
+
+    public function release(Batch $batch, BatchHolds $holds): RedirectResponse
+    {
+        abort_unless($batch->branch_id === $this->branch->id(), 404);
+
+        $holds->release($batch);
+
+        return back()->with('success', "Batch {$batch->batch_number} released for sale.");
     }
 
     private function user(Request $request): User

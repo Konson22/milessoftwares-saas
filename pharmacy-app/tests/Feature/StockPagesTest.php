@@ -67,7 +67,7 @@ it('lets a storekeeper add opening stock and adjust it in their branch', functio
     $batch = $this->asTenant('acme', fn () => Batch::query()->sole());
     expect($batch)->quantity_on_hand->toBe(40)->unit_cost_minor->toBe(120)->branch_id->toBe($this->juba);
 
-    $this->post($this->workspaceUrl('acme', "batches/{$batch->id}/adjustments"), ['change' => -5, 'reason' => 'damaged'])
+    $this->post($this->workspaceUrl('acme', "batches/{$batch->id}/adjustments"), ['change' => -5, 'reason' => 'count_correction'])
         ->assertSessionHasNoErrors();
     $this->post($this->workspaceUrl('acme', "batches/{$batch->id}/adjustments"), ['change' => -50, 'reason' => 'count_correction'])
         ->assertSessionHasErrors('change');
@@ -88,7 +88,7 @@ it('refuses adjustments without the permission in this branch', function () {
     ]);
     workIn($this->juba);
 
-    $this->post($this->workspaceUrl('acme', "batches/{$batch->id}/adjustments"), ['change' => -1, 'reason' => 'damaged'])
+    $this->post($this->workspaceUrl('acme', "batches/{$batch->id}/adjustments"), ['change' => -1, 'reason' => 'theft_or_loss'])
         ->assertForbidden();
     expect($batch->refresh()->quantity_on_hand)->toBe(10);
 });
@@ -98,7 +98,7 @@ it('treats another branch\'s batch as unknown', function () {
     $this->actingAsMember('acme', ['pharmacy.stock.view', 'pharmacy.stock.adjust']);
     workIn($this->juba);
 
-    $this->post($this->workspaceUrl('acme', "batches/{$wauBatch->id}/adjustments"), ['change' => -1, 'reason' => 'damaged'])
+    $this->post($this->workspaceUrl('acme', "batches/{$wauBatch->id}/adjustments"), ['change' => -1, 'reason' => 'theft_or_loss'])
         ->assertNotFound();
     expect($wauBatch->refresh()->quantity_on_hand)->toBe(10);
 });

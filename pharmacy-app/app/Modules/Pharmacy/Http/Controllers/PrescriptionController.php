@@ -117,6 +117,7 @@ class PrescriptionController extends Controller
         $sellable = Batch::query()
             ->where('branch_id', $this->branch->id())
             ->whereIn('item_id', $prescription->items->pluck('medicine_id'))
+            ->where('status', Batch::AVAILABLE)
             ->whereDate('expires_on', '>', CarbonImmutable::today())
             ->groupBy('item_id')
             ->selectRaw('item_id, SUM(quantity_on_hand) AS quantity')

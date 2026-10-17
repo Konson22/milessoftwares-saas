@@ -127,9 +127,10 @@ class ReportController extends Controller
 
     /**
      * What the stock on the shelves is worth today, at cost and at today's
-     * prices; expired stock separately, at cost, as it can only be lost.
+     * prices; expired stock separately, at cost, as it can only be lost, and
+     * unexpired stock on hold (quarantined or recalled) at cost.
      *
-     * @return array{units: int, costMinor: int, retailMinor: int, expiredUnits: int, expiredCostMinor: int}
+     * @return array{units: int, costMinor: int, retailMinor: int, expiredUnits: int, expiredCostMinor: int, heldUnits: int, heldCostMinor: int}
      */
     private function stockValue(string $branchId, CarbonImmutable $today): array
     {
@@ -138,6 +139,7 @@ class ReportController extends Controller
             ->where('batches.quantity_on_hand', '>', 0);
 
         $sellable = $onHand()
+            ->where('batches.status', Batch::AVAILABLE)
             ->whereDate('batches.expires_on', '>', $today)
             ->join('items', 'items.id', '=', 'batches.item_id')
             ->selectRaw('SUM(batches.quantity_on_hand) AS units, SUM(batches.quantity_on_hand * batches.unit_cost_minor) AS cost, SUM(batches.quantity_on_hand * items.sell_price_minor) AS retail')
@@ -150,12 +152,21 @@ class ReportController extends Controller
             ->toBase()
             ->first();
 
+        $held = $onHand()
+            ->where('batches.status', '!=', Batch::AVAILABLE)
+            ->whereDate('batches.expires_on', '>', $today)
+            ->selectRaw('SUM(batches.quantity_on_hand) AS units, SUM(batches.quantity_on_hand * batches.unit_cost_minor) AS cost')
+            ->toBase()
+            ->first();
+
         return [
             'units' => (int) ($sellable->units ?? 0),
             'costMinor' => (int) ($sellable->cost ?? 0),
             'retailMinor' => (int) ($sellable->retail ?? 0),
             'expiredUnits' => (int) ($expired->units ?? 0),
             'expiredCostMinor' => (int) ($expired->cost ?? 0),
+            'heldUnits' => (int) ($held->units ?? 0),
+            'heldCostMinor' => (int) ($held->cost ?? 0),
         ];
     }
 }

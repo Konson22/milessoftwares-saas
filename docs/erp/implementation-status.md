@@ -12,7 +12,8 @@
 | 3.4 Counter: one sale per submission, discounts, receipts | Done 2026-10-18 |
 | 3.5 Cashier tills and reconciliation | Done 2026-10-18 |
 | 3.6 Partial sales returns | Done 2026-10-18 |
-| 3.7 – 11 | Not started |
+| 3.7 Batch holds and approved disposals | Done 2026-10-18 |
+| 3.8 – 11 | Not started |
 
 Decisions accepted 2026-10-16: D1 → `docs/adr/0003-erp-workspace-application.md`,
 D2 → `docs/adr/0004-companies-as-organizations.md`.
@@ -288,3 +289,36 @@ Partial returns: part of a sale comes back and is refunded, the rest of the sale
 
 **Known limitations:** a refund is given the way the sale was paid; there is no exchange (swap
 for another item) or store credit.
+
+## Phase 3.7 — 2026-10-18 (local, Windows)
+
+Batches can be held back from sale, and stock is destroyed only with a second person's approval.
+
+**Implemented** (`pharmacy-app`):
+- Migration `2026_10_18_130000_add_batch_holds_and_stock_disposals` (additive): `batches.status`
+  (available | quarantined | recalled, default available), hold reason, who and when;
+  `stock_disposals` (number `D-00001`, batch, quantity, reason, note, pending → approved | rejected,
+  requester and decider).
+- `Inventory\Actions\BatchHolds`: quarantine (releasable) and recall (final: the batch leaves by a
+  supplier return or a disposal). FEFO, the counter, prescriptions, home and stock pages count only
+  available batches; the report values stock on hold separately; the stock list has "On hold".
+- `Inventory\Actions\Disposals`: request (no more than is on hand less what other requests ask
+  for), approve (stock leaves the batch as a `disposal` movement, in the controlled register too),
+  reject (with a reason). The requester can never decide their own disposal. Negative adjustments
+  for damaged or expired stock are refused: they go through a disposal.
+- Pages: stock item page (status, release, hold form, disposal request, pending list) and
+  `disposals` (waiting / approved / turned down, approve or turn down). Menu: Inventory → Disposals.
+- Permissions (catalog 1.5.0): `pharmacy.stock.hold` (manager, pharmacist), `pharmacy.stock.dispose`
+  (manager); `pharmacy.stock.adjust` renamed "Adjust stock (count) and ask for disposals"; SoD
+  warning for adjust + dispose.
+
+**Tests executed:**
+- Pharmacy: Pest 121 passed, 1 skipped; PHPStan 0; Pint; `vp check`; `tsc`. New
+  `BatchHoldAndDisposalTest` (7).
+- Local PostgreSQL: `migrate`, `migrate:rollback --step=1`, `migrate`.
+- Mutation: selling from held batches, and letting a requester approve their own disposal, each
+  fail a test.
+
+**Known limitations:** disposals and adjustments are not posted to Finance (inventory there drifts
+from the pharmacy by write-offs until an inventory write-off event exists). Units awaiting disposal
+stay sellable unless the batch is quarantined.

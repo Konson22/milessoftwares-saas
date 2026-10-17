@@ -8,8 +8,8 @@ Against `MASTER-PLAN.md` §7, from reading `pharmacy-app` and `finance-app` (202
 | Packaging (pack ↔ unit conversions), storage requirements, category | 🟠 | packs per item, bought in packs (Phase 3.3); no category/storage, POS sells units only |
 | Batch number, expiry, unit cost per branch | ✅ | `batches` |
 | FEFO allocation, expired stock blocked at sale | ✅ | `Stock` orders by `expires_on`, excludes expired |
-| Quarantine / recall status | ❌ | no batch status |
-| Adjustments with reasons, disposal | 🟠 | `AdjustmentReason`; no approval for disposal |
+| Quarantine / recall status | ✅ | batch status blocks sale; quarantine releasable, recall final (Phase 3.7) |
+| Adjustments with reasons, disposal | ✅ | `AdjustmentReason`; damaged/expired leave through a disposal approved by a second person (Phase 3.7) |
 | Stock by warehouse/location | ❌ | branch only |
 | Append-only movements, non-negative stock | ✅ | trigger + CHECK |
 | Suppliers, PO, goods receipt → stock + Finance bill | ✅ | `ReceiveGoods` (outbox `finance.bill.received`) |

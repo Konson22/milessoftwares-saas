@@ -130,8 +130,34 @@ class Stock
     }
 
     /**
+     * Destroys an approved disposal's quantity. Never below zero.
+     *
+     * @throws ValidationException
+     */
+    public function dispose(Batch $batch, int $quantity, string $reason, ?string $note, User $user, string $disposalId): Batch
+    {
+        return DB::transaction(function () use ($batch, $quantity, $reason, $note, $user, $disposalId) {
+            $locked = Batch::query()->whereKey($batch->id)->lockForUpdate()->firstOrFail();
+
+            if ($quantity > $locked->quantity_on_hand) {
+                throw ValidationException::withMessages([
+                    'disposal' => "Only {$locked->quantity_on_hand} left in batch {$locked->batch_number}.",
+                ]);
+            }
+
+            $locked->quantity_on_hand -= $quantity;
+            $locked->save();
+
+            $this->record($locked, -$quantity, MovementType::Disposal, $user, $reason, $note, 'stock_disposal', $disposalId);
+
+            return $locked;
+        });
+    }
+
+    /**
      * Takes a quantity of an item from a branch for a sale: oldest expiry
-     * first (FEFO), never from expired batches. All or nothing.
+     * first (FEFO), never from expired batches or batches on hold. All or
+     * nothing.
      *
      * @return list<array{batch: Batch, quantity: int}>
      *
@@ -150,6 +176,7 @@ class Stock
                 ->where('branch_id', $branchId)
                 ->where('item_id', $item->id)
                 ->where('quantity_on_hand', '>', 0)
+                ->where('status', Batch::AVAILABLE)
                 ->whereDate('expires_on', '>', $today)
                 ->orderBy('expires_on')
                 ->orderBy('batch_number')
@@ -205,6 +232,7 @@ class Stock
         return (int) Batch::query()
             ->where('branch_id', $branchId)
             ->where('item_id', $item->id)
+            ->where('status', Batch::AVAILABLE)
             ->whereDate('expires_on', '>', ($today ?? CarbonImmutable::today())->startOfDay())
             ->sum('quantity_on_hand');
     }

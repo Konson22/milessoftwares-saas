@@ -6,7 +6,7 @@
         "kind": "standalone",
         "status": "beta"
     },
-    "version": "1.4.0",
+    "version": "1.5.0",
     "permissions": [
         {
             "key": "pharmacy.medicines.view",
@@ -28,7 +28,19 @@
         },
         {
             "key": "pharmacy.stock.adjust",
-            "name": "Adjust stock (damage, expiry, count)",
+            "name": "Adjust stock (count) and ask for disposals",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "pharmacy.stock.hold",
+            "name": "Quarantine, recall and release batches",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "pharmacy.stock.dispose",
+            "name": "Approve disposals of stock",
             "sensitivity": 3,
             "scopes": ["organization", "branch"]
         },
@@ -123,6 +135,8 @@
                 "pharmacy.medicines.manage",
                 "pharmacy.stock.view",
                 "pharmacy.stock.adjust",
+                "pharmacy.stock.hold",
+                "pharmacy.stock.dispose",
                 "pharmacy.purchasing.view",
                 "pharmacy.purchasing.manage",
                 "pharmacy.purchasing.receive",
@@ -147,6 +161,7 @@
             "permissions": [
                 "pharmacy.medicines.view",
                 "pharmacy.stock.view",
+                "pharmacy.stock.hold",
                 "pharmacy.purchasing.view",
                 "pharmacy.purchasing.receive",
                 "pharmacy.sales.view",
@@ -194,6 +209,11 @@
             "permissions": ["pharmacy.sales.create", "pharmacy.sales.void"],
             "mode": "warn",
             "description": "Voiding sales you made yourself needs a second look."
+        },
+        {
+            "permissions": ["pharmacy.stock.adjust", "pharmacy.stock.dispose"],
+            "mode": "warn",
+            "description": "Disposals are approved by someone other than who asked; the pharmacy enforces it per disposal."
         }
     ]
 }

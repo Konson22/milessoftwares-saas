@@ -3,6 +3,7 @@
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ReportController;
+use App\Modules\Inventory\Http\Controllers\DisposalController;
 use App\Modules\Inventory\Http\Controllers\StockController;
 use App\Modules\MasterData\Http\Controllers\SupplierController;
 use App\Modules\Pharmacy\Http\Controllers\ControlledRegisterController;
@@ -139,6 +140,20 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::middleware('branch.can:pharmacy.stock.adjust')->group(function () {
                 Route::post('stock/{item}/opening', [StockController::class, 'storeOpening'])->whereUuid('item')->name('stock.opening');
                 Route::post('batches/{batch}/adjustments', [StockController::class, 'storeAdjustment'])->whereUuid('batch')->name('stock.adjust');
+                Route::post('batches/{batch}/disposals', [DisposalController::class, 'store'])->whereUuid('batch')->name('disposals.store');
+            });
+            // Batches held back from sale: quarantine, recall, release.
+            Route::middleware('branch.can:pharmacy.stock.hold')->group(function () {
+                Route::post('batches/{batch}/hold', [StockController::class, 'hold'])->whereUuid('batch')->name('stock.hold');
+                Route::post('batches/{batch}/release', [StockController::class, 'release'])->whereUuid('batch')->name('stock.release');
+            });
+            // Disposals: asked for with stock.adjust, decided by someone else.
+            Route::get('disposals', [DisposalController::class, 'index'])
+                ->middleware('branch.can:pharmacy.stock.adjust,pharmacy.stock.dispose')
+                ->name('disposals.index');
+            Route::middleware('branch.can:pharmacy.stock.dispose')->group(function () {
+                Route::post('disposals/{disposal}/approve', [DisposalController::class, 'approve'])->whereUuid('disposal')->name('disposals.approve');
+                Route::post('disposals/{disposal}/reject', [DisposalController::class, 'reject'])->whereUuid('disposal')->name('disposals.reject');
             });
         });
     });

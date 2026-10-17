@@ -9,6 +9,7 @@ import {
     ReceiptText,
     ShieldAlert,
     ShoppingCart,
+    Trash2,
     Truck,
     Undo2,
     Wallet,
@@ -16,6 +17,7 @@ import {
 import type { ShellNavItem } from '@miles/ui/shell/navigation';
 import { home } from '@/routes';
 import { index as controlled } from '@/routes/controlled';
+import { index as disposals } from '@/routes/disposals';
 import { index as medicines } from '@/routes/medicines';
 import { index as prescriptions } from '@/routes/prescriptions';
 import { index as purchaseOrders } from '@/routes/purchase-orders';
@@ -96,6 +98,13 @@ export const navigation: NavGroup[] = [
                 href: stock(),
                 icon: Boxes,
                 permission: 'pharmacy.stock.view',
+                scope: 'branch',
+            },
+            {
+                title: 'Disposals',
+                href: disposals(),
+                icon: Trash2,
+                permission: 'pharmacy.stock.adjust',
                 scope: 'branch',
             },
             {

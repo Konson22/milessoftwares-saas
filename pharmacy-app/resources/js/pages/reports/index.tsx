@@ -51,6 +51,8 @@ type Props = {
         retailMinor: number;
         expiredUnits: number;
         expiredCostMinor: number;
+        heldUnits: number;
+        heldCostMinor: number;
     };
 };
 
@@ -183,6 +185,12 @@ export default function Reports({
                                 <span className="mt-1 block text-destructive">
                                     Expired: {stock.expiredUnits} units,{' '}
                                     {money(stock.expiredCostMinor)}
+                                </span>
+                            )}
+                            {stock.heldUnits > 0 && (
+                                <span className="mt-1 block text-amber-700 dark:text-amber-400">
+                                    On hold: {stock.heldUnits} units,{' '}
+                                    {money(stock.heldCostMinor)}
                                 </span>
                             )}
                         </>

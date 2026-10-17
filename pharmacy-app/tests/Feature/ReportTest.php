@@ -81,6 +81,8 @@ it('reports the month so far: takings, profit, payments, days and best sellers',
                 'retailMinor' => 8500,
                 'expiredUnits' => 4,
                 'expiredCostMinor' => 320,
+                'heldUnits' => 0,
+                'heldCostMinor' => 0,
             ]));
 });
 
