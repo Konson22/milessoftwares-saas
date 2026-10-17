@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * A line of a goods received note. Tenant-safe only through its receipt.
+ * quantity and unit_cost_minor are per pack (BoughtInPacks); line_total_minor
+ * is what the supplier billed for the line.
  *
  * @property string $id
  * @property string $goods_receipt_id
@@ -26,6 +28,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class GoodsReceiptLine extends Model
 {
+    use BoughtInPacks;
     use HasUuids;
 
     public $timestamps = false;
@@ -39,6 +42,7 @@ class GoodsReceiptLine extends Model
             'quantity' => 'integer',
             'unit_cost_minor' => 'integer',
             'line_total_minor' => 'integer',
+            'units_per_pack' => 'integer',
         ];
     }
 

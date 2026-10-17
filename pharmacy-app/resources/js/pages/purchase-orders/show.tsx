@@ -31,6 +31,7 @@ type Props = {
             id: string;
             medicine: string;
             unit: string;
+            pack: string | null;
             ordered: number;
             received: number;
             unitCostMinor: number;
@@ -109,7 +110,7 @@ export default function ShowPurchaseOrder({
                                 Received
                             </TableHead>
                             <TableHead className="text-right">
-                                Unit cost
+                                Cost each
                             </TableHead>
                             <TableHead className="text-right">Total</TableHead>
                         </TableRow>
@@ -119,7 +120,8 @@ export default function ShowPurchaseOrder({
                             <TableRow key={line.id}>
                                 <TableCell>{line.medicine}</TableCell>
                                 <TableCell className="text-right tabular-nums">
-                                    {line.ordered} {line.unit}
+                                    {line.ordered}{' '}
+                                    {line.pack ? `× ${line.pack}` : line.unit}
                                 </TableCell>
                                 <TableCell className="text-right tabular-nums">
                                     {line.received}

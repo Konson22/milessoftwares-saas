@@ -3,12 +3,15 @@
 namespace App\Modules\Pharmacy\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Inventory\Actions\ItemPacks;
+use App\Modules\Inventory\Models\ItemPack;
 use App\Modules\Pharmacy\Enums\MedicineForm;
 use App\Modules\Pharmacy\Models\Medicine;
 use App\Support\Money;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -45,10 +48,10 @@ class MedicineController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, ItemPacks $packs): RedirectResponse
     {
         $medicine = new Medicine;
-        $medicine->fill($this->validated($request, $medicine))->save();
+        $this->save($request, $medicine, $packs);
 
         return to_route('medicines.index')->with('success', "{$medicine->label()} added.");
     }
@@ -59,20 +62,36 @@ class MedicineController extends Controller
             'medicine' => [
                 ...$this->summary($medicine),
                 'sellPrice' => Money::toMajor($medicine->sell_price_minor),
+                'packs' => $medicine->item->packs->map(fn (ItemPack $pack) => ['name' => $pack->name, 'units' => $pack->units])->values(),
             ],
             'forms' => $this->forms(),
         ]);
     }
 
-    public function update(Request $request, Medicine $medicine): RedirectResponse
+    public function update(Request $request, Medicine $medicine, ItemPacks $packs): RedirectResponse
     {
-        $medicine->fill($this->validated($request, $medicine))->save();
+        $this->save($request, $medicine, $packs);
 
         return to_route('medicines.index')->with('success', "{$medicine->label()} saved.");
     }
 
     /**
-     * @return array<string, mixed>
+     * The medicine and the packs its item is bought in, together.
+     */
+    private function save(Request $request, Medicine $medicine, ItemPacks $packs): void
+    {
+        [$attributes, $packList] = $this->validated($request, $medicine);
+
+        DB::transaction(function () use ($medicine, $attributes, $packs, $packList) {
+            $medicine->fill($attributes)->save();
+            $packs->sync($medicine->item, $packList);
+        });
+    }
+
+    /**
+     * The medicine's attributes, and the packs its item is bought in.
+     *
+     * @return array{0: array<string, mixed>, 1: list<array{name: string, units: int}>}
      */
     private function validated(Request $request, Medicine $medicine): array
     {
@@ -93,17 +112,26 @@ class MedicineController extends Controller
             'sell_price' => ['required', 'string', Money::rule()],
             'reorder_level' => ['required', 'integer', 'min:0', 'max:1000000'],
             'active' => ['boolean'],
+            'packs' => ['array', 'max:10'],
+            'packs.*.name' => ['required', 'string', 'max:32'],
+            'packs.*.units' => ['required', 'integer', 'min:2', 'max:100000'],
         ]);
 
         // A controlled medicine is always prescription-only.
         $controlled = (bool) ($validated['controlled'] ?? false);
 
         return [
-            ...Arr::except($validated, ['sell_price']),
-            'controlled' => $controlled,
-            'prescription_only' => $controlled || (bool) ($validated['prescription_only'] ?? false),
-            'active' => (bool) ($validated['active'] ?? true),
-            'sell_price_minor' => Money::toMinor($validated['sell_price']),
+            [
+                ...Arr::except($validated, ['sell_price', 'packs']),
+                'controlled' => $controlled,
+                'prescription_only' => $controlled || (bool) ($validated['prescription_only'] ?? false),
+                'active' => (bool) ($validated['active'] ?? true),
+                'sell_price_minor' => Money::toMinor($validated['sell_price']),
+            ],
+            array_values(array_map(fn (array $pack) => [
+                'name' => (string) $pack['name'],
+                'units' => (int) $pack['units'],
+            ], $validated['packs'] ?? [])),
         ];
     }
 

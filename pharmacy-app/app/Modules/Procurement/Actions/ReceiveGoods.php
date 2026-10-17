@@ -3,6 +3,7 @@
 namespace App\Modules\Procurement\Actions;
 
 use App\Models\User;
+use App\Modules\Inventory\Actions\ItemPacks;
 use App\Modules\Inventory\Actions\Stock;
 use App\Modules\Inventory\Enums\MovementType;
 use App\Modules\Inventory\Models\Item;
@@ -23,17 +24,22 @@ use Miles\PlatformClient\Events\Outbox;
  * each line into stock (a batch), the purchase order's received quantities,
  * and one finance.bill.received for Finance. All in one transaction:
  * nothing is half received.
+ *
+ * A line counts packs at a cost per pack when it names a pack (against an
+ * order: the order line's pack). Stock gets the units, at the pack cost
+ * shared over its units; Finance is billed exactly packs x pack cost.
  */
 class ReceiveGoods
 {
     public function __construct(
         private readonly Stock $stock,
+        private readonly ItemPacks $packs,
         private readonly DocumentNumbers $numbers,
         private readonly Outbox $outbox,
     ) {}
 
     /**
-     * @param  list<array{item_id: string, batch_number: string, expires_on: string, quantity: int, unit_cost_minor: int, purchase_order_line_id?: string|null}>  $lines
+     * @param  list<array{item_id: string, batch_number: string, expires_on: string, quantity: int, unit_cost_minor: int, purchase_order_line_id?: string|null, pack_id?: string|null}>  $lines
      *
      * @throws ValidationException
      */
@@ -81,6 +87,10 @@ class ReceiveGoods
                     if ($line['quantity'] > $orderLine->remaining()) {
                         throw ValidationException::withMessages(["lines.{$index}.quantity" => "Only {$orderLine->remaining()} still expected on the order."]);
                     }
+                    [$packName, $units] = [$orderLine->pack_name, $orderLine->units_per_pack];
+                } else {
+                    $pack = $this->packs->find($item->id, $line['pack_id'] ?? null, "lines.{$index}.pack_id");
+                    [$packName, $units] = [$pack?->name, $pack->units ?? 1];
                 }
 
                 $batch = $this->stock->add(
@@ -88,8 +98,8 @@ class ReceiveGoods
                     branchId: $branchId,
                     batchNumber: $line['batch_number'],
                     expiresOn: CarbonImmutable::parse($line['expires_on']),
-                    quantity: $line['quantity'],
-                    unitCostMinor: $line['unit_cost_minor'],
+                    quantity: $line['quantity'] * $units,
+                    unitCostMinor: (int) round($line['unit_cost_minor'] / $units),
                     user: $by,
                     type: MovementType::Receipt,
                     referenceType: 'goods_receipt',
@@ -108,6 +118,8 @@ class ReceiveGoods
                     'quantity' => $line['quantity'],
                     'unit_cost_minor' => $line['unit_cost_minor'],
                     'line_total_minor' => $lineTotal,
+                    'pack_name' => $packName,
+                    'units_per_pack' => $units,
                 ]);
 
                 if ($orderLine instanceof PurchaseOrderLine) {
@@ -115,7 +127,7 @@ class ReceiveGoods
                 }
 
                 $billLines[] = [
-                    'description' => "{$item->name} (batch {$line['batch_number']})",
+                    'description' => $item->name.($packName === null ? '' : ", {$packName} of {$units}")." (batch {$line['batch_number']})",
                     'quantity' => $line['quantity'],
                     'amount_minor' => $lineTotal,
                     'expense_account' => null,

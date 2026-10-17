@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * A line of a purchase order. Tenant-safe only through its order.
+ * Quantities and unit_cost_minor are per pack (BoughtInPacks).
  *
  * @property string $id
  * @property string $purchase_order_id
@@ -20,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class PurchaseOrderLine extends Model
 {
+    use BoughtInPacks;
     use HasUuids;
 
     public $timestamps = false;
@@ -32,6 +34,7 @@ class PurchaseOrderLine extends Model
             'quantity_ordered' => 'integer',
             'quantity_received' => 'integer',
             'unit_cost_minor' => 'integer',
+            'units_per_pack' => 'integer',
         ];
     }
 

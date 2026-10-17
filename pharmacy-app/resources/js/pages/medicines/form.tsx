@@ -1,4 +1,6 @@
 import { Form, Head, Link } from '@inertiajs/react';
+import { Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { PageHeader } from '@miles/ui/components/page-header';
 import { Panel, PanelBody } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
@@ -19,6 +21,7 @@ type Medicine = {
     sellPrice: string;
     reorderLevel: number;
     active: boolean;
+    packs: { name: string; units: number }[];
 };
 
 type Props = {
@@ -52,6 +55,10 @@ function Field({
 
 export default function MedicineForm({ medicine, forms }: Props) {
     const action = medicine ? update.form(medicine.id) : store.form();
+    const [packs, setPacks] = useState(
+        (medicine?.packs ?? []).map((pack, key) => ({ key, ...pack })),
+    );
+    const [nextKey, setNextKey] = useState(packs.length);
 
     return (
         <>
@@ -191,6 +198,104 @@ export default function MedicineForm({ medicine, forms }: Props) {
                                         }
                                     />
                                 </Field>
+
+                                <fieldset className="grid gap-2 sm:col-span-2">
+                                    <legend className="mb-1 text-sm font-medium">
+                                        Packs it is bought in
+                                    </legend>
+                                    <p className="text-xs text-muted-foreground">
+                                        Stock is always counted in the unit
+                                        above; orders and deliveries can count
+                                        packs (a box of 30).
+                                    </p>
+                                    {packs.map((pack, i) => (
+                                        <div
+                                            key={pack.key}
+                                            className="grid items-start gap-2 sm:grid-cols-[1fr_8rem_auto]"
+                                        >
+                                            <div>
+                                                <Input
+                                                    name={`packs[${i}][name]`}
+                                                    required
+                                                    defaultValue={pack.name}
+                                                    placeholder="box, strip, carton"
+                                                    aria-label={`Pack name, pack ${i + 1}`}
+                                                />
+                                                {errors[`packs.${i}.name`] && (
+                                                    <p className="text-xs text-destructive">
+                                                        {
+                                                            errors[
+                                                                `packs.${i}.name`
+                                                            ]
+                                                        }
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <Input
+                                                    name={`packs[${i}][units]`}
+                                                    type="number"
+                                                    min={2}
+                                                    required
+                                                    defaultValue={
+                                                        pack.units || undefined
+                                                    }
+                                                    placeholder="Units in it"
+                                                    aria-label={`Units in pack ${i + 1}`}
+                                                />
+                                                {errors[`packs.${i}.units`] && (
+                                                    <p className="text-xs text-destructive">
+                                                        {
+                                                            errors[
+                                                                `packs.${i}.units`
+                                                            ]
+                                                        }
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                aria-label={`Remove pack ${i + 1}`}
+                                                onClick={() =>
+                                                    setPacks(
+                                                        packs.filter(
+                                                            (p) =>
+                                                                p.key !==
+                                                                pack.key,
+                                                        ),
+                                                    )
+                                                }
+                                            >
+                                                <Trash2
+                                                    className="size-4"
+                                                    aria-hidden
+                                                />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="justify-self-start"
+                                        onClick={() => {
+                                            setPacks([
+                                                ...packs,
+                                                {
+                                                    key: nextKey,
+                                                    name: '',
+                                                    units: 0,
+                                                },
+                                            ]);
+                                            setNextKey(nextKey + 1);
+                                        }}
+                                    >
+                                        <Plus className="size-4" aria-hidden />
+                                        Add pack
+                                    </Button>
+                                </fieldset>
 
                                 <fieldset className="grid gap-2 sm:col-span-2">
                                     <legend className="mb-1 text-sm font-medium">

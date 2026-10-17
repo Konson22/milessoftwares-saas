@@ -4,7 +4,6 @@ namespace App\Modules\Procurement\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Modules\Inventory\Models\Item;
 use App\Modules\MasterData\Models\Supplier;
 use App\Modules\Procurement\Actions\ReceiveGoods;
 use App\Modules\Procurement\Models\GoodsReceipt;
@@ -64,8 +63,7 @@ class GoodsReceiptController extends Controller
 
         return Inertia::render('receipts/create', [
             'suppliers' => Supplier::query()->where('active', true)->orderBy('name')->get(['id', 'name']),
-            'medicines' => Item::query()->where('active', true)->orderBy('name')->get()
-                ->map(fn (Item $item) => ['id' => $item->id, 'label' => $item->name, 'unit' => $item->unit]),
+            'medicines' => PurchaseOrderController::itemOptions(),
             'order' => $order === null ? null : [
                 'id' => $order->id,
                 'number' => $order->number,
@@ -78,6 +76,7 @@ class GoodsReceiptController extends Controller
                         'medicineId' => $line->item_id,
                         'medicine' => $line->item->name,
                         'remaining' => $line->remaining(),
+                        'pack' => $line->packLabel(),
                         'unitCost' => Money::toMajor($line->unit_cost_minor),
                     ]),
             ],
@@ -97,6 +96,7 @@ class GoodsReceiptController extends Controller
             'lines' => ['required', 'array', 'min:1', 'max:200'],
             'lines.*.item_id' => ['required', 'uuid', Rule::exists('items', 'id')->where('organization_id', $organizationId)],
             'lines.*.purchase_order_line_id' => ['nullable', 'uuid'],
+            'lines.*.pack_id' => ['nullable', 'uuid'],
             'lines.*.batch_number' => ['required', 'string', 'max:64'],
             'lines.*.expires_on' => ['required', 'date', 'after:received_on'],
             'lines.*.quantity' => ['required', 'integer', 'min:1', 'max:1000000'],
@@ -122,6 +122,7 @@ class GoodsReceiptController extends Controller
             lines: array_values(array_map(fn (array $line) => [
                 'item_id' => $line['item_id'],
                 'purchase_order_line_id' => $line['purchase_order_line_id'] ?? null,
+                'pack_id' => $line['pack_id'] ?? null,
                 'batch_number' => trim($line['batch_number']),
                 'expires_on' => $line['expires_on'],
                 'quantity' => (int) $line['quantity'],
@@ -150,7 +151,7 @@ class GoodsReceiptController extends Controller
                     'totalMinor' => $return->total_minor,
                     'reason' => $return->reason,
                 ]),
-            'canReturn' => array_sum(array_map(fn (GoodsReceiptLine $line) => $line->quantity - ($returned[$line->id] ?? 0), $receipt->lines->all())) > 0,
+            'canReturn' => array_sum(array_map(fn (GoodsReceiptLine $line) => $line->inUnits($line->quantity) - ($returned[$line->id] ?? 0), $receipt->lines->all())) > 0,
             'receipt' => [
                 'id' => $receipt->id,
                 'number' => $receipt->number,
@@ -166,6 +167,8 @@ class GoodsReceiptController extends Controller
                     'batchNumber' => $line->batch_number,
                     'expiresOn' => $line->expires_on->toDateString(),
                     'quantity' => $line->quantity,
+                    'pack' => $line->packLabel(),
+                    'unit' => $line->item->unit,
                     'returned' => $returned[$line->id] ?? 0,
                     'unitCostMinor' => $line->unit_cost_minor,
                     'lineTotalMinor' => $line->line_total_minor,

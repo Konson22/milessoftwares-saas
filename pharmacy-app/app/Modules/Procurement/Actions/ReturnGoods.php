@@ -18,7 +18,8 @@ use Miles\PlatformClient\Events\Outbox;
 /**
  * Goods going back to the supplier they came from: out of stock at the
  * cost they were received at, and a credit note for Finance, which takes
- * it off what is owed for that delivery.
+ * it off what is owed for that delivery. Quantities are in the item's unit
+ * (loose tablets from a box can go back), credited out of the line's bill.
  */
 class ReturnGoods
 {
@@ -72,21 +73,23 @@ class ReturnGoods
             foreach ($quantities as $lineId => $quantity) {
                 /** @var GoodsReceiptLine $line */
                 $line = $lines->get($lineId);
-                $left = $line->quantity - (int) ($returned[$lineId] ?? 0);
+                $received = $line->inUnits($line->quantity);
+                $before = (int) ($returned[$lineId] ?? 0);
+                $left = $received - $before;
 
                 if ($quantity < 0 || $quantity > $left) {
-                    throw ValidationException::withMessages(["quantities.{$lineId}" => "Only {$left} of {$line->quantity} can still go back."]);
+                    throw ValidationException::withMessages(["quantities.{$lineId}" => "Only {$left} of {$received} can still go back."]);
                 }
 
                 $this->stock->returnToSupplier($line->batch()->firstOrFail(), $quantity, $by, $return->id, "quantities.{$lineId}");
 
-                $lineTotal = $quantity * $line->unit_cost_minor;
+                $lineTotal = self::credit($line, $before + $quantity) - self::credit($line, $before);
                 $return->lines()->create([
                     'goods_receipt_line_id' => $line->id,
                     'item_id' => $line->item_id,
                     'batch_id' => $line->batch_id,
                     'quantity' => $quantity,
-                    'unit_cost_minor' => $line->unit_cost_minor,
+                    'unit_cost_minor' => (int) round($line->unit_cost_minor / $line->units_per_pack),
                     'line_total_minor' => $lineTotal,
                 ]);
                 $total += $lineTotal;
@@ -118,5 +121,15 @@ class ReturnGoods
 
             return $return;
         });
+    }
+
+    /**
+     * What the first $units units of a receipt line are worth, out of what
+     * the supplier billed for it. Credits are differences of this, so
+     * returns in parts add up to the bill exactly, never a minor unit over.
+     */
+    private static function credit(GoodsReceiptLine $line, int $units): int
+    {
+        return (int) round($line->line_total_minor * $units / $line->inUnits($line->quantity));
     }
 }

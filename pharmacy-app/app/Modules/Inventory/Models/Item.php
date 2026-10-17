@@ -62,6 +62,14 @@ class Item extends Model
     }
 
     /**
+     * @return HasMany<ItemPack, $this>
+     */
+    public function packs(): HasMany
+    {
+        return $this->hasMany(ItemPack::class)->orderBy('units');
+    }
+
+    /**
      * @param  Builder<self>  $query
      */
     public function scopeSearch(Builder $query, ?string $term): void

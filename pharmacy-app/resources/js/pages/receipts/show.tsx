@@ -36,6 +36,8 @@ type Props = {
             batchNumber: string;
             expiresOn: string;
             quantity: number;
+            pack: string | null;
+            unit: string;
             returned: number;
             unitCostMinor: number;
             lineTotalMinor: number;
@@ -111,7 +113,7 @@ export default function ShowReceipt({ receipt, returns, canReturn }: Props) {
                                 Returned
                             </TableHead>
                             <TableHead className="text-right">
-                                Unit cost
+                                Cost each
                             </TableHead>
                             <TableHead className="text-right">Total</TableHead>
                         </TableRow>
@@ -126,9 +128,12 @@ export default function ShowReceipt({ receipt, returns, canReturn }: Props) {
                                 </TableCell>
                                 <TableCell className="text-right tabular-nums">
                                     {line.quantity}
+                                    {line.pack && ` × ${line.pack}`}
                                 </TableCell>
                                 <TableCell className="text-right text-muted-foreground tabular-nums">
-                                    {line.returned > 0 ? line.returned : ''}
+                                    {line.returned > 0
+                                        ? `${line.returned} ${line.unit}`
+                                        : ''}
                                 </TableCell>
                                 <TableCell className="text-right tabular-nums">
                                     {money(line.unitCostMinor)}

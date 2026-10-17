@@ -26,8 +26,8 @@ Pharmacy as the industry module on top.
 
 | Folder                    | Holds                                                      |
 | ------------------------- | ---------------------------------------------------------- |
-| `app/Modules/MasterData`  | suppliers (customers and units later)                      |
-| `app/Modules/Inventory`   | items, batches, append-only stock movements, FEFO (`Stock`) |
+| `app/Modules/MasterData`  | suppliers (customers later)                                |
+| `app/Modules/Inventory`   | items and their packs, batches, stock movements, FEFO      |
 | `app/Modules/Procurement` | purchase orders, goods receipts, supplier returns          |
 | `app/Modules/Sales`       | counter sales and voids                                    |
 | `app/Modules/Pharmacy`    | medicines (details of items), prescriptions, the register  |
@@ -51,6 +51,10 @@ Each module has `Models`, `Enums`, `Actions` and `Http/Controllers`. Rules, enfo
 Routes, route names and permission keys did not change with the move. The item master (Phase
 3.2) moved the shared medicine columns onto `items` and renamed `medicine_id` to `item_id` on the
 shared tables; order, receipt and sale forms post `item_id`.
+
+Stock is always counted in the item's unit. An item can be bought in packs (`item_packs`, a box
+of 30): order and receipt lines then count packs at a cost per pack and copy the pack's name and
+size (`pack_name`, `units_per_pack`); stock gets the units. Returns and sales are in units.
 
 ## Develop
 

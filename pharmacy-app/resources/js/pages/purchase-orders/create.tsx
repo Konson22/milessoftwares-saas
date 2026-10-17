@@ -6,11 +6,13 @@ import { Panel, PanelBody } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
 import { Label } from '@miles/ui/components/ui/label';
+import { PackSelect } from '@/components/pack-select';
+import type { BuyableItem } from '@/components/pack-select';
 import { index, store } from '@/routes/purchase-orders';
 
 type Props = {
     suppliers: { id: string; name: string }[];
-    medicines: { id: string; label: string; unit: string }[];
+    medicines: BuyableItem[];
 };
 
 const selectClass = 'h-9 w-full rounded-md border bg-transparent px-3 text-sm';
@@ -18,6 +20,10 @@ const selectClass = 'h-9 w-full rounded-md border bg-transparent px-3 text-sm';
 export default function CreatePurchaseOrder({ suppliers, medicines }: Props) {
     const [lines, setLines] = useState([0]);
     const [nextKey, setNextKey] = useState(1);
+    // The medicine chosen on each line (by line key), for its packs.
+    const [chosen, setChosen] = useState<Record<number, string>>({});
+    const itemOf = (key: number) =>
+        medicines.find((m) => m.id === (chosen[key] ?? medicines[0]?.id));
 
     return (
         <>
@@ -81,13 +87,20 @@ export default function CreatePurchaseOrder({ suppliers, medicines }: Props) {
                                         {lines.map((key, i) => (
                                             <div
                                                 key={key}
-                                                className="grid items-start gap-2 sm:grid-cols-[1fr_8rem_8rem_auto]"
+                                                className="grid items-start gap-2 sm:grid-cols-[1fr_9rem_7rem_8rem_auto]"
                                             >
                                                 <div>
                                                     <select
                                                         name={`lines[${i}][item_id]`}
                                                         aria-label={`Medicine, line ${i + 1}`}
                                                         className={selectClass}
+                                                        onChange={(e) =>
+                                                            setChosen({
+                                                                ...chosen,
+                                                                [key]: e.target
+                                                                    .value,
+                                                            })
+                                                        }
                                                     >
                                                         {medicines.map(
                                                             (medicine) => (
@@ -118,6 +131,24 @@ export default function CreatePurchaseOrder({ suppliers, medicines }: Props) {
                                                         </p>
                                                     )}
                                                 </div>
+                                                <div>
+                                                    <PackSelect
+                                                        name={`lines[${i}][pack_id]`}
+                                                        line={i + 1}
+                                                        item={itemOf(key)}
+                                                    />
+                                                    {errors[
+                                                        `lines.${i}.pack_id`
+                                                    ] && (
+                                                        <p className="text-xs text-destructive">
+                                                            {
+                                                                errors[
+                                                                    `lines.${i}.pack_id`
+                                                                ]
+                                                            }
+                                                        </p>
+                                                    )}
+                                                </div>
                                                 <Input
                                                     name={`lines[${i}][quantity]`}
                                                     type="number"
@@ -130,8 +161,8 @@ export default function CreatePurchaseOrder({ suppliers, medicines }: Props) {
                                                     name={`lines[${i}][unit_cost]`}
                                                     inputMode="decimal"
                                                     required
-                                                    placeholder="Unit cost"
-                                                    aria-label={`Unit cost, line ${i + 1}`}
+                                                    placeholder="Cost each"
+                                                    aria-label={`Cost each, line ${i + 1}`}
                                                 />
                                                 <Button
                                                     type="button"

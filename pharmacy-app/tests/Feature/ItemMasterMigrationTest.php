@@ -11,8 +11,12 @@ use Illuminate\Support\Str;
 */
 
 it('moves existing medicines and their stock onto items, and back', function () {
+    // Rolled back in order: later migrations that point at items go first.
+    /** @var Migration $packs */
+    $packs = require database_path('migrations/2026_10_17_100000_create_item_packs.php');
     /** @var Migration $migration */
     $migration = require database_path('migrations/2026_10_16_100000_create_items_and_move_stock_onto_them.php');
+    $packs->down();
     $migration->down();
 
     $organization = (string) Str::uuid();
@@ -54,4 +58,5 @@ it('moves existing medicines and their stock onto items, and back', function () 
 
     // Leave the schema as the other tests expect it.
     $migration->up();
+    $packs->up();
 });

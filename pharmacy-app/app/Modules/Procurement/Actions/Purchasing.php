@@ -3,6 +3,7 @@
 namespace App\Modules\Procurement\Actions;
 
 use App\Models\User;
+use App\Modules\Inventory\Actions\ItemPacks;
 use App\Modules\MasterData\Models\Supplier;
 use App\Modules\Procurement\Enums\PurchaseOrderStatus;
 use App\Modules\Procurement\Models\PurchaseOrder;
@@ -17,10 +18,17 @@ use Illuminate\Validation\ValidationException;
  */
 class Purchasing
 {
-    public function __construct(private readonly DocumentNumbers $numbers) {}
+    public function __construct(
+        private readonly DocumentNumbers $numbers,
+        private readonly ItemPacks $packs,
+    ) {}
 
     /**
-     * @param  list<array{item_id: string, quantity: int, unit_cost_minor: int}>  $lines
+     * Quantity and cost are per pack when a line names one, per unit otherwise.
+     *
+     * @param  list<array{item_id: string, pack_id?: string|null, quantity: int, unit_cost_minor: int}>  $lines
+     *
+     * @throws ValidationException
      */
     public function createOrder(User $by, string $branchId, Supplier $supplier, array $lines, ?CarbonImmutable $expectedOn, ?string $notes): PurchaseOrder
     {
@@ -36,9 +44,13 @@ class Purchasing
             $order->status = PurchaseOrderStatus::Draft;
             $order->save();
 
-            foreach ($lines as $line) {
+            foreach ($lines as $index => $line) {
+                $pack = $this->packs->find($line['item_id'], $line['pack_id'] ?? null, "lines.{$index}.pack_id");
+
                 $order->lines()->create([
                     'item_id' => $line['item_id'],
+                    'pack_name' => $pack?->name,
+                    'units_per_pack' => $pack->units ?? 1,
                     'quantity_ordered' => $line['quantity'],
                     'unit_cost_minor' => $line['unit_cost_minor'],
                 ]);

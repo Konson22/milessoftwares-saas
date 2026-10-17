@@ -29,6 +29,7 @@ type Props = {
             expiresOn: string;
             received: number;
             returnable: number;
+            unit: string;
             unitCostMinor: number;
         }[];
     };
@@ -91,7 +92,7 @@ export default function CreateSupplierReturn({ receipt, today }: Props) {
                                                 {line.expiresOn}
                                             </TableCell>
                                             <TableCell className="text-right tabular-nums">
-                                                {line.received}
+                                                {line.received} {line.unit}
                                             </TableCell>
                                             <TableCell className="text-right tabular-nums">
                                                 {line.returnable}

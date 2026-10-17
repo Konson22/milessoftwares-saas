@@ -5,6 +5,7 @@ namespace App\Modules\Procurement\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Inventory\Models\Item;
+use App\Modules\Inventory\Models\ItemPack;
 use App\Modules\MasterData\Models\Supplier;
 use App\Modules\Procurement\Actions\Purchasing;
 use App\Modules\Procurement\Models\PurchaseOrder;
@@ -53,8 +54,7 @@ class PurchaseOrderController extends Controller
     {
         return Inertia::render('purchase-orders/create', [
             'suppliers' => Supplier::query()->where('active', true)->orderBy('name')->get(['id', 'name']),
-            'medicines' => Item::query()->where('active', true)->orderBy('name')->get()
-                ->map(fn (Item $item) => ['id' => $item->id, 'label' => $item->name, 'unit' => $item->unit]),
+            'medicines' => self::itemOptions(),
         ]);
     }
 
@@ -66,6 +66,7 @@ class PurchaseOrderController extends Controller
             'notes' => ['nullable', 'string', 'max:1000'],
             'lines' => ['required', 'array', 'min:1', 'max:200'],
             'lines.*.item_id' => ['required', 'uuid', 'distinct', Rule::exists('items', 'id')->where('organization_id', $this->organizationId())],
+            'lines.*.pack_id' => ['nullable', 'uuid'],
             'lines.*.quantity' => ['required', 'integer', 'min:1', 'max:1000000'],
             'lines.*.unit_cost' => ['required', 'string', Money::rule()],
         ]);
@@ -76,6 +77,7 @@ class PurchaseOrderController extends Controller
             supplier: Supplier::query()->findOrFail((string) $validated['supplier_id']),
             lines: array_values(array_map(fn (array $line) => [
                 'item_id' => $line['item_id'],
+                'pack_id' => $line['pack_id'] ?? null,
                 'quantity' => (int) $line['quantity'],
                 'unit_cost_minor' => Money::toMinor($line['unit_cost']),
             ], $validated['lines'])),
@@ -104,6 +106,7 @@ class PurchaseOrderController extends Controller
                     'id' => $line->id,
                     'medicine' => $line->item->name,
                     'unit' => $line->item->unit,
+                    'pack' => $line->packLabel(),
                     'ordered' => $line->quantity_ordered,
                     'received' => $line->quantity_received,
                     'unitCostMinor' => $line->unit_cost_minor,
@@ -128,6 +131,23 @@ class PurchaseOrderController extends Controller
         $purchasing->cancel($order);
 
         return back()->with('success', "Order {$order->number} cancelled.");
+    }
+
+    /**
+     * What can be bought, with the packs it comes in (orders and deliveries).
+     *
+     * @return list<array{id: string, label: string, unit: string, packs: list<array{id: string, label: string}>}>
+     */
+    public static function itemOptions(): array
+    {
+        return array_values(Item::query()->where('active', true)->with('packs')->orderBy('name')->get()
+            ->map(fn (Item $item) => [
+                'id' => $item->id,
+                'label' => $item->name,
+                'unit' => $item->unit,
+                'packs' => array_values($item->packs->map(fn (ItemPack $pack) => ['id' => $pack->id, 'label' => $pack->label()])->all()),
+            ])
+            ->all());
     }
 
     /**

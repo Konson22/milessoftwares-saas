@@ -8,7 +8,8 @@
 | 1.3 – 2 | Not started |
 | 3.1 Pharmacy code into module namespaces | Done 2026-10-16 |
 | 3.2 Shared item master | Done 2026-10-16 |
-| 3.3 – 11 | Not started |
+| 3.3 Units and packaging | Done 2026-10-17 |
+| 3.4 – 11 | Not started |
 
 Decisions accepted 2026-10-16: D1 → `docs/adr/0003-erp-workspace-application.md`,
 D2 → `docs/adr/0004-companies-as-organizations.md`.
@@ -155,8 +156,47 @@ from the items; it stops if an item that is not a medicine is referenced.
 - Mutation: a Sales class using `Pharmacy\Models\Medicine` fails the architecture test.
 
 **Known limitations / next slices:**
-- Units and packaging (buy by the box, sell by the tablet) are not built: an item has one unit.
+- Units and packaging: done in 3.3.
 - The "needs a verified prescription" message still lives in `Sell`.
 - Page props still say `medicines` / `medicine`; the stock page shows the item's `controlled`.
 - `sales.prescription_id` still references a Pharmacy table from a Sales table.
 - Customers (Sales) and units/conversions (MasterData) are not built yet.
+
+## Phase 3.3 — 2026-10-17 (local, Windows)
+
+Units and packaging: stock is counted in the item's unit (a capsule); an item can be bought in
+packs (a box of 30).
+
+**Implemented** (`pharmacy-app`, branch `erp/phase-3-pharmacy-modules`):
+- `item_packs` (Inventory): name and units per item; `ItemPacks::sync()` (matched by name;
+  refuses the unit's own name, duplicates, fewer than 2) and `ItemPacks::find()` (never another
+  item's pack). Edited on the medicine form ("Packs it is bought in").
+- Purchase order and goods receipt lines count what the supplier sold: quantity and cost per
+  pack, with `pack_name` and `units_per_pack` copied onto the line, so editing a pack never
+  rewrites a document. Old lines are units (`units_per_pack` 1) and read as before.
+- Receiving: stock gets packs × units, at the pack cost shared over its units (rounded to the
+  minor unit); Finance is billed exactly packs × pack cost, the pack named in the line
+  description. Against an order, a line uses the order line's pack and is counted in it.
+- Supplier returns stay in units (loose capsules from a box can go back). Credits come out of
+  the receipt line's bill cumulatively, so returns in parts add up to the bill exactly.
+- Pages: order and receipt forms pick "bought as" per line (`PackSelect`); order, receipt and
+  return pages show the pack.
+
+**Tests executed:**
+- `composer ci:check`: Pest 95 passed, 1 skipped (PostgreSQL-only); PHPStan 0; Pint; `vp check`;
+  `tsc`. Before: 88. New `PacksTest` (7): packs on the medicine, refused packs, order and
+  receipt in boxes with the bill exact, packs without an order, loose returns credited exactly.
+- Full suite on a scratch PostgreSQL database: 96 passed.
+- Local PostgreSQL: `migrate`, `migrate:rollback --step=1`, `migrate`.
+- Mutations: stocking packs instead of units fails 3 tests; crediting each return on its own
+  (10.02 back for a 10.01 box) fails the return test.
+
+**Found on the way:** the 3.2 migration test rolled back `items` while `item_packs` pointed at
+it; SQLite let it through, PostgreSQL did not. The test now rolls back in order.
+
+**Known limitations / next slices:**
+- The counter (POS) sells units only; selling a whole pack at a pack price is not built.
+- A receipt against an order line cannot switch to another pack than the order's.
+- Batch cost from a pack is rounded per unit; Finance's bill is exact, stock value may differ
+  by under a minor unit per unit.
+- Customers (Sales) are not built yet; warehouses/locations remain Phase 5.

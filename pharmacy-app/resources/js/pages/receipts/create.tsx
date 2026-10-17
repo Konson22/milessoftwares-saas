@@ -6,6 +6,8 @@ import { Panel, PanelBody } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
 import { Label } from '@miles/ui/components/ui/label';
+import { PackSelect } from '@/components/pack-select';
+import type { BuyableItem } from '@/components/pack-select';
 import { index, store } from '@/routes/receipts';
 
 type OrderLine = {
@@ -13,12 +15,13 @@ type OrderLine = {
     medicineId: string;
     medicine: string;
     remaining: number;
+    pack: string | null;
     unitCost: string;
 };
 
 type Props = {
     suppliers: { id: string; name: string }[];
-    medicines: { id: string; label: string; unit: string }[];
+    medicines: BuyableItem[];
     order: {
         id: string;
         number: string;
@@ -51,6 +54,10 @@ export default function ReceiveGoods({
             : [{ key: 0, orderLine: null }],
     );
     const [nextKey, setNextKey] = useState(lines.length);
+    // The medicine chosen on each free line (by line key), for its packs.
+    const [chosen, setChosen] = useState<Record<number, string>>({});
+    const itemOf = (key: number) =>
+        medicines.find((m) => m.id === (chosen[key] ?? medicines[0]?.id));
 
     return (
         <>
@@ -194,42 +201,69 @@ export default function ReceiveGoods({
                                                                     line
                                                                         .orderLine
                                                                         .remaining
-                                                                }{' '}
+                                                                }
+                                                                {line.orderLine
+                                                                    .pack &&
+                                                                    ` × ${line.orderLine.pack}`}{' '}
                                                                 still expected
                                                             </p>
                                                         </>
                                                     ) : (
-                                                        <select
-                                                            name={`lines[${i}][item_id]`}
-                                                            aria-label={`Medicine, line ${i + 1}`}
-                                                            className={
-                                                                selectClass
-                                                            }
-                                                        >
-                                                            {medicines.map(
-                                                                (medicine) => (
-                                                                    <option
-                                                                        key={
-                                                                            medicine.id
-                                                                        }
-                                                                        value={
-                                                                            medicine.id
-                                                                        }
-                                                                    >
-                                                                        {
-                                                                            medicine.label
-                                                                        }
-                                                                    </option>
-                                                                ),
-                                                            )}
-                                                        </select>
+                                                        <div className="grid gap-2">
+                                                            <select
+                                                                name={`lines[${i}][item_id]`}
+                                                                aria-label={`Medicine, line ${i + 1}`}
+                                                                className={
+                                                                    selectClass
+                                                                }
+                                                                onChange={(e) =>
+                                                                    setChosen({
+                                                                        ...chosen,
+                                                                        [line.key]:
+                                                                            e
+                                                                                .target
+                                                                                .value,
+                                                                    })
+                                                                }
+                                                            >
+                                                                {medicines.map(
+                                                                    (
+                                                                        medicine,
+                                                                    ) => (
+                                                                        <option
+                                                                            key={
+                                                                                medicine.id
+                                                                            }
+                                                                            value={
+                                                                                medicine.id
+                                                                            }
+                                                                        >
+                                                                            {
+                                                                                medicine.label
+                                                                            }
+                                                                        </option>
+                                                                    ),
+                                                                )}
+                                                            </select>
+                                                            <PackSelect
+                                                                name={`lines[${i}][pack_id]`}
+                                                                line={i + 1}
+                                                                item={itemOf(
+                                                                    line.key,
+                                                                )}
+                                                            />
+                                                        </div>
                                                     )}
                                                     {(error('item_id') ||
+                                                        error('pack_id') ||
                                                         error(
                                                             'purchase_order_line_id',
                                                         )) && (
                                                         <p className="text-xs text-destructive">
                                                             {error('item_id') ??
+                                                                error(
+                                                                    'pack_id',
+                                                                ) ??
                                                                 error(
                                                                     'purchase_order_line_id',
                                                                 )}
@@ -298,8 +332,8 @@ export default function ReceiveGoods({
                                                                 ?.unitCost
                                                         }
                                                         required
-                                                        placeholder="Unit cost"
-                                                        aria-label={`Unit cost, line ${i + 1}`}
+                                                        placeholder="Cost each"
+                                                        aria-label={`Cost each, line ${i + 1}`}
                                                     />
                                                     {error('unit_cost') && (
                                                         <p className="text-xs text-destructive">
