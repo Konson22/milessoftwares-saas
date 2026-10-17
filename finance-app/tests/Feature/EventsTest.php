@@ -133,6 +133,60 @@ it('asks the product to retry a void that arrives before its invoice', function 
     expect(balanceOf(Account::RECEIVABLE))->toBe(0);
 });
 
+it('takes a partial return off its invoice: revenue, cost back to stock, and the refund', function () {
+    $this->sendEvent('finance.invoice.issued', 'sale:S-1:invoice', [
+        'invoice_number' => 'S-1', 'currency' => 'SSP', 'total_minor' => 1250,
+        'lines' => [['description' => 'Paracetamol', 'quantity' => 5, 'amount_minor' => 1250, 'revenue_account' => null, 'cost_minor' => 500]],
+    ])->assertCreated();
+    $this->sendEvent('finance.payment.received', 'sale:S-1:payment', [
+        'payment_reference' => 'S-1', 'invoice_number' => 'S-1', 'currency' => 'SSP', 'amount_minor' => 1250, 'method' => 'cash',
+    ])->assertCreated();
+
+    $this->sendEvent('finance.sales_return.issued', 'sale_return:1', [
+        'return_number' => 'R-000001', 'invoice_number' => 'S-1', 'branch_id' => null, 'currency' => 'SSP',
+        'total_minor' => 500, 'tax_minor' => 0, 'reason' => 'Wrong strength',
+        'lines' => [['description' => 'Paracetamol', 'quantity' => 2, 'amount_minor' => 500, 'cost_minor' => 200]],
+        'refund' => ['method' => 'cash', 'amount_minor' => 500, 'payment_reference' => 'R-000001'],
+    ])->assertCreated();
+
+    expect(balanceOf(Account::SALES))->toBe(750)
+        ->and(balanceOf(Account::CASH))->toBe(750)
+        ->and(balanceOf(Account::RECEIVABLE))->toBe(0)
+        ->and(balanceOf(Account::PURCHASES))->toBe(300)
+        ->and(balanceOf(Account::INVENTORY))->toBe(-300);
+
+    $this->asTenant('acme', function () {
+        $invoice = Invoice::query()->sole();
+        expect($invoice->credited_minor)->toBe(500)
+            ->and($invoice->paid_minor)->toBe(750)
+            ->and($invoice->outstanding())->toBe(0)
+            ->and($invoice->status())->toBe('paid')
+            ->and(CustomerPayment::query()->where('kind', CustomerPayment::REFUND)->value('number'))->toBe('R-000001');
+    });
+});
+
+it('leaves goods not resold in cost of goods sold, and waits for the invoice', function () {
+    $return = fn () => $this->sendEvent('finance.sales_return.issued', 'sale_return:2', [
+        'return_number' => 'R-000002', 'invoice_number' => 'S-2', 'currency' => 'SSP',
+        'total_minor' => 300, 'reason' => 'Damaged',
+        'lines' => [['description' => 'Syrup', 'quantity' => 1, 'amount_minor' => 300, 'cost_minor' => 0]],
+        'refund' => null,
+    ]);
+
+    $return()->assertStatus(503)->assertJsonPath('error', 'retry_later');
+
+    $this->sendEvent('finance.invoice.issued', 'sale:S-2:invoice', [
+        'invoice_number' => 'S-2', 'currency' => 'SSP', 'total_minor' => 900,
+        'lines' => [['description' => 'Syrup', 'quantity' => 3, 'amount_minor' => 900, 'cost_minor' => 450]],
+    ])->assertCreated();
+    $return()->assertCreated();
+
+    expect(balanceOf(Account::SALES))->toBe(600)
+        ->and(balanceOf(Account::PURCHASES))->toBe(450)
+        ->and(balanceOf(Account::RECEIVABLE))->toBe(600);
+    $this->asTenant('acme', fn () => expect(Invoice::query()->sole()->outstanding())->toBe(600));
+});
+
 it('posts a supplier bill to inventory and payables, one supplier per product supplier', function () {
     $bill = fn (string $number, int $total) => $this->sendEvent('finance.bill.received', "goods_receipt:{$number}", [
         'bill_number' => $number, 'supplier_reference' => 'INV-77', 'supplier_name' => 'Juba Medical Supplies',

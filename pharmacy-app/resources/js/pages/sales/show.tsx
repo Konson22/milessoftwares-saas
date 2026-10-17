@@ -1,13 +1,14 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { Printer } from 'lucide-react';
 import { PageHeader } from '@miles/ui/components/page-header';
-import { Panel, PanelBody } from '@miles/ui/components/panel';
+import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
 import { StatusBadge } from '@miles/ui/components/status-badge';
 import { statusTone } from '@/lib/status';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
 import { formatMoney } from '@/lib/money';
 import { index, receipt, voidMethod as voidSale } from '@/routes/sales';
+import { store as storeReturn } from '@/routes/sales/returns';
 
 type Props = {
     sale: {
@@ -36,15 +37,33 @@ type Props = {
             unitPriceMinor: number;
             discountMinor: number;
             lineTotalMinor: number;
+            returned: number;
+        }[];
+        returns: {
+            id: string;
+            number: string;
+            returnedAt: string;
+            returnedBy: string;
+            reason: string;
+            totalMinor: number;
+            lines: {
+                id: string;
+                medicine: string;
+                quantity: number;
+                amountMinor: number;
+                restocked: boolean;
+            }[];
         }[];
     };
     canVoid: boolean;
+    canReturn: boolean;
 };
 
 /**
- * The receipt (printable) and, for managers, voiding.
+ * The sale (printable receipt), what was brought back, and for managers
+ * returns and voiding.
  */
-export default function ShowSale({ sale, canVoid }: Props) {
+export default function ShowSale({ sale, canVoid, canReturn }: Props) {
     const { workspace, branch } = usePage().props;
     const money = (minor: number) => formatMoney(minor, sale.currency);
 
@@ -169,6 +188,139 @@ export default function ShowSale({ sale, canVoid }: Props) {
                     )}
                 </PanelBody>
             </Panel>
+
+            {sale.returns.length > 0 && (
+                <Panel className="mx-auto mt-6 max-w-md">
+                    <PanelHeader title="Returned" />
+                    <PanelBody>
+                        <ul className="grid gap-3 text-sm">
+                            {sale.returns.map((ret) => (
+                                <li key={ret.id}>
+                                    <p className="flex justify-between gap-2 font-medium">
+                                        <span>{ret.number}</span>
+                                        <span className="tabular-nums">
+                                            −{money(ret.totalMinor)}
+                                        </span>
+                                    </p>
+                                    <p className="text-muted-foreground">
+                                        {new Date(
+                                            ret.returnedAt,
+                                        ).toLocaleString()}{' '}
+                                        · {ret.returnedBy} · {ret.reason}
+                                    </p>
+                                    <ul className="mt-1">
+                                        {ret.lines.map((line) => (
+                                            <li key={line.id}>
+                                                {line.quantity} ×{' '}
+                                                {line.medicine}
+                                                {line.restocked
+                                                    ? ' (back in stock)'
+                                                    : ' (not resold)'}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </li>
+                            ))}
+                        </ul>
+                    </PanelBody>
+                </Panel>
+            )}
+
+            {canReturn && (
+                <Panel className="mx-auto mt-6 max-w-md print:hidden">
+                    <PanelHeader title="Take a return" />
+                    <PanelBody>
+                        <Form
+                            {...storeReturn.form(sale.id)}
+                            className="grid gap-3"
+                        >
+                            {({ errors, processing }) => (
+                                <>
+                                    {sale.lines
+                                        .filter(
+                                            (line) =>
+                                                line.quantity > line.returned,
+                                        )
+                                        .map((line, i) => (
+                                            <div
+                                                key={line.id}
+                                                className="flex flex-wrap items-center gap-2 text-sm"
+                                            >
+                                                <input
+                                                    type="hidden"
+                                                    name={`lines[${i}][sale_line_id]`}
+                                                    value={line.id}
+                                                />
+                                                <span className="min-w-40 flex-1">
+                                                    {line.medicine}{' '}
+                                                    <span className="text-muted-foreground">
+                                                        (batch{' '}
+                                                        {line.batchNumber}, up
+                                                        to{' '}
+                                                        {line.quantity -
+                                                            line.returned}
+                                                        )
+                                                    </span>
+                                                </span>
+                                                <Input
+                                                    type="number"
+                                                    name={`lines[${i}][quantity]`}
+                                                    min={0}
+                                                    max={
+                                                        line.quantity -
+                                                        line.returned
+                                                    }
+                                                    defaultValue={0}
+                                                    aria-label={`Quantity of ${line.medicine} returned`}
+                                                    className="h-8 w-20"
+                                                />
+                                                <label className="flex items-center gap-1">
+                                                    <input
+                                                        type="checkbox"
+                                                        name={`lines[${i}][restock]`}
+                                                        value="1"
+                                                        defaultChecked
+                                                    />
+                                                    Back in stock
+                                                </label>
+                                            </div>
+                                        ))}
+                                    {Object.entries(errors)
+                                        .filter(([field]) =>
+                                            field.startsWith('lines'),
+                                        )
+                                        .map(([field, message]) => (
+                                            <p
+                                                key={field}
+                                                className="text-sm text-destructive"
+                                            >
+                                                {message}
+                                            </p>
+                                        ))}
+                                    <Input
+                                        name="reason"
+                                        required
+                                        placeholder="Why is it coming back?"
+                                        aria-label="Reason for the return"
+                                    />
+                                    {errors.reason && (
+                                        <p className="text-sm text-destructive">
+                                            {errors.reason}
+                                        </p>
+                                    )}
+                                    <Button
+                                        type="submit"
+                                        variant="outline"
+                                        disabled={processing}
+                                    >
+                                        Return and refund ({sale.paymentMethod})
+                                    </Button>
+                                </>
+                            )}
+                        </Form>
+                    </PanelBody>
+                </Panel>
+            )}
 
             {canVoid && (
                 <Form

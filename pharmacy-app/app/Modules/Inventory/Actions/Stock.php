@@ -184,16 +184,16 @@ class Stock
     }
 
     /**
-     * Puts stock back into the batch it came from (a voided sale).
+     * Puts stock back into the batch it came from (a voided sale, a return).
      */
-    public function putBack(Batch $batch, int $quantity, User $user, string $referenceType, string $referenceId): void
+    public function putBack(Batch $batch, int $quantity, User $user, string $referenceType, string $referenceId, MovementType $type = MovementType::SaleVoid): void
     {
-        DB::transaction(function () use ($batch, $quantity, $user, $referenceType, $referenceId) {
+        DB::transaction(function () use ($batch, $quantity, $user, $referenceType, $referenceId, $type) {
             $locked = Batch::query()->whereKey($batch->id)->lockForUpdate()->firstOrFail();
             $locked->quantity_on_hand += $quantity;
             $locked->save();
 
-            $this->record($locked, $quantity, MovementType::SaleVoid, $user, null, null, $referenceType, $referenceId);
+            $this->record($locked, $quantity, $type, $user, null, null, $referenceType, $referenceId);
         });
     }
 

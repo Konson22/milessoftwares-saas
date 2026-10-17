@@ -1,0 +1,61 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milessoftwares.com/contracts/events/finance.sales_return.issued.v1.schema.json",
+    "title": "finance.sales_return.issued, schema_version 1",
+    "description": "A customer brought back part of what an invoice or receipt (finance.invoice.issued) sold, and was refunded. Finance reverses that much revenue against the invoice, moves the cost of goods put back on the shelf from cost of goods sold to inventory, and records the refund. Amounts are integers in the currency's minor unit.",
+    "type": "object",
+    "required": ["return_number", "invoice_number", "currency", "total_minor", "reason", "lines"],
+    "additionalProperties": false,
+    "properties": {
+        "return_number": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "The product's own document number for the return."
+        },
+        "invoice_number": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "The invoice_number of the finance.invoice.issued the goods were sold on."
+        },
+        "branch_id": { "type": ["string", "null"], "format": "uuid" },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "total_minor": { "type": "integer", "minimum": 0 },
+        "tax_minor": { "type": "integer", "default": 0 },
+        "reason": { "type": "string", "maxLength": 255 },
+        "lines": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "type": "object",
+                "required": ["description", "quantity", "amount_minor"],
+                "additionalProperties": false,
+                "properties": {
+                    "description": { "type": "string", "maxLength": 255 },
+                    "quantity": { "type": "number" },
+                    "amount_minor": { "type": "integer" },
+                    "revenue_account": {
+                        "type": ["string", "null"],
+                        "maxLength": 32
+                    },
+                    "cost_minor": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "What the goods put back into stock cost. Finance moves it from cost of goods sold back to inventory. 0 or omitted when the goods are not resold."
+                    }
+                }
+            }
+        },
+        "refund": {
+            "type": ["object", "null"],
+            "required": ["method", "amount_minor"],
+            "additionalProperties": false,
+            "properties": {
+                "method": {
+                    "enum": ["cash", "mobile_money", "card", "bank_transfer", "other"]
+                },
+                "amount_minor": { "type": "integer", "minimum": 1 },
+                "payment_reference": { "type": ["string", "null"], "maxLength": 64 }
+            }
+        }
+    }
+}

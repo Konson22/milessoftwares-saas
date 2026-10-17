@@ -36,6 +36,7 @@ class InvoiceController extends Controller
             'dueOn' => $invoice->due_on?->toDateString(),
             'totalMinor' => $invoice->total_minor,
             'paidMinor' => $invoice->paid_minor,
+            'creditedMinor' => $invoice->credited_minor,
             'outstandingMinor' => $invoice->outstanding(),
             'status' => $invoice->status(),
         ];
@@ -47,9 +48,9 @@ class InvoiceController extends Controller
         $search = trim((string) $request->query('search', ''));
 
         $invoices = Invoice::query()
-            ->when($status === 'unpaid', fn ($query) => $query->whereNull('voided_at')->whereColumn('paid_minor', '<', 'total_minor'))
-            ->when($status === 'overdue', fn ($query) => $query->whereNull('voided_at')->whereColumn('paid_minor', '<', 'total_minor')->whereDate('due_on', '<', CarbonImmutable::today()))
-            ->when($status === 'paid', fn ($query) => $query->whereNull('voided_at')->whereColumn('paid_minor', '>=', 'total_minor'))
+            ->when($status === 'unpaid', fn ($query) => $query->whereNull('voided_at')->whereRaw('paid_minor + credited_minor < total_minor'))
+            ->when($status === 'overdue', fn ($query) => $query->whereNull('voided_at')->whereRaw('paid_minor + credited_minor < total_minor')->whereDate('due_on', '<', CarbonImmutable::today()))
+            ->when($status === 'paid', fn ($query) => $query->whereNull('voided_at')->whereRaw('paid_minor + credited_minor >= total_minor'))
             ->when($status === 'void', fn ($query) => $query->whereNotNull('voided_at'))
             ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
                 ->where('number', 'like', "%{$search}%")
@@ -63,7 +64,7 @@ class InvoiceController extends Controller
             'status' => $status,
             'search' => $search,
             'invoices' => $invoices->map(fn (Invoice $invoice) => self::row($invoice)),
-            'outstandingMinor' => (int) Invoice::query()->whereNull('voided_at')->selectRaw('COALESCE(SUM(total_minor - paid_minor), 0) AS owed')->value('owed'),
+            'outstandingMinor' => (int) Invoice::query()->whereNull('voided_at')->selectRaw('COALESCE(SUM(total_minor - credited_minor - paid_minor), 0) AS owed')->value('owed'),
         ]);
     }
 

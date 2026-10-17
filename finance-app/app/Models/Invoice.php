@@ -23,6 +23,7 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property int $total_minor
  * @property int $tax_minor
  * @property int $paid_minor
+ * @property int $credited_minor
  * @property list<array{description: string, quantity: int|float|null, amount_minor: int, account: string|null, cost_minor: int|null}> $lines
  * @property string|null $journal_id
  * @property CarbonImmutable|null $voided_at
@@ -46,20 +47,21 @@ class Invoice extends Model
             'total_minor' => 'integer',
             'tax_minor' => 'integer',
             'paid_minor' => 'integer',
+            'credited_minor' => 'integer',
             'lines' => 'array',
         ];
     }
 
     public function outstanding(): int
     {
-        return $this->voided_at === null ? max(0, $this->total_minor - $this->paid_minor) : 0;
+        return $this->voided_at === null ? max(0, $this->total_minor - $this->credited_minor - $this->paid_minor) : 0;
     }
 
     public function status(): string
     {
         return match (true) {
             $this->voided_at !== null => 'void',
-            $this->paid_minor >= $this->total_minor => 'paid',
+            $this->paid_minor + $this->credited_minor >= $this->total_minor => 'paid',
             $this->paid_minor > 0 => 'partly_paid',
             $this->due_on !== null && $this->due_on->isPast() => 'overdue',
             default => 'open',

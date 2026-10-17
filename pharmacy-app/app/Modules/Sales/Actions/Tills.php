@@ -5,6 +5,7 @@ namespace App\Modules\Sales\Actions;
 use App\Models\User;
 use App\Modules\Sales\Enums\PaymentMethod;
 use App\Modules\Sales\Models\Sale;
+use App\Modules\Sales\Models\SaleReturn;
 use App\Modules\Sales\Models\TillSession;
 use App\Support\DocumentNumbers;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -14,7 +15,8 @@ use Illuminate\Validation\ValidationException;
 /**
  * Cashier tills: opened with a float, every counter sale taken into the
  * seller's open till, and closed with a count of the cash. What the till
- * should hold is the float plus cash taken minus cash given back.
+ * should hold is the float plus cash taken minus cash given back (voids
+ * and returns).
  */
 class Tills
 {
@@ -133,13 +135,19 @@ class Tills
             $takenMinor[(string) $method] = (int) $row->getAttribute('total');
         }
 
-        $cashRefunds = (int) $refunds?->getAttribute('total');
+        $returns = SaleReturn::query()
+            ->where('till_session_id', $till->id)
+            ->where('refund_method', PaymentMethod::Cash->value)
+            ->selectRaw('COUNT(*) AS refunds, COALESCE(SUM(total_minor), 0) AS total')
+            ->first();
+
+        $cashRefunds = (int) $refunds?->getAttribute('total') + (int) $returns?->getAttribute('total');
 
         return [
             'salesCount' => (int) $taken->sum(fn ($row) => (int) $row->getAttribute('sales')),
             'takenMinor' => $takenMinor,
             'cashRefundsMinor' => $cashRefunds,
-            'refundsCount' => (int) $refunds?->getAttribute('refunds'),
+            'refundsCount' => (int) $refunds?->getAttribute('refunds') + (int) $returns?->getAttribute('refunds'),
             'expectedCashMinor' => $till->opening_float_minor + ($takenMinor[PaymentMethod::Cash->value] ?? 0) - $cashRefunds,
         ];
     }

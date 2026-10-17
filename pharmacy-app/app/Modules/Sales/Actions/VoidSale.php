@@ -36,6 +36,9 @@ class VoidSale
             if ($locked->status !== Sale::COMPLETED) {
                 throw ValidationException::withMessages(['reason' => "Sale {$locked->number} is already voided."]);
             }
+            if ($locked->returns()->exists()) {
+                throw ValidationException::withMessages(['reason' => "Part of sale {$locked->number} was returned: return the rest instead."]);
+            }
 
             $till = $locked->payment_method === PaymentMethod::Cash && $locked->total_minor > 0
                 ? $this->tills->requireOpen($by, $locked->branch_id, 'reason')

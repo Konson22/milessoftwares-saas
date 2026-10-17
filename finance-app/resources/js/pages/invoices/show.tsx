@@ -35,6 +35,7 @@ type Props = {
         totalMinor: number;
         taxMinor: number;
         paidMinor: number;
+        creditedMinor: number;
         outstandingMinor: number;
         status: string;
         journalId: string | null;
@@ -206,6 +207,16 @@ export default function ShowInvoice({
                             <dd className="tabular-nums">
                                 {invoice.dueOn ?? '—'}
                             </dd>
+                            {invoice.creditedMinor > 0 && (
+                                <>
+                                    <dt className="text-muted-foreground">
+                                        Returned
+                                    </dt>
+                                    <dd>
+                                        <Amount minor={invoice.creditedMinor} />
+                                    </dd>
+                                </>
+                            )}
                             <dt className="text-muted-foreground">Paid</dt>
                             <dd>
                                 <Amount minor={invoice.paidMinor} />

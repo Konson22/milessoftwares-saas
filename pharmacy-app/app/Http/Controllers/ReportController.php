@@ -7,6 +7,8 @@ use App\Modules\Inventory\Models\Item;
 use App\Modules\Sales\Enums\PaymentMethod;
 use App\Modules\Sales\Models\Sale;
 use App\Modules\Sales\Models\SaleLine;
+use App\Modules\Sales\Models\SaleReturn;
+use App\Modules\Sales\Models\SaleReturnLine;
 use App\Support\CurrentBranch;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -17,7 +19,8 @@ use Inertia\Response;
 /**
  * The branch's figures for a period: takings, what they cost, how they were
  * paid, what sold best; and what the stock on the shelves is worth today.
- * Cost is the batch's unit cost, so profit follows the stock actually sold.
+ * Cost is the batch's unit cost, so profit follows the stock actually sold;
+ * returns come off both.
  */
 class ReportController extends Controller
 {
@@ -51,9 +54,20 @@ class ReportController extends Controller
             ->whereIn('sale_lines.sale_id', $sales(Sale::COMPLETED)->select('id'))
             ->join('batches', 'batches.id', '=', 'sale_lines.batch_id');
 
-        $revenue = (int) $sales(Sale::COMPLETED)->sum('total_minor');
+        // Returns in the period: their refunds come off the takings, and
+        // what went back on the shelf off the cost.
+        $returns = fn () => SaleReturn::query()
+            ->where('branch_id', $branch->id())
+            ->whereBetween('returned_at', [$from->startOfDay(), $to->endOfDay()]);
+        $returnedMinor = (int) $returns()->sum('total_minor');
+        $restockedCost = (int) SaleReturnLine::query()
+            ->whereIn('sale_return_id', $returns()->select('id'))
+            ->where('restocked', true)
+            ->sum('cost_minor');
+
+        $revenue = (int) $sales(Sale::COMPLETED)->sum('total_minor') - $returnedMinor;
         $count = $sales(Sale::COMPLETED)->count();
-        $cost = (int) $lines()->sum(DB::raw('sale_lines.quantity * batches.unit_cost_minor'));
+        $cost = (int) $lines()->sum(DB::raw('sale_lines.quantity * batches.unit_cost_minor')) - $restockedCost;
 
         $top = $lines()
             ->groupBy('sale_lines.item_id')
@@ -75,6 +89,8 @@ class ReportController extends Controller
                 'averageMinor' => $count === 0 ? 0 : intdiv($revenue, $count),
                 'voidedCount' => $sales(Sale::VOIDED)->count(),
                 'voidedMinor' => (int) $sales(Sale::VOIDED)->sum('total_minor'),
+                'returnedCount' => $returns()->count(),
+                'returnedMinor' => $returnedMinor,
             ],
             'byMethod' => $sales(Sale::COMPLETED)
                 ->groupBy('payment_method')

@@ -16,6 +16,7 @@ JSON Schemas in `contracts/events/`:
 | `finance.bill.received.v1.schema.json`       | supplier bill (goods received) |
 | `finance.credit_note.received.v1.schema.json` | supplier credit (goods returned) |
 | `finance.invoice.voided.v1.schema.json`      | invoice voided, payment refunded |
+| `finance.sales_return.issued.v1.schema.json` | part of a sale returned, refunded |
 | `hr.employee.joined.v1.schema.json`          | a person starts working       |
 | `payroll.timesheet.submitted.v1.schema.json` | hours worked                  |
 

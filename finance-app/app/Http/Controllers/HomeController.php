@@ -36,8 +36,8 @@ class HomeController extends Controller
         }
 
         $receivable = $can('finance.receivables.view') ? [
-            'outstandingMinor' => (int) Invoice::query()->whereNull('voided_at')->selectRaw('COALESCE(SUM(total_minor - paid_minor), 0) AS owed')->value('owed'),
-            'overdue' => Invoice::query()->whereNull('voided_at')->whereColumn('paid_minor', '<', 'total_minor')->whereDate('due_on', '<', $today)->count(),
+            'outstandingMinor' => (int) Invoice::query()->whereNull('voided_at')->selectRaw('COALESCE(SUM(total_minor - credited_minor - paid_minor), 0) AS owed')->value('owed'),
+            'overdue' => Invoice::query()->whereNull('voided_at')->whereRaw('paid_minor + credited_minor < total_minor')->whereDate('due_on', '<', $today)->count(),
         ] : null;
 
         $payable = $can('finance.payables.view') ? [

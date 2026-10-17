@@ -11,7 +11,8 @@
 | 3.3 Units and packaging | Done 2026-10-17 |
 | 3.4 Counter: one sale per submission, discounts, receipts | Done 2026-10-18 |
 | 3.5 Cashier tills and reconciliation | Done 2026-10-18 |
-| 3.6 – 11 | Not started |
+| 3.6 Partial sales returns | Done 2026-10-18 |
+| 3.7 – 11 | Not started |
 
 Decisions accepted 2026-10-16: D1 → `docs/adr/0003-erp-workspace-application.md`,
 D2 → `docs/adr/0004-companies-as-organizations.md`.
@@ -258,3 +259,32 @@ against what it should hold.
 **Known limitations:** over/short is recorded in the pharmacy only; it is not posted to Finance
 (no event for cash differences yet). Cash moved into or out of a drawer during the day (a
 pay-out, a safe drop) is not recorded.
+
+## Phase 3.6 — 2026-10-18 (local, Windows)
+
+Partial returns: part of a sale comes back and is refunded, the rest of the sale stands.
+
+**Implemented** (`pharmacy-app`, `finance-app`, `contracts`):
+- Pharmacy migration `2026_10_18_120000_create_sale_returns` (additive): `sale_returns` (number
+  `R-000001`, reason, refund method, till) and `sale_return_lines` (quantity, amount, cost,
+  restocked).
+- `Sales\Actions\ReturnSale`: up to what is left on each line; the refund is worked out on the
+  line's total (discount included) so returns in parts add up to it exactly; cash comes from the
+  open till of whoever takes the return; units fit to sell go back into their batch
+  (`sale_return` movement). A sale partly returned can no longer be voided.
+- Till summary, sales-day takings, home takings and the reports count returns off revenue, and
+  restocked goods off the cost of goods sold. The sale page shows what came back and, for those
+  with `pharmacy.sales.void` (now "Void sales and take returns", catalog 1.4.0), a return form.
+- Contract `finance.sales_return.issued` v1. Finance: Dr revenue (+ tax) / Cr receivable, the
+  cost of restocked goods Dr inventory / Cr cost of goods sold, and the refund Dr receivable /
+  Cr cash/bank as a refund payment. Migration `2026_10_18_100000_add_credited_to_invoices`:
+  invoices keep what returns took off (`credited_minor`); owed = total − returned − paid.
+
+**Tests executed:**
+- Pharmacy: Pest 114 passed, 1 skipped; PHPStan 0; Pint; `vp check`; `tsc`. New `SaleReturnTest` (6).
+- Finance: Pest 47 passed, 1 skipped (2 new in `EventsTest`); PHPStan 0; Pint; `tsc`.
+- Local PostgreSQL (both apps): `migrate`, `migrate:rollback --step=1`, `migrate`.
+- Mutation: dropping what was already returned from the cumulative refund fails the return test.
+
+**Known limitations:** a refund is given the way the sale was paid; there is no exchange (swap
+for another item) or store credit.

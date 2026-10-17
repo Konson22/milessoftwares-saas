@@ -33,6 +33,8 @@ type Props = {
         averageMinor: number;
         voidedCount: number;
         voidedMinor: number;
+        returnedCount: number;
+        returnedMinor: number;
     };
     byMethod: { method: string; count: number; totalMinor: number }[];
     byDay: { day: string; count: number; totalMinor: number }[];
@@ -157,9 +159,9 @@ export default function Reports({
                     accent="emerald"
                 />
                 <StatCard
-                    label="Voided"
-                    value={money(summary.voidedMinor)}
-                    hint={`${summary.voidedCount} sales, not in takings`}
+                    label="Voided and returned"
+                    value={money(summary.voidedMinor + summary.returnedMinor)}
+                    hint={`${summary.voidedCount} sales, not in takings. Returns: ${money(summary.returnedMinor)} (${summary.returnedCount}), taken off`}
                     icon={XCircle}
                     accent="red"
                 />

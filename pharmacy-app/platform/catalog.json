@@ -6,7 +6,7 @@
         "kind": "standalone",
         "status": "beta"
     },
-    "version": "1.3.0",
+    "version": "1.4.0",
     "permissions": [
         {
             "key": "pharmacy.medicines.view",
@@ -64,7 +64,7 @@
         },
         {
             "key": "pharmacy.sales.void",
-            "name": "Void a sale",
+            "name": "Void sales and take returns",
             "sensitivity": 3,
             "scopes": ["organization", "branch"]
         },

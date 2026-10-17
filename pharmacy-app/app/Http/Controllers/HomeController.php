@@ -8,6 +8,7 @@ use App\Modules\Inventory\Models\Item;
 use App\Modules\Pharmacy\Enums\PrescriptionStatus;
 use App\Modules\Pharmacy\Models\Prescription;
 use App\Modules\Sales\Models\Sale;
+use App\Modules\Sales\Models\SaleReturn;
 use App\Support\CurrentBranch;
 use Carbon\CarbonImmutable;
 use Inertia\Inertia;
@@ -33,7 +34,12 @@ class HomeController extends Controller
                 ->where('status', Sale::COMPLETED)
                 ->whereBetween('sold_at', [$today, $today->endOfDay()]);
 
-            $sales = ['count' => (clone $todays)->count(), 'totalMinor' => (int) (clone $todays)->sum('total_minor')];
+            $returned = (int) SaleReturn::query()
+                ->where('branch_id', $branch->id())
+                ->whereBetween('returned_at', [$today, $today->endOfDay()])
+                ->sum('total_minor');
+
+            $sales = ['count' => (clone $todays)->count(), 'totalMinor' => (int) (clone $todays)->sum('total_minor') - $returned];
         }
 
         $stock = null;

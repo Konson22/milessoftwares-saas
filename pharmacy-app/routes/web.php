@@ -76,10 +76,10 @@ Route::prefix(app(PlatformConfig::class)->path())
                 Route::post('tills/{till}/close', [TillController::class, 'close'])->whereUuid('till')->name('tills.close');
             });
 
-            Route::post('sales/{sale}/void', [SaleController::class, 'void'])
-                ->whereUuid('sale')
-                ->middleware('branch.can:pharmacy.sales.void')
-                ->name('sales.void');
+            Route::middleware('branch.can:pharmacy.sales.void')->group(function () {
+                Route::post('sales/{sale}/void', [SaleController::class, 'void'])->whereUuid('sale')->name('sales.void');
+                Route::post('sales/{sale}/returns', [SaleController::class, 'storeReturn'])->whereUuid('sale')->name('sales.returns.store');
+            });
 
             // Prescriptions: recorded, verified by a pharmacist, dispensed.
             Route::middleware('branch.can:pharmacy.prescriptions.view')->group(function () {

@@ -60,6 +60,8 @@ it('reports the month so far: takings, profit, payments, days and best sellers',
                 'averageMinor' => 750,
                 'voidedCount' => 1,
                 'voidedMinor' => 250,
+                'returnedCount' => 0,
+                'returnedMinor' => 0,
             ])
             ->where('byMethod', [
                 ['method' => 'Cash', 'count' => 1, 'totalMinor' => 1000],

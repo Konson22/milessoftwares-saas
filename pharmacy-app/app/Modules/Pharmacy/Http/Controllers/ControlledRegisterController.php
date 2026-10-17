@@ -8,6 +8,7 @@ use App\Modules\Pharmacy\Models\Medicine;
 use App\Modules\Pharmacy\Models\Prescription;
 use App\Modules\Procurement\Models\GoodsReceipt;
 use App\Modules\Sales\Models\Sale;
+use App\Modules\Sales\Models\SaleReturn;
 use App\Support\CurrentBranch;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -44,6 +45,10 @@ class ControlledRegisterController extends Controller
                 ->keyBy('id');
             // Each sale's prescription (a prescription may be dispensed over several sales).
             $prescriptions = $sales->map(fn (Sale $sale) => $sale->prescription_id === null ? null : $byPrescription->get($sale->prescription_id))->filter();
+            $returns = SaleReturn::query()
+                ->whereIn('id', $movements->where('reference_type', 'sale_return')->pluck('reference_id')->unique())
+                ->get(['id', 'number'])
+                ->keyBy('id');
             $receipts = GoodsReceipt::query()
                 ->whereIn('id', $movements->where('reference_type', 'goods_receipt')->pluck('reference_id')->unique())
                 ->with('supplier:id,name')
@@ -67,6 +72,7 @@ class ControlledRegisterController extends Controller
                     'document' => match ($movement->reference_type) {
                         'sale' => $sales->get($movement->reference_id)?->number,
                         'goods_receipt' => $receipt?->number,
+                        'sale_return' => $returns->get($movement->reference_id)?->number,
                         default => null,
                     },
                     'supplier' => $receipt?->supplier->name,

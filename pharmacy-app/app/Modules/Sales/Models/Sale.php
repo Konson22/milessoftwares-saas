@@ -40,6 +40,7 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property-read User $seller
  * @property-read User|null $voider
  * @property-read Collection<int, SaleLine> $lines
+ * @property-read Collection<int, SaleReturn> $returns
  */
 class Sale extends Model
 {
@@ -88,5 +89,13 @@ class Sale extends Model
     {
         // Ids are time-ordered (UUID v7): lines in the order they were sold.
         return $this->hasMany(SaleLine::class)->orderBy('id');
+    }
+
+    /**
+     * @return HasMany<SaleReturn, $this>
+     */
+    public function returns(): HasMany
+    {
+        return $this->hasMany(SaleReturn::class)->orderBy('returned_at');
     }
 }

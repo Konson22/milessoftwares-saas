@@ -41,6 +41,7 @@ const TYPES: Record<string, string> = {
     receipt: 'Received',
     sale: 'Dispensed',
     sale_void: 'Returned (sale voided)',
+    sale_return: 'Returned by the customer',
     supplier_return: 'Returned to supplier',
     adjustment: 'Adjusted',
 };

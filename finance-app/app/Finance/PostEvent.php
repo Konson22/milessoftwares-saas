@@ -21,13 +21,17 @@ use Miles\SharedModuleKit\Envelope;
  *   finance.payment.received  Dr cash/bank/...     Cr receivable
  *   finance.invoice.voided    Dr revenue (+ tax)   Cr receivable, and a refund:
  *                             Dr receivable        Cr cash/bank/...
+ *   finance.sales_return.issued
+ *                             Dr revenue (+ tax)   Cr receivable, set against its invoice,
+ *                             and a refund: Dr receivable  Cr cash/bank/...
  *   finance.bill.received     Dr inventory (or the line's account) (+ tax)
  *                                                  Cr payable
  *   finance.credit_note.received
  *                             Dr payable           Cr inventory (or the line's account) (+ tax),
  *                                                  set against its bill
  *
- * Sales carrying a cost also move it: Dr cost of goods sold / Cr inventory.
+ * Sales carrying a cost also move it: Dr cost of goods sold / Cr inventory
+ * (returns put back on the shelf, the other way round).
  */
 class PostEvent
 {
@@ -49,6 +53,7 @@ class PostEvent
             'finance.invoice.issued.v1' => $this->invoiceIssued($event),
             'finance.payment.received.v1' => $this->paymentReceived($event),
             'finance.invoice.voided.v1' => $this->invoiceVoided($event),
+            'finance.sales_return.issued.v1' => $this->salesReturnIssued($event),
             'finance.bill.received.v1' => $this->billReceived($event),
             'finance.credit_note.received.v1' => $this->creditNoteReceived($event),
             default => throw new UnsupportedEvent("Finance does not handle {$event->eventType} v{$event->schemaVersion}."),
@@ -200,6 +205,77 @@ class PostEvent
             ]);
             $this->refreshPaid($invoice);
         }
+    }
+
+    /**
+     * Part of a sale brought back: the revenue reversed against its
+     * invoice, the cost of what goes back on the shelf back to inventory,
+     * and the refund.
+     */
+    private function salesReturnIssued(Envelope $event): void
+    {
+        $p = $event->payload;
+        $date = CarbonImmutable::instance($event->occurredAt)->startOfDay();
+        $invoice = Invoice::query()->where('source_app', $event->sourceApp)->where('number', $p['invoice_number'])->lockForUpdate()->first();
+
+        if ($invoice === null) {
+            throw new NotYetPostable("Invoice {$p['invoice_number']} has not arrived yet.");
+        }
+        if ($invoice->voided_at !== null) {
+            return;
+        }
+
+        $total = (int) $p['total_minor'];
+        $tax = (int) ($p['tax_minor'] ?? 0);
+        $lines = $this->lines($p['lines'] ?? [], 'revenue_account');
+
+        $journalLines = [];
+        if ($total > 0) {
+            foreach ($this->split($lines, $total - $tax, Account::SALES) as [$account, $amount]) {
+                $journalLines[] = ['account' => $account, 'debit' => $amount];
+            }
+            if ($tax > 0) {
+                $journalLines[] = ['account' => Account::system(Account::TAX), 'debit' => $tax];
+            }
+            $journalLines[] = ['account' => Account::system(Account::RECEIVABLE), 'credit' => $total, 'description' => $invoice->customer_name];
+        }
+        $cost = array_sum(array_map(fn (array $line) => $line['cost_minor'] ?? 0, $lines));
+        if ($cost > 0) {
+            $journalLines[] = ['account' => Account::system(Account::INVENTORY), 'debit' => $cost, 'description' => 'Returned to stock'];
+            $journalLines[] = ['account' => Account::system(Account::PURCHASES), 'credit' => $cost];
+        }
+        if ($journalLines !== []) {
+            $this->ledger->post($date, "Return {$p['return_number']} on invoice {$invoice->number}: {$p['reason']}", $journalLines, $this->source($event, $p['return_number']));
+        }
+        $invoice->forceFill(['credited_minor' => $invoice->credited_minor + $total])->save();
+
+        $refund = $p['refund'] ?? null;
+        if (is_array($refund) && (int) $refund['amount_minor'] > 0) {
+            $method = PaymentMethod::from($refund['method']);
+            $account = $this->moneyAccount($method);
+            $amount = (int) $refund['amount_minor'];
+            $reference = $refund['payment_reference'] ?? $p['return_number'];
+
+            $journal = $this->ledger->post($date, "Refund for return {$p['return_number']}", [
+                ['account' => Account::system(Account::RECEIVABLE), 'debit' => $amount],
+                ['account' => $account, 'credit' => $amount],
+            ], $this->source($event, "{$reference}-REFUND"));
+
+            CustomerPayment::query()->create([
+                'number' => $reference,
+                'source_app' => $event->sourceApp,
+                'kind' => CustomerPayment::REFUND,
+                'invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->number,
+                'method' => $method,
+                'amount_minor' => $amount,
+                'received_on' => $date,
+                'account_id' => $account->id,
+                'memo' => $p['reason'],
+                'journal_id' => $journal->id,
+            ]);
+        }
+        $this->refreshPaid($invoice);
     }
 
     private function billReceived(Envelope $event): void

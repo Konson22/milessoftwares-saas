@@ -7,12 +7,15 @@ use App\Models\User;
 use App\Modules\Inventory\Actions\InsufficientStock;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Item;
+use App\Modules\Sales\Actions\ReturnSale;
 use App\Modules\Sales\Actions\Sell;
 use App\Modules\Sales\Actions\Tills;
 use App\Modules\Sales\Actions\VoidSale;
 use App\Modules\Sales\Enums\PaymentMethod;
 use App\Modules\Sales\Models\Sale;
 use App\Modules\Sales\Models\SaleLine;
+use App\Modules\Sales\Models\SaleReturn;
+use App\Modules\Sales\Models\SaleReturnLine;
 use App\Support\CurrentBranch;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
@@ -41,6 +44,10 @@ class SaleController extends Controller
             ->with('seller:id,name')
             ->latest('sold_at')
             ->get();
+        $returns = (int) SaleReturn::query()
+            ->where('branch_id', $this->branch->id())
+            ->whereBetween('returned_at', [$day, $day->endOfDay()])
+            ->sum('total_minor');
 
         return Inertia::render('sales/index', [
             'day' => $day->toDateString(),
@@ -53,9 +60,11 @@ class SaleController extends Controller
                 'paymentMethod' => $sale->payment_method->label(),
                 'status' => $sale->status,
             ]),
+            // Money given back for returns that day comes off the takings.
             'takings' => [
                 'count' => $sales->where('status', Sale::COMPLETED)->count(),
-                'totalMinor' => (int) $sales->where('status', Sale::COMPLETED)->sum('total_minor'),
+                'totalMinor' => (int) $sales->where('status', Sale::COMPLETED)->sum('total_minor') - $returns,
+                'returnsMinor' => $returns,
             ],
         ]);
     }
@@ -138,7 +147,9 @@ class SaleController extends Controller
     public function show(Sale $sale): Response
     {
         $this->ensureHere($sale);
-        $sale->load(['seller:id,name', 'voider:id,name', 'lines.item', 'lines.batch:id,batch_number,expires_on']);
+        $sale->load(['seller:id,name', 'voider:id,name', 'lines.item', 'lines.batch:id,batch_number,expires_on', 'returns.returner:id,name', 'returns.lines.item']);
+        $returned = $sale->returns->flatMap(fn (SaleReturn $return) => $return->lines)->groupBy('sale_line_id')->map(fn ($lines) => (int) $lines->sum('quantity'));
+        $mayRefund = app(CurrentAccess::class)->get()?->allowsIn('pharmacy.sales.void', branchId: $this->branch->id()) ?? false;
 
         return Inertia::render('sales/show', [
             'sale' => [
@@ -167,11 +178,49 @@ class SaleController extends Controller
                     'unitPriceMinor' => $line->unit_price_minor,
                     'discountMinor' => $line->discount_minor,
                     'lineTotalMinor' => $line->line_total_minor,
+                    'returned' => $returned->get($line->id, 0),
+                ]),
+                'returns' => $sale->returns->map(fn (SaleReturn $return) => [
+                    'id' => $return->id,
+                    'number' => $return->number,
+                    'returnedAt' => $return->returned_at->toIso8601String(),
+                    'returnedBy' => $return->returner->name,
+                    'reason' => $return->reason,
+                    'totalMinor' => $return->total_minor,
+                    'lines' => $return->lines->map(fn (SaleReturnLine $line) => [
+                        'id' => $line->id,
+                        'medicine' => $line->item->name,
+                        'quantity' => $line->quantity,
+                        'amountMinor' => $line->amount_minor,
+                        'restocked' => $line->restocked,
+                    ]),
                 ]),
             ],
-            'canVoid' => $sale->status === Sale::COMPLETED
-                && (app(CurrentAccess::class)->get()?->allowsIn('pharmacy.sales.void', branchId: $this->branch->id()) ?? false),
+            // A sale partly returned is finished by returning the rest.
+            'canVoid' => $mayRefund && $sale->status === Sale::COMPLETED && $sale->returns->isEmpty(),
+            'canReturn' => $mayRefund && $sale->status === Sale::COMPLETED
+                && $sale->lines->contains(fn (SaleLine $line) => $line->quantity > $returned->get($line->id, 0)),
         ]);
+    }
+
+    public function storeReturn(Request $request, Sale $sale, ReturnSale $returns): RedirectResponse
+    {
+        $this->ensureHere($sale);
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:255'],
+            'lines' => ['required', 'array', 'min:1', 'max:200'],
+            'lines.*.sale_line_id' => ['required', 'uuid', 'distinct'],
+            'lines.*.quantity' => ['required', 'integer', 'min:0', 'max:100000'],
+            'lines.*.restock' => ['sometimes', 'boolean'],
+        ]);
+
+        $return = $returns->handle($sale, $this->user($request), array_values(array_map(fn (array $line) => [
+            'sale_line_id' => (string) $line['sale_line_id'],
+            'quantity' => (int) $line['quantity'],
+            'restock' => (bool) ($line['restock'] ?? false),
+        ], $validated['lines'])), $validated['reason']);
+
+        return back()->with('success', "Return {$return->number} recorded; refund {$return->currency} ".Money::toMajor($return->total_minor, $return->currency).'.');
     }
 
     public function void(Request $request, Sale $sale, VoidSale $void): RedirectResponse

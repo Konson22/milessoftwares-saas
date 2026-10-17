@@ -32,7 +32,7 @@ type Sale = {
 type Props = {
     day: string;
     sales: Sale[];
-    takings: { count: number; totalMinor: number };
+    takings: { count: number; totalMinor: number; returnsMinor: number };
 };
 
 export default function Sales({ day, sales, takings }: Props) {
@@ -91,6 +91,8 @@ export default function Sales({ day, sales, takings }: Props) {
                         <span className="text-muted-foreground">
                             {' '}
                             from {takings.count} sales
+                            {takings.returnsMinor > 0 &&
+                                `, after ${money(takings.returnsMinor)} returned`}
                         </span>
                     </p>
                 </PanelToolbar>
