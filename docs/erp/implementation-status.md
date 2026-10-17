@@ -13,7 +13,8 @@
 | 3.5 Cashier tills and reconciliation | Done 2026-10-18 |
 | 3.6 Partial sales returns | Done 2026-10-18 |
 | 3.7 Batch holds and approved disposals | Done 2026-10-18 |
-| 3.8 – 11 | Not started |
+| 3.8 Profitability, purchases and cashier reports | Done 2026-10-18 |
+| 3.9 – 11 | Not started |
 
 Decisions accepted 2026-10-16: D1 → `docs/adr/0003-erp-workspace-application.md`,
 D2 → `docs/adr/0004-companies-as-organizations.md`.
@@ -322,3 +323,26 @@ Batches can be held back from sale, and stock is destroyed only with a second pe
 **Known limitations:** disposals and adjustments are not posted to Finance (inventory there drifts
 from the pharmacy by write-offs until an inventory write-off event exists). Units awaiting disposal
 stay sellable unless the batch is quarantined.
+
+## Phase 3.8 — 2026-10-18 (local, Windows)
+
+The branch reports gain profitability, purchase history and cashier reconciliation.
+
+**Implemented** (`pharmacy-app`):
+- `App\Support\ReportPeriod`: one period rule for all reports (default month so far, at most a
+  year); the overview uses it.
+- `reports/profitability`: per medicine, sold less returned, discounts, revenue, cost (restocked
+  returns off), profit and margin; totals agree with the overview.
+- `reports/purchases`: per supplier (received less sent back), per medicine (units, spend, average
+  and range of unit cost per base unit), and the period's deliveries. Supplier balances stay in
+  Finance payables.
+- `reports/cashiers`: every till opened in the period (taken, cash refunds, expected, counted,
+  over/short, note) and per cashier totals with over and short.
+- Shared report header (tabs keep the period, print button). All need `pharmacy.reports.view`.
+
+**Tests executed:**
+- Pharmacy: Pest 127 passed, 1 skipped; PHPStan 0; Pint; `vp check`; `tsc`. New
+  `AnalysisReportsTest` (6), with profitability reconciled to the overview.
+- Mutation: leaving restocked returns in the cost fails the profitability test.
+
+**Known limitations:** no export (CSV/PDF other than the browser's print); reports are per branch.

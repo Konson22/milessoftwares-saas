@@ -1,15 +1,7 @@
-import { Form, Head, usePage } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 import { Banknote, Package, TrendingUp, XCircle } from 'lucide-react';
-import { PageHeader } from '@miles/ui/components/page-header';
-import {
-    Panel,
-    PanelBody,
-    PanelHeader,
-    PanelToolbar,
-} from '@miles/ui/components/panel';
+import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
 import { StatCard } from '@miles/ui/components/stat-card';
-import { Button } from '@miles/ui/components/ui/button';
-import { Input } from '@miles/ui/components/ui/input';
 import {
     Table,
     TableBody,
@@ -20,7 +12,7 @@ import {
     TableRow,
 } from '@miles/ui/components/ui/table';
 import { formatMoney } from '@/lib/money';
-import { index } from '@/routes/reports';
+import { margin, ReportHeader } from '@/components/report-header';
 
 type Props = {
     from: string;
@@ -56,12 +48,6 @@ type Props = {
     };
 };
 
-function margin(revenue: number, cost: number): string {
-    return revenue === 0
-        ? '–'
-        : `${Math.round(((revenue - cost) / revenue) * 100)}%`;
-}
-
 /**
  * The branch's figures for a period, and its stock's worth today.
  */
@@ -74,66 +60,13 @@ export default function Reports({
     topMedicines,
     stock,
 }: Props) {
-    const { branch, currency } = usePage().props;
+    const { currency } = usePage().props;
     const money = (minor: number) => formatMoney(minor, currency ?? 'USD');
     const busiest = Math.max(0, ...byDay.map((day) => day.totalMinor));
 
     return (
         <>
-            <Head title="Reports" />
-            <PageHeader title="Reports" description={branch?.name} />
-
-            <Panel className="mb-5">
-                <PanelToolbar>
-                    <Form
-                        {...index.form()}
-                        className="flex flex-wrap items-end gap-2"
-                    >
-                        {({ errors }) => (
-                            <>
-                                <div className="grid gap-1.5">
-                                    <label
-                                        htmlFor="from"
-                                        className="text-sm font-medium"
-                                    >
-                                        From
-                                    </label>
-                                    <Input
-                                        id="from"
-                                        name="from"
-                                        type="date"
-                                        defaultValue={from}
-                                        className="w-44"
-                                    />
-                                </div>
-                                <div className="grid gap-1.5">
-                                    <label
-                                        htmlFor="to"
-                                        className="text-sm font-medium"
-                                    >
-                                        To
-                                    </label>
-                                    <Input
-                                        id="to"
-                                        name="to"
-                                        type="date"
-                                        defaultValue={to}
-                                        className="w-44"
-                                    />
-                                </div>
-                                <Button type="submit" variant="outline">
-                                    Show
-                                </Button>
-                                {(errors.from || errors.to) && (
-                                    <p className="w-full text-sm text-destructive">
-                                        {errors.from ?? errors.to}
-                                    </p>
-                                )}
-                            </>
-                        )}
-                    </Form>
-                </PanelToolbar>
-            </Panel>
+            <ReportHeader current="overview" from={from} to={to} />
 
             <div className="mb-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <StatCard

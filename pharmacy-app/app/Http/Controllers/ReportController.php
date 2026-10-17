@@ -10,6 +10,7 @@ use App\Modules\Sales\Models\SaleLine;
 use App\Modules\Sales\Models\SaleReturn;
 use App\Modules\Sales\Models\SaleReturnLine;
 use App\Support\CurrentBranch;
+use App\Support\ReportPeriod;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,25 +25,13 @@ use Inertia\Response;
  */
 class ReportController extends Controller
 {
-    /** The longest period one report covers, in days. */
-    public const MAX_DAYS = 366;
-
     public const TOP_MEDICINES = 10;
 
     public function __invoke(Request $request, CurrentBranch $branch): Response
     {
-        $period = $request->validate([
-            'from' => ['nullable', 'date_format:Y-m-d'],
-            'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
-        ]);
-
+        $period = ReportPeriod::fromRequest($request);
         $today = CarbonImmutable::today();
-        $to = isset($period['to']) ? CarbonImmutable::parse($period['to']) : $today;
-        $from = isset($period['from']) ? CarbonImmutable::parse($period['from']) : $to->startOfMonth();
-        // A period too long to read at a glance is cut to its last year.
-        if ($from->diffInDays($to) >= self::MAX_DAYS) {
-            $from = $to->subDays(self::MAX_DAYS - 1);
-        }
+        [$from, $to] = [$period->from, $period->to];
 
         $sales = fn (string $status) => Sale::query()
             ->where('branch_id', $branch->id())

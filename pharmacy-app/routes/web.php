@@ -3,6 +3,9 @@
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\Reports\CashierReportController;
+use App\Http\Controllers\Reports\ProfitabilityReportController;
+use App\Http\Controllers\Reports\PurchaseReportController;
 use App\Modules\Inventory\Http\Controllers\DisposalController;
 use App\Modules\Inventory\Http\Controllers\StockController;
 use App\Modules\MasterData\Http\Controllers\SupplierController;
@@ -105,9 +108,12 @@ Route::prefix(app(PlatformConfig::class)->path())
                 ->name('controlled.index');
 
             // The branch's figures for a period.
-            Route::get('reports', ReportController::class)
-                ->middleware('branch.can:pharmacy.reports.view')
-                ->name('reports.index');
+            Route::middleware('branch.can:pharmacy.reports.view')->group(function () {
+                Route::get('reports', ReportController::class)->name('reports.index');
+                Route::get('reports/profitability', ProfitabilityReportController::class)->name('reports.profitability');
+                Route::get('reports/purchases', PurchaseReportController::class)->name('reports.purchases');
+                Route::get('reports/cashiers', CashierReportController::class)->name('reports.cashiers');
+            });
 
             // Purchasing for the branch being worked in.
             Route::middleware('branch.can:pharmacy.purchasing.view')->group(function () {
