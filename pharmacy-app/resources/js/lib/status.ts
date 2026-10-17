@@ -18,6 +18,7 @@ const STATUS_TONES: Record<string, Tone> = {
     closed: 'neutral',
     pending: 'warning',
     approved: 'success',
+    in_transit: 'info',
 };
 
 export function statusTone(status: string): Tone {

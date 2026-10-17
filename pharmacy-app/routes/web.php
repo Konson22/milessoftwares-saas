@@ -9,6 +9,7 @@ use App\Http\Controllers\Reports\PurchaseReportController;
 use App\Modules\Inventory\Http\Controllers\DisposalController;
 use App\Modules\Inventory\Http\Controllers\LocationController;
 use App\Modules\Inventory\Http\Controllers\StockController;
+use App\Modules\Inventory\Http\Controllers\TransferController;
 use App\Modules\MasterData\Http\Controllers\SupplierController;
 use App\Modules\Pharmacy\Http\Controllers\ControlledRegisterController;
 use App\Modules\Pharmacy\Http\Controllers\MedicineController;
@@ -145,6 +146,8 @@ Route::prefix(app(PlatformConfig::class)->path())
                 Route::get('stock/{item}', [StockController::class, 'show'])->whereUuid('item')->name('stock.show');
                 Route::get('locations', [LocationController::class, 'index'])->name('locations.index');
                 Route::get('locations/{location}', [LocationController::class, 'show'])->whereUuid('location')->name('locations.show');
+                Route::get('transfers', [TransferController::class, 'index'])->name('transfers.index');
+                Route::get('transfers/{transfer}', [TransferController::class, 'show'])->whereUuid('transfer')->name('transfers.show');
             });
             Route::middleware('branch.can:pharmacy.stock.adjust')->group(function () {
                 Route::post('stock/{item}/opening', [StockController::class, 'storeOpening'])->whereUuid('item')->name('stock.opening');
@@ -154,6 +157,11 @@ Route::prefix(app(PlatformConfig::class)->path())
                 Route::post('locations', [LocationController::class, 'store'])->name('locations.store');
                 Route::put('locations/{location}', [LocationController::class, 'update'])->whereUuid('location')->name('locations.update');
                 Route::post('batches/{batch}/move', [LocationController::class, 'move'])->whereUuid('batch')->name('locations.move');
+                // Stock sent to another branch, received from one.
+                Route::get('transfers/create', [TransferController::class, 'create'])->name('transfers.create');
+                Route::post('transfers', [TransferController::class, 'store'])->name('transfers.store');
+                Route::post('transfers/{transfer}/receive', [TransferController::class, 'receive'])->whereUuid('transfer')->name('transfers.receive');
+                Route::post('transfers/{transfer}/cancel', [TransferController::class, 'cancel'])->whereUuid('transfer')->name('transfers.cancel');
             });
             // Batches held back from sale: quarantine, recall, release.
             Route::middleware('branch.can:pharmacy.stock.hold')->group(function () {

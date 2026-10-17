@@ -80,6 +80,8 @@ const TYPE_LABELS: Record<string, string> = {
     supplier_return: 'Returned to supplier',
     adjustment: 'Adjusted',
     disposal: 'Disposed of',
+    transfer_out: 'Sent to another branch',
+    transfer_in: 'Transfer received',
 };
 
 export default function StockShow({

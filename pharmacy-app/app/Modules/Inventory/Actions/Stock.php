@@ -152,6 +152,31 @@ class Stock
     }
 
     /**
+     * Sends a quantity of one batch to another branch. Never below zero.
+     *
+     * @throws ValidationException
+     */
+    public function transferOut(Batch $batch, int $quantity, User $user, string $transferId, string $field): Batch
+    {
+        return DB::transaction(function () use ($batch, $quantity, $user, $transferId, $field) {
+            $locked = Batch::query()->whereKey($batch->id)->lockForUpdate()->firstOrFail();
+
+            if ($quantity > $locked->quantity_on_hand) {
+                throw ValidationException::withMessages([
+                    $field => "Only {$locked->quantity_on_hand} left in batch {$locked->batch_number}.",
+                ]);
+            }
+
+            $locked->quantity_on_hand -= $quantity;
+            $locked->save();
+
+            $this->record($locked, -$quantity, MovementType::TransferOut, $user, null, null, 'stock_transfer', $transferId);
+
+            return $locked;
+        });
+    }
+
+    /**
      * Destroys an approved disposal's quantity. Never below zero.
      *
      * @throws ValidationException

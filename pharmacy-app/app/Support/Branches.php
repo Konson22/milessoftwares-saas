@@ -103,6 +103,35 @@ class Branches
         return null;
     }
 
+    /**
+     * Every active branch of the organization, whoever may work there:
+     * where stock can be sent.
+     *
+     * @return list<Branch>
+     */
+    public function allActive(): array
+    {
+        return array_values(array_filter(
+            $this->api->branches($this->tenant->require()->id),
+            fn (Branch $branch) => $branch->isActive(),
+        ));
+    }
+
+    /**
+     * Every branch's name, closed ones too, by id.
+     *
+     * @return array<string, string>
+     */
+    public function names(): array
+    {
+        $names = [];
+        foreach ($this->api->branches($this->tenant->require()->id) as $branch) {
+            $names[$branch->id] = $branch->name;
+        }
+
+        return $names;
+    }
+
     public function find(string $branchId): ?Branch
     {
         foreach ($this->available() as $branch) {

@@ -10,7 +10,7 @@ Against `MASTER-PLAN.md` §7, from reading `pharmacy-app` and `finance-app` (202
 | FEFO allocation, expired stock blocked at sale | ✅ | `Stock` orders by `expires_on`, excludes expired |
 | Quarantine / recall status | ✅ | batch status blocks sale; quarantine releasable, recall final (Phase 3.7) |
 | Adjustments with reasons, disposal | ✅ | `AdjustmentReason`; damaged/expired leave through a disposal approved by a second person (Phase 3.7) |
-| Stock by warehouse/location | ✅ | locations within a branch (shelf, store room, fridge), batches spread over them, moves logged, count sheet (Phase 3.10); deliveries received onto a location (Phase 3.12) |
+| Stock by warehouse/location | ✅ | locations within a branch (shelf, store room, fridge), batches spread over them, moves logged, count sheet (Phase 3.10); deliveries received onto a location (Phase 3.12); transfers between branches (Phase 3.14) |
 | Append-only movements, non-negative stock | ✅ | trigger + CHECK |
 | Suppliers, PO, goods receipt → stock + Finance bill | ✅ | `ReceiveGoods` (outbox `finance.bill.received`) |
 | Supplier returns → Finance credit | ✅ | `ReturnGoods` |

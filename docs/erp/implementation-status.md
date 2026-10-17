@@ -19,6 +19,7 @@
 | 3.11 Stock write-offs and cash over/short in Finance | Done 2026-10-18 |
 | 3.12 Deliveries received onto a location | Done 2026-10-18 |
 | 3.13 CSV export of reports | Done 2026-10-18 |
+| 3.14 Stock transfers between branches | Done 2026-10-18 |
 | 4 – 11 | Not started |
 
 Decisions accepted 2026-10-16: D1 → `docs/adr/0003-erp-workspace-application.md`,
@@ -402,7 +403,7 @@ Where stock is kept within a branch.
 - Mutation: not taking leaving stock off the locations fails the location test.
 
 **Known limitations:** the counter does not pick a location (stock leaves "not put away" first). Locations are within a
-branch; moving stock between branches is not built yet.
+branch; moving stock between branches came in Phase 3.14.
 
 ## Phase 3.11 — 2026-10-18 (local, Windows)
 
@@ -449,3 +450,31 @@ Pint; `vp check`; `tsc`.
 
 **Known limitations:** exports carry the same row caps as the pages (500 tills, 200 deliveries,
 top 10 medicines).
+
+## Phase 3.14 — 2026-10-18 (local, Windows)
+
+Stock sent from one branch to another.
+
+**Implemented** (`pharmacy-app`):
+- Migration `2026_10_18_160000_create_stock_transfers` (additive): `stock_transfers` (number `T…`,
+  from and to branch, in transit → received | cancelled, who and when) and `stock_transfer_lines`
+  (sending batch, its number, expiry and cost, quantity, the batch it arrived in).
+- `Inventory\Actions\Transfers`: send (only batches of the branch, in date, off hold, up to what is
+  on hand less pending disposals; never to the same branch), receive (into a batch of the same
+  number, expiry and cost in the receiving branch, optionally onto a location), cancel (sender only,
+  while in transit: the stock goes back into the batches it left). Movement types `transfer_out`
+  and `transfer_in`. Nothing goes to Finance: the stock stays the organization's, at cost.
+- Pages: `transfers` (coming in / sent out, in-transit first), `transfers/create`, `transfers/{id}`
+  (printable delivery note; receive or cancel). Menu: Inventory → Transfers. Viewing needs
+  `pharmacy.stock.view` in either branch of the transfer; sending, receiving and cancelling need
+  `pharmacy.stock.adjust` in the branch doing it.
+
+**Tests executed:**
+- Pharmacy: Pest 147 passed, 1 skipped; PHPStan 0; Pint; `vp check`; `tsc`; build. New
+  `StockTransferTest` (4).
+- Local PostgreSQL: `migrate`, `migrate:rollback --step=1`, `migrate`.
+- Mutation: not taking stock out when sending fails the transfer tests.
+
+**Known limitations:** a transfer is received whole (no partial receipt or discrepancy note);
+the sending branch cannot be changed once sent. Branch-level figures in Finance do not move with
+the stock (Finance does not split inventory by branch).

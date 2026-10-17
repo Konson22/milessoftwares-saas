@@ -12,6 +12,7 @@ import {
     ShoppingCart,
     Trash2,
     Truck,
+    ArrowLeftRight,
     Undo2,
     Wallet,
 } from 'lucide-react';
@@ -20,6 +21,7 @@ import { home } from '@/routes';
 import { index as controlled } from '@/routes/controlled';
 import { index as disposals } from '@/routes/disposals';
 import { index as locations } from '@/routes/locations';
+import { index as transfers } from '@/routes/transfers';
 import { index as medicines } from '@/routes/medicines';
 import { index as prescriptions } from '@/routes/prescriptions';
 import { index as purchaseOrders } from '@/routes/purchase-orders';
@@ -106,6 +108,13 @@ export const navigation: NavGroup[] = [
                 title: 'Locations',
                 href: locations(),
                 icon: MapPin,
+                permission: 'pharmacy.stock.view',
+                scope: 'branch',
+            },
+            {
+                title: 'Transfers',
+                href: transfers(),
+                icon: ArrowLeftRight,
                 permission: 'pharmacy.stock.view',
                 scope: 'branch',
             },
