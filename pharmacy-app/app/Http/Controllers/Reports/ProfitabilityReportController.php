@@ -8,11 +8,13 @@ use App\Modules\Sales\Models\Sale;
 use App\Modules\Sales\Models\SaleLine;
 use App\Modules\Sales\Models\SaleReturn;
 use App\Modules\Sales\Models\SaleReturnLine;
+use App\Support\CsvExport;
 use App\Support\CurrentBranch;
 use App\Support\ReportPeriod;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * What each medicine earned in the period: sold less returned, at what it
@@ -20,7 +22,7 @@ use Inertia\Response;
  */
 class ProfitabilityReportController extends Controller
 {
-    public function __invoke(Request $request, CurrentBranch $branch): Response
+    public function __invoke(Request $request, CurrentBranch $branch): Response|StreamedResponse
     {
         $period = ReportPeriod::fromRequest($request);
 
@@ -70,7 +72,7 @@ class ProfitabilityReportController extends Controller
             ];
         })->sortByDesc('profitMinor')->values();
 
-        return Inertia::render('reports/profitability', [
+        $props = [
             ...$period->toArray(),
             'rows' => $rows,
             'totals' => [
@@ -79,6 +81,20 @@ class ProfitabilityReportController extends Controller
                 'profitMinor' => (int) $rows->sum('profitMinor'),
                 'discountMinor' => (int) $rows->sum('discountMinor'),
             ],
-        ]);
+        ];
+
+        return match ($request->query('export')) {
+            null => Inertia::render('reports/profitability', $props),
+            'medicines' => CsvExport::download("profitability-{$period->from->toDateString()}-to-{$period->to->toDateString()}", [
+                'Medicine' => 'medicine',
+                'Quantity sold' => 'quantity',
+                'Quantity returned' => 'returnedQuantity',
+                'Discounts' => 'discountMinor',
+                'Revenue' => 'revenueMinor',
+                'Cost' => 'costMinor',
+                'Profit' => 'profitMinor',
+            ], $rows),
+            default => abort(404),
+        };
     }
 }

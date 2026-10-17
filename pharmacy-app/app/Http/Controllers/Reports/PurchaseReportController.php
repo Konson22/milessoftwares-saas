@@ -8,11 +8,13 @@ use App\Modules\MasterData\Models\Supplier;
 use App\Modules\Procurement\Models\GoodsReceipt;
 use App\Modules\Procurement\Models\GoodsReceiptLine;
 use App\Modules\Procurement\Models\SupplierReturn;
+use App\Support\CsvExport;
 use App\Support\CurrentBranch;
 use App\Support\ReportPeriod;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * What the branch bought in the period: per supplier (received less sent
@@ -23,7 +25,7 @@ class PurchaseReportController extends Controller
 {
     public const MAX_RECEIPTS = 200;
 
-    public function __invoke(Request $request, CurrentBranch $branch): Response
+    public function __invoke(Request $request, CurrentBranch $branch): Response|StreamedResponse
     {
         $period = ReportPeriod::fromRequest($request);
         $dates = [$period->from->toDateString(), $period->to->toDateString()];
@@ -68,7 +70,7 @@ class PurchaseReportController extends Controller
             ->get();
         $items = Item::query()->whereIn('id', $byItem->pluck('item_id'))->pluck('name', 'id');
 
-        return Inertia::render('reports/purchases', [
+        $props = [
             ...$period->toArray(),
             'bySupplier' => $bySupplier,
             'byItem' => $byItem->map(fn (object $row) => [
@@ -100,6 +102,15 @@ class PurchaseReportController extends Controller
                 'returnedMinor' => (int) $bySupplier->sum('returnedMinor'),
                 'netMinor' => (int) $bySupplier->sum('netMinor'),
             ],
-        ]);
+        ];
+        $name = "{$period->from->toDateString()}-to-{$period->to->toDateString()}";
+
+        return match ($request->query('export')) {
+            null => Inertia::render('reports/purchases', $props),
+            'suppliers' => CsvExport::download("purchases-by-supplier-{$name}", ['Supplier' => 'supplier', 'Deliveries' => 'receipts', 'Received' => 'receivedMinor', 'Returned' => 'returnedMinor', 'Net' => 'netMinor'], $bySupplier),
+            'medicines' => CsvExport::download("purchases-by-medicine-{$name}", ['Medicine' => 'medicine', 'Quantity' => 'quantity', 'Total' => 'totalMinor', 'Average cost' => 'averageCostMinor', 'Lowest cost' => 'lowestCostMinor', 'Highest cost' => 'highestCostMinor'], $props['byItem']),
+            'deliveries' => CsvExport::download("deliveries-{$name}", ['Number' => 'number', 'Received on' => 'receivedOn', 'Supplier' => 'supplier', 'Supplier reference' => 'supplierReference', 'Total' => 'totalMinor'], $props['receipts']),
+            default => abort(404),
+        };
     }
 }

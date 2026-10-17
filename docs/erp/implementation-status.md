@@ -18,6 +18,7 @@
 | 3.10 Stock locations within a branch | Done 2026-10-18 |
 | 3.11 Stock write-offs and cash over/short in Finance | Done 2026-10-18 |
 | 3.12 Deliveries received onto a location | Done 2026-10-18 |
+| 3.13 CSV export of reports | Done 2026-10-18 |
 | 4 – 11 | Not started |
 
 Decisions accepted 2026-10-16: D1 → `docs/adr/0003-erp-workspace-application.md`,
@@ -434,3 +435,17 @@ empty, the stock stays "not put away" as before.
 
 **Tests executed:** Pharmacy Pest 141 passed, 1 skipped (1 new in `StockLocationsTest`); PHPStan 0;
 Pint; `vp check`; `tsc`.
+
+## Phase 3.13 — 2026-10-18 (local, Windows)
+
+**Implemented** (`pharmacy-app`): every report table downloads as CSV (`?export=<table>` on the
+report, links in the report header): overview (sales by day, by payment, top medicines),
+profitability, purchases (by supplier, by medicine, deliveries), cashiers (by cashier, tills).
+Same rows and period as the page; amounts in major units; UTF-8 with a byte-order mark; text that
+a spreadsheet would run as a formula is written as text (`App\Support\CsvExport`).
+
+**Tests executed:** Pharmacy Pest 143 passed, 1 skipped (2 new in `AnalysisReportsTest`); PHPStan 0;
+Pint; `vp check`; `tsc`.
+
+**Known limitations:** exports carry the same row caps as the pages (500 tills, 200 deliveries,
+top 10 medicines).

@@ -24,7 +24,7 @@ Against `MASTER-PLAN.md` §7, from reading `pharmacy-app` and `finance-app` (202
 | Prescriptions, pharmacist verification, partial dispensing | ✅ | |
 | Controlled drugs register | ✅ | |
 | Reports: stock, near-expiry, sales, value | 🟠 | branch report page |
-| Reports: profitability, purchase history, supplier balances, cashier reconciliation | ✅ | `reports/profitability`, `reports/purchases`, `reports/cashiers` (Phase 3.8); supplier balances live in Finance payables |
+| Reports: profitability, purchase history, supplier balances, cashier reconciliation | ✅ | `reports/profitability`, `reports/purchases`, `reports/cashiers` (Phase 3.8), CSV export of every table (Phase 3.13); supplier balances live in Finance payables |
 | SUNMI device integration | ❌ | none in the repo |
 | Offline POS | ❌ | correctly deferred (Phase 11) |
 

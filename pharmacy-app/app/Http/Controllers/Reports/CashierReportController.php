@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Modules\Sales\Actions\Tills;
 use App\Modules\Sales\Enums\PaymentMethod;
 use App\Modules\Sales\Models\TillSession;
+use App\Support\CsvExport;
 use App\Support\CurrentBranch;
 use App\Support\ReportPeriod;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Cashier reconciliation over a period: every till opened in it, what went
@@ -21,7 +23,7 @@ class CashierReportController extends Controller
 {
     public const MAX_TILLS = 500;
 
-    public function __invoke(Request $request, CurrentBranch $branch, Tills $tills): Response
+    public function __invoke(Request $request, CurrentBranch $branch, Tills $tills): Response|StreamedResponse
     {
         $period = ReportPeriod::fromRequest($request);
 
@@ -68,10 +70,17 @@ class CashierReportController extends Controller
             'shortMinor' => (int) -$tillsOfCashier->filter(fn (array $row) => ($row['differenceMinor'] ?? 0) < 0)->sum('differenceMinor'),
         ])->sortBy('cashier')->values();
 
-        return Inertia::render('reports/cashiers', [
-            ...$period->toArray(),
-            'byCashier' => $byCashier,
-            'tills' => $rows->values(),
-        ]);
+        $name = "{$period->from->toDateString()}-to-{$period->to->toDateString()}";
+
+        return match ($request->query('export')) {
+            null => Inertia::render('reports/cashiers', [
+                ...$period->toArray(),
+                'byCashier' => $byCashier,
+                'tills' => $rows->values(),
+            ]),
+            'cashiers' => CsvExport::download("cashiers-{$name}", ['Cashier' => 'cashier', 'Tills' => 'tills', 'Still open' => 'open', 'Sales' => 'salesCount', 'Taken' => 'takenMinor', 'Cash refunds' => 'cashRefundsMinor', 'Over' => 'overMinor', 'Short' => 'shortMinor'], $byCashier),
+            'tills' => CsvExport::download("tills-{$name}", ['Till' => 'number', 'Cashier' => 'cashier', 'Opened' => 'openedAt', 'Closed' => 'closedAt', 'Status' => 'status', 'Sales' => 'salesCount', 'Taken' => 'takenMinor', 'Cash taken' => 'cashTakenMinor', 'Cash refunds' => 'cashRefundsMinor', 'Expected cash' => 'expectedCashMinor', 'Counted cash' => 'countedCashMinor', 'Difference' => 'differenceMinor', 'Note' => 'closingNote'], $rows),
+            default => abort(404),
+        };
     }
 }

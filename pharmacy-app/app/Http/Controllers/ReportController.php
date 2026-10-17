@@ -9,6 +9,7 @@ use App\Modules\Sales\Models\Sale;
 use App\Modules\Sales\Models\SaleLine;
 use App\Modules\Sales\Models\SaleReturn;
 use App\Modules\Sales\Models\SaleReturnLine;
+use App\Support\CsvExport;
 use App\Support\CurrentBranch;
 use App\Support\ReportPeriod;
 use Carbon\CarbonImmutable;
@@ -16,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * The branch's figures for a period: takings, what they cost, how they were
@@ -27,7 +29,7 @@ class ReportController extends Controller
 {
     public const TOP_MEDICINES = 10;
 
-    public function __invoke(Request $request, CurrentBranch $branch): Response
+    public function __invoke(Request $request, CurrentBranch $branch): Response|StreamedResponse
     {
         $period = ReportPeriod::fromRequest($request);
         $today = CarbonImmutable::today();
@@ -67,7 +69,7 @@ class ReportController extends Controller
             ->get();
         $items = Item::query()->whereIn('id', $top->pluck('item_id'))->get()->keyBy('id');
 
-        return Inertia::render('reports/index', [
+        $props = [
             'from' => $from->toDateString(),
             'to' => $to->toDateString(),
             'summary' => [
@@ -111,7 +113,16 @@ class ReportController extends Controller
                 'costMinor' => (int) $row->cost,
             ]),
             'stock' => $this->stockValue($branch->id(), $today),
-        ]);
+        ];
+        $name = "{$period->from->toDateString()}-to-{$period->to->toDateString()}";
+
+        return match ($request->query('export')) {
+            null => Inertia::render('reports/index', $props),
+            'days' => CsvExport::download("sales-by-day-{$name}", ['Day' => 'day', 'Sales' => 'count', 'Takings' => 'totalMinor'], $props['byDay']),
+            'methods' => CsvExport::download("sales-by-payment-{$name}", ['Payment method' => 'method', 'Sales' => 'count', 'Takings' => 'totalMinor'], $props['byMethod']),
+            'top' => CsvExport::download("top-medicines-{$name}", ['Medicine' => 'medicine', 'Quantity' => 'quantity', 'Revenue' => 'revenueMinor', 'Cost' => 'costMinor'], $props['topMedicines']),
+            default => abort(404),
+        };
     }
 
     /**

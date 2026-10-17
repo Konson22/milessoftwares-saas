@@ -122,3 +122,27 @@ it('keeps the analysis reports to members who may see reports', function (string
 
     $this->get($this->workspaceUrl('acme', $path))->assertForbidden();
 })->with(['reports/profitability', 'reports/purchases', 'reports/cashiers']);
+
+it('downloads each report table as CSV, amounts in major units', function () {
+    $csv = fn (string $path) => $this->get($this->workspaceUrl('acme', $path))->assertOk()->streamedContent();
+
+    $tills = $csv('reports/cashiers?from=2026-10-01&to=2026-10-31&export=tills');
+    $lines = explode("\n", trim(ltrim($tills, "\u{FEFF}")));
+    expect($lines[0])->toStartWith('Till,Cashier,Opened')
+        ->and($lines)->toHaveCount(2)
+        ->and($lines[1])->toContain('Achol')->toContain(',28.00,27.00,-1.00,"One note missing"');
+
+    $this->get($this->workspaceUrl('acme', 'reports/profitability?from=2026-10-01&to=2026-10-31&export=medicines'))
+        ->assertHeader('content-disposition', 'attachment; filename=profitability-2026-10-01-to-2026-10-31.csv');
+    expect($csv('reports/purchases?from=2026-10-01&to=2026-10-31&export=deliveries'))->toContain('INV-77')
+        ->and($csv('reports?from=2026-10-01&to=2026-10-31&export=methods'))->toContain('Cash,1,22.50');
+
+    $this->get($this->workspaceUrl('acme', 'reports/purchases?export=nonsense'))->assertNotFound();
+});
+
+it('keeps formulas in CSV cells as text', function () {
+    $this->asTenant('acme', fn () => Supplier::query()->where('name', 'Nile Pharma')->update(['name' => '=HYPERLINK("x")']));
+
+    expect($this->get($this->workspaceUrl('acme', 'reports/purchases?from=2026-10-01&to=2026-10-31&export=suppliers'))->streamedContent())
+        ->toContain('"\'=HYPERLINK(""x"")"');
+});

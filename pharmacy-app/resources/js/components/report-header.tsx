@@ -14,6 +14,25 @@ const REPORTS = [
 
 export type ReportKey = (typeof REPORTS)[number]['key'];
 
+/** The tables each report downloads as CSV (?export=<key>). */
+const EXPORTS: Record<ReportKey, { key: string; title: string }[]> = {
+    overview: [
+        { key: 'days', title: 'Sales by day' },
+        { key: 'methods', title: 'By payment' },
+        { key: 'top', title: 'Top medicines' },
+    ],
+    profitability: [{ key: 'medicines', title: 'Medicines' }],
+    purchases: [
+        { key: 'suppliers', title: 'By supplier' },
+        { key: 'medicines', title: 'By medicine' },
+        { key: 'deliveries', title: 'Deliveries' },
+    ],
+    cashiers: [
+        { key: 'cashiers', title: 'By cashier' },
+        { key: 'tills', title: 'Tills' },
+    ],
+};
+
 /**
  * The reports' title, tabs and period; switching tabs keeps the period.
  */
@@ -106,6 +125,34 @@ export function ReportHeader({
                                 >
                                     Print
                                 </Button>
+                                <span className="ml-auto flex flex-wrap items-center gap-1 text-sm">
+                                    <span className="text-muted-foreground">
+                                        CSV:
+                                    </span>
+                                    {EXPORTS[current].map((table) => (
+                                        <Button
+                                            key={table.key}
+                                            variant="link"
+                                            size="sm"
+                                            asChild
+                                        >
+                                            <a
+                                                href={
+                                                    report.route({
+                                                        query: {
+                                                            from,
+                                                            to,
+                                                            export: table.key,
+                                                        },
+                                                    }).url
+                                                }
+                                                download
+                                            >
+                                                {table.title}
+                                            </a>
+                                        </Button>
+                                    ))}
+                                </span>
                                 {(errors.from || errors.to) && (
                                     <p className="w-full text-sm text-destructive">
                                         {errors.from ?? errors.to}
