@@ -3,6 +3,7 @@
 namespace App\Sites\Central\Http\Controllers\Workspace;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Authorization\Actions\SeparationOfDutiesWarning;
 use App\Modules\Authorization\Support\AccessResolver;
 use App\Modules\Memberships\Actions\MembershipActionDenied;
 use App\Modules\Memberships\Actions\TemporaryAccounts;
@@ -42,6 +43,7 @@ class MemberAccountController extends Controller
             'scope_type' => ['required_with:role_id', 'nullable', Rule::in(['organization', 'branch', 'department'])],
             'branch_id' => ['required_if:scope_type,branch', 'nullable', 'uuid'],
             'department_id' => ['required_if:scope_type,department', 'nullable', 'uuid'],
+            'acknowledge_sod' => ['sometimes', 'boolean'],
         ]);
 
         $proposed = empty($validated['role_id']) ? null : [
@@ -54,9 +56,11 @@ class MemberAccountController extends Controller
         ];
 
         try {
-            $result = $this->accounts->add($actor, $validated['name'], $validated['email'], $proposed);
+            $result = $this->accounts->add($actor, $validated['name'], $validated['email'], $proposed, (bool) ($validated['acknowledge_sod'] ?? false));
         } catch (MembershipActionDenied $e) {
             throw ValidationException::withMessages(['email' => $e->getMessage()]);
+        } catch (SeparationOfDutiesWarning $warning) {
+            throw ValidationException::withMessages(['acknowledge_sod' => $warning->conflicts]);
         }
 
         $this->showOnce($result['membership'], $result['password'], $result['expiresAt'], $result['roleNote']);

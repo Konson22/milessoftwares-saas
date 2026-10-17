@@ -13,6 +13,7 @@ use App\Modules\Authorization\Support\Scope;
 use App\Modules\Authorization\Support\WorkspaceAbilities;
 use App\Modules\Memberships\Enums\MembershipStatus;
 use App\Modules\Memberships\Models\OrganizationMembership;
+use App\Modules\Memberships\Support\ProposedRoleCheck;
 use App\Modules\Organizations\Enums\OrganizationStatus;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonInterface;
@@ -52,8 +53,9 @@ final class TemporaryAccounts
      * @return array{membership: OrganizationMembership, password: string, expiresAt: CarbonInterface, roleNote: string|null}
      *
      * @throws MembershipActionDenied
+     * @throws SeparationOfDutiesWarning before anything is created, when the role warns and it was not acknowledged
      */
-    public function add(OrganizationMembership $actor, string $name, string $email, ?array $proposed = null): array
+    public function add(OrganizationMembership $actor, string $name, string $email, ?array $proposed = null, bool $acknowledgeSeparationOfDuties = false): array
     {
         $this->assertMayAdd($actor);
 
@@ -66,6 +68,8 @@ final class TemporaryAccounts
         if (User::query()->whereRaw('lower(email) = ?', [$email])->exists()) {
             throw new MembershipActionDenied('An account with that email already exists. Invite them instead: they sign in with their own password.');
         }
+
+        $acknowledged = $proposed !== null && app(ProposedRoleCheck::class)->separationOfDuties($proposed, $acknowledgeSeparationOfDuties);
 
         $password = $this->generate();
         $expiresAt = now()->addDays(self::VALID_DAYS);
@@ -100,7 +104,7 @@ final class TemporaryAccounts
             throw $e;
         }
 
-        $roleNote = $proposed === null ? null : $this->assign($actor, $membership, $proposed);
+        $roleNote = $proposed === null ? null : $this->assign($actor, $membership, $proposed, $acknowledged);
 
         // The password itself is never logged.
         $this->audit->record('member.added_with_temporary_password', $membership, [
@@ -161,7 +165,7 @@ final class TemporaryAccounts
      *
      * @param  array{role_id: string, scope: array{scope_type: string, branch_id?: string|null, department_id?: string|null}}  $proposed
      */
-    private function assign(OrganizationMembership $actor, OrganizationMembership $membership, array $proposed): ?string
+    private function assign(OrganizationMembership $actor, OrganizationMembership $membership, array $proposed, bool $acknowledged): ?string
     {
         $role = ApplicationRole::query()->with('application')->find($proposed['role_id']);
 
@@ -170,7 +174,7 @@ final class TemporaryAccounts
         }
 
         try {
-            app(AssignRole::class)->handle($actor, $membership, $role, Scope::fromInput($proposed['scope']));
+            app(AssignRole::class)->handle($actor, $membership, $role, Scope::fromInput($proposed['scope']), acknowledgeSeparationOfDuties: $acknowledged);
         } catch (AssignmentDenied|SeparationOfDutiesWarning|InvalidArgumentException $e) {
             return 'The role was not given: '.$e->getMessage();
         }

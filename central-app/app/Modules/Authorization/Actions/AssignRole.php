@@ -184,19 +184,37 @@ final class AssignRole
      */
     private function assertSeparationOfDuties(OrganizationMembership $grantee, ApplicationRole $role, Scope $scope, bool $acknowledged): void
     {
+        $warnings = $this->separationOfDutiesWarnings($role, $scope, $grantee);
+
+        if ($warnings !== [] && ! $acknowledged) {
+            throw new SeparationOfDutiesWarning($warnings);
+        }
+    }
+
+    /**
+     * The catalog's warnings this assignment would raise, for asking before
+     * it is made: when inviting or adding someone, $grantee is null (they
+     * hold nothing yet) and a role can still conflict with itself.
+     *
+     * @return list<string>
+     *
+     * @throws AssignmentDenied when a pair blocks
+     */
+    public function separationOfDutiesWarnings(ApplicationRole $role, Scope $scope, ?OrganizationMembership $grantee = null): array
+    {
         $constraints = SodConstraint::query()
             ->where('catalog_version_id', $role->application->current_catalog_version_id)
             ->with('permissionA:id,key', 'permissionB:id,key')
             ->get();
 
         if ($constraints->isEmpty()) {
-            return;
+            return [];
         }
 
         $new = $role->permissions()->pluck('key')->all();
 
         // Permission keys the grantee holds at scopes overlapping the target.
-        $held = $this->access->liveAssignments($grantee, $role->application_id)
+        $held = $grantee === null ? [] : $this->access->liveAssignments($grantee, $role->application_id)
             ->filter(fn (RoleAssignment $assignment) => $this->access->tree()->overlaps(Scope::of($assignment), $scope))
             ->flatMap(fn (RoleAssignment $assignment) => $assignment->role->permissions->pluck('key'))
             ->all();
@@ -223,9 +241,7 @@ final class AssignRole
             $warnings[] = $description;
         }
 
-        if ($warnings !== [] && ! $acknowledged) {
-            throw new SeparationOfDutiesWarning($warnings);
-        }
+        return $warnings;
     }
 
     private function ensureApplicationAccess(OrganizationMembership $grantor, OrganizationMembership $grantee, string $applicationId): void

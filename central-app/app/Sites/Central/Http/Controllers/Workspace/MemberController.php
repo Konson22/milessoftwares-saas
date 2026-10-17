@@ -3,10 +3,12 @@
 namespace App\Sites\Central\Http\Controllers\Workspace;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Authorization\Support\AccessResolver;
 use App\Modules\Memberships\Actions\ManageMembers;
 use App\Modules\Memberships\Actions\MembershipActionDenied;
 use App\Modules\Memberships\Enums\MembershipStatus;
 use App\Modules\Memberships\Models\OrganizationMembership;
+use App\Sites\Central\Http\Controllers\Workspace\Concerns\AuthorizesWorkspaceAdministration;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -17,12 +19,17 @@ use Inertia\Response;
 /**
  * Member directory of the current workspace. Memberships are tenant-scoped:
  * route model binding runs inside the tenant context, so another
- * organization's membership id resolves to 404 here.
+ * organization's membership id resolves to 404 here. Only workspace
+ * administrators see it.
  */
 class MemberController extends Controller
 {
-    public function index(): Response
+    use AuthorizesWorkspaceAdministration;
+
+    public function index(Request $request, AccessResolver $access): Response
     {
+        $this->authorizeAdministration($request, $access);
+
         return Inertia::render('central/workspace/members/index', [
             'members' => OrganizationMembership::query()
                 ->with('user:id,name,email')
@@ -33,8 +40,10 @@ class MemberController extends Controller
         ]);
     }
 
-    public function show(OrganizationMembership $membership): Response
+    public function show(Request $request, OrganizationMembership $membership, AccessResolver $access): Response
     {
+        $this->authorizeAdministration($request, $access);
+
         return Inertia::render('central/workspace/members/show', [
             'member' => $this->present($membership->load('user:id,name,email')),
         ]);

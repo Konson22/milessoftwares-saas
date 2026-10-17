@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Applications\Enums\ApplicationKind;
 use App\Modules\Applications\Models\Application;
 use App\Modules\Applications\Models\ApplicationRole;
+use App\Modules\Authorization\Actions\SeparationOfDutiesWarning;
 use App\Modules\Authorization\Support\AccessResolver;
 use App\Modules\Entitlements\Models\Entitlement;
 use App\Modules\Memberships\Actions\Invitations;
@@ -101,6 +102,7 @@ class InvitationController extends Controller
             'scope_type' => ['required_with:role_id', 'nullable', Rule::in(['organization', 'branch', 'department'])],
             'branch_id' => ['required_if:scope_type,branch', 'nullable', 'uuid'],
             'department_id' => ['required_if:scope_type,department', 'nullable', 'uuid'],
+            'acknowledge_sod' => ['sometimes', 'boolean'],
         ]);
 
         $proposed = empty($validated['role_id']) ? null : [
@@ -112,7 +114,11 @@ class InvitationController extends Controller
             ],
         ];
 
-        $this->attempt(fn () => $this->invitations->invite($inviter, $validated['email'], $proposed), 'email');
+        try {
+            $this->attempt(fn () => $this->invitations->invite($inviter, $validated['email'], $proposed, (bool) ($validated['acknowledge_sod'] ?? false)), 'email');
+        } catch (SeparationOfDutiesWarning $warning) {
+            throw ValidationException::withMessages(['acknowledge_sod' => $warning->conflicts]);
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Invitation sent.')]);
 

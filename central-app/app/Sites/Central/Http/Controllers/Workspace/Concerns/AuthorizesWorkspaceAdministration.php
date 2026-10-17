@@ -17,6 +17,14 @@ trait AuthorizesWorkspaceAdministration
         return $membership;
     }
 
+    protected function authorizeAdministration(Request $request, AccessResolver $access): OrganizationMembership
+    {
+        $membership = $this->membership($request);
+        abort_unless((new WorkspaceAbilities($access))->administers($membership), 403);
+
+        return $membership;
+    }
+
     protected function authorizeStructure(Request $request, AccessResolver $access): OrganizationMembership
     {
         $membership = $this->membership($request);

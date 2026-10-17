@@ -25,6 +25,8 @@ beforeEach(function () {
 });
 
 it('lists only the current workspace members', function () {
+    $this->alpha->forceFill(['owner_membership_id' => $this->alphaMember->id])->save();
+
     $this->actingAs($this->alphaMember->user)
         ->get(workspaceUrl('alpha-co', '/members'))
         ->assertOk()
@@ -57,7 +59,8 @@ it('forbids opening another organization\'s workspace', function () {
 
 it('shows a member of both organizations only the members of the host they are on', function () {
     $both = OrganizationMembership::factory()->create(['organization_id' => $this->alpha->id]);
-    OrganizationMembership::factory()->create(['organization_id' => $this->beta->id, 'user_id' => $both->user_id]);
+    $inBeta = OrganizationMembership::factory()->create(['organization_id' => $this->beta->id, 'user_id' => $both->user_id]);
+    $this->beta->forceFill(['owner_membership_id' => $inBeta->id])->save();
 
     $this->actingAs($both->user)
         ->get(workspaceUrl('beta-co', '/members'))

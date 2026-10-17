@@ -128,7 +128,8 @@ it('signs a member in on the workspace host after a valid callback', function ()
     ]);
 
     $this->get(tenantUrl('manggala', 'auth/callback').'?'.http_build_query(['code' => 'c', 'state' => $query['state']]))
-        ->assertRedirect('/');
+        ->assertRedirect('/')
+        ->assertSessionHas('signed_in', true);
 
     $this->assertAuthenticatedAs($this->owner);
     $this->get(tenantUrl('manggala'))->assertOk();

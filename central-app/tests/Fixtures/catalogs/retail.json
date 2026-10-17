@@ -73,6 +73,14 @@
             "permissions": ["retail.sales.create", "retail.reports.view"]
         },
         {
+            "key": "shift_supervisor",
+            "name": "Shift supervisor",
+            "sensitivity": 3,
+            "delegable": true,
+            "scopes": ["organization", "branch"],
+            "permissions": ["retail.sales.create", "retail.payments.approve"]
+        },
+        {
             "key": "auditor",
             "name": "Auditor",
             "sensitivity": 2,

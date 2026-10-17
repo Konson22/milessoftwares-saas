@@ -25,7 +25,7 @@ it('resolves an active organization for its members', function () {
         ->get(workspace('manggala'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('central/workspace/home')
+            ->component('central/workspace/apps')
             ->where('organization.id', $org->id)
             ->where('organization.displayName', 'Manggala Trading'));
 });

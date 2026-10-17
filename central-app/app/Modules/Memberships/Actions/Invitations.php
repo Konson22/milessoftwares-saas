@@ -15,6 +15,7 @@ use App\Modules\Memberships\Enums\MembershipStatus;
 use App\Modules\Memberships\Models\Invitation;
 use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Memberships\Notifications\OrganizationInvitation;
+use App\Modules\Memberships\Support\ProposedRoleCheck;
 use App\Modules\Organizations\Enums\OrganizationStatus;
 use App\Modules\Organizations\Models\Organization;
 use App\Support\Tenancy\TenantContext;
@@ -44,10 +45,15 @@ final class Invitations
     /**
      * Runs inside the inviting organization's tenant context.
      *
+     * A proposed role that raises separation-of-duties warnings needs them
+     * acknowledged now; the acknowledgement is kept and applied at acceptance.
+     *
      * @param  array{role_id: string, scope: array{scope_type: string, branch_id?: string|null, department_id?: string|null}}|null  $proposed
      * @return array{0: Invitation, 1: string} the invitation and its plain token
+     *
+     * @throws SeparationOfDutiesWarning
      */
-    public function invite(OrganizationMembership $inviter, string $email, ?array $proposed = null): array
+    public function invite(OrganizationMembership $inviter, string $email, ?array $proposed = null, bool $acknowledgeSeparationOfDuties = false): array
     {
         $this->assertMayInvite($inviter);
 
@@ -65,6 +71,7 @@ final class Invitations
 
         if ($proposed !== null) {
             $this->assertProposalPlausible($inviter, $proposed);
+            $proposed['acknowledge_sod'] = app(ProposedRoleCheck::class)->separationOfDuties($proposed, $acknowledgeSeparationOfDuties);
         }
 
         $token = Str::random(48);
@@ -249,7 +256,13 @@ final class Invitations
         }
 
         try {
-            app(AssignRole::class)->handle($inviter, $membership, $role, Scope::fromInput($proposed['scope']));
+            app(AssignRole::class)->handle(
+                $inviter,
+                $membership,
+                $role,
+                Scope::fromInput($proposed['scope']),
+                acknowledgeSeparationOfDuties: (bool) ($proposed['acknowledge_sod'] ?? false),
+            );
         } catch (AssignmentDenied|SeparationOfDutiesWarning|InvalidArgumentException $e) {
             return 'The proposed role was not given: '.$e->getMessage();
         }

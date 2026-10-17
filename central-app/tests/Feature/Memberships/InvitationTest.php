@@ -217,6 +217,26 @@ it('gives a proposed role on acceptance, checked as the inviter', function () {
         ->and($assignment->granted_by_membership_id)->toBe($this->owner->id);
 });
 
+it('asks the inviter to confirm a role that conflicts with itself, and gives it on acceptance', function () {
+    // A shift supervisor both sells and approves payments: a warning pair.
+    $proposal = ['email' => 'amina@example.test', 'role_id' => $this->role('retail', 'shift_supervisor')->id, 'scope_type' => 'branch', 'branch_id' => $this->juba->id];
+
+    $this->actingAs($this->owner->user)
+        ->post(workspaceAt('/manage/invitations'), $proposal)
+        ->assertSessionHasErrors(['acknowledge_sod' => 'Cashiers approving payments needs a second look.']);
+    expect(Invitation::acrossTenants()->count())->toBe(0);
+
+    $token = invite($this->owner, extra: [...$proposal, 'acknowledge_sod' => '1']);
+    expect(Invitation::acrossTenants()->sole()->proposed_access['acknowledge_sod'])->toBeTrue();
+
+    acceptAs($this->invitee, $token)->assertRedirect(route('dashboard'));
+
+    $assignment = RoleAssignment::acrossTenants()->where('membership_id', membershipOf($this->invitee)->id)->sole();
+    expect($assignment->role->key)->toBe('shift_supervisor')
+        ->and($assignment->branch_id)->toBe($this->juba->id)
+        ->and(AuditLog::query()->where('action', 'role.assigned')->latest('sequence')->value('context')['sod_acknowledged'])->toBeTrue();
+});
+
 it('still adds the member but skips a proposed role the inviter can no longer give', function () {
     $branchAdmin = $this->member();
     app(TenantContext::class)->run($this->organization, function () use ($branchAdmin) {

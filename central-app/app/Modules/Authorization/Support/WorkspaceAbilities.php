@@ -31,6 +31,15 @@ final class WorkspaceAbilities
     }
 
     /**
+     * Who uses the workspace itself (home, members, administration). Everyone
+     * else only picks one of their applications.
+     */
+    public function administers(OrganizationMembership $membership): bool
+    {
+        return $this->manageStructure($membership) || $this->manageAccess($membership);
+    }
+
+    /**
      * @return array{manageStructure: bool, manageAccess: bool}
      */
     public function for(OrganizationMembership $membership): array

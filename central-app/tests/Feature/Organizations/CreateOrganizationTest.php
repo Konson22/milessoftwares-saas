@@ -11,6 +11,7 @@ use App\Modules\Memberships\Support\CurrentOrganization;
 use App\Modules\Organizations\Enums\OrganizationStatus;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationSlug;
+use App\Modules\Products\Support\ProductCatalog;
 use App\Support\Hosts\PlatformHosts;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
@@ -195,4 +196,50 @@ it('never gives an organization a second trial of the same application', functio
 
     expect(fn () => app(ManageEntitlements::class)->startTrial($organization, $retail, $user))
         ->toThrow(RuntimeException::class);
+});
+
+describe('trials of an ERP product', function () {
+    beforeEach(function () {
+        $this->pharmacy = Application::query()->forceCreate(['code' => 'pharmacy', 'name' => 'Pharmacy', 'category' => 'products', 'kind' => 'standalone', 'status' => 'available']);
+        $this->finance = Application::query()->forceCreate(['code' => 'finance', 'name' => 'Finance', 'category' => 'shared', 'kind' => 'shared_module', 'status' => 'available']);
+        app(ProductCatalog::class)->sync([
+            'code' => 'pharmacy', 'name' => 'Miles Pharmacy ERP', 'status' => 'pilot', 'sort_order' => 10,
+            'applications' => [['code' => 'pharmacy', 'requirement' => 'required'], ['code' => 'finance', 'requirement' => 'required']],
+        ]);
+        $this->user = User::factory()->create();
+    });
+
+    function trialsOf(Organization $organization): array
+    {
+        $ids = app(TenantContext::class)->run($organization, fn () => Entitlement::query()->current()->where('source', 'trial')->pluck('application_id'));
+
+        return Application::query()->whereIn('id', $ids)->orderBy('code')->pluck('code')->all();
+    }
+
+    it('tries the shared modules the product needs alongside the application', function () {
+        $this->actingAs($this->user)->post(appUrl('organizations'), organizationInput(['trial_application' => 'pharmacy']))
+            ->assertSessionHasNoErrors();
+
+        $organization = Organization::query()->sole();
+
+        expect(trialsOf($organization))->toBe(['finance', 'pharmacy'])
+            ->and(AuditLog::query()->where('action', 'entitlement.trial_started')->count())->toBe(2)
+            ->and(AuditLog::query()->where('action', 'entitlement.trial_started')->get()->firstWhere('context.application', 'finance')?->context['with'])->toBe('pharmacy');
+    });
+
+    it('adds nothing to a trial of the shared module itself', function () {
+        $this->actingAs($this->user)->post(appUrl('organizations'), organizationInput(['trial_application' => 'finance']));
+
+        expect(trialsOf(Organization::query()->sole()))->toBe(['finance']);
+    });
+
+    it('does not try a shared module again that the organization has already tried', function () {
+        $this->actingAs($this->user)->post(appUrl('organizations'), organizationInput(['trial_application' => 'finance']));
+        $organization = Organization::query()->sole();
+
+        app(ManageEntitlements::class)->startTrial($organization, $this->pharmacy, $this->user);
+
+        expect(app(TenantContext::class)->run($organization, fn () => Entitlement::query()->where('application_id', $this->finance->id)->count()))->toBe(1)
+            ->and(trialsOf($organization))->toBe(['finance', 'pharmacy']);
+    });
 });

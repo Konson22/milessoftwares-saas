@@ -4,12 +4,14 @@ namespace App\Modules\Entitlements\Actions;
 
 use App\Models\User;
 use App\Modules\Administration\Models\PlatformStaff;
+use App\Modules\Applications\Enums\ApplicationKind;
 use App\Modules\Applications\Models\Application;
 use App\Modules\Applications\Support\TenantRedirectUris;
 use App\Modules\Audit\AuditLogger;
 use App\Modules\Entitlements\Models\Entitlement;
 use App\Modules\Integration\Support\IntegrationEvents;
 use App\Modules\Organizations\Models\Organization;
+use App\Modules\Products\Models\ErpProduct;
 use App\Modules\Provisioning\Support\Provisioner;
 use App\Modules\Subscriptions\Models\Plan;
 use App\Modules\Subscriptions\Models\Subscription;
@@ -109,13 +111,16 @@ final class ManageEntitlements
     /**
      * Self-serve: the owner of a new workspace tries one application free
      * for the configured number of days. One trial per application, ever,
-     * so ending and restarting never extends it.
+     * so ending and restarting never extends it. The shared modules its ERP
+     * products require (Finance for Pharmacy) are tried alongside, unless
+     * the organization already has or has tried them.
      */
     public function startTrial(Organization $organization, Application $application, User $owner): Entitlement
     {
         $days = (int) config('platform.marketing.trial_days');
+        $companions = $this->sharedModulesRequiredWith($application);
 
-        $entitlement = $this->tenant->run($organization, function () use ($application, $days): Entitlement {
+        [$entitlement, $alongside] = $this->tenant->run($organization, function () use ($application, $companions, $days): array {
             $tried = Entitlement::query()
                 ->where('application_id', $application->id)
                 ->where('source', 'trial')
@@ -125,16 +130,56 @@ final class ManageEntitlements
                 throw new RuntimeException("This organization has already tried {$application->name}.");
             }
 
-            return $this->writeEntitlement($application->id, null, null, 'trial', now()->addDays($days), null);
+            $until = now()->addDays($days);
+            $alongside = [];
+
+            foreach ($companions as $companion) {
+                $covered = Entitlement::query()
+                    ->where('application_id', $companion->id)
+                    ->whereNull('feature_key')
+                    ->where(fn ($query) => $query->where('source', 'trial')->orWhere(fn ($current) => $current->current()))
+                    ->exists();
+
+                if (! $covered) {
+                    $alongside[$companion->code] = $this->writeEntitlement($companion->id, null, null, 'trial', $until, null);
+                }
+            }
+
+            return [$this->writeEntitlement($application->id, null, null, 'trial', $until, null), $alongside];
         });
 
-        $this->afterEntitlementChange($organization, [$application->id], provision: true);
-        $this->audit->record('entitlement.trial_started', $entitlement, [
-            'application' => $application->code,
-            'valid_until' => $entitlement->valid_until?->toIso8601String(),
-        ], actor: $owner, organizationId: $organization->id);
+        $this->afterEntitlementChange($organization, [$application->id, ...array_map(fn (Entitlement $e) => $e->application_id, array_values($alongside))], provision: true);
+
+        foreach ([$application->code => $entitlement, ...$alongside] as $code => $trial) {
+            $this->audit->record('entitlement.trial_started', $trial, [
+                'application' => $code,
+                'valid_until' => $trial->valid_until?->toIso8601String(),
+            ] + ($trial === $entitlement ? [] : ['with' => $application->code]), actor: $owner, organizationId: $organization->id);
+        }
 
         return $entitlement;
+    }
+
+    /**
+     * Shared modules (Finance) that an ERP product built on this application
+     * cannot work without. Nothing for a shared module itself.
+     *
+     * @return list<Application>
+     */
+    private function sharedModulesRequiredWith(Application $application): array
+    {
+        if ($application->kind === ApplicationKind::SharedModule) {
+            return [];
+        }
+
+        return array_values(ErpProduct::query()
+            ->whereHas('requiredApplications', fn ($query) => $query->whereKey($application->id))
+            ->with('requiredApplications')
+            ->get()
+            ->flatMap(fn (ErpProduct $product) => $product->requiredApplications)
+            ->filter(fn (Application $required) => $required->kind === ApplicationKind::SharedModule)
+            ->unique('id')
+            ->all());
     }
 
     public function revoke(Organization $organization, Entitlement $entitlement, ?PlatformStaff $actor, string $reason): void

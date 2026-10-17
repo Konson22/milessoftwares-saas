@@ -17,7 +17,7 @@ use Illuminate\Support\Carbon;
  * @property string $email
  * @property string $token_hash
  * @property string $invited_by_membership_id
- * @property array{role_id: string, scope: array{scope_type: string, branch_id?: string|null, department_id?: string|null}}|null $proposed_access
+ * @property array{role_id: string, scope: array{scope_type: string, branch_id?: string|null, department_id?: string|null}, acknowledge_sod?: bool}|null $proposed_access
  * @property string $status pending|accepted|revoked|expired
  * @property Carbon $expires_at
  * @property Carbon|null $accepted_at

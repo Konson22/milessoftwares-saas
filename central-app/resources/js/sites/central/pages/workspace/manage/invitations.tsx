@@ -238,6 +238,9 @@ export default function Invitations({
                                         branches={branches}
                                         departments={departments}
                                     />
+                                    <SeparationOfDuties
+                                        error={errors.acknowledge_sod}
+                                    />
                                     <Button type="submit" disabled={processing}>
                                         Send invitation
                                     </Button>
@@ -272,6 +275,9 @@ export default function Invitations({
                                         branches={branches}
                                         departments={departments}
                                     />
+                                    <SeparationOfDuties
+                                        error={errors.acknowledge_sod}
+                                    />
                                     <Button type="submit" disabled={processing}>
                                         Add member
                                     </Button>
@@ -282,6 +288,28 @@ export default function Invitations({
                 </section>
             </div>
         </>
+    );
+}
+
+/**
+ * Shown when the proposed role combines permissions the catalog flags (a
+ * pharmacy manager both sells and voids). Ticking it and sending again
+ * gives the role anyway, as on the access page.
+ */
+function SeparationOfDuties({ error }: { error?: string }) {
+    if (!error) {
+        return null;
+    }
+
+    return (
+        <div className="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-500/40 dark:bg-amber-500/10">
+            <p className="font-medium">Separation of duties</p>
+            <p>{error}</p>
+            <label className="flex items-center gap-2">
+                <input type="checkbox" name="acknowledge_sod" value="1" />
+                Give the role anyway
+            </label>
+        </div>
     );
 }
 

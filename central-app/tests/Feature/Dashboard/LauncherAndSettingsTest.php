@@ -43,7 +43,7 @@ it('lists an entitled application for members who hold a role in it', function (
 });
 
 it('gives the workspace sidebar the same applications as the launcher, on every workspace page', function () {
-    $this->actingAs($this->cashier->user)
+    $this->actingAs($this->owner->user)
         ->get(home().'members')
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->has('apps', 1)
@@ -53,6 +53,54 @@ it('gives the workspace sidebar the same applications as the launcher, on every 
     $this->actingAs($this->plainMember->user)
         ->get(home())
         ->assertInertia(fn (AssertableInertia $page) => $page->has('apps', 0));
+});
+
+it('opens the workspace home to administrators, even right after signing in', function () {
+    $accessAdministrator = app(TenantContext::class)->run($this->organization, function () {
+        $membership = $this->member();
+        $this->grant($membership, 'platform', 'access_administrator');
+
+        return $membership;
+    });
+
+    foreach ([$this->owner, $accessAdministrator] as $membership) {
+        $this->actingAs($membership->user)
+            ->withSession(['signed_in' => true])
+            ->get(home())
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('central/workspace/home'));
+    }
+});
+
+it('gives other members only a page to pick an application', function () {
+    foreach ([$this->cashier, $this->plainMember] as $membership) {
+        $this->actingAs($membership->user)
+            ->get(home())
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('central/workspace/apps'));
+    }
+});
+
+it('keeps the member directory to administrators', function () {
+    $this->actingAs($this->cashier->user)->get(home().'members')->assertForbidden();
+    $this->actingAs($this->cashier->user)->get(home().'members/'.$this->owner->id)->assertForbidden();
+
+    $this->actingAs($this->owner->user)->get(home().'members')->assertOk();
+});
+
+it('takes a member with one application straight to it right after signing in', function () {
+    $this->actingAs($this->cashier->user)
+        ->withSession(['signed_in' => true])
+        ->get(home())
+        ->assertRedirect(rtrim(home(), '/').'/retail');
+});
+
+it('shows the picker, not a redirect, to members without an application after signing in', function () {
+    $this->actingAs($this->plainMember->user)
+        ->withSession(['signed_in' => true])
+        ->get(home())
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page->component('central/workspace/apps')->has('modules', 0));
 });
 
 it('shares no workspace applications on the app host', function () {

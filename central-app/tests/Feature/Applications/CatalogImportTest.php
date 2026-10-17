@@ -26,7 +26,7 @@ it('imports a catalog as the current published version', function () {
     expect($application->current_catalog_version_id)->toBe($version->id)
         ->and($version->status)->toBe('published')
         ->and($version->permissions()->count())->toBe(5)
-        ->and($version->roles()->count())->toBe(6)
+        ->and($version->roles()->count())->toBe(7)
         ->and($cashier->allowedScopeTypes())->toBe([ScopeType::Branch])
         ->and($cashier->permissions()->pluck('key')->all())->toBe(['retail.sales.create'])
         ->and(SodConstraint::query()->count())->toBe(2);

@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Modules\Audit\Models\AuditLog;
+use App\Modules\Authorization\Models\RoleAssignment;
 use App\Modules\Identity\OpenId\UserIdentity;
 use App\Modules\Memberships\Actions\Invitations;
 use App\Modules\Memberships\Actions\MembershipActionDenied;
@@ -71,6 +72,21 @@ it('adds a member with a temporary password shown once to the administrator', fu
     // The audit trail records the addition, never the password.
     $audit = AuditLog::query()->where('action', 'member.added_with_temporary_password')->sole();
     expect(json_encode($audit->getAttributes()))->not->toContain($credentials['password']);
+});
+
+it('asks before adding someone with a role that conflicts with itself, and creates nothing until confirmed', function () {
+    $role = ['role_id' => $this->role('retail', 'shift_supervisor')->id, 'scope_type' => 'branch', 'branch_id' => $this->juba->id];
+
+    $this->actingAs($this->owner->user)
+        ->post(membersAt('/manage/members'), ['name' => 'Deng Garang', 'email' => 'deng@example.test', ...$role])
+        ->assertSessionHasErrors('acknowledge_sod');
+    expect(User::query()->where('email', 'deng@example.test')->exists())->toBeFalse();
+
+    $credentials = addMember(extra: [...$role, 'acknowledge_sod' => '1']);
+
+    $membership = OrganizationMembership::query()->withoutGlobalScopes()->where('user_id', addedUser()->id)->sole();
+    expect($credentials['roleNote'])->toBeNull()
+        ->and(RoleAssignment::acrossTenants()->where('membership_id', $membership->id)->sole()->role->key)->toBe('shift_supervisor');
 });
 
 it('refuses an email that already has an account', function () {

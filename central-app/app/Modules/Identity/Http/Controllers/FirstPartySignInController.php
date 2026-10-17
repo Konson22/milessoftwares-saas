@@ -21,6 +21,12 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
  */
 class FirstPartySignInController
 {
+    /**
+     * Flashed for the page right after a sign-in, so a host can send the
+     * person on (the workspace opens a member's only application).
+     */
+    public const JUST_SIGNED_IN = 'signed_in';
+
     public function __construct(
         private readonly OidcRelyingParty $relyingParty,
         private readonly AuthenticationEventRecorder $recorder,
@@ -51,6 +57,7 @@ class FirstPartySignInController
 
         Auth::guard('web')->login($user);
         $request->session()->regenerate();
+        $request->session()->flash(self::JUST_SIGNED_IN, true);
 
         return redirect()->intended('/');
     }
