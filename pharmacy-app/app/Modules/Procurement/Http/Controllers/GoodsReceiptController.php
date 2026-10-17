@@ -4,6 +4,7 @@ namespace App\Modules\Procurement\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Modules\Inventory\Models\StockLocation;
 use App\Modules\MasterData\Models\Supplier;
 use App\Modules\Procurement\Actions\ReceiveGoods;
 use App\Modules\Procurement\Models\GoodsReceipt;
@@ -80,6 +81,7 @@ class GoodsReceiptController extends Controller
                         'unitCost' => Money::toMajor($line->unit_cost_minor),
                     ]),
             ],
+            'locations' => StockLocation::query()->where('branch_id', $this->branch->id())->where('active', true)->orderBy('name')->get(['id', 'name']),
             'today' => CarbonImmutable::today()->toDateString(),
         ]);
     }
@@ -97,6 +99,7 @@ class GoodsReceiptController extends Controller
             'lines.*.item_id' => ['required', 'uuid', Rule::exists('items', 'id')->where('organization_id', $organizationId)],
             'lines.*.purchase_order_line_id' => ['nullable', 'uuid'],
             'lines.*.pack_id' => ['nullable', 'uuid'],
+            'lines.*.location_id' => ['nullable', 'uuid'],
             'lines.*.batch_number' => ['required', 'string', 'max:64'],
             'lines.*.expires_on' => ['required', 'date', 'after:received_on'],
             'lines.*.quantity' => ['required', 'integer', 'min:1', 'max:1000000'],
@@ -123,6 +126,7 @@ class GoodsReceiptController extends Controller
                 'item_id' => $line['item_id'],
                 'purchase_order_line_id' => $line['purchase_order_line_id'] ?? null,
                 'pack_id' => $line['pack_id'] ?? null,
+                'location_id' => $line['location_id'] ?? null,
                 'batch_number' => trim($line['batch_number']),
                 'expires_on' => $line['expires_on'],
                 'quantity' => (int) $line['quantity'],

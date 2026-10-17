@@ -7,6 +7,7 @@ use App\Modules\Inventory\Enums\AdjustmentReason;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\BatchLocation;
 use App\Modules\Inventory\Models\StockLocation;
+use App\Modules\MasterData\Models\Supplier;
 use App\Modules\Pharmacy\Models\Medicine;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -123,4 +124,24 @@ it('keeps locations to their branch and their managers', function () {
     $this->get($this->workspaceUrl('acme', 'locations'))->assertOk()->assertInertia(fn (Assert $page) => $page->where('canManage', false));
     $this->post($this->workspaceUrl('acme', 'locations'), ['name' => 'Fridge'])->assertForbidden();
     moveStock(['to_location_id' => $this->shelf->id, 'quantity' => 1])->assertForbidden();
+});
+
+it('receives a delivery straight onto a location of the branch', function () {
+    $supplier = $this->asTenant('acme', fn () => Supplier::query()->create(['name' => 'Juba Medical Supplies']));
+    $wauShelf = $this->asTenant('acme', fn () => StockLocation::query()->create(['branch_id' => $this->wau, 'name' => 'Wau shelf']));
+    $this->actingAsMember('acme', ['pharmacy.purchasing.view', 'pharmacy.purchasing.receive', 'pharmacy.stock.view'], branch: $this->juba);
+
+    $this->get($this->workspaceUrl('acme', 'receipts/create'))->assertInertia(fn (Assert $page) => $page->has('locations', 2));
+
+    $receive = fn (array $line) => $this->post($this->workspaceUrl('acme', 'receipts'), [
+        'supplier_id' => $supplier->id,
+        'received_on' => '2026-10-18',
+        'lines' => [$line + ['item_id' => $this->para->item->id, 'batch_number' => 'P-7', 'expires_on' => '2027-08-31', 'quantity' => 6, 'unit_cost' => '1.00']],
+    ]);
+    $receive(['location_id' => $wauShelf->id])->assertSessionHasErrors('lines.0.location_id');
+    $receive(['location_id' => $this->store->id])->assertSessionHasNoErrors();
+    $receive(['batch_number' => 'P-8'])->assertSessionHasNoErrors();
+
+    expect(placed($this->store->id))->toBe(6)
+        ->and($this->asTenant('acme', fn () => Batch::query()->where('batch_number', 'P-8')->sole()->quantity_on_hand))->toBe(6);
 });

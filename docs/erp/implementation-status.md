@@ -17,6 +17,7 @@
 | 3.9 Categories, storage and selling packs | Done 2026-10-18 |
 | 3.10 Stock locations within a branch | Done 2026-10-18 |
 | 3.11 Stock write-offs and cash over/short in Finance | Done 2026-10-18 |
+| 3.12 Deliveries received onto a location | Done 2026-10-18 |
 | 4 – 11 | Not started |
 
 Decisions accepted 2026-10-16: D1 → `docs/adr/0003-erp-workspace-application.md`,
@@ -399,8 +400,7 @@ Where stock is kept within a branch.
 - Local PostgreSQL: `migrate`, `migrate:rollback --step=1`, `migrate`.
 - Mutation: not taking leaving stock off the locations fails the location test.
 
-**Known limitations:** goods receipts put stock "not put away" (put it away from the stock page);
-the counter does not pick a location (stock leaves "not put away" first). Locations are within a
+**Known limitations:** the counter does not pick a location (stock leaves "not put away" first). Locations are within a
 branch; moving stock between branches is not built yet.
 
 ## Phase 3.11 — 2026-10-18 (local, Windows)
@@ -425,3 +425,12 @@ Stock and cash changes outside buying and selling reach the ledger.
 **Known limitations:** stock and tills recorded before this phase are not sent retroactively. If an
 organisation already uses code 5100 or 6800 for an account of its own, the system account is not
 created and posting these events fails until the code is freed.
+
+## Phase 3.12 — 2026-10-18 (local, Windows)
+
+**Implemented** (`pharmacy-app`): each line of a goods receipt can name a location of the branch
+in use ("Put away at"); `ReceiveGoods` refuses a location of another branch or out of use. Left
+empty, the stock stays "not put away" as before.
+
+**Tests executed:** Pharmacy Pest 141 passed, 1 skipped (1 new in `StockLocationsTest`); PHPStan 0;
+Pint; `vp check`; `tsc`.

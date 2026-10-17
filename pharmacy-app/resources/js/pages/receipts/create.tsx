@@ -28,6 +28,7 @@ type Props = {
         supplierId: string;
         lines: OrderLine[];
     } | null;
+    locations: { id: string; name: string }[];
     today: string;
 };
 
@@ -46,6 +47,7 @@ export default function ReceiveGoods({
     suppliers,
     medicines,
     order,
+    locations,
     today,
 }: Props) {
     const [lines, setLines] = useState<Line[]>(
@@ -254,13 +256,46 @@ export default function ReceiveGoods({
                                                             />
                                                         </div>
                                                     )}
-                                                    {(error('item_id') ||
+                                                    {locations.length > 0 && (
+                                                        <select
+                                                            name={`lines[${i}][location_id]`}
+                                                            aria-label={`Put away at, line ${i + 1}`}
+                                                            className={`${selectClass} mt-2`}
+                                                        >
+                                                            <option value="">
+                                                                Not put away
+                                                            </option>
+                                                            {locations.map(
+                                                                (location) => (
+                                                                    <option
+                                                                        key={
+                                                                            location.id
+                                                                        }
+                                                                        value={
+                                                                            location.id
+                                                                        }
+                                                                    >
+                                                                        {
+                                                                            location.name
+                                                                        }
+                                                                    </option>
+                                                                ),
+                                                            )}
+                                                        </select>
+                                                    )}
+                                                    {(error('location_id') ||
+                                                        error('item_id') ||
                                                         error('pack_id') ||
                                                         error(
                                                             'purchase_order_line_id',
                                                         )) && (
                                                         <p className="text-xs text-destructive">
-                                                            {error('item_id') ??
+                                                            {error(
+                                                                'location_id',
+                                                            ) ??
+                                                                error(
+                                                                    'item_id',
+                                                                ) ??
                                                                 error(
                                                                     'pack_id',
                                                                 ) ??

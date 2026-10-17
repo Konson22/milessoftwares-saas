@@ -7,6 +7,7 @@ use App\Modules\Inventory\Actions\ItemPacks;
 use App\Modules\Inventory\Actions\Stock;
 use App\Modules\Inventory\Enums\MovementType;
 use App\Modules\Inventory\Models\Item;
+use App\Modules\Inventory\Models\StockLocation;
 use App\Modules\MasterData\Models\Supplier;
 use App\Modules\Procurement\Enums\PurchaseOrderStatus;
 use App\Modules\Procurement\Models\GoodsReceipt;
@@ -39,7 +40,7 @@ class ReceiveGoods
     ) {}
 
     /**
-     * @param  list<array{item_id: string, batch_number: string, expires_on: string, quantity: int, unit_cost_minor: int, purchase_order_line_id?: string|null, pack_id?: string|null}>  $lines
+     * @param  list<array{item_id: string, batch_number: string, expires_on: string, quantity: int, unit_cost_minor: int, purchase_order_line_id?: string|null, pack_id?: string|null, location_id?: string|null}>  $lines
      *
      * @throws ValidationException
      */
@@ -93,6 +94,17 @@ class ReceiveGoods
                     [$packName, $units] = [$pack?->name, $pack->units ?? 1];
                 }
 
+                // Straight onto a shelf of this branch, or left "not put away".
+                $location = null;
+                if (! empty($line['location_id'])) {
+                    $location = StockLocation::query()
+                        ->where('branch_id', $branchId)
+                        ->where('active', true)
+                        ->whereKey($line['location_id'])
+                        ->first()
+                        ?? throw ValidationException::withMessages(["lines.{$index}.location_id" => 'Not a location in use in this branch.']);
+                }
+
                 $batch = $this->stock->add(
                     item: $item,
                     branchId: $branchId,
@@ -104,6 +116,7 @@ class ReceiveGoods
                     type: MovementType::Receipt,
                     referenceType: 'goods_receipt',
                     referenceId: $receipt->id,
+                    location: $location,
                 );
 
                 $lineTotal = $line['quantity'] * $line['unit_cost_minor'];
