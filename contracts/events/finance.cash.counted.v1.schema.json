@@ -1,0 +1,28 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milessoftwares.com/contracts/events/finance.cash.counted.v1.schema.json",
+    "title": "finance.cash.counted, schema_version 1",
+    "description": "A cash drawer (a till) was counted and held more or less than it should. Finance moves the difference between cash and cash over and short: short is Dr cash over and short / Cr cash, over the reverse. Amounts are integers in the currency's minor unit.",
+    "type": "object",
+    "required": ["reference", "currency", "counted_on", "expected_minor", "counted_minor", "difference_minor"],
+    "additionalProperties": false,
+    "properties": {
+        "reference": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "The product's own reference for the count (a till number)."
+        },
+        "branch_id": { "type": ["string", "null"], "format": "uuid" },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "counted_on": { "type": "string", "format": "date" },
+        "expected_minor": { "type": "integer" },
+        "counted_minor": { "type": "integer" },
+        "difference_minor": {
+            "type": "integer",
+            "not": { "const": 0 },
+            "description": "Counted minus expected: positive over, negative short."
+        },
+        "counted_by": { "type": ["string", "null"], "maxLength": 255 },
+        "note": { "type": ["string", "null"], "maxLength": 255 }
+    }
+}

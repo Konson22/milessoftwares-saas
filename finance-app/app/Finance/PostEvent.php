@@ -24,6 +24,10 @@ use Miles\SharedModuleKit\Envelope;
  *   finance.sales_return.issued
  *                             Dr revenue (+ tax)   Cr receivable, set against its invoice,
  *                             and a refund: Dr receivable  Cr cash/bank/...
+ *   finance.stock.adjusted    opening: Dr inventory  Cr owner's equity;
+ *                             count, write_off: Dr stock losses  Cr inventory
+ *                             (a gain the other way round)
+ *   finance.cash.counted      short: Dr cash over and short  Cr cash (over the reverse)
  *   finance.bill.received     Dr inventory (or the line's account) (+ tax)
  *                                                  Cr payable
  *   finance.credit_note.received
@@ -54,6 +58,8 @@ class PostEvent
             'finance.payment.received.v1' => $this->paymentReceived($event),
             'finance.invoice.voided.v1' => $this->invoiceVoided($event),
             'finance.sales_return.issued.v1' => $this->salesReturnIssued($event),
+            'finance.stock.adjusted.v1' => $this->stockAdjusted($event),
+            'finance.cash.counted.v1' => $this->cashCounted($event),
             'finance.bill.received.v1' => $this->billReceived($event),
             'finance.credit_note.received.v1' => $this->creditNoteReceived($event),
             default => throw new UnsupportedEvent("Finance does not handle {$event->eventType} v{$event->schemaVersion}."),
@@ -276,6 +282,54 @@ class PostEvent
             ]);
         }
         $this->refreshPaid($invoice);
+    }
+
+    /**
+     * Stock found, lost or destroyed, or on the shelf from before: at cost,
+     * against inventory.
+     */
+    private function stockAdjusted(Envelope $event): void
+    {
+        $p = $event->payload;
+        $amount = (int) $p['amount_minor'];
+        if ($amount === 0) {
+            return;
+        }
+
+        $other = Account::system($p['kind'] === 'opening' ? Account::EQUITY : Account::STOCK_LOSSES);
+        $inventory = Account::system(Account::INVENTORY);
+        [$debit, $credit] = $amount > 0 ? [$inventory, $other] : [$other, $inventory];
+        $label = match ($p['kind']) {
+            'opening' => 'Opening stock',
+            'write_off' => 'Stock written off',
+            default => 'Stock count',
+        };
+
+        $this->ledger->post(CarbonImmutable::parse($p['adjusted_on']), "{$label} {$p['reference']}: {$p['reason']}", [
+            ['account' => $debit, 'debit' => abs($amount)],
+            ['account' => $credit, 'credit' => abs($amount)],
+        ], $this->source($event, $p['reference']));
+    }
+
+    /**
+     * A drawer that held more or less cash than it should.
+     */
+    private function cashCounted(Envelope $event): void
+    {
+        $p = $event->payload;
+        $difference = (int) $p['difference_minor'];
+        if ($difference === 0) {
+            return;
+        }
+
+        $cash = Account::system(Account::CASH);
+        $overShort = Account::system(Account::CASH_OVER_SHORT);
+        [$debit, $credit] = $difference > 0 ? [$cash, $overShort] : [$overShort, $cash];
+
+        $this->ledger->post(CarbonImmutable::parse($p['counted_on']), ($difference > 0 ? 'Cash over' : 'Cash short')." in {$p['reference']}".(isset($p['note']) ? ": {$p['note']}" : ''), [
+            ['account' => $debit, 'debit' => abs($difference)],
+            ['account' => $credit, 'credit' => abs($difference)],
+        ], $this->source($event, $p['reference']));
     }
 
     private function billReceived(Envelope $event): void

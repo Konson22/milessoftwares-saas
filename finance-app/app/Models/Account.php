@@ -55,6 +55,10 @@ class Account extends Model
 
     public const PURCHASES = 'purchases';
 
+    public const STOCK_LOSSES = 'stock_losses';
+
+    public const CASH_OVER_SHORT = 'cash_over_short';
+
     protected $guarded = ['organization_id', 'system_key'];
 
     protected function casts(): array

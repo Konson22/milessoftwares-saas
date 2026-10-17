@@ -1,0 +1,39 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milessoftwares.com/contracts/events/finance.stock.adjusted.v1.schema.json",
+    "title": "finance.stock.adjusted, schema_version 1",
+    "description": "Stock changed outside buying and selling, valued at what it cost: stock already on the shelf when the product started (opening: Dr inventory / Cr owner's equity), a count that found more or less than recorded (count), or stock destroyed (write_off). For count and write_off a loss is Dr stock losses / Cr inventory and a gain the reverse. Amounts are integers in the currency's minor unit; negative is stock lost.",
+    "type": "object",
+    "required": ["reference", "currency", "adjusted_on", "kind", "amount_minor", "reason", "lines"],
+    "additionalProperties": false,
+    "properties": {
+        "reference": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "The product's own reference for the change (a disposal number, a movement id)."
+        },
+        "branch_id": { "type": ["string", "null"], "format": "uuid" },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "adjusted_on": { "type": "string", "format": "date" },
+        "kind": { "enum": ["opening", "count", "write_off"] },
+        "amount_minor": {
+            "type": "integer",
+            "description": "Signed total at cost: positive stock gained, negative stock lost. Equals the sum of the lines."
+        },
+        "reason": { "type": "string", "maxLength": 255 },
+        "lines": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "type": "object",
+                "required": ["description", "quantity", "amount_minor"],
+                "additionalProperties": false,
+                "properties": {
+                    "description": { "type": "string", "maxLength": 255 },
+                    "quantity": { "type": "number" },
+                    "amount_minor": { "type": "integer" }
+                }
+            }
+        }
+    }
+}

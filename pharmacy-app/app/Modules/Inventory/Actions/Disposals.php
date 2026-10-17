@@ -68,7 +68,7 @@ class Disposals
         return DB::transaction(function () use ($disposal, $by, $note) {
             $locked = $this->pending($disposal, $by);
 
-            $this->stock->dispose($locked->batch()->firstOrFail(), $locked->quantity, $locked->reason->value, $locked->note, $by, $locked->id);
+            $this->stock->dispose($locked->batch()->firstOrFail(), $locked->quantity, $locked->reason->value, $locked->note, $by, $locked->id, $locked->number);
 
             return $this->decide($locked, StockDisposal::APPROVED, $by, $note);
         });

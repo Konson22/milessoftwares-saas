@@ -8,9 +8,11 @@ use App\Modules\Sales\Models\Sale;
 use App\Modules\Sales\Models\SaleReturn;
 use App\Modules\Sales\Models\TillSession;
 use App\Support\DocumentNumbers;
+use App\Support\Money;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Miles\PlatformClient\Events\Outbox;
 
 /**
  * Cashier tills: opened with a float, every counter sale taken into the
@@ -20,7 +22,10 @@ use Illuminate\Validation\ValidationException;
  */
 class Tills
 {
-    public function __construct(private readonly DocumentNumbers $numbers) {}
+    public function __construct(
+        private readonly DocumentNumbers $numbers,
+        private readonly Outbox $outbox,
+    ) {}
 
     public function openFor(User $user, string $branchId): ?TillSession
     {
@@ -102,6 +107,21 @@ class Tills
                 'counted_cash_minor' => $countedMinor,
                 'closing_note' => blank($note) ? null : $note,
             ])->save();
+
+            // Over or short: Finance moves the difference out of (or into) cash.
+            if ($countedMinor !== $expected) {
+                $this->outbox->record('finance', 'finance.cash.counted', 1, "till:{$locked->id}:count", [
+                    'reference' => $locked->number,
+                    'branch_id' => $locked->branch_id,
+                    'currency' => Money::currency(),
+                    'counted_on' => $locked->closed_at?->toDateString() ?? now()->toDateString(),
+                    'expected_minor' => $expected,
+                    'counted_minor' => $countedMinor,
+                    'difference_minor' => $countedMinor - $expected,
+                    'counted_by' => $by->name,
+                    'note' => $locked->closing_note,
+                ], now());
+            }
 
             return $locked;
         });

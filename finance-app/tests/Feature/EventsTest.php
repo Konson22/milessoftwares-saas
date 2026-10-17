@@ -187,6 +187,38 @@ it('leaves goods not resold in cost of goods sold, and waits for the invoice', f
     $this->asTenant('acme', fn () => expect(Invoice::query()->sole()->outstanding())->toBe(600));
 });
 
+it('posts opening stock to equity and counted or destroyed stock to stock losses', function () {
+    $adjust = fn (string $reference, string $kind, int $amount) => $this->sendEvent('finance.stock.adjusted', "stock:{$reference}", [
+        'reference' => $reference, 'branch_id' => null, 'currency' => 'SSP', 'adjusted_on' => '2026-10-10',
+        'kind' => $kind, 'amount_minor' => $amount, 'reason' => 'Test',
+        'lines' => [['description' => 'Paracetamol', 'quantity' => intdiv($amount, 100), 'amount_minor' => $amount]],
+    ])->assertCreated();
+
+    $adjust('M-1', 'opening', 5000);
+    $adjust('M-2', 'count', -300);
+    $adjust('D-00001', 'write_off', -700);
+    $adjust('M-3', 'count', 100);
+
+    expect(balanceOf(Account::INVENTORY))->toBe(4100)
+        ->and(balanceOf(Account::EQUITY))->toBe(5000)
+        ->and(balanceOf(Account::STOCK_LOSSES))->toBe(900);
+});
+
+it('moves a till\'s over or short between cash and cash over and short', function () {
+    sale(total: 2000);
+    $count = fn (string $till, int $difference) => $this->sendEvent('finance.cash.counted', "till:{$till}:count", [
+        'reference' => $till, 'branch_id' => null, 'currency' => 'SSP', 'counted_on' => '2026-10-10',
+        'expected_minor' => 2000, 'counted_minor' => 2000 + $difference, 'difference_minor' => $difference,
+        'counted_by' => 'Achol', 'note' => 'Note missing',
+    ])->assertCreated();
+
+    $count('T-00001', -150);
+    $count('T-00002', 50);
+
+    expect(balanceOf(Account::CASH))->toBe(1900)
+        ->and(balanceOf(Account::CASH_OVER_SHORT))->toBe(100);
+});
+
 it('posts a supplier bill to inventory and payables, one supplier per product supplier', function () {
     $bill = fn (string $number, int $total) => $this->sendEvent('finance.bill.received', "goods_receipt:{$number}", [
         'bill_number' => $number, 'supplier_reference' => 'INV-77', 'supplier_name' => 'Juba Medical Supplies',

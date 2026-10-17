@@ -9,19 +9,28 @@ use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Item;
 use App\Modules\Inventory\Models\StockLocation;
 use App\Modules\Inventory\Models\StockMovement;
+use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Miles\PlatformClient\Events\Outbox;
 
 /**
  * The only way stock changes. Every change locks the batch rows it touches,
  * writes a StockMovement and updates the batch in one transaction, and
  * never lets a batch go below zero. Expired batches are never sold. Stock
  * leaving a batch comes off its locations too (Locations::fit).
+ *
+ * Changes outside buying and selling (opening stock, counts, disposals) go
+ * to Finance at the batch's cost (finance.stock.adjusted), so inventory
+ * there follows the shelves.
  */
 class Stock
 {
-    public function __construct(private readonly Locations $locations) {}
+    public function __construct(
+        private readonly Locations $locations,
+        private readonly Outbox $outbox,
+    ) {}
 
     /**
      * Stock arriving in a branch (opening balance or goods received). Adds to
@@ -73,7 +82,10 @@ class Stock
             $batch->quantity_on_hand += $quantity;
             $batch->save();
 
-            $this->record($batch, $quantity, $type, $user, null, null, $referenceType, $referenceId);
+            $movement = $this->record($batch, $quantity, $type, $user, null, null, $referenceType, $referenceId);
+            if ($type === MovementType::Opening) {
+                $this->toFinance($batch, $quantity, 'opening', $movement->id, 'Stock on the shelf before the system');
+            }
             if ($location !== null) {
                 $this->locations->place($batch, $location, $quantity);
             }
@@ -106,7 +118,8 @@ class Stock
             $locked->quantity_on_hand += $change;
             $locked->save();
 
-            $this->record($locked, $change, MovementType::Adjustment, $user, $reason->value, $note);
+            $movement = $this->record($locked, $change, MovementType::Adjustment, $user, $reason->value, $note);
+            $this->toFinance($locked, $change, 'count', $movement->id, $reason->label().($note === null ? '' : ": {$note}"));
 
             return $locked;
         });
@@ -143,9 +156,9 @@ class Stock
      *
      * @throws ValidationException
      */
-    public function dispose(Batch $batch, int $quantity, string $reason, ?string $note, User $user, string $disposalId): Batch
+    public function dispose(Batch $batch, int $quantity, string $reason, ?string $note, User $user, string $disposalId, string $disposalNumber): Batch
     {
-        return DB::transaction(function () use ($batch, $quantity, $reason, $note, $user, $disposalId) {
+        return DB::transaction(function () use ($batch, $quantity, $reason, $note, $user, $disposalId, $disposalNumber) {
             $locked = Batch::query()->whereKey($batch->id)->lockForUpdate()->firstOrFail();
 
             if ($quantity > $locked->quantity_on_hand) {
@@ -158,6 +171,7 @@ class Stock
             $locked->save();
 
             $this->record($locked, -$quantity, MovementType::Disposal, $user, $reason, $note, 'stock_disposal', $disposalId);
+            $this->toFinance($locked, -$quantity, 'write_off', $disposalNumber, ucfirst($reason).($note === null ? '' : ": {$note}"));
 
             return $locked;
         });
@@ -246,9 +260,9 @@ class Stock
             ->sum('quantity_on_hand');
     }
 
-    private function record(Batch $batch, int $quantity, MovementType $type, User $user, ?string $reason, ?string $note, ?string $referenceType = null, ?string $referenceId = null): void
+    private function record(Batch $batch, int $quantity, MovementType $type, User $user, ?string $reason, ?string $note, ?string $referenceType = null, ?string $referenceId = null): StockMovement
     {
-        StockMovement::query()->create([
+        $movement = StockMovement::query()->create([
             'branch_id' => $batch->branch_id,
             'item_id' => $batch->item_id,
             'batch_id' => $batch->id,
@@ -264,5 +278,36 @@ class Stock
         if ($quantity < 0) {
             $this->locations->fit($batch);
         }
+
+        return $movement;
+    }
+
+    /**
+     * A change at the batch's cost, signed: positive stock gained.
+     *
+     * @param  'opening'|'count'|'write_off'  $kind
+     */
+    private function toFinance(Batch $batch, int $quantity, string $kind, string $reference, string $reason): void
+    {
+        $amount = $quantity * $batch->unit_cost_minor;
+        if ($amount === 0) {
+            return;
+        }
+
+        $batch->loadMissing('item');
+        $this->outbox->record('finance', 'finance.stock.adjusted', 1, "stock_adjustment:{$kind}:{$reference}", [
+            'reference' => $reference,
+            'branch_id' => $batch->branch_id,
+            'currency' => Money::currency(),
+            'adjusted_on' => now()->toDateString(),
+            'kind' => $kind,
+            'amount_minor' => $amount,
+            'reason' => mb_substr($reason, 0, 255),
+            'lines' => [[
+                'description' => "{$batch->item->name}, batch {$batch->batch_number}",
+                'quantity' => $quantity,
+                'amount_minor' => $amount,
+            ]],
+        ], now());
     }
 }

@@ -16,6 +16,7 @@
 | 3.8 Profitability, purchases and cashier reports | Done 2026-10-18 |
 | 3.9 Categories, storage and selling packs | Done 2026-10-18 |
 | 3.10 Stock locations within a branch | Done 2026-10-18 |
+| 3.11 Stock write-offs and cash over/short in Finance | Done 2026-10-18 |
 | 4 – 11 | Not started |
 
 Decisions accepted 2026-10-16: D1 → `docs/adr/0003-erp-workspace-application.md`,
@@ -401,3 +402,26 @@ Where stock is kept within a branch.
 **Known limitations:** goods receipts put stock "not put away" (put it away from the stock page);
 the counter does not pick a location (stock leaves "not put away" first). Locations are within a
 branch; moving stock between branches is not built yet.
+
+## Phase 3.11 — 2026-10-18 (local, Windows)
+
+Stock and cash changes outside buying and selling reach the ledger.
+
+**Implemented:**
+- Contracts: `finance.stock.adjusted.v1` (kind `opening`, `count` or `write_off`, signed amount at
+  cost, lines) and `finance.cash.counted.v1` (expected, counted, difference; never zero).
+- `finance-app`: system accounts 5100 "Stock losses and write-offs" and 6800 "Cash over and short"
+  (created by `ChartOfAccounts::ensure`). `PostEvent`: opening stock Dr inventory / Cr owner's
+  equity; a count or write-off loss Dr stock losses / Cr inventory (a gain the reverse); a short
+  till Dr cash over and short / Cr cash (over the reverse).
+- `pharmacy-app`: `Stock` sends opening stock, adjustments (`count`) and approved disposals
+  (`write_off`, under the disposal number) at the batch's unit cost. `Tills::close` sends the
+  difference when the count is not what was expected.
+
+**Tests executed:**
+- Finance: Pest 49 passed, 1 skipped (2 new in `EventsTest`); PHPStan 0; Pint.
+- Pharmacy: Pest 140 passed, 1 skipped; PHPStan 0; Pint. New `FinanceAdjustmentsTest` (3).
+
+**Known limitations:** stock and tills recorded before this phase are not sent retroactively. If an
+organisation already uses code 5100 or 6800 for an account of its own, the system account is not
+created and posting these events fails until the code is freed.

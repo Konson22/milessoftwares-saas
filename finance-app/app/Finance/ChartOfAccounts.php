@@ -32,10 +32,12 @@ class ChartOfAccounts
         ['code' => '4000', 'name' => 'Sales revenue', 'type' => AccountType::Revenue, 'key' => Account::SALES],
         ['code' => '4900', 'name' => 'Other income', 'type' => AccountType::Revenue],
         ['code' => '5000', 'name' => 'Cost of goods sold', 'type' => AccountType::Expense, 'key' => Account::PURCHASES],
+        ['code' => '5100', 'name' => 'Stock losses and write-offs', 'type' => AccountType::Expense, 'key' => Account::STOCK_LOSSES],
         ['code' => '6000', 'name' => 'Rent', 'type' => AccountType::Expense],
         ['code' => '6100', 'name' => 'Salaries and wages', 'type' => AccountType::Expense],
         ['code' => '6200', 'name' => 'Utilities', 'type' => AccountType::Expense],
         ['code' => '6300', 'name' => 'Bank and mobile money charges', 'type' => AccountType::Expense],
+        ['code' => '6800', 'name' => 'Cash over and short', 'type' => AccountType::Expense, 'key' => Account::CASH_OVER_SHORT],
         ['code' => '6900', 'name' => 'Other expenses', 'type' => AccountType::Expense],
     ];
 
