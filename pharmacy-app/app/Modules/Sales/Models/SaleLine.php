@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $batch_id
  * @property int $quantity
  * @property int $unit_price_minor
+ * @property int $discount_minor
  * @property int $line_total_minor
  * @property-read Item $item
  * @property-read Batch $batch
@@ -34,6 +35,7 @@ class SaleLine extends Model
         return [
             'quantity' => 'integer',
             'unit_price_minor' => 'integer',
+            'discount_minor' => 'integer',
             'line_total_minor' => 'integer',
         ];
     }

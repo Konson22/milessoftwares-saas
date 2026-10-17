@@ -23,6 +23,8 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property string|null $customer_name
  * @property string $currency
  * @property int $total_minor
+ * @property int $discount_minor
+ * @property string|null $submission_id
  * @property PaymentMethod $payment_method
  * @property string|null $payment_reference
  * @property int|null $amount_tendered_minor
@@ -53,6 +55,7 @@ class Sale extends Model
         return [
             'payment_method' => PaymentMethod::class,
             'total_minor' => 'integer',
+            'discount_minor' => 'integer',
             'amount_tendered_minor' => 'integer',
             'change_minor' => 'integer',
             'sold_at' => 'immutable_datetime',

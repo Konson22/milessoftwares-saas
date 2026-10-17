@@ -7,7 +7,7 @@ import { statusTone } from '@/lib/status';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
 import { formatMoney } from '@/lib/money';
-import { index, voidMethod as voidSale } from '@/routes/sales';
+import { index, receipt, voidMethod as voidSale } from '@/routes/sales';
 
 type Props = {
     sale: {
@@ -19,6 +19,7 @@ type Props = {
         customerName: string | null;
         currency: string;
         totalMinor: number;
+        discountMinor: number;
         paymentMethod: string;
         paymentReference: string | null;
         tenderedMinor: number | null;
@@ -33,6 +34,7 @@ type Props = {
             expiresOn: string;
             quantity: number;
             unitPriceMinor: number;
+            discountMinor: number;
             lineTotalMinor: number;
         }[];
     };
@@ -61,13 +63,15 @@ export default function ShowSale({ sale, canVoid }: Props) {
                         <Button variant="outline" size="sm" asChild>
                             <Link href={index()}>← Sales</Link>
                         </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.print()}
-                        >
-                            <Printer className="size-4" aria-hidden />
-                            Print receipt
+                        <Button variant="outline" size="sm" asChild>
+                            <a
+                                href={receipt.url(sale.id)}
+                                target="_blank"
+                                rel="noreferrer"
+                            >
+                                <Printer className="size-4" aria-hidden />
+                                Print receipt
+                            </a>
                         </Button>
                     </div>
                 }
@@ -103,6 +107,8 @@ export default function ShowSale({ sale, canVoid }: Props) {
                                             {money(line.unitPriceMinor)} · batch{' '}
                                             {line.batchNumber}, exp{' '}
                                             {line.expiresOn}
+                                            {line.discountMinor > 0 &&
+                                                ` · less ${money(line.discountMinor)}`}
                                         </span>
                                     </td>
                                     <td className="py-1.5 text-right tabular-nums">
@@ -112,6 +118,16 @@ export default function ShowSale({ sale, canVoid }: Props) {
                             ))}
                         </tbody>
                         <tfoot className="border-t">
+                            {sale.discountMinor > 0 && (
+                                <tr>
+                                    <td className="py-0.5 text-muted-foreground">
+                                        Discount
+                                    </td>
+                                    <td className="py-0.5 text-right tabular-nums">
+                                        −{money(sale.discountMinor)}
+                                    </td>
+                                </tr>
+                            )}
                             <tr className="font-semibold">
                                 <td className="py-1.5">Total</td>
                                 <td className="py-1.5 text-right tabular-nums">

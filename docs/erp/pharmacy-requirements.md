@@ -15,11 +15,11 @@ Against `MASTER-PLAN.md` §7, from reading `pharmacy-app` and `finance-app` (202
 | Suppliers, PO, goods receipt → stock + Finance bill | ✅ | `ReceiveGoods` (outbox `finance.bill.received`) |
 | Supplier returns → Finance credit | ✅ | `ReturnGoods` |
 | POS: search, barcode entry, cart, cash/configured methods | ✅ | `sales/create.tsx`, `PaymentMethod` |
-| Discounts (validated) | ❌ | |
-| Printable receipts | ❌ | no receipt view |
+| Discounts (validated) | ✅ | percent per line, `pharmacy.sales.discount`, capped (Phase 3.4) |
+| Printable receipts | ✅ | `sales/{sale}/receipt`, 80 mm (Phase 3.4) |
 | Sales returns (partial) | 🟠 | whole-sale void only |
 | Cashier sessions / till reconciliation | ❌ | |
-| Idempotent sale submission | ❌ | risk R2 |
+| Idempotent sale submission | ✅ | `submission_id` per basket (Phase 3.4) |
 | Accounting posting (revenue, payment, COGS, voids) | ✅ | events to Finance |
 | Prescriptions, pharmacist verification, partial dispensing | ✅ | |
 | Controlled drugs register | ✅ | |

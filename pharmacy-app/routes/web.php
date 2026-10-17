@@ -65,6 +65,7 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::middleware('branch.can:pharmacy.sales.view')->group(function () {
                 Route::get('sales', [SaleController::class, 'index'])->name('sales.index');
                 Route::get('sales/{sale}', [SaleController::class, 'show'])->whereUuid('sale')->name('sales.show');
+                Route::get('sales/{sale}/receipt', [SaleController::class, 'receipt'])->whereUuid('sale')->name('sales.receipt');
             });
             Route::post('sales/{sale}/void', [SaleController::class, 'void'])
                 ->whereUuid('sale')

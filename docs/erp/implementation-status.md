@@ -9,7 +9,8 @@
 | 3.1 Pharmacy code into module namespaces | Done 2026-10-16 |
 | 3.2 Shared item master | Done 2026-10-16 |
 | 3.3 Units and packaging | Done 2026-10-17 |
-| 3.4 – 11 | Not started |
+| 3.4 Counter: one sale per submission, discounts, receipts | Done 2026-10-18 |
+| 3.5 – 11 | Not started |
 
 Decisions accepted 2026-10-16: D1 → `docs/adr/0003-erp-workspace-application.md`,
 D2 → `docs/adr/0004-companies-as-organizations.md`.
@@ -200,3 +201,30 @@ it; SQLite let it through, PostgreSQL did not. The test now rolls back in order.
 - Batch cost from a pack is rounded per unit; Finance's bill is exact, stock value may differ
   by under a minor unit per unit.
 - Customers (Sales) are not built yet; warehouses/locations remain Phase 5.
+
+## Phase 3.4 — 2026-10-18 (local, Windows)
+
+The counter, hardened for the pilot: a sale is recorded once however often it is sent, discounts
+are validated, and the customer gets a printed receipt.
+
+**Implemented** (`pharmacy-app`, branch `erp/phase-3-pharmacy-modules`):
+- Migration `2026_10_18_100000_add_submission_and_discounts_to_sales` (additive): `sales.submission_id`
+  (unique per organization), `sales.discount_minor`, `sale_lines.discount_minor`.
+- `Sell`: a sale sent with a `submission_id` already used returns that sale (checked first, and
+  again after a unique-key clash with a request running alongside), so stock, outbox and number
+  are taken once. The counter sends a new key per basket.
+- Discounts per line in percent: only with the new permission `pharmacy.sales.discount` (Pharmacy
+  Manager; catalog 1.2.0) and at most `config('pharmacy.max_discount_percent')` (env
+  `PHARMACY_MAX_DISCOUNT_PERCENT`, default 20). Shared across the batches of a line in proportion;
+  Finance gets the net amount per line (revenue after discount), cost unchanged.
+- Receipt page `sales/{sale}/receipt`: one line per medicine, discount, payment and change, sized for
+  an 80 mm printer; printing shows only the receipt. The sale page links to it.
+
+**Tests executed:**
+- Pharmacy: Pest 103 passed, 1 skipped; PHPStan 0; Pint; `vp check`; `tsc`. New `CounterTest` (8).
+- Local PostgreSQL: `migrate`, `migrate:rollback --step=1`, `migrate`.
+- Mutations: never finding the earlier submission fails the double-submit test; giving the whole
+  discount to the last batch fails the discount test.
+
+**Known limitations:** the discount limit is one setting for the whole installation, not per
+workspace or role; discounts are percent per line only (no amount off, no whole-basket discount).

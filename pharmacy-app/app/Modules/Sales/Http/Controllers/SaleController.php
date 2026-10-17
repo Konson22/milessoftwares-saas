@@ -87,6 +87,7 @@ class SaleController extends Controller
                     'available' => (int) ($sellable[$item->id] ?? 0),
                     'prescriptionOnly' => $item->restricted,
                 ]),
+            'maxDiscountPercent' => $this->maxDiscountPercent(),
             'paymentMethods' => array_map(fn (PaymentMethod $method) => ['value' => $method->value, 'label' => $method->label()], PaymentMethod::cases()),
         ]);
     }
@@ -97,6 +98,8 @@ class SaleController extends Controller
             'items' => ['required', 'array', 'min:1', 'max:100'],
             'items.*.item_id' => ['required', 'uuid', 'distinct'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:100000'],
+            'items.*.discount_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'submission_id' => ['nullable', 'uuid'],
             'payment_method' => ['required', Rule::enum(PaymentMethod::class)],
             'payment_reference' => ['nullable', 'string', 'max:64'],
             'amount_tendered' => ['nullable', 'string', Money::rule()],
@@ -110,11 +113,14 @@ class SaleController extends Controller
                 items: array_values(array_map(fn (array $item) => [
                     'item_id' => (string) $item['item_id'],
                     'quantity' => (int) $item['quantity'],
+                    'discount_percent' => (int) ($item['discount_percent'] ?? 0),
                 ], $validated['items'])),
                 method: PaymentMethod::from($validated['payment_method']),
                 paymentReference: $validated['payment_reference'] ?? null,
                 tenderedMinor: isset($validated['amount_tendered']) ? Money::toMinor($validated['amount_tendered']) : null,
                 customerName: $validated['customer_name'] ?? null,
+                maxDiscountPercent: $this->maxDiscountPercent(),
+                submissionId: $validated['submission_id'] ?? null,
             );
         } catch (InsufficientStock $e) {
             $index = array_search($e->item->id, array_column($validated['items'], 'item_id'), true);
@@ -140,6 +146,7 @@ class SaleController extends Controller
                 'customerName' => $sale->customer_name,
                 'currency' => $sale->currency,
                 'totalMinor' => $sale->total_minor,
+                'discountMinor' => $sale->discount_minor,
                 'paymentMethod' => $sale->payment_method->label(),
                 'paymentReference' => $sale->payment_reference,
                 'tenderedMinor' => $sale->amount_tendered_minor,
@@ -154,6 +161,7 @@ class SaleController extends Controller
                     'expiresOn' => $line->batch->expires_on->toDateString(),
                     'quantity' => $line->quantity,
                     'unitPriceMinor' => $line->unit_price_minor,
+                    'discountMinor' => $line->discount_minor,
                     'lineTotalMinor' => $line->line_total_minor,
                 ]),
             ],
@@ -170,6 +178,50 @@ class SaleController extends Controller
         $void->handle($sale, $this->user($request), $validated['reason']);
 
         return back()->with('success', "Sale {$sale->number} voided; stock returned.");
+    }
+
+    /**
+     * The customer's receipt, one line per medicine (not per batch), for
+     * printing at the counter.
+     */
+    public function receipt(Sale $sale): Response
+    {
+        $this->ensureHere($sale);
+        $sale->load(['seller:id,name', 'lines.item']);
+
+        return Inertia::render('sales/receipt', [
+            'sale' => [
+                'id' => $sale->id,
+                'number' => $sale->number,
+                'status' => $sale->status,
+                'soldAt' => $sale->sold_at->toIso8601String(),
+                'soldBy' => $sale->seller->name,
+                'customerName' => $sale->customer_name,
+                'totalMinor' => $sale->total_minor,
+                'discountMinor' => $sale->discount_minor,
+                'paymentMethod' => $sale->payment_method->label(),
+                'paymentReference' => $sale->payment_reference,
+                'tenderedMinor' => $sale->amount_tendered_minor,
+                'changeMinor' => $sale->change_minor,
+                'lines' => $sale->lines->groupBy('item_id')->map(fn ($lines) => [
+                    'medicine' => $lines->first()->item->name,
+                    'quantity' => (int) $lines->sum('quantity'),
+                    'unitPriceMinor' => $lines->first()->unit_price_minor,
+                    'discountMinor' => (int) $lines->sum('discount_minor'),
+                    'lineTotalMinor' => (int) $lines->sum('line_total_minor'),
+                ])->values(),
+            ],
+        ]);
+    }
+
+    /**
+     * How much the signed-in member may take off a line in this branch.
+     */
+    private function maxDiscountPercent(): int
+    {
+        $allowed = app(CurrentAccess::class)->get()?->allowsIn('pharmacy.sales.discount', branchId: $this->branch->id()) ?? false;
+
+        return $allowed ? max(0, min(100, (int) config('pharmacy.max_discount_percent'))) : 0;
     }
 
     /**

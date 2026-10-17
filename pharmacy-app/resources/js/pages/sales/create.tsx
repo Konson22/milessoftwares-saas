@@ -24,15 +24,28 @@ type Medicine = {
 type Props = {
     medicines: Medicine[];
     paymentMethods: { value: string; label: string }[];
+    /** 0 when this member may not give discounts. */
+    maxDiscountPercent: number;
 };
 
-type BasketLine = { medicine: Medicine; quantity: number };
+type BasketLine = { medicine: Medicine; quantity: number; discount: number };
+
+const lineTotal = (line: BasketLine) => {
+    const gross = line.quantity * line.medicine.priceMinor;
+
+    return gross - Math.round((gross * line.discount) / 100);
+};
 
 /**
- * The counter: find medicines, build the basket, take payment. Prices and
- * stock are checked again on the server.
+ * The counter: find medicines, build the basket, take payment. Prices,
+ * discounts and stock are checked again on the server. Each basket is sent
+ * with its own key, so a double click or a retry records one sale.
  */
-export default function Counter({ medicines, paymentMethods }: Props) {
+export default function Counter({
+    medicines,
+    paymentMethods,
+    maxDiscountPercent,
+}: Props) {
     const { currency, branch } = usePage().props;
     const money = (minor: number) => formatMoney(minor, currency ?? 'USD');
     const decimals = money(0).includes('.') ? 2 : 0;
@@ -41,6 +54,7 @@ export default function Counter({ medicines, paymentMethods }: Props) {
     const [basket, setBasket] = useState<BasketLine[]>([]);
     const [method, setMethod] = useState(paymentMethods[0]?.value ?? 'cash');
     const [tendered, setTendered] = useState('');
+    const [submissionId, setSubmissionId] = useState(() => crypto.randomUUID());
 
     const matches = useMemo(() => {
         const term = search.trim().toLowerCase();
@@ -58,10 +72,7 @@ export default function Counter({ medicines, paymentMethods }: Props) {
             .slice(0, 8);
     }, [medicines, search]);
 
-    const total = basket.reduce(
-        (sum, line) => sum + line.quantity * line.medicine.priceMinor,
-        0,
-    );
+    const total = basket.reduce((sum, line) => sum + lineTotal(line), 0);
     const tenderedMinor = Math.round(
         Number.parseFloat(tendered || '0') * 10 ** decimals,
     );
@@ -87,7 +98,7 @@ export default function Counter({ medicines, paymentMethods }: Props) {
                 );
             }
 
-            return [...lines, { medicine, quantity: 1 }];
+            return [...lines, { medicine, quantity: 1, discount: 0 }];
         });
         setSearch('');
     };
@@ -101,6 +112,24 @@ export default function Counter({ medicines, paymentMethods }: Props) {
                           quantity: Math.max(
                               1,
                               Math.min(quantity, line.medicine.available),
+                          ),
+                      }
+                    : line,
+            ),
+        );
+
+    const setDiscount = (id: string, discount: number) =>
+        setBasket((lines) =>
+            lines.map((line) =>
+                line.medicine.id === id
+                    ? {
+                          ...line,
+                          discount: Math.max(
+                              0,
+                              Math.min(
+                                  Number.isFinite(discount) ? discount : 0,
+                                  maxDiscountPercent,
+                              ),
                           ),
                       }
                     : line,
@@ -233,11 +262,30 @@ export default function Counter({ medicines, paymentMethods }: Props) {
                                                 />
                                             </Button>
                                         </div>
+                                        {maxDiscountPercent > 0 && (
+                                            <label className="flex items-center gap-1 text-muted-foreground">
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    max={maxDiscountPercent}
+                                                    value={line.discount}
+                                                    onChange={(event) =>
+                                                        setDiscount(
+                                                            line.medicine.id,
+                                                            Number(
+                                                                event.target
+                                                                    .value,
+                                                            ),
+                                                        )
+                                                    }
+                                                    aria-label={`Discount on ${line.medicine.label}, percent`}
+                                                    className="h-8 w-16 text-center"
+                                                />
+                                                % off
+                                            </label>
+                                        )}
                                         <span className="w-28 text-right tabular-nums">
-                                            {money(
-                                                line.quantity *
-                                                    line.medicine.priceMinor,
-                                            )}
+                                            {money(lineTotal(line))}
                                         </span>
                                         <Button
                                             type="button"
@@ -272,11 +320,17 @@ export default function Counter({ medicines, paymentMethods }: Props) {
                     onSuccess={() => {
                         setBasket([]);
                         setTendered('');
+                        setSubmissionId(crypto.randomUUID());
                     }}
                     className="grid content-start gap-4 rounded-lg border bg-card p-4 shadow-xs"
                 >
                     {({ errors, processing }) => (
                         <>
+                            <input
+                                type="hidden"
+                                name="submission_id"
+                                value={submissionId}
+                            />
                             {basket.map((line, i) => (
                                 <span key={line.medicine.id}>
                                     <input
@@ -289,6 +343,13 @@ export default function Counter({ medicines, paymentMethods }: Props) {
                                         name={`items[${i}][quantity]`}
                                         value={line.quantity}
                                     />
+                                    {line.discount > 0 && (
+                                        <input
+                                            type="hidden"
+                                            name={`items[${i}][discount_percent]`}
+                                            value={line.discount}
+                                        />
+                                    )}
                                 </span>
                             ))}
                             <p className="flex items-baseline justify-between">
