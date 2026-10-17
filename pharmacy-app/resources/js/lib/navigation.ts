@@ -4,6 +4,7 @@ import {
     ClipboardList,
     FileText,
     LayoutDashboard,
+    MapPin,
     PackageCheck,
     Pill,
     ReceiptText,
@@ -18,6 +19,7 @@ import type { ShellNavItem } from '@miles/ui/shell/navigation';
 import { home } from '@/routes';
 import { index as controlled } from '@/routes/controlled';
 import { index as disposals } from '@/routes/disposals';
+import { index as locations } from '@/routes/locations';
 import { index as medicines } from '@/routes/medicines';
 import { index as prescriptions } from '@/routes/prescriptions';
 import { index as purchaseOrders } from '@/routes/purchase-orders';
@@ -97,6 +99,13 @@ export const navigation: NavGroup[] = [
                 title: 'Stock',
                 href: stock(),
                 icon: Boxes,
+                permission: 'pharmacy.stock.view',
+                scope: 'branch',
+            },
+            {
+                title: 'Locations',
+                href: locations(),
+                icon: MapPin,
                 permission: 'pharmacy.stock.view',
                 scope: 'branch',
             },

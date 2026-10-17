@@ -7,6 +7,7 @@ use App\Modules\Inventory\Enums\AdjustmentReason;
 use App\Modules\Inventory\Enums\MovementType;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Item;
+use App\Modules\Inventory\Models\StockLocation;
 use App\Modules\Inventory\Models\StockMovement;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -15,13 +16,17 @@ use Illuminate\Validation\ValidationException;
 /**
  * The only way stock changes. Every change locks the batch rows it touches,
  * writes a StockMovement and updates the batch in one transaction, and
- * never lets a batch go below zero. Expired batches are never sold.
+ * never lets a batch go below zero. Expired batches are never sold. Stock
+ * leaving a batch comes off its locations too (Locations::fit).
  */
 class Stock
 {
+    public function __construct(private readonly Locations $locations) {}
+
     /**
      * Stock arriving in a branch (opening balance or goods received). Adds to
-     * the batch with the same number, or creates it.
+     * the batch with the same number, or creates it; put straight at
+     * $location when one is given, otherwise not put away.
      *
      * @throws ValidationException when the batch exists with another expiry date
      */
@@ -36,12 +41,13 @@ class Stock
         MovementType $type = MovementType::Receipt,
         ?string $referenceType = null,
         ?string $referenceId = null,
+        ?StockLocation $location = null,
     ): Batch {
         if ($quantity <= 0) {
             throw ValidationException::withMessages(['quantity' => 'The quantity must be at least 1.']);
         }
 
-        return DB::transaction(function () use ($item, $branchId, $batchNumber, $expiresOn, $quantity, $unitCostMinor, $user, $type, $referenceType, $referenceId) {
+        return DB::transaction(function () use ($item, $branchId, $batchNumber, $expiresOn, $quantity, $unitCostMinor, $user, $type, $referenceType, $referenceId, $location) {
             $batch = Batch::query()
                 ->where('branch_id', $branchId)
                 ->where('item_id', $item->id)
@@ -68,6 +74,9 @@ class Stock
             $batch->save();
 
             $this->record($batch, $quantity, $type, $user, null, null, $referenceType, $referenceId);
+            if ($location !== null) {
+                $this->locations->place($batch, $location, $quantity);
+            }
 
             return $batch;
         });
@@ -251,5 +260,9 @@ class Stock
             'reference_id' => $referenceId,
             'user_id' => $user->id,
         ]);
+
+        if ($quantity < 0) {
+            $this->locations->fit($batch);
+        }
     }
 }

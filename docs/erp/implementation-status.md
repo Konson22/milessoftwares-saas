@@ -15,7 +15,8 @@
 | 3.7 Batch holds and approved disposals | Done 2026-10-18 |
 | 3.8 Profitability, purchases and cashier reports | Done 2026-10-18 |
 | 3.9 Categories, storage and selling packs | Done 2026-10-18 |
-| 3.10 – 11 | Not started |
+| 3.10 Stock locations within a branch | Done 2026-10-18 |
+| 4 – 11 | Not started |
 
 Decisions accepted 2026-10-16: D1 → `docs/adr/0003-erp-workspace-application.md`,
 D2 → `docs/adr/0004-companies-as-organizations.md`.
@@ -372,3 +373,31 @@ Medicines get a category and a storage condition, and the counter sells packs.
   `CategoriesAndPackSalesTest` (5).
 - Local PostgreSQL: `migrate`, `migrate:rollback --step=1`, `migrate`.
 - Mutation: pricing pack lines by the unit price fails the pack sale test.
+
+## Phase 3.10 — 2026-10-18 (local, Windows)
+
+Where stock is kept within a branch.
+
+**Implemented** (`pharmacy-app`):
+- Migration `2026_10_18_150000_create_stock_locations` (additive): `stock_locations` (per branch,
+  unique name, in use or not), `batch_locations` (units of a batch at a location, never negative),
+  `stock_location_moves` (who moved how many from where to where).
+- `Inventory\Actions\Locations`: create, rename, take out of use (only when empty), move units
+  between locations or to and from "not put away". Moves never change what is on hand.
+- `Stock`: opening stock can go straight to a location; every decrease (sale, disposal, supplier
+  return, adjustment) comes off "not put away" first, then off the locations in name order, so the
+  locations never hold more than the batch.
+- Pages: `locations` (each location's batches and units, what is not put away, add and rename) and
+  `locations/{location}` (its contents as a printable count sheet). The stock item page shows
+  where each batch is and moves it. Menu: Inventory → Locations. Managing and moving need
+  `pharmacy.stock.adjust`; viewing `pharmacy.stock.view`.
+
+**Tests executed:**
+- Pharmacy: Pest 137 passed, 1 skipped; PHPStan 0; Pint; `vp check`; `tsc`. New
+  `StockLocationsTest` (5).
+- Local PostgreSQL: `migrate`, `migrate:rollback --step=1`, `migrate`.
+- Mutation: not taking leaving stock off the locations fails the location test.
+
+**Known limitations:** goods receipts put stock "not put away" (put it away from the stock page);
+the counter does not pick a location (stock leaves "not put away" first). Locations are within a
+branch; moving stock between branches is not built yet.

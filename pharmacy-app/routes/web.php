@@ -7,6 +7,7 @@ use App\Http\Controllers\Reports\CashierReportController;
 use App\Http\Controllers\Reports\ProfitabilityReportController;
 use App\Http\Controllers\Reports\PurchaseReportController;
 use App\Modules\Inventory\Http\Controllers\DisposalController;
+use App\Modules\Inventory\Http\Controllers\LocationController;
 use App\Modules\Inventory\Http\Controllers\StockController;
 use App\Modules\MasterData\Http\Controllers\SupplierController;
 use App\Modules\Pharmacy\Http\Controllers\ControlledRegisterController;
@@ -142,11 +143,17 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::middleware('branch.can:pharmacy.stock.view')->group(function () {
                 Route::get('stock', [StockController::class, 'index'])->name('stock.index');
                 Route::get('stock/{item}', [StockController::class, 'show'])->whereUuid('item')->name('stock.show');
+                Route::get('locations', [LocationController::class, 'index'])->name('locations.index');
+                Route::get('locations/{location}', [LocationController::class, 'show'])->whereUuid('location')->name('locations.show');
             });
             Route::middleware('branch.can:pharmacy.stock.adjust')->group(function () {
                 Route::post('stock/{item}/opening', [StockController::class, 'storeOpening'])->whereUuid('item')->name('stock.opening');
                 Route::post('batches/{batch}/adjustments', [StockController::class, 'storeAdjustment'])->whereUuid('batch')->name('stock.adjust');
                 Route::post('batches/{batch}/disposals', [DisposalController::class, 'store'])->whereUuid('batch')->name('disposals.store');
+                // Where stock is kept, and moving it there.
+                Route::post('locations', [LocationController::class, 'store'])->name('locations.store');
+                Route::put('locations/{location}', [LocationController::class, 'update'])->whereUuid('location')->name('locations.update');
+                Route::post('batches/{batch}/move', [LocationController::class, 'move'])->whereUuid('batch')->name('locations.move');
             });
             // Batches held back from sale: quarantine, recall, release.
             Route::middleware('branch.can:pharmacy.stock.hold')->group(function () {

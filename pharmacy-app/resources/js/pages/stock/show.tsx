@@ -17,6 +17,7 @@ import {
 } from '@miles/ui/components/ui/table';
 import { formatMoney } from '@/lib/money';
 import { index as disposals, store as storeDisposal } from '@/routes/disposals';
+import { move as moveStock } from '@/routes/locations';
 import { adjust, hold, index, opening, release } from '@/routes/stock';
 
 type Batch = {
@@ -29,6 +30,8 @@ type Batch = {
     status: 'available' | 'quarantined' | 'recalled';
     holdReason: string | null;
     heldAt: string | null;
+    locations: { id: string; name: string; quantity: number }[];
+    notPutAway: number;
 };
 
 type Movement = {
@@ -60,6 +63,8 @@ type Props = {
         reason: string;
         requestedBy: string;
     }[];
+    /** The branch's locations in use; none means stock is not placed. */
+    locations: { id: string; name: string }[];
     reasons: { value: string; label: string }[];
     disposalReasons: { value: string; label: string }[];
     canAdjust: boolean;
@@ -82,12 +87,17 @@ export default function StockShow({
     batches,
     movements,
     pendingDisposals,
+    locations,
     reasons,
     disposalReasons,
     canAdjust,
     canHold,
 }: Props) {
     const { branch, currency } = usePage().props;
+    const [moveBatch, setMoveBatch] = useState(
+        batches.find((batch) => batch.quantity > 0)?.id ?? '',
+    );
+    const movable = batches.find((batch) => batch.id === moveBatch);
     const [holdBatch, setHoldBatch] = useState(
         batches.find((batch) => batch.status !== 'recalled')?.id ?? '',
     );
@@ -189,6 +199,22 @@ export default function StockShow({
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
                                         {batch.quantity}
+                                        {locations.length > 0 &&
+                                            batch.quantity > 0 && (
+                                                <span className="block text-xs text-muted-foreground">
+                                                    {[
+                                                        ...batch.locations.map(
+                                                            (place) =>
+                                                                `${place.name} ${place.quantity}`,
+                                                        ),
+                                                        ...(batch.notPutAway > 0
+                                                            ? [
+                                                                  `not put away ${batch.notPutAway}`,
+                                                              ]
+                                                            : []),
+                                                    ].join(' · ')}
+                                                </span>
+                                            )}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
                                         {formatMoney(
@@ -489,6 +515,110 @@ export default function StockShow({
                 </div>
             )}
 
+            {canAdjust && locations.length > 0 && movable && (
+                <Panel className="mb-5 max-w-3xl">
+                    <PanelHeader
+                        title="Put away or move"
+                        description="Where the units are kept; what is on hand does not change."
+                    />
+                    <PanelBody>
+                        <Form
+                            {...moveStock.form(moveBatch)}
+                            resetOnSuccess
+                            options={{ preserveScroll: true }}
+                            className="flex flex-wrap items-start gap-2"
+                        >
+                            {({ errors, processing }) => (
+                                <>
+                                    <select
+                                        value={moveBatch}
+                                        onChange={(e) =>
+                                            setMoveBatch(e.target.value)
+                                        }
+                                        aria-label="Batch to move"
+                                        className="h-9 rounded-md border bg-transparent px-2 text-sm"
+                                    >
+                                        {batches
+                                            .filter(
+                                                (batch) => batch.quantity > 0,
+                                            )
+                                            .map((batch) => (
+                                                <option
+                                                    key={batch.id}
+                                                    value={batch.id}
+                                                >
+                                                    {batch.batchNumber}
+                                                </option>
+                                            ))}
+                                    </select>
+                                    <select
+                                        name="from_location_id"
+                                        aria-label="From"
+                                        className="h-9 rounded-md border bg-transparent px-2 text-sm"
+                                    >
+                                        {movable.notPutAway > 0 && (
+                                            <option value="">
+                                                From not put away (
+                                                {movable.notPutAway})
+                                            </option>
+                                        )}
+                                        {movable.locations.map((place) => (
+                                            <option
+                                                key={place.id}
+                                                value={place.id}
+                                            >
+                                                From {place.name} (
+                                                {place.quantity})
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        name="to_location_id"
+                                        aria-label="To"
+                                        className="h-9 rounded-md border bg-transparent px-2 text-sm"
+                                    >
+                                        {locations.map((location) => (
+                                            <option
+                                                key={location.id}
+                                                value={location.id}
+                                            >
+                                                To {location.name}
+                                            </option>
+                                        ))}
+                                        <option value="">
+                                            To not put away
+                                        </option>
+                                    </select>
+                                    <Input
+                                        name="quantity"
+                                        type="number"
+                                        min={1}
+                                        required
+                                        placeholder="How many"
+                                        aria-label="Quantity to move"
+                                        className="w-28"
+                                    />
+                                    <Button
+                                        type="submit"
+                                        variant="outline"
+                                        disabled={processing}
+                                    >
+                                        Move
+                                    </Button>
+                                    {(errors.quantity ||
+                                        errors.to_location_id) && (
+                                        <p className="w-full text-sm text-destructive">
+                                            {errors.quantity ??
+                                                errors.to_location_id}
+                                        </p>
+                                    )}
+                                </>
+                            )}
+                        </Form>
+                    </PanelBody>
+                </Panel>
+            )}
+
             {canAdjust && (
                 <Panel className="mb-5 max-w-3xl">
                     <PanelHeader
@@ -553,6 +683,30 @@ export default function StockShow({
                                             )}
                                         </div>
                                     ))}
+                                    {locations.length > 0 && (
+                                        <div className="grid gap-1.5">
+                                            <Label htmlFor="location_id">
+                                                Put it at
+                                            </Label>
+                                            <select
+                                                id="location_id"
+                                                name="location_id"
+                                                className="h-9 rounded-md border bg-transparent px-2 text-sm"
+                                            >
+                                                <option value="">
+                                                    Not put away yet
+                                                </option>
+                                                {locations.map((location) => (
+                                                    <option
+                                                        key={location.id}
+                                                        value={location.id}
+                                                    >
+                                                        {location.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
                                     <div className="sm:col-span-4">
                                         <Button
                                             type="submit"

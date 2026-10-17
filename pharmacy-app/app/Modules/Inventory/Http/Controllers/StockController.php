@@ -10,8 +10,10 @@ use App\Modules\Inventory\Enums\AdjustmentReason;
 use App\Modules\Inventory\Enums\DisposalReason;
 use App\Modules\Inventory\Enums\MovementType;
 use App\Modules\Inventory\Models\Batch;
+use App\Modules\Inventory\Models\BatchLocation;
 use App\Modules\Inventory\Models\Item;
 use App\Modules\Inventory\Models\StockDisposal;
+use App\Modules\Inventory\Models\StockLocation;
 use App\Modules\Inventory\Models\StockMovement;
 use App\Support\CurrentBranch;
 use App\Support\Money;
@@ -105,7 +107,15 @@ class StockController extends Controller
             ->where('branch_id', $this->branch->id())
             ->where('item_id', $item->id)
             ->orderBy('expires_on')
+            ->get();
+        // Where each batch's units are kept; the rest is not put away.
+        $placed = BatchLocation::query()
+            ->whereIn('batch_id', $batches->modelKeys())
+            ->where('quantity', '>', 0)
+            ->with('location:id,name')
             ->get()
+            ->groupBy('batch_id');
+        $batches = $batches
             ->map(fn (Batch $batch) => [
                 'id' => $batch->id,
                 'batchNumber' => $batch->batch_number,
@@ -116,6 +126,12 @@ class StockController extends Controller
                 'status' => $batch->status,
                 'holdReason' => $batch->hold_reason,
                 'heldAt' => $batch->held_at?->toIso8601String(),
+                'locations' => $placed->get($batch->id, collect())->map(fn (BatchLocation $placement) => [
+                    'id' => $placement->stock_location_id,
+                    'name' => $placement->location->name,
+                    'quantity' => $placement->quantity,
+                ])->sortBy('name')->values(),
+                'notPutAway' => $batch->quantity_on_hand - (int) $placed->get($batch->id, collect())->sum('quantity'),
             ]);
 
         $disposals = StockDisposal::query()
@@ -166,6 +182,7 @@ class StockController extends Controller
             'batches' => $batches,
             'movements' => $movements,
             'pendingDisposals' => $disposals,
+            'locations' => StockLocation::query()->where('branch_id', $this->branch->id())->where('active', true)->orderBy('name')->get(['id', 'name'])->map(fn (StockLocation $location) => ['id' => $location->id, 'name' => $location->name]),
             'reasons' => array_map(fn (AdjustmentReason $reason) => ['value' => $reason->value, 'label' => $reason->label()], AdjustmentReason::cases()),
             'disposalReasons' => array_map(fn (DisposalReason $reason) => ['value' => $reason->value, 'label' => $reason->label()], DisposalReason::cases()),
             'canAdjust' => $can('pharmacy.stock.adjust'),
@@ -184,6 +201,7 @@ class StockController extends Controller
             'expires_on' => ['required', 'date', 'after:today'],
             'quantity' => ['required', 'integer', 'min:1', 'max:1000000'],
             'unit_cost' => ['required', 'string', Money::rule()],
+            'location_id' => ['nullable', 'uuid'],
         ]);
 
         $stock->add(
@@ -195,6 +213,9 @@ class StockController extends Controller
             unitCostMinor: Money::toMinor($validated['unit_cost']),
             user: $this->user($request),
             type: MovementType::Opening,
+            location: isset($validated['location_id'])
+                ? StockLocation::query()->where('branch_id', $this->branch->id())->where('active', true)->whereKey($validated['location_id'])->firstOrFail()
+                : null,
         );
 
         return back()->with('success', "Added {$validated['quantity']} to batch {$validated['batch_number']}.");
