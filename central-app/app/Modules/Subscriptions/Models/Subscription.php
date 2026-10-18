@@ -16,6 +16,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $trial_ends_at
  * @property Carbon|null $current_period_start
  * @property Carbon|null $current_period_end
+ * @property Carbon|null $renews_at
  * @property Carbon|null $cancelled_at
  */
 class Subscription extends Model

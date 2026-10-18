@@ -33,7 +33,7 @@ export default function MemberDetail({ member }: Props) {
 
             <h1 className="mt-4 text-2xl font-semibold">{member.name}</h1>
 
-            <dl className="mt-6 grid max-w-md grid-cols-[8rem_1fr] gap-y-2 text-sm">
+            <dl className="mt-4 grid max-w-md grid-cols-[8rem_1fr] gap-y-2 text-sm">
                 <dt className="text-muted-foreground">Email</dt>
                 <dd>{member.email}</dd>
                 <dt className="text-muted-foreground">Status</dt>
@@ -43,7 +43,7 @@ export default function MemberDetail({ member }: Props) {
             </dl>
 
             {abilities?.manageAccess && member.status !== 'removed' && (
-                <div className="mt-8 flex flex-wrap gap-2">
+                <div className="mt-5 flex flex-wrap gap-2">
                     {member.status === 'active' ? (
                         <Button
                             variant="outline"

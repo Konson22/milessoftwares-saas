@@ -100,7 +100,7 @@ export default function ShowSale({ sale, canVoid, canReturn }: Props) {
             />
 
             <Panel className="mx-auto max-w-md print:border-0 print:shadow-none">
-                <PanelBody className="p-6">
+                <PanelBody className="p-4">
                     <header className="text-center">
                         <p className="font-semibold">{workspace?.name}</p>
                         <p className="text-sm text-muted-foreground">
@@ -194,7 +194,7 @@ export default function ShowSale({ sale, canVoid, canReturn }: Props) {
             </Panel>
 
             {sale.returns.length > 0 && (
-                <Panel className="mx-auto mt-6 max-w-md">
+                <Panel className="mx-auto mt-4 max-w-md">
                     <PanelHeader title="Returned" />
                     <PanelBody>
                         <ul className="grid gap-3 text-sm">
@@ -231,7 +231,7 @@ export default function ShowSale({ sale, canVoid, canReturn }: Props) {
             )}
 
             {canReturn && (
-                <Panel className="mx-auto mt-6 max-w-md print:hidden">
+                <Panel className="mx-auto mt-4 max-w-md print:hidden">
                     <PanelHeader title="Take a return" />
                     <PanelBody>
                         <Form
@@ -329,7 +329,7 @@ export default function ShowSale({ sale, canVoid, canReturn }: Props) {
             {canVoid && (
                 <Form
                     {...voidSale.form(sale.id)}
-                    className="mx-auto mt-6 flex max-w-md flex-wrap items-start gap-2 print:hidden"
+                    className="mx-auto mt-4 flex max-w-md flex-wrap items-start gap-2 print:hidden"
                 >
                     {({ errors, processing }) => (
                         <>

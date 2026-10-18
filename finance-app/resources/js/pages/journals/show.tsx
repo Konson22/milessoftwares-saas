@@ -103,7 +103,7 @@ export default function ShowJournal({ journal }: Props) {
             )}
 
             {reversing && (
-                <Panel className="mb-5">
+                <Panel className="mb-3">
                     <PanelHeader
                         title="Reverse this journal"
                         description="Posts the mirror image of every line. The original stays in the books."
@@ -157,7 +157,7 @@ export default function ShowJournal({ journal }: Props) {
                 </Panel>
             )}
 
-            <div className="grid gap-5 lg:grid-cols-3">
+            <div className="grid gap-3 lg:grid-cols-3">
                 <Panel className="lg:col-span-2">
                     <Table>
                         <TableHeader>

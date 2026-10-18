@@ -42,7 +42,7 @@ export default function Locations({ locations, notPutAway, canManage }: Props) {
                 description={`Where stock is kept in ${branch?.name ?? 'this branch'}: shelves, the store room, the fridge.`}
             />
 
-            <div className="grid gap-5 lg:grid-cols-[1fr_20rem]">
+            <div className="grid gap-3 lg:grid-cols-[1fr_20rem]">
                 <Panel>
                     {locations.length === 0 ? (
                         <EmptyState icon={MapPin} title="No locations yet">

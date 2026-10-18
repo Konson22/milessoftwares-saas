@@ -92,6 +92,23 @@ Route::domain(PlatformHosts::admin())
             Route::post('subscriptions/{subscription}/cancel', [Admin\EntitlementController::class, 'cancelSubscription'])->whereUuid('subscription')->name('subscriptions.cancel');
             Route::post('entitlements', [Admin\EntitlementController::class, 'grant'])->name('entitlements.store');
             Route::post('entitlements/{entitlement}/revoke', [Admin\EntitlementController::class, 'revoke'])->whereUuid('entitlement')->name('entitlements.revoke');
+
+            // Customers' plan requests: approving assigns or cancels the plan.
+            Route::post('plan-requests/{planRequest}/approve', [Admin\BillingController::class, 'approveRequest'])->whereUuid('planRequest')->name('plan-requests.approve');
+            Route::post('plan-requests/{planRequest}/decline', [Admin\BillingController::class, 'declineRequest'])->whereUuid('planRequest')->name('plan-requests.decline');
+        });
+
+        // Manual billing: invoices, and payments made outside the platform.
+        Route::middleware('staff.can:billing.manage')->group(function () {
+            Route::get('billing', [Admin\BillingController::class, 'index'])->name('billing.index');
+
+            Route::prefix('organizations/{organization}')->whereUuid('organization')->group(function () {
+                Route::post('invoices', [Admin\BillingController::class, 'issueInvoice'])->name('invoices.store');
+                Route::post('invoices/{invoice}/void', [Admin\BillingController::class, 'voidInvoice'])->whereUuid('invoice')->name('invoices.void');
+                Route::post('invoices/{invoice}/payments', [Admin\BillingController::class, 'recordPayment'])->whereUuid('invoice')->name('payments.store');
+                Route::post('payments/{payment}/confirm', [Admin\BillingController::class, 'confirmPayment'])->whereUuid('payment')->name('payments.confirm');
+                Route::post('payments/{payment}/reject', [Admin\BillingController::class, 'rejectPayment'])->whereUuid('payment')->name('payments.reject');
+            });
         });
 
         Route::middleware('staff.can:security.view')->group(function () {

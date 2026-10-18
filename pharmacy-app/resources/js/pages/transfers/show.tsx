@@ -88,7 +88,7 @@ export default function Transfer({
                 }
             />
 
-            <Panel className="mb-5">
+            <Panel className="mb-3">
                 <PanelBody className="grid gap-1 text-sm">
                     <p>
                         Sent by {transfer.sentBy}, {when(transfer.sentAt)}
@@ -109,7 +109,7 @@ export default function Transfer({
                 </PanelBody>
             </Panel>
 
-            <Panel className="mb-5">
+            <Panel className="mb-3">
                 <Table>
                     <TableHeader>
                         <TableRow>

@@ -29,7 +29,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                 linked to it.
             </p>
 
-            <ul className="mt-8 space-y-4">
+            <ul className="mt-5 space-y-4">
                 {products.length === 0 && (
                     <p className="text-sm text-muted-foreground">
                         No products yet. Run{' '}

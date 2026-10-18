@@ -41,7 +41,7 @@ export default function ApplicationsIndex({ applications }: Props) {
                 Catalog versions are immutable once published.
             </p>
 
-            <section className="mt-6 max-w-xl rounded-lg border p-4">
+            <section className="mt-4 max-w-xl rounded-lg border p-4">
                 <h2 className="font-medium">Import a role catalog</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                     A JSON catalog creates the application if needed and
@@ -75,7 +75,7 @@ export default function ApplicationsIndex({ applications }: Props) {
                 </Form>
             </section>
 
-            <ul className="mt-8 space-y-4">
+            <ul className="mt-5 space-y-4">
                 {applications.map((application) => (
                     <li key={application.id} className="rounded-lg border p-4">
                         <div className="flex flex-wrap items-center gap-2">

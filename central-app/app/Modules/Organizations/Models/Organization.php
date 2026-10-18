@@ -26,6 +26,9 @@ use Illuminate\Support\Carbon;
  * @property string|null $contact_email
  * @property string|null $contact_phone
  * @property string|null $address
+ * @property string|null $billing_email
+ * @property string|null $billing_address
+ * @property string|null $tax_id
  * @property string $country_code
  * @property string $default_currency
  * @property string $timezone

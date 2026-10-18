@@ -51,7 +51,7 @@ export default function Leads({
                 ))}
             </nav>
 
-            <div className="mt-6 grid gap-10 xl:grid-cols-2">
+            <div className="mt-4 grid gap-5 xl:grid-cols-2">
                 <LeadList
                     title="Demo requests"
                     type="demo"

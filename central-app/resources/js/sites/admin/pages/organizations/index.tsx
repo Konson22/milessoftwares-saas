@@ -34,7 +34,7 @@ export default function OrganizationsIndex({ search, organizations }: Props) {
             <Form
                 action="/organizations"
                 method="get"
-                className="mt-6 flex max-w-md gap-2"
+                className="mt-4 flex max-w-md gap-2"
             >
                 <Input
                     name="search"
@@ -47,7 +47,7 @@ export default function OrganizationsIndex({ search, organizations }: Props) {
                 </Button>
             </Form>
 
-            <div className="mt-6 overflow-x-auto rounded-lg border">
+            <div className="mt-4 overflow-x-auto rounded-lg border">
                 <table className="w-full text-sm">
                     <thead className="bg-muted/50 text-left">
                         <tr>

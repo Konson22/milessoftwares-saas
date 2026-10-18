@@ -55,6 +55,13 @@ class DemoApplicationsSeeder extends Seeder
             'features' => ['Allowances and deductions', 'Payslips for every employee', 'Tax and statutory reports', 'Posts to Finance automatically'],
         ],
         [
+            'code' => 'advanced_accounting',
+            'name' => 'Advanced accounting',
+            'tagline' => 'Budgets, cost centres and consolidation.',
+            'description' => 'Budgets against actuals, cost centres per branch and department, multi-currency revaluation and consolidated statements across companies, on top of Finance.',
+            'features' => ['Budgets and variance reports', 'Cost centres by branch and department', 'Multi-currency revaluation', 'Consolidated financial statements'],
+        ],
+        [
             'code' => 'crm',
             'name' => 'CRM',
             'tagline' => 'Every customer conversation in one place.',

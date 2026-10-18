@@ -17,7 +17,7 @@ export default function WorkspaceHome({ organization, modules }: Props) {
                     No applications are available to you in this workspace yet.
                 </p>
             ) : (
-                <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {modules.map((module) => (
                         <li key={module.code}>
                             <a

@@ -8,9 +8,13 @@ use App\Modules\Administration\Enums\PlatformPermission;
 use App\Modules\Administration\Models\PlatformStaff;
 use App\Modules\Administration\Models\SupportAccessGrant;
 use App\Modules\Audit\AuditLogger;
+use App\Modules\Billing\Models\Invoice;
+use App\Modules\Billing\Models\Payment;
 use App\Modules\Integration\Support\IntegrationEvents;
 use App\Modules\Organizations\Enums\OrganizationStatus;
 use App\Modules\Organizations\Models\Organization;
+use App\Modules\Subscriptions\Models\PlanRequest;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +29,8 @@ use Inertia\Response;
  */
 class OrganizationController extends Controller
 {
+    public function __construct(private readonly TenantContext $tenant) {}
+
     public function index(Request $request): Response
     {
         $search = trim((string) $request->query('search', ''));
@@ -111,6 +117,52 @@ class OrganizationController extends Controller
                         ->where('subscription_items.subscription_id', $subscription->id)->pluck('plans.name')->all(),
                 ])
                 ->all(),
+            'billing' => $this->tenant->run($organization, fn () => [
+                'invoices' => Invoice::query()
+                    ->with('payments')
+                    ->latest('issued_at')
+                    ->limit(30)
+                    ->get()
+                    ->map(fn (Invoice $invoice) => [
+                        'id' => $invoice->id,
+                        'number' => $invoice->number,
+                        'status' => $invoice->isOverdue() ? 'overdue' : $invoice->status,
+                        'currency' => $invoice->currency,
+                        'totalMinor' => $invoice->total_minor,
+                        'balanceMinor' => $invoice->balanceMinor(),
+                        'issuedOn' => $invoice->issued_at->toDateString(),
+                        'dueOn' => $invoice->due_on->toDateString(),
+                        'voidable' => $invoice->status === 'open' && $invoice->amount_paid_minor === 0,
+                        'payments' => $invoice->payments->sortByDesc('paid_on')->values()->map(fn (Payment $payment) => [
+                            'id' => $payment->id,
+                            'status' => $payment->status,
+                            'method' => $payment->method,
+                            'amountMinor' => $payment->amount_minor,
+                            'reference' => $payment->reference,
+                            'paidOn' => $payment->paid_on->toDateString(),
+                            'note' => $payment->note,
+                        ])->all(),
+                    ])
+                    ->all(),
+                'requests' => PlanRequest::query()
+                    ->with(['plan:id,name,trial_days', 'requester:id,name'])
+                    ->latest()
+                    ->limit(20)
+                    ->get()
+                    ->map(fn (PlanRequest $planRequest) => [
+                        'id' => $planRequest->id,
+                        'type' => $planRequest->type,
+                        'status' => $planRequest->status,
+                        'plan' => $planRequest->plan?->name,
+                        'trialDays' => $planRequest->plan->trial_days ?? 0,
+                        'note' => $planRequest->note,
+                        'decisionNote' => $planRequest->decision_note,
+                        'requestedBy' => $planRequest->requester?->name,
+                        'requestedAt' => $planRequest->created_at?->toDateString(),
+                    ])
+                    ->all(),
+                'dueDays' => (int) config('platform.billing.due_days'),
+            ]),
             'plans' => DB::table('plans')->where('status', 'active')->orderBy('name')->get(['id', 'name', 'trial_days'])->all(),
             'applications' => DB::table('applications')->where('kind', '!=', 'platform')->orderBy('name')->get(['id', 'name'])->all(),
             'activeGrant' => $grant === null ? null : ['id' => $grant->id, 'expiresAt' => $grant->expires_at->toIso8601String()],
@@ -118,6 +170,7 @@ class OrganizationController extends Controller
                 'suspend' => $staff->hasPermission(PlatformPermission::OrganizationsSuspend),
                 'requestSupport' => $staff->hasPermission(PlatformPermission::SupportRequest),
                 'manageEntitlements' => $staff->hasPermission(PlatformPermission::EntitlementsManage),
+                'manageBilling' => $staff->hasPermission(PlatformPermission::BillingManage),
             ],
         ]);
     }

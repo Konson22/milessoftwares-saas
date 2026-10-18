@@ -104,7 +104,7 @@ export default function ShowInvoice({
             />
 
             {voiding && (
-                <Panel className="mb-5">
+                <Panel className="mb-3">
                     <PanelHeader
                         title="Void this invoice"
                         description="Its journal is reversed; the invoice stays on record as void."
@@ -144,7 +144,7 @@ export default function ShowInvoice({
                 </Panel>
             )}
 
-            <div className="grid gap-5 lg:grid-cols-3">
+            <div className="grid gap-3 lg:grid-cols-3">
                 <Panel className="lg:col-span-2">
                     <Table>
                         <TableHeader>
@@ -197,7 +197,7 @@ export default function ShowInvoice({
                     </Table>
                 </Panel>
 
-                <div className="grid content-start gap-5">
+                <div className="grid content-start gap-3">
                     <Panel>
                         <PanelHeader title="Summary" />
                         <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 p-4 text-sm">

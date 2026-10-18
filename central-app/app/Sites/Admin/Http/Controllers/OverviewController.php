@@ -43,6 +43,11 @@ class OverviewController extends Controller
                 ->whereNull('revoked_at')
                 ->where('expires_at', '>', now())
                 ->count(),
+            'billingQueue' => [
+                'reportedPayments' => DB::table('payments')->where('status', 'reported')->count(),
+                'pendingRequests' => DB::table('plan_requests')->where('status', 'pending')->count(),
+                'overdueInvoices' => DB::table('invoices')->where('status', 'open')->where('due_on', '<', today())->count(),
+            ],
             'activeSupportGrants' => DB::table('support_access_grants')
                 ->whereNotNull('approved_by_staff_id')
                 ->whereNull('revoked_at')

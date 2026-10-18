@@ -1,4 +1,4 @@
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Head, Link } from '@inertiajs/react';
 import { Pill } from 'lucide-react';
 import { EmptyState } from '@miles/ui/components/empty-state';
 import { PageHeader } from '@miles/ui/components/page-header';
@@ -14,7 +14,7 @@ import {
     TableHeader,
     TableRow,
 } from '@miles/ui/components/ui/table';
-import { formatMoney } from '@/lib/money';
+import { PriceBadges } from '@/components/price-badges';
 import { create, edit, index } from '@/routes/medicines';
 
 type Medicine = {
@@ -30,6 +30,8 @@ type Medicine = {
     prescriptionOnly: boolean;
     controlled: boolean;
     sellPriceMinor: number;
+    /** null: never received, so no buying price yet. */
+    lastUnitCostMinor: number | null;
     active: boolean;
 };
 
@@ -46,8 +48,6 @@ export default function Medicines({
     categories,
     canManage,
 }: Props) {
-    const { currency } = usePage().props;
-
     return (
         <>
             <Head title="Medicines" />
@@ -126,9 +126,7 @@ export default function Medicines({
                                 <TableHead>Generic</TableHead>
                                 <TableHead>Category</TableHead>
                                 <TableHead>Unit</TableHead>
-                                <TableHead className="text-right">
-                                    Price
-                                </TableHead>
+                                <TableHead>Prices</TableHead>
                                 <TableHead>Flags</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -159,11 +157,14 @@ export default function Medicines({
                                         {medicine.category ?? '–'}
                                     </TableCell>
                                     <TableCell>{medicine.unit}</TableCell>
-                                    <TableCell className="text-right tabular-nums">
-                                        {formatMoney(
-                                            medicine.sellPriceMinor,
-                                            currency ?? 'USD',
-                                        )}
+                                    <TableCell>
+                                        <PriceBadges
+                                            sellMinor={medicine.sellPriceMinor}
+                                            buyMinor={
+                                                medicine.lastUnitCostMinor
+                                            }
+                                            unit={medicine.unit}
+                                        />
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex flex-wrap gap-1">

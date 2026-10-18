@@ -12,7 +12,7 @@ const TONES: Record<Tone, string> = {
 };
 
 /**
- * A small rounded label: a status, a type or a flag.
+ * A small square label: a status, a type or a flag.
  */
 export function StatusBadge({
     tone = 'neutral',
@@ -26,7 +26,7 @@ export function StatusBadge({
     return (
         <span
             className={cn(
-                'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap',
+                'inline-flex items-center gap-1 border px-1.5 py-px text-xs font-medium whitespace-nowrap',
                 TONES[tone],
                 className,
             )}

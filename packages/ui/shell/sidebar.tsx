@@ -7,7 +7,10 @@ import { hrefOf } from './navigation';
 import type { ShellHref, ShellNavGroup, ShellNavItem } from './navigation';
 
 const itemClass =
-    'relative flex h-9 items-center gap-3 rounded-md px-3 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none';
+    'relative flex h-8 items-center gap-3 px-5 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none';
+
+/** Text that fades out while the desktop rail is collapsed to icons. */
+const labelClass = 'transition-opacity duration-150 rail-collapsed:opacity-0';
 
 const tiles = {
     blue: 'bg-sidebar-primary text-sidebar-primary-foreground',
@@ -47,19 +50,19 @@ export function ShellSidebar({
 }) {
     const BrandIcon = brand.icon;
     const brandClass =
-        'flex min-w-0 items-center gap-3 rounded-md focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none';
+        'flex min-w-0 items-center gap-3 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none';
     const brandContent = (
         <>
             <span
                 className={cn(
-                    'grid size-9 shrink-0 place-items-center rounded-lg shadow-sm',
+                    'grid size-7 shrink-0 place-items-center',
                     tiles[brand.tone ?? 'blue'],
                 )}
             >
-                <BrandIcon className="size-5" aria-hidden />
+                <BrandIcon className="size-4" aria-hidden />
             </span>
-            <span className="min-w-0 leading-tight">
-                <span className="block truncate font-semibold text-white">
+            <span className={cn('min-w-0 leading-tight', labelClass)}>
+                <span className="block truncate text-sm font-semibold text-white">
                     {brand.title}
                 </span>
                 {brand.subtitle && (
@@ -74,7 +77,7 @@ export function ShellSidebar({
     return (
         <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
             {/* Same height as the top bar, so the two borders line up. */}
-            <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border px-4">
+            <div className="flex h-11 shrink-0 items-center border-b border-sidebar-border px-3.5">
                 {brand.external ? (
                     <a href={hrefOf(brand.href)} className={brandClass}>
                         {brandContent}
@@ -92,26 +95,31 @@ export function ShellSidebar({
 
             <nav
                 aria-label={label}
-                className="flex-1 space-y-5 overflow-y-auto px-2 py-4"
+                className="flex-1 space-y-3 overflow-y-auto py-2"
             >
                 {back && (
                     <a
                         href={back.href}
-                        className="flex items-center gap-1.5 px-3 text-sm text-sidebar-foreground/70 transition-colors hover:text-white"
+                        className="flex h-7 items-center gap-3 px-5 text-sm text-sidebar-foreground/70 transition-colors hover:text-white"
                     >
                         <ArrowLeft className="size-4" aria-hidden />
-                        {back.label}
+                        <span className={labelClass}>{back.label}</span>
                     </a>
                 )}
                 {groups.map((group) => (
                     <div key={group.title}>
                         {(groups.length > 1 || group.items.some((i) => i.external)) &&
                             group.title !== '' && (
-                                <p className="px-3 pb-1.5 text-[11px] font-semibold tracking-wider text-sidebar-foreground/50 uppercase">
+                                <p
+                                    className={cn(
+                                        'truncate px-5 pb-1 text-[11px] font-semibold tracking-wider whitespace-nowrap text-sidebar-foreground/50 uppercase',
+                                        labelClass,
+                                    )}
+                                >
                                     {group.title}
                                 </p>
                             )}
-                        <ul className="space-y-0.5">
+                        <ul>
                             {group.items.map((item) => (
                                 <li key={`${item.title}-${hrefOf(item.href)}`}>
                                     <SidebarItem
@@ -159,9 +167,14 @@ function SidebarItem({
                     className="size-4 shrink-0 text-sidebar-foreground/70"
                     aria-hidden
                 />
-                <span className="min-w-0 flex-1 truncate">{item.title}</span>
+                <span className={cn('min-w-0 flex-1 truncate', labelClass)}>
+                    {item.title}
+                </span>
                 <SquareArrowOutUpRight
-                    className="size-3.5 shrink-0 text-sidebar-foreground/50"
+                    className={cn(
+                        'size-3.5 shrink-0 text-sidebar-foreground/50',
+                        labelClass,
+                    )}
                     aria-hidden
                 />
             </a>
@@ -176,7 +189,7 @@ function SidebarItem({
             className={cn(
                 itemClass,
                 current
-                    ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-full before:bg-cyan-400'
+                    ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-cyan-400'
                     : 'text-sidebar-foreground hover:bg-white/5 hover:text-white',
             )}
         >
@@ -187,7 +200,9 @@ function SidebarItem({
                 )}
                 aria-hidden
             />
-            <span className="min-w-0 flex-1 truncate">{item.title}</span>
+            <span className={cn('min-w-0 flex-1 truncate', labelClass)}>
+                {item.title}
+            </span>
         </Link>
     );
 }

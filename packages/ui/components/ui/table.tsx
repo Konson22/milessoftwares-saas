@@ -59,7 +59,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "h-9 px-4 text-left align-middle text-[11px] font-semibold tracking-wide whitespace-nowrap text-muted-foreground uppercase",
+        "h-8 px-3 text-left align-middle text-[11px] font-semibold tracking-wide whitespace-nowrap text-muted-foreground uppercase",
         className
       )}
       {...props}
@@ -71,7 +71,7 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   return (
     <td
       data-slot="table-cell"
-      className={cn("px-4 py-2.5 align-middle", className)}
+      className={cn("px-3 py-2 align-middle", className)}
       {...props}
     />
   )
@@ -89,7 +89,7 @@ function TableEmpty({
 }) {
   return (
     <tr>
-      <td colSpan={colSpan} className="px-4 py-10 text-center text-sm text-muted-foreground">
+      <td colSpan={colSpan} className="px-3 py-8 text-center text-sm text-muted-foreground">
         {children}
       </td>
     </tr>

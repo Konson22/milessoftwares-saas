@@ -230,7 +230,7 @@ export default function Accounts({ accounts, types, bankKinds }: Props) {
             />
 
             {adding && (
-                <Panel className="mb-5">
+                <Panel className="mb-3">
                     <PanelHeader title="New account" />
                     <PanelBody>
                         <Form

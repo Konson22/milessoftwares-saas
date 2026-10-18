@@ -110,6 +110,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Billing
+    |--------------------------------------------------------------------------
+    |
+    | Invoices are paid outside the platform (bank transfer, mobile money,
+    | cash). The billing page shows customers these instructions; one line
+    | each, separated by "|" in the environment. Invoices staff issue are due
+    | after due_days unless they choose another date.
+    |
+    */
+
+    'billing' => [
+        'payment_instructions' => array_values(array_filter(array_map('trim', explode('|', (string) env('PLATFORM_PAYMENT_INSTRUCTIONS', ''))))),
+        'issuer' => env('PLATFORM_BILLING_ISSUER', 'Miles Global Link Co. Ltd'),
+        'contact_email' => env('PLATFORM_BILLING_EMAIL', env('PLATFORM_SALES_EMAIL')),
+        'due_days' => (int) env('PLATFORM_INVOICE_DUE_DAYS', 14),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Platform administration (admin.<root>)
     |--------------------------------------------------------------------------
     |

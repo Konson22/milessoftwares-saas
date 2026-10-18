@@ -1,5 +1,13 @@
 import { usePage } from '@inertiajs/react';
-import { Building2, Home, KeyRound, Mail, Settings, Users } from 'lucide-react';
+import {
+    Building2,
+    Home,
+    KeyRound,
+    Mail,
+    Settings,
+    ShieldCheck,
+    Users,
+} from 'lucide-react';
 import type { PropsWithChildren } from 'react';
 import { AppShell } from '@miles/ui/shell/app-shell';
 import { activeItem, crumbsFor } from '@miles/ui/shell/navigation';
@@ -84,6 +92,12 @@ export default function WorkspaceLayout({ children }: PropsWithChildren) {
                                     label: 'Account settings',
                                     href: platform.accountUrl,
                                     icon: Settings,
+                                    external: true,
+                                },
+                                {
+                                    label: 'Security',
+                                    href: platform.securityUrl,
+                                    icon: ShieldCheck,
                                     external: true,
                                 },
                             ]}

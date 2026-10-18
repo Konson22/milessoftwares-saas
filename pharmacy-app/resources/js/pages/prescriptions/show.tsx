@@ -136,7 +136,7 @@ export default function ShowPrescription({
                 </p>
             )}
 
-            <Panel className="mb-5 max-w-3xl">
+            <Panel className="mb-3 max-w-3xl">
                 <PanelBody>
                     <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-[max-content_1fr]">
                         <dt className="text-muted-foreground">Patient</dt>
@@ -213,7 +213,7 @@ export default function ShowPrescription({
                 </PanelBody>
             </Panel>
 
-            <Panel className="mb-5">
+            <Panel className="mb-3">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -272,7 +272,7 @@ export default function ShowPrescription({
                 </Table>
             </Panel>
 
-            <div className="mb-5 flex flex-wrap gap-3">
+            <div className="mb-3 flex flex-wrap gap-3">
                 {can.verify && (
                     <Form {...verify.form(prescription.id)}>
                         <Button type="submit">Verify (pharmacist)</Button>
@@ -290,7 +290,7 @@ export default function ShowPrescription({
             {can.reject && (
                 <Form
                     {...reject.form(prescription.id)}
-                    className="mb-5 flex max-w-xl flex-wrap items-start gap-2"
+                    className="mb-3 flex max-w-xl flex-wrap items-start gap-2"
                 >
                     {({ errors: formErrors, processing }) => (
                         <>

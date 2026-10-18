@@ -5,6 +5,7 @@ namespace App\Modules\Pharmacy\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Actions\ItemPacks;
 use App\Modules\Inventory\Enums\StorageCondition;
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Item;
 use App\Modules\Inventory\Models\ItemPack;
 use App\Modules\Pharmacy\Enums\MedicineForm;
@@ -30,15 +31,21 @@ class MedicineController extends Controller
         $category = $request->string('category')->toString();
         $showInactive = $request->boolean('inactive');
 
+        $medicines = Medicine::query()
+            ->search($search)
+            ->when($category !== '', fn ($query) => $query->whereHas('item', fn ($item) => $item->where('category', $category)))
+            ->when(! $showInactive, fn ($query) => $query->active())
+            ->orderBy('name')
+            ->limit(200)
+            ->get();
+        // A medicine shares its item's id: the buying price is the item's.
+        $lastCosts = Batch::lastUnitCosts($medicines->modelKeys());
+
         return Inertia::render('medicines/index', [
-            'medicines' => Medicine::query()
-                ->search($search)
-                ->when($category !== '', fn ($query) => $query->whereHas('item', fn ($item) => $item->where('category', $category)))
-                ->when(! $showInactive, fn ($query) => $query->active())
-                ->orderBy('name')
-                ->limit(200)
-                ->get()
-                ->map(fn (Medicine $medicine) => $this->summary($medicine)),
+            'medicines' => $medicines->map(fn (Medicine $medicine) => [
+                ...$this->summary($medicine),
+                'lastUnitCostMinor' => $lastCosts[$medicine->id] ?? null,
+            ]),
             'filters' => ['search' => $search, 'category' => $category, 'inactive' => $showInactive],
             'categories' => $this->categories(),
             'canManage' => $request->user()?->can('pharmacy.medicines.manage') ?? false,
@@ -67,6 +74,7 @@ class MedicineController extends Controller
             'medicine' => [
                 ...$this->summary($medicine),
                 'sellPrice' => Money::toMajor($medicine->sell_price_minor),
+                'lastUnitCostMinor' => Batch::lastUnitCosts([$medicine->id])[$medicine->id] ?? null,
                 'packs' => $medicine->item->packs->map(fn (ItemPack $pack) => [
                     'name' => $pack->name,
                     'units' => $pack->units,

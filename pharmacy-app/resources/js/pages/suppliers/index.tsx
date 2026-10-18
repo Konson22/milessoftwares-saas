@@ -66,7 +66,7 @@ export default function Suppliers({ suppliers, canManage }: Props) {
             <PageHeader title="Suppliers" />
 
             {canManage && (
-                <Panel className="mb-5">
+                <Panel className="mb-3">
                     <PanelHeader title="Add supplier" />
                     <PanelBody>
                         <Form

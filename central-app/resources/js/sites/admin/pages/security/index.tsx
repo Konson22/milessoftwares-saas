@@ -49,7 +49,7 @@ export default function Security({
 
             <h1 className="text-2xl font-semibold">Security</h1>
 
-            <section className="mt-6 flex flex-wrap items-center gap-4 rounded-lg border p-4">
+            <section className="mt-4 flex flex-wrap items-center gap-4 rounded-lg border p-4">
                 <div className="flex-1">
                     <h2 className="font-medium">Audit chain</h2>
                     <p className="text-sm text-muted-foreground">
@@ -80,7 +80,7 @@ export default function Security({
                 </Form>
             </section>
 
-            <div className="mt-8 grid gap-10 xl:grid-cols-2">
+            <div className="mt-5 grid gap-5 xl:grid-cols-2">
                 <section>
                     <h2 className="text-lg font-medium">Sign-in events</h2>
                     <Form

@@ -39,7 +39,7 @@ export default function CreateBill({
                             Add a supplier first (Payables → Suppliers).
                         </p>
                     ) : (
-                        <Form {...store.form()} className="grid gap-5">
+                        <Form {...store.form()} className="grid gap-3">
                             {({ errors, processing }) => (
                                 <>
                                     <div className="grid gap-3 sm:grid-cols-4">

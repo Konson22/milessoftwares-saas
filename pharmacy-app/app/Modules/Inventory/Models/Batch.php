@@ -60,6 +60,24 @@ class Batch extends Model
         return $this->belongsTo(Item::class);
     }
 
+    /**
+     * What one unit of each item cost on its latest batch: the buying price
+     * to show beside the selling price. Items never received are missing.
+     *
+     * @param  list<string>|null  $itemIds  null: every item
+     * @return array<string, int> unit cost in minor units, by item id
+     */
+    public static function lastUnitCosts(?array $itemIds = null): array
+    {
+        return self::query()
+            ->when($itemIds !== null, fn ($query) => $query->whereIn('item_id', $itemIds))
+            ->orderByDesc('created_at')
+            ->get(['item_id', 'unit_cost_minor'])
+            ->unique('item_id')
+            ->mapWithKeys(fn (self $batch) => [$batch->item_id => $batch->unit_cost_minor])
+            ->all();
+    }
+
     public function onHold(): bool
     {
         return $this->status !== self::AVAILABLE;

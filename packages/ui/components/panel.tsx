@@ -8,7 +8,7 @@ export function Panel({ className, ...props }: ComponentProps<'section'>) {
     return (
         <section
             className={cn(
-                'overflow-hidden rounded-lg border bg-card text-card-foreground shadow-xs',
+                'overflow-hidden border bg-card text-card-foreground',
                 className,
             )}
             {...props}
@@ -33,7 +33,7 @@ export function PanelHeader({
     return (
         <div
             className={cn(
-                'flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3',
+                'flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2',
                 className,
             )}
         >
@@ -61,7 +61,7 @@ export function PanelToolbar({ className, ...props }: ComponentProps<'div'>) {
     return (
         <div
             className={cn(
-                'flex flex-wrap items-center gap-3 border-b p-4',
+                'flex flex-wrap items-center gap-2 border-b px-3 py-2',
                 className,
             )}
             {...props}
@@ -70,5 +70,5 @@ export function PanelToolbar({ className, ...props }: ComponentProps<'div'>) {
 }
 
 export function PanelBody({ className, ...props }: ComponentProps<'div'>) {
-    return <div className={cn('p-4', className)} {...props} />;
+    return <div className={cn('p-3', className)} {...props} />;
 }

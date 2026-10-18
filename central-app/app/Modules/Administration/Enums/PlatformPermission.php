@@ -19,4 +19,5 @@ enum PlatformPermission: string
     case EntitlementsManage = 'entitlements.manage';
     case SecurityView = 'security.view';
     case LeadsManage = 'leads.manage';
+    case BillingManage = 'billing.manage';
 }

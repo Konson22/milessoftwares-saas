@@ -1,4 +1,4 @@
-import { Form, Head, Link } from '@inertiajs/react';
+import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { PageHeader } from '@miles/ui/components/page-header';
@@ -6,6 +6,9 @@ import { Panel, PanelBody } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
 import { Label } from '@miles/ui/components/ui/label';
+import { StatusBadge } from '@miles/ui/components/status-badge';
+import { PriceBadges } from '@/components/price-badges';
+import { formatMoney, parseMoney } from '@/lib/money';
 import { index, store, update } from '@/routes/medicines';
 
 type Medicine = {
@@ -21,6 +24,8 @@ type Medicine = {
     prescriptionOnly: boolean;
     controlled: boolean;
     sellPrice: string;
+    /** null: never received, so no buying price yet. */
+    lastUnitCostMinor: number | null;
     reorderLevel: number;
     active: boolean;
     packs: { name: string; units: number; sellPrice: string }[];
@@ -57,6 +62,69 @@ function Field({
     );
 }
 
+/**
+ * What a pack sells for and costs, worked out per unit: its own price split
+ * over its units (a box of 10 at 100 is 10 a unit), or its units at the
+ * unit price; and the last unit buying price times its units.
+ */
+function PackPrices({
+    name,
+    units,
+    unit,
+    packSellMinor,
+    unitSellMinor,
+    lastCostMinor,
+    money,
+}: {
+    name: string;
+    units: number;
+    unit: string;
+    /** null: no pack price, so its units at the unit price. */
+    packSellMinor: number | null;
+    unitSellMinor: number | null;
+    lastCostMinor: number | null;
+    money: (minor: number) => string;
+}) {
+    if (units < 2) {
+        return null;
+    }
+
+    const sellMinor =
+        packSellMinor ??
+        (unitSellMinor === null ? null : unitSellMinor * units);
+    const costMinor = lastCostMinor === null ? null : lastCostMinor * units;
+    const margin =
+        sellMinor === null || costMinor === null ? null : sellMinor - costMinor;
+
+    return (
+        <span className="inline-flex flex-wrap items-center gap-1 tabular-nums sm:col-span-4">
+            {packSellMinor !== null ? (
+                <StatusBadge tone="success">
+                    Sell {name} of {units} at {money(packSellMinor)} ={' '}
+                    {money(Math.round(packSellMinor / units))} / {unit}
+                </StatusBadge>
+            ) : (
+                sellMinor !== null && (
+                    <StatusBadge tone="success">
+                        Sell {name} {money(sellMinor)} ({units} ×{' '}
+                        {money(unitSellMinor ?? 0)})
+                    </StatusBadge>
+                )
+            )}
+            {costMinor !== null && (
+                <StatusBadge tone="info">
+                    Last buy {money(costMinor)} / {name}
+                </StatusBadge>
+            )}
+            {margin !== null && (
+                <StatusBadge tone={margin > 0 ? 'success' : 'danger'}>
+                    Margin {money(margin)} / {name}
+                </StatusBadge>
+            )}
+        </span>
+    );
+}
+
 export default function MedicineForm({
     medicine,
     forms,
@@ -68,6 +136,16 @@ export default function MedicineForm({
         (medicine?.packs ?? []).map((pack, key) => ({ key, ...pack })),
     );
     const [nextKey, setNextKey] = useState(packs.length);
+    // The unit price and unit name as typed, for the price badges.
+    const [sellPrice, setSellPrice] = useState(medicine?.sellPrice ?? '');
+    const [unit, setUnit] = useState(medicine?.unit ?? 'tablet');
+    const { currency } = usePage().props;
+    const code = currency ?? 'USD';
+    const money = (minor: number) => formatMoney(minor, code);
+    const unitSellMinor = parseMoney(sellPrice, code);
+    const lastCostMinor = medicine?.lastUnitCostMinor ?? null;
+    const setPack = (key: number, change: Partial<(typeof packs)[number]>) =>
+        setPacks(packs.map((p) => (p.key === key ? { ...p, ...change } : p)));
 
     return (
         <>
@@ -159,6 +237,9 @@ export default function MedicineForm({
                                         defaultValue={
                                             medicine?.unit ?? 'tablet'
                                         }
+                                        onChange={(e) =>
+                                            setUnit(e.target.value)
+                                        }
                                     />
                                 </Field>
                                 <Field
@@ -229,10 +310,21 @@ export default function MedicineForm({
                                         inputMode="decimal"
                                         required
                                         defaultValue={medicine?.sellPrice}
+                                        onChange={(e) =>
+                                            setSellPrice(e.target.value)
+                                        }
                                         aria-invalid={
                                             errors.sell_price ? true : undefined
                                         }
                                     />
+                                    {unitSellMinor !== null && (
+                                        <PriceBadges
+                                            sellMinor={unitSellMinor}
+                                            buyMinor={lastCostMinor}
+                                            unit={unit || 'unit'}
+                                            buyLabel="Last buy"
+                                        />
+                                    )}
                                 </Field>
                                 <Field
                                     id="reorder_level"
@@ -272,6 +364,12 @@ export default function MedicineForm({
                                                     name={`packs[${i}][name]`}
                                                     required
                                                     defaultValue={pack.name}
+                                                    onChange={(e) =>
+                                                        setPack(pack.key, {
+                                                            name: e.target
+                                                                .value,
+                                                        })
+                                                    }
                                                     placeholder="box, strip, carton"
                                                     aria-label={`Pack name, pack ${i + 1}`}
                                                 />
@@ -296,6 +394,16 @@ export default function MedicineForm({
                                                     }
                                                     placeholder="Units in it"
                                                     aria-label={`Units in pack ${i + 1}`}
+                                                    onChange={(e) =>
+                                                        setPack(pack.key, {
+                                                            units:
+                                                                Number.parseInt(
+                                                                    e.target
+                                                                        .value,
+                                                                    10,
+                                                                ) || 0,
+                                                        })
+                                                    }
                                                 />
                                                 {errors[`packs.${i}.units`] && (
                                                     <p className="text-xs text-destructive">
@@ -316,6 +424,12 @@ export default function MedicineForm({
                                                     }
                                                     placeholder="Pack price"
                                                     aria-label={`Selling price of pack ${i + 1}`}
+                                                    onChange={(e) =>
+                                                        setPack(pack.key, {
+                                                            sellPrice:
+                                                                e.target.value,
+                                                        })
+                                                    }
                                                 />
                                                 {errors[
                                                     `packs.${i}.sell_price`
@@ -349,6 +463,18 @@ export default function MedicineForm({
                                                     aria-hidden
                                                 />
                                             </Button>
+                                            <PackPrices
+                                                name={pack.name || 'pack'}
+                                                units={pack.units}
+                                                unit={unit || 'unit'}
+                                                packSellMinor={parseMoney(
+                                                    pack.sellPrice,
+                                                    code,
+                                                )}
+                                                unitSellMinor={unitSellMinor}
+                                                lastCostMinor={lastCostMinor}
+                                                money={money}
+                                            />
                                         </div>
                                     ))}
                                     <Button

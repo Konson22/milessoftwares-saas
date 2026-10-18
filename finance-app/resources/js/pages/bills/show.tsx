@@ -109,7 +109,7 @@ export default function ShowBill({ bill, payments, credits }: Props) {
                 }
             />
 
-            <div className="grid gap-5 lg:grid-cols-3">
+            <div className="grid gap-3 lg:grid-cols-3">
                 <Panel className="lg:col-span-2">
                     <Table>
                         <TableHeader>
@@ -162,7 +162,7 @@ export default function ShowBill({ bill, payments, credits }: Props) {
                     </Table>
                 </Panel>
 
-                <div className="grid content-start gap-5">
+                <div className="grid content-start gap-3">
                     <Panel>
                         <PanelHeader title="Summary" />
                         <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 p-4 text-sm">

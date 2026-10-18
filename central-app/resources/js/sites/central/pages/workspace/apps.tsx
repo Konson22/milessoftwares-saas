@@ -57,7 +57,7 @@ export default function WorkspaceApps({ organization, modules }: Props) {
                             give you a role.
                         </p>
                     ) : (
-                        <ul className="mt-6 grid gap-4 sm:grid-cols-2">
+                        <ul className="mt-4 grid gap-4 sm:grid-cols-2">
                             {modules.map((module) => {
                                 const Icon = appIcon(module.code);
 

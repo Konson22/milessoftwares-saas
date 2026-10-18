@@ -74,7 +74,7 @@ type Editing =
     | null;
 
 const selectClass =
-    'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs';
+    'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm';
 
 export default function Structure({ branches, departments, positions }: Props) {
     const [branchQuery, setBranchQuery] = useState('');
@@ -121,7 +121,7 @@ export default function Structure({ branches, departments, positions }: Props) {
         <>
             <Head title="Structure" />
 
-            <div className="space-y-6">
+            <div className="space-y-3">
                 <PageHeader
                     title="Organization structure"
                     description="Manage branches, departments, and positions"
@@ -261,7 +261,7 @@ export default function Structure({ branches, departments, positions }: Props) {
                     </CardContent>
                 </Card>
 
-                <div className="grid gap-6 lg:grid-cols-2">
+                <div className="grid gap-3 lg:grid-cols-2">
                     <Section
                         title="Departments"
                         addLabel="Add department"

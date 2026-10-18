@@ -65,7 +65,7 @@ export default function Suppliers({ search, suppliers }: Props) {
             />
 
             {adding && (
-                <Panel className="mb-5">
+                <Panel className="mb-3">
                     <PanelHeader title="New supplier" />
                     <PanelBody>
                         <Form

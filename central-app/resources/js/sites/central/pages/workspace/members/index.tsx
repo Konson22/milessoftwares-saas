@@ -20,7 +20,7 @@ export default function Members({ members }: Props) {
 
             <h1 className="text-2xl font-semibold">Members</h1>
 
-            <ul className="mt-6 divide-y rounded-lg border">
+            <ul className="mt-4 divide-y rounded-lg border">
                 {members.map((member) => (
                     <li key={member.id}>
                         <Link

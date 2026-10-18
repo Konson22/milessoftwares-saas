@@ -63,7 +63,7 @@ export default function Cashiers({ from, to, byCashier, tills }: Props) {
         <>
             <ReportHeader current="cashiers" from={from} to={to} />
 
-            <Panel className="mb-5">
+            <Panel className="mb-3">
                 <PanelHeader
                     title="By cashier"
                     description="Tills opened in the period. Over and short come from the count at closing."

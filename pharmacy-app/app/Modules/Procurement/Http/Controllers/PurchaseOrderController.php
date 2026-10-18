@@ -4,6 +4,7 @@ namespace App\Modules\Procurement\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Item;
 use App\Modules\Inventory\Models\ItemPack;
 use App\Modules\MasterData\Models\Supplier;
@@ -134,18 +135,31 @@ class PurchaseOrderController extends Controller
     }
 
     /**
-     * What can be bought, with the packs it comes in (orders and deliveries).
+     * What can be bought, with the packs it comes in (orders and deliveries),
+     * its selling prices and what a unit last cost, so a line can show what
+     * it costs per unit against what it sells for.
      *
-     * @return list<array{id: string, label: string, unit: string, packs: list<array{id: string, label: string}>}>
+     * @return list<array{id: string, label: string, unit: string, sellPriceMinor: int, lastUnitCostMinor: int|null, packs: list<array{id: string, label: string, name: string, units: int, sellPriceMinor: int}>}>
      */
     public static function itemOptions(): array
     {
-        return array_values(Item::query()->where('active', true)->with('packs')->orderBy('name')->get()
+        $items = Item::query()->where('active', true)->with('packs')->orderBy('name')->get();
+        $lastCosts = Batch::lastUnitCosts($items->modelKeys());
+
+        return array_values($items
             ->map(fn (Item $item) => [
                 'id' => $item->id,
                 'label' => $item->name,
                 'unit' => $item->unit,
-                'packs' => array_values($item->packs->map(fn (ItemPack $pack) => ['id' => $pack->id, 'label' => $pack->label()])->all()),
+                'sellPriceMinor' => $item->sell_price_minor,
+                'lastUnitCostMinor' => $lastCosts[$item->id] ?? null,
+                'packs' => array_values($item->packs->map(fn (ItemPack $pack) => [
+                    'id' => $pack->id,
+                    'label' => $pack->label(),
+                    'name' => $pack->name,
+                    'units' => $pack->units,
+                    'sellPriceMinor' => $pack->sellPrice($item),
+                ])->all()),
             ])
             ->all());
     }

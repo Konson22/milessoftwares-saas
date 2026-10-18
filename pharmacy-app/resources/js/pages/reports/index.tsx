@@ -68,7 +68,7 @@ export default function Reports({
         <>
             <ReportHeader current="overview" from={from} to={to} />
 
-            <div className="mb-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mb-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <StatCard
                     label="Takings"
                     value={money(summary.revenueMinor)}
@@ -133,8 +133,8 @@ export default function Reports({
                 />
             </div>
 
-            <div className="grid gap-5 lg:grid-cols-2">
-                <div className="space-y-5">
+            <div className="grid gap-3 lg:grid-cols-2">
+                <div className="space-y-3">
                     <Panel>
                         <PanelHeader title="Best sellers" />
                         <Table>
@@ -233,7 +233,7 @@ export default function Reports({
                                         {row.day}
                                     </span>
                                     <span
-                                        className="h-2 rounded-full bg-primary/70"
+                                        className="h-2 bg-primary/70"
                                         style={{
                                             width: `${busiest === 0 ? 0 : Math.max(2, (row.totalMinor / busiest) * 100)}%`,
                                         }}

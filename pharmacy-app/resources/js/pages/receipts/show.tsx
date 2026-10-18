@@ -161,7 +161,7 @@ export default function ShowReceipt({ receipt, returns, canReturn }: Props) {
             </Panel>
 
             {returns.length > 0 && (
-                <Panel className="mt-5">
+                <Panel className="mt-3">
                     <PanelHeader title="Returned to the supplier" />
                     <ul className="divide-y text-sm">
                         {returns.map((supplierReturn) => (

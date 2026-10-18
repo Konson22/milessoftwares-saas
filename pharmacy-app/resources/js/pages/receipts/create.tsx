@@ -8,6 +8,7 @@ import { Input } from '@miles/ui/components/ui/input';
 import { Label } from '@miles/ui/components/ui/label';
 import { PackSelect } from '@/components/pack-select';
 import type { BuyableItem } from '@/components/pack-select';
+import { CostBreakdown } from '@/components/price-badges';
 import { index, store } from '@/routes/receipts';
 
 type OrderLine = {
@@ -16,8 +17,12 @@ type OrderLine = {
     medicine: string;
     remaining: number;
     pack: string | null;
+    packName: string | null;
+    unitsPerPack: number;
     unitCost: string;
 };
+
+type Entered = { pack: string; cost: string; quantity: string };
 
 type Props = {
     suppliers: { id: string; name: string }[];
@@ -60,6 +65,49 @@ export default function ReceiveGoods({
     const [chosen, setChosen] = useState<Record<number, string>>({});
     const itemOf = (key: number) =>
         medicines.find((m) => m.id === (chosen[key] ?? medicines[0]?.id));
+    // What has been typed on each line (by line key), for its cost breakdown;
+    // order lines start from the order's quantity and cost.
+    const [entered, setEntered] = useState<Record<number, Entered>>(() =>
+        Object.fromEntries(
+            lines
+                .filter((line) => line.orderLine)
+                .map((line) => [
+                    line.key,
+                    {
+                        pack: '',
+                        cost: line.orderLine!.unitCost,
+                        quantity: String(line.orderLine!.remaining),
+                    },
+                ]),
+        ),
+    );
+    const enteredOf = (key: number): Entered =>
+        entered[key] ?? { pack: '', cost: '', quantity: '' };
+    const enter = (key: number, change: Partial<Entered>) =>
+        setEntered({ ...entered, [key]: { ...enteredOf(key), ...change } });
+    // The item and pack a line is for: the order's, or as chosen.
+    const breakdownOf = (line: Line) => {
+        if (line.orderLine) {
+            const { medicineId, packName, unitsPerPack } = line.orderLine;
+
+            return {
+                item: medicines.find((m) => m.id === medicineId),
+                pack:
+                    packName === null
+                        ? null
+                        : { name: packName, units: unitsPerPack },
+            };
+        }
+
+        const item = itemOf(line.key);
+
+        return {
+            item,
+            pack:
+                item?.packs.find((p) => p.id === enteredOf(line.key).pack) ??
+                null,
+        };
+    };
 
     return (
         <>
@@ -218,15 +266,24 @@ export default function ReceiveGoods({
                                                                 className={
                                                                     selectClass
                                                                 }
-                                                                onChange={(e) =>
+                                                                onChange={(
+                                                                    e,
+                                                                ) => {
                                                                     setChosen({
                                                                         ...chosen,
                                                                         [line.key]:
                                                                             e
                                                                                 .target
                                                                                 .value,
-                                                                    })
-                                                                }
+                                                                    });
+                                                                    // The pack list remounts on the unit.
+                                                                    enter(
+                                                                        line.key,
+                                                                        {
+                                                                            pack: '',
+                                                                        },
+                                                                    );
+                                                                }}
                                                             >
                                                                 {medicines.map(
                                                                     (
@@ -253,6 +310,16 @@ export default function ReceiveGoods({
                                                                 item={itemOf(
                                                                     line.key,
                                                                 )}
+                                                                onChange={(
+                                                                    pack,
+                                                                ) =>
+                                                                    enter(
+                                                                        line.key,
+                                                                        {
+                                                                            pack,
+                                                                        },
+                                                                    )
+                                                                }
                                                             />
                                                         </div>
                                                     )}
@@ -351,6 +418,13 @@ export default function ReceiveGoods({
                                                         required
                                                         placeholder="Qty"
                                                         aria-label={`Quantity, line ${i + 1}`}
+                                                        onChange={(e) =>
+                                                            enter(line.key, {
+                                                                quantity:
+                                                                    e.target
+                                                                        .value,
+                                                            })
+                                                        }
                                                     />
                                                     {error('quantity') && (
                                                         <p className="text-xs text-destructive">
@@ -369,6 +443,12 @@ export default function ReceiveGoods({
                                                         required
                                                         placeholder="Cost each"
                                                         aria-label={`Cost each, line ${i + 1}`}
+                                                        onChange={(e) =>
+                                                            enter(line.key, {
+                                                                cost: e.target
+                                                                    .value,
+                                                            })
+                                                        }
                                                     />
                                                     {error('unit_cost') && (
                                                         <p className="text-xs text-destructive">
@@ -399,6 +479,19 @@ export default function ReceiveGoods({
                                                         aria-hidden
                                                     />
                                                 </Button>
+                                                <div className="sm:col-span-6">
+                                                    <CostBreakdown
+                                                        {...breakdownOf(line)}
+                                                        cost={
+                                                            enteredOf(line.key)
+                                                                .cost
+                                                        }
+                                                        quantity={
+                                                            enteredOf(line.key)
+                                                                .quantity
+                                                        }
+                                                    />
+                                                </div>
                                             </div>
                                         );
                                     })}

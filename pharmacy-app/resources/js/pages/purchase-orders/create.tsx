@@ -8,12 +8,15 @@ import { Input } from '@miles/ui/components/ui/input';
 import { Label } from '@miles/ui/components/ui/label';
 import { PackSelect } from '@/components/pack-select';
 import type { BuyableItem } from '@/components/pack-select';
+import { CostBreakdown } from '@/components/price-badges';
 import { index, store } from '@/routes/purchase-orders';
 
 type Props = {
     suppliers: { id: string; name: string }[];
     medicines: BuyableItem[];
 };
+
+type Entered = { pack: string; cost: string; quantity: string };
 
 const selectClass = 'h-9 w-full rounded-md border bg-transparent px-3 text-sm';
 
@@ -24,6 +27,14 @@ export default function CreatePurchaseOrder({ suppliers, medicines }: Props) {
     const [chosen, setChosen] = useState<Record<number, string>>({});
     const itemOf = (key: number) =>
         medicines.find((m) => m.id === (chosen[key] ?? medicines[0]?.id));
+    // What has been typed on each line (by line key), for its cost breakdown.
+    const [entered, setEntered] = useState<Record<number, Entered>>({});
+    const enteredOf = (key: number): Entered =>
+        entered[key] ?? { pack: '', cost: '', quantity: '' };
+    const enter = (key: number, change: Partial<Entered>) =>
+        setEntered({ ...entered, [key]: { ...enteredOf(key), ...change } });
+    const packOf = (key: number) =>
+        itemOf(key)?.packs.find((p) => p.id === enteredOf(key).pack) ?? null;
 
     return (
         <>
@@ -94,13 +105,17 @@ export default function CreatePurchaseOrder({ suppliers, medicines }: Props) {
                                                         name={`lines[${i}][item_id]`}
                                                         aria-label={`Medicine, line ${i + 1}`}
                                                         className={selectClass}
-                                                        onChange={(e) =>
+                                                        onChange={(e) => {
                                                             setChosen({
                                                                 ...chosen,
                                                                 [key]: e.target
                                                                     .value,
-                                                            })
-                                                        }
+                                                            });
+                                                            // The pack list remounts on the unit.
+                                                            enter(key, {
+                                                                pack: '',
+                                                            });
+                                                        }}
                                                     >
                                                         {medicines.map(
                                                             (medicine) => (
@@ -136,6 +151,9 @@ export default function CreatePurchaseOrder({ suppliers, medicines }: Props) {
                                                         name={`lines[${i}][pack_id]`}
                                                         line={i + 1}
                                                         item={itemOf(key)}
+                                                        onChange={(pack) =>
+                                                            enter(key, { pack })
+                                                        }
                                                     />
                                                     {errors[
                                                         `lines.${i}.pack_id`
@@ -156,6 +174,12 @@ export default function CreatePurchaseOrder({ suppliers, medicines }: Props) {
                                                     required
                                                     placeholder="Quantity"
                                                     aria-label={`Quantity, line ${i + 1}`}
+                                                    onChange={(e) =>
+                                                        enter(key, {
+                                                            quantity:
+                                                                e.target.value,
+                                                        })
+                                                    }
                                                 />
                                                 <Input
                                                     name={`lines[${i}][unit_cost]`}
@@ -163,6 +187,12 @@ export default function CreatePurchaseOrder({ suppliers, medicines }: Props) {
                                                     required
                                                     placeholder="Cost each"
                                                     aria-label={`Cost each, line ${i + 1}`}
+                                                    onChange={(e) =>
+                                                        enter(key, {
+                                                            cost: e.target
+                                                                .value,
+                                                        })
+                                                    }
                                                 />
                                                 <Button
                                                     type="button"
@@ -186,6 +216,19 @@ export default function CreatePurchaseOrder({ suppliers, medicines }: Props) {
                                                         aria-hidden
                                                     />
                                                 </Button>
+                                                <div className="sm:col-span-5">
+                                                    <CostBreakdown
+                                                        item={itemOf(key)}
+                                                        pack={packOf(key)}
+                                                        cost={
+                                                            enteredOf(key).cost
+                                                        }
+                                                        quantity={
+                                                            enteredOf(key)
+                                                                .quantity
+                                                        }
+                                                    />
+                                                </div>
                                             </div>
                                         ))}
                                         <Button

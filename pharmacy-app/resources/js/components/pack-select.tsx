@@ -2,7 +2,16 @@ export type BuyableItem = {
     id: string;
     label: string;
     unit: string;
-    packs: { id: string; label: string }[];
+    sellPriceMinor: number;
+    /** null: never received, so no buying price yet. */
+    lastUnitCostMinor: number | null;
+    packs: {
+        id: string;
+        label: string;
+        name: string;
+        units: number;
+        sellPriceMinor: number;
+    }[];
 };
 
 /**
@@ -13,10 +22,12 @@ export function PackSelect({
     name,
     line,
     item,
+    onChange,
 }: {
     name: string;
     line: number;
     item: BuyableItem | undefined;
+    onChange?: (packId: string) => void;
 }) {
     return (
         <select
@@ -25,6 +36,7 @@ export function PackSelect({
             aria-label={`Bought as, line ${line}`}
             className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
             disabled={!item || item.packs.length === 0}
+            onChange={(e) => onChange?.(e.target.value)}
         >
             <option value="">{item?.unit ?? 'unit'}</option>
             {item?.packs.map((pack) => (

@@ -7,7 +7,8 @@ import { Breadcrumbs } from './breadcrumbs';
 import type { Crumb } from './navigation';
 
 /**
- * The frame of every signed-in page: the navy sidebar (a drawer below lg),
+ * The frame of every signed-in page: the navy sidebar (an icon rail that
+ * opens on hover at lg and up, a drawer below),
  * a sticky top bar with breadcrumbs and actions, and the page on the grey
  * canvas. The sidebar is rendered by the app, which knows its sections;
  * onNavigate closes the drawer.
@@ -60,9 +61,12 @@ export function AppShell({
                 Skip to content
             </a>
 
-            {/* Desktop sidebar */}
-            <aside className="sticky top-0 hidden h-screen w-64 shrink-0 lg:block">
-                {sidebar(closeSidebar)}
+            {/* Desktop sidebar: an icon rail that widens over the page on
+                hover or keyboard focus, so the page never reflows. */}
+            <aside className="sticky top-0 z-30 hidden h-screen w-14 shrink-0 lg:block">
+                <div className="shell-rail absolute inset-y-0 left-0 w-14 overflow-hidden transition-[width,box-shadow] duration-200 hover:w-64 hover:shadow-xl has-[:focus-visible]:w-64 has-[:focus-visible]:shadow-xl">
+                    <div className="h-full w-64">{sidebar(closeSidebar)}</div>
+                </div>
             </aside>
 
             {/* Mobile sidebar drawer */}
@@ -94,12 +98,12 @@ export function AppShell({
             </div>
 
             <div className="flex min-w-0 flex-1 flex-col">
-                <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b bg-card/95 px-4 backdrop-blur supports-backdrop-filter:bg-card/80">
+                <header className="sticky top-0 z-20 flex h-11 shrink-0 items-center gap-3 border-b bg-card/95 px-3 backdrop-blur supports-backdrop-filter:bg-card/80">
                     <button
                         type="button"
                         onClick={() => setSidebarOpen(true)}
                         aria-label="Open navigation"
-                        className="grid size-9 place-items-center rounded-md border text-muted-foreground hover:bg-accent lg:hidden"
+                        className="grid size-8 place-items-center border text-muted-foreground hover:bg-accent lg:hidden"
                     >
                         <Menu className="size-4" aria-hidden />
                     </button>
@@ -112,11 +116,11 @@ export function AppShell({
                         </div>
                     )}
                 </header>
-                <main id="main" className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+                <main id="main" className="flex-1 p-3">
                     {flash && (
                         <p
                             role="status"
-                            className="mb-5 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800"
+                            className="mb-3 border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm text-emerald-800"
                         >
                             {flash}
                         </p>

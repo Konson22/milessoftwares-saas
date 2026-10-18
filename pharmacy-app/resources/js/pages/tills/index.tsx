@@ -69,7 +69,7 @@ export default function Tills({ day, managing, mine, tills }: Props) {
             />
 
             {canHere('pharmacy.sales.create') && (
-                <Panel className="mb-5">
+                <Panel className="mb-3">
                     <PanelHeader title="Your till" />
                     <PanelBody>
                         {mine ? (

@@ -46,7 +46,7 @@ export default function BillingControls({
     applications,
 }: Props) {
     return (
-        <div className="space-y-6">
+        <div className="space-y-3">
             <div className="space-y-3">
                 <h2 className="text-lg font-medium">Subscriptions</h2>
                 {subscriptions.length === 0 ? (

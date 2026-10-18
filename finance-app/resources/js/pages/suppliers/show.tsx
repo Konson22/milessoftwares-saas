@@ -129,7 +129,7 @@ export default function ShowSupplier({
             />
 
             {editing && (
-                <Panel className="mb-5">
+                <Panel className="mb-3">
                     <PanelHeader title="Edit supplier" />
                     <PanelBody>
                         <Form
@@ -190,7 +190,7 @@ export default function ShowSupplier({
                 </Panel>
             )}
 
-            <Panel className="mb-5">
+            <Panel className="mb-3">
                 <PanelHeader title="Bills" />
                 <DocumentsTable
                     rows={bills.map((bill) => ({
@@ -250,7 +250,7 @@ export default function ShowSupplier({
             </Panel>
 
             {credits.length > 0 && (
-                <Panel className="mt-5">
+                <Panel className="mt-3">
                     <PanelHeader
                         title="Credits"
                         description="Goods returned: taken off the bill they came on; any rest stays on account."

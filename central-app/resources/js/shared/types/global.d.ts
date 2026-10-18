@@ -15,9 +15,10 @@ declare module '@inertiajs/core' {
                 host: string;
                 isAuthHost: boolean;
                 accountUrl: string;
+                securityUrl: string;
                 logoutUrl: string;
             };
-            tenant: { displayName: string } | null;
+            tenant: { displayName: string; isOwner: boolean } | null;
             /** Workspace hosts: applications the member can open. */
             apps: {
                 code: string;

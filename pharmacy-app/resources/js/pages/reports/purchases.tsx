@@ -63,7 +63,7 @@ export default function Purchases({
         <>
             <ReportHeader current="purchases" from={from} to={to} />
 
-            <Panel className="mb-5">
+            <Panel className="mb-3">
                 <PanelHeader
                     title="By supplier"
                     description="Goods received less goods sent back. What is still owed is in Finance, under payables."
@@ -132,7 +132,7 @@ export default function Purchases({
                 </Table>
             </Panel>
 
-            <div className="grid gap-5 xl:grid-cols-2">
+            <div className="grid gap-3 xl:grid-cols-2">
                 <Panel>
                     <PanelHeader
                         title="By medicine"

@@ -77,7 +77,7 @@ export function ReportHeader({
                 ))}
             </nav>
 
-            <Panel className="mb-5 print:hidden">
+            <Panel className="mb-3 print:hidden">
                 <PanelToolbar>
                     <Form
                         {...report.route.form()}

@@ -39,4 +39,12 @@ class SubscriptionItem extends Model
     {
         return $this->belongsTo(Plan::class);
     }
+
+    /**
+     * @return BelongsTo<Subscription, $this>
+     */
+    public function subscription(): BelongsTo
+    {
+        return $this->belongsTo(Subscription::class);
+    }
 }

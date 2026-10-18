@@ -41,7 +41,7 @@ type Props = {
 };
 
 const selectClass =
-    'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs';
+    'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm';
 
 const scopeLabels = {
     organization: 'Whole organization',
@@ -81,7 +81,7 @@ export default function Access({
                 your own level in that application.
             </p>
 
-            <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_22rem]">
+            <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_22rem]">
                 <ul className="space-y-4">
                     {members.map((member) => (
                         <li key={member.id} className="rounded-lg border p-4">

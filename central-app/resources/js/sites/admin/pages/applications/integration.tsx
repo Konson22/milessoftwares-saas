@@ -85,7 +85,7 @@ export default function Integration({
             {issuedSecret && (
                 <div
                     role="alert"
-                    className="mt-6 space-y-1 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm dark:border-amber-500/40 dark:bg-amber-500/10"
+                    className="mt-4 space-y-1 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm dark:border-amber-500/40 dark:bg-amber-500/10"
                 >
                     <p className="font-medium">
                         {issuedSecret.label}: copy this now, it will not be
@@ -112,7 +112,7 @@ export default function Integration({
                 </div>
             )}
 
-            <div className="mt-8 grid gap-10 xl:grid-cols-2">
+            <div className="mt-5 grid gap-5 xl:grid-cols-2">
                 <section className="space-y-4">
                     <h2 className="text-lg font-medium">Clients</h2>
                     <ul className="space-y-3">
@@ -298,7 +298,7 @@ export default function Integration({
                     </Form>
                 </section>
 
-                <section className="space-y-6">
+                <section className="space-y-3">
                     <div className="space-y-3">
                         <h2 className="text-lg font-medium">Webhooks</h2>
                         <Form

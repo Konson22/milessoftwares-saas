@@ -67,6 +67,9 @@ class HandleInertiaRequests extends Middleware
                 : [],
             'tenant' => fn () => ($organization = app(TenantContext::class)->organization()) === null ? null : [
                 'displayName' => $organization->display_name,
+                // The app. sidebar shows organization settings and billing to the owner only.
+                'isOwner' => ($membership = $request->attributes->get('membership')) instanceof OrganizationMembership
+                    && $organization->owner_membership_id === $membership->id,
             ],
         ];
     }
@@ -75,7 +78,7 @@ class HandleInertiaRequests extends Middleware
      * Account links differ per host: only the auth host serves account
      * settings and the central sign-out; app. and admin. sign out locally.
      *
-     * @return array{host: string, isAuthHost: bool, accountUrl: string, logoutUrl: string}
+     * @return array{host: string, isAuthHost: bool, accountUrl: string, securityUrl: string, logoutUrl: string}
      */
     private function platformLinks(Request $request): array
     {
@@ -85,6 +88,7 @@ class HandleInertiaRequests extends Middleware
             'host' => $type->value,
             'isAuthHost' => $type === HostType::Auth,
             'accountUrl' => PlatformHosts::url(PlatformHosts::auth(), 'settings/profile'),
+            'securityUrl' => PlatformHosts::url(PlatformHosts::auth(), 'settings/security'),
             'logoutUrl' => match ($type) {
                 HostType::App => PlatformHosts::url(PlatformHosts::app(), 'logout'),
                 HostType::Admin => PlatformHosts::url(PlatformHosts::admin(), 'logout'),

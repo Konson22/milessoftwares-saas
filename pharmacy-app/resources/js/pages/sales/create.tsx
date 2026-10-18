@@ -8,6 +8,7 @@ import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
 import { Label } from '@miles/ui/components/ui/label';
 import { formatMoney } from '@/lib/money';
+import { uuid } from '@/lib/uuid';
 import { store } from '@/routes/sales';
 import { show as showTill, store as openTill } from '@/routes/tills';
 
@@ -49,6 +50,37 @@ const packOf = (line: BasketLine) =>
 const maxQuantity = (line: BasketLine) =>
     Math.floor(line.medicine.available / (packOf(line)?.units ?? 1));
 
+/** Units the line takes off the shelf: packs count all their units. */
+const lineUnits = (line: BasketLine) =>
+    line.quantity * (packOf(line)?.units ?? 1);
+
+/**
+ * What is left on the shelf once the basket is sold: red when nothing is,
+ * amber once the basket has taken some.
+ */
+function StockBadge({
+    available,
+    inBasket,
+    unit,
+}: {
+    available: number;
+    inBasket: number;
+    unit: string;
+}) {
+    const left = Math.max(available - inBasket, 0);
+
+    return (
+        <StatusBadge
+            tone={left === 0 ? 'danger' : inBasket > 0 ? 'warning' : 'success'}
+            className="tabular-nums"
+        >
+            {inBasket > 0
+                ? `${left} of ${available} ${unit} left`
+                : `${available} ${unit} in stock`}
+        </StatusBadge>
+    );
+}
+
 const lineTotal = (line: BasketLine) => {
     const gross =
         line.quantity * (packOf(line)?.priceMinor ?? line.medicine.priceMinor);
@@ -75,7 +107,7 @@ export default function Counter({
     const [basket, setBasket] = useState<BasketLine[]>([]);
     const [method, setMethod] = useState(paymentMethods[0]?.value ?? 'cash');
     const [tendered, setTendered] = useState('');
-    const [submissionId, setSubmissionId] = useState(() => crypto.randomUUID());
+    const [submissionId, setSubmissionId] = useState(() => uuid());
 
     const matches = useMemo(() => {
         const term = search.trim().toLowerCase();
@@ -93,6 +125,12 @@ export default function Counter({
             )
             .slice(0, 8);
     }, [medicines, search]);
+
+    const inBasket = (id: string) => {
+        const line = basket.find((l) => l.medicine.id === id);
+
+        return line ? lineUnits(line) : 0;
+    };
 
     const total = basket.reduce((sum, line) => sum + lineTotal(line), 0);
     const tenderedMinor = Math.round(
@@ -226,7 +264,7 @@ export default function Counter({
                 }
             />
 
-            <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
+            <div className="grid gap-3 lg:grid-cols-[1fr_22rem]">
                 <Panel>
                     <PanelHeader title="Find medicines" />
                     <PanelBody>
@@ -243,9 +281,10 @@ export default function Counter({
                         {matches.length > 0 && (
                             <ul className="mt-2 divide-y rounded-md border">
                                 {matches.map((medicine) => {
+                                    const taken = inBasket(medicine.id);
                                     const blocked =
                                         medicine.prescriptionOnly ||
-                                        medicine.available === 0;
+                                        medicine.available - taken <= 0;
 
                                     return (
                                         <li key={medicine.id}>
@@ -271,10 +310,15 @@ export default function Counter({
                                                         {medicine.storage}
                                                     </StatusBadge>
                                                 )}
-                                                <span className="ml-auto tabular-nums">
-                                                    {money(medicine.priceMinor)}{' '}
-                                                    · {medicine.available}{' '}
-                                                    {medicine.unit} in stock
+                                                <span className="ml-auto flex items-center gap-2 tabular-nums">
+                                                    {money(medicine.priceMinor)}
+                                                    <StockBadge
+                                                        available={
+                                                            medicine.available
+                                                        }
+                                                        inBasket={taken}
+                                                        unit={medicine.unit}
+                                                    />
                                                 </span>
                                             </button>
                                         </li>
@@ -283,7 +327,7 @@ export default function Counter({
                             </ul>
                         )}
 
-                        <h2 className="mt-6 text-sm font-semibold">Basket</h2>
+                        <h2 className="mt-4 text-sm font-semibold">Basket</h2>
                         {basket.length === 0 ? (
                             <p className="mt-2 text-sm text-muted-foreground">
                                 Nothing yet: search above.
@@ -298,6 +342,11 @@ export default function Counter({
                                         <span className="font-medium">
                                             {line.medicine.label}
                                         </span>
+                                        <StockBadge
+                                            available={line.medicine.available}
+                                            inBasket={lineUnits(line)}
+                                            unit={line.medicine.unit}
+                                        />
                                         {line.medicine.packs.length > 0 && (
                                             <select
                                                 value={line.packId ?? ''}
@@ -451,9 +500,9 @@ export default function Counter({
                     onSuccess={() => {
                         setBasket([]);
                         setTendered('');
-                        setSubmissionId(crypto.randomUUID());
+                        setSubmissionId(uuid());
                     }}
-                    className="grid content-start gap-4 rounded-lg border bg-card p-4 shadow-xs"
+                    className="grid content-start gap-4 rounded-lg border bg-card p-4"
                 >
                     {({ errors, processing }) => (
                         <>

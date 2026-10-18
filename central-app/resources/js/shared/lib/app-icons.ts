@@ -1,5 +1,6 @@
 import {
     Boxes,
+    Calculator,
     GraduationCap,
     Handshake,
     Landmark,
@@ -21,6 +22,7 @@ import type { LucideIcon } from 'lucide-react';
 const icons: Record<string, LucideIcon> = {
     pharmacy: Pill,
     finance: Landmark,
+    advanced_accounting: Calculator,
     retail: ShoppingCart,
     school: GraduationCap,
     hr: Users,

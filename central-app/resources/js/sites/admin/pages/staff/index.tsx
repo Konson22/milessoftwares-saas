@@ -44,7 +44,7 @@ export default function StaffIndex({ staff, roles }: Props) {
             </p>
             <InputError message={errors.staff} className="mt-2" />
 
-            <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_20rem]">
+            <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_20rem]">
                 <ul className="space-y-4">
                     {staff.map((member) => (
                         <li key={member.id} className="rounded-lg border p-4">
@@ -164,7 +164,7 @@ export default function StaffIndex({ staff, roles }: Props) {
                     ))}
                 </ul>
 
-                <aside className="space-y-8">
+                <aside className="space-y-5">
                     <section className="space-y-3">
                         <h2 className="text-lg font-medium">Add staff</h2>
                         <Form

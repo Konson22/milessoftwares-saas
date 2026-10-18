@@ -7,6 +7,7 @@ import {
     Inbox,
     LifeBuoy,
     Package,
+    ReceiptText,
     ShieldCheck,
     ShieldHalf,
     UserCog,
@@ -45,6 +46,12 @@ const navigation: { title: string; items: AdminItem[] }[] = [
                 href: '/support-access',
                 icon: LifeBuoy,
                 permission: 'support.request',
+            },
+            {
+                title: 'Billing',
+                href: '/billing',
+                icon: ReceiptText,
+                permission: 'billing.manage',
             },
             {
                 title: 'Leads',

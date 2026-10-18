@@ -42,7 +42,7 @@ export default function SupportAccessIndex({
             <InputError message={errors.support} className="mt-2" />
 
             {canApprove && (
-                <section className="mt-8">
+                <section className="mt-5">
                     <h2 className="text-lg font-medium">
                         Awaiting your approval
                     </h2>
@@ -54,7 +54,7 @@ export default function SupportAccessIndex({
                 </section>
             )}
 
-            <section className="mt-8">
+            <section className="mt-5">
                 <h2 className="text-lg font-medium">Your requests</h2>
                 <GrantList
                     grants={mine}

@@ -101,7 +101,7 @@ export default function CreateOrganization({
         <>
             <Head title="New organization" />
 
-            <div className="max-w-xl space-y-6">
+            <div className="max-w-xl space-y-3">
                 <Heading
                     title="New organization"
                     description="Your organization gets its own workspace address. You become its owner."
@@ -109,7 +109,7 @@ export default function CreateOrganization({
 
                 <Form
                     {...OrganizationController.store.form()}
-                    className="space-y-6"
+                    className="space-y-3"
                 >
                     {({ processing, errors }) => (
                         <>

@@ -36,13 +36,13 @@ export function StatCard({
     const body = (
         <>
             <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-xs font-medium text-muted-foreground">
                     {label}
                 </p>
                 {Icon && (
                     <span
                         className={cn(
-                            'grid size-8 shrink-0 place-items-center rounded-md',
+                            'grid size-7 shrink-0 place-items-center',
                             ACCENTS[accent],
                         )}
                     >
@@ -50,7 +50,7 @@ export function StatCard({
                     </span>
                 )}
             </div>
-            <div className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">
+            <div className="mt-0.5 text-xl font-semibold tracking-tight tabular-nums">
                 {value}
             </div>
             {hint && (
@@ -59,7 +59,7 @@ export function StatCard({
         </>
     );
     const className =
-        'block rounded-lg border bg-card p-4 shadow-xs transition-colors';
+        'block border bg-card p-3 transition-colors';
 
     return href ? (
         <Link

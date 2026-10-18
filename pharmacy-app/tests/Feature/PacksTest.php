@@ -166,3 +166,27 @@ it('sends loose capsules back out of a box, credited out of its bill to the last
     $this->get($this->workspaceUrl('acme', "receipts/{$receipt->id}"))
         ->assertInertia(fn (AssertableInertia $page) => $page->where('receipt.lines.0.returned', 30)->where('canReturn', false));
 });
+
+it('shows what a unit last cost beside its selling price, and the pack sizes to split a pack cost by', function () {
+    $this->actingAsMember('acme', ['pharmacy.purchasing.view', 'pharmacy.purchasing.manage', 'pharmacy.purchasing.receive', 'pharmacy.medicines.view', 'pharmacy.medicines.manage'], branch: $this->juba);
+
+    // Never received: no buying price yet.
+    $this->get($this->workspaceUrl('acme', 'medicines'))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('medicines.0.name', 'Amoxil')->where('medicines.0.lastUnitCostMinor', null));
+
+    // A box of 30 at 31.00: 103 a capsule, rounded.
+    deliver(null, [['item_id' => $this->amox->id, 'pack_id' => $this->box->id, 'batch_number' => 'AMX-1', 'expires_on' => '2027-09-30', 'quantity' => 1, 'unit_cost' => '31.00']])
+        ->assertSessionHasNoErrors();
+
+    $this->get($this->workspaceUrl('acme', 'medicines'))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('medicines.0.lastUnitCostMinor', 103));
+    $this->get($this->workspaceUrl('acme', "medicines/{$this->amox->id}/edit"))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('medicine.lastUnitCostMinor', 103));
+    $this->get($this->workspaceUrl('acme', 'purchase-orders/create'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('medicines.0.label', 'Amoxil 500 mg tablet')
+            ->where('medicines.0.lastUnitCostMinor', 103)
+            ->where('medicines.0.sellPriceMinor', $this->amox->sell_price_minor)
+            ->where('medicines.0.packs.0.name', 'box')
+            ->where('medicines.0.packs.0.units', 30));
+});

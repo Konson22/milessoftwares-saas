@@ -122,7 +122,7 @@ export function StatusTabs({
                     aria-current={status.value === current ? 'page' : undefined}
                     className={
                         status.value === current
-                            ? 'rounded-sm bg-card px-3 py-1 text-sm font-medium shadow-xs'
+                            ? 'rounded-sm bg-card px-3 py-1 text-sm font-medium'
                             : 'rounded-sm px-3 py-1 text-sm text-muted-foreground hover:text-foreground'
                     }
                 >

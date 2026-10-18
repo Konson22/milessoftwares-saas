@@ -46,7 +46,7 @@ type Props = {
 };
 
 const selectClass =
-    'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs';
+    'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm';
 const scopeLabels: Record<string, string> = {
     organization: 'Whole organization',
     branch: 'One branch',
@@ -73,8 +73,8 @@ export default function Invitations({
                 is checked again when the person accepts.
             </p>
 
-            <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_22rem]">
-                <div className="space-y-8">
+            <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_22rem]">
+                <div className="space-y-5">
                     {credentials && <CredentialsCard {...credentials} />}
 
                     <ul className="divide-y rounded-lg border text-sm">

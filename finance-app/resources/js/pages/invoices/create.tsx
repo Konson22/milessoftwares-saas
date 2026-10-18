@@ -23,7 +23,7 @@ export default function CreateInvoice({ accounts, today }: Props) {
             />
             <Panel>
                 <PanelBody>
-                    <Form {...store.form()} className="grid gap-5">
+                    <Form {...store.form()} className="grid gap-3">
                         {({ errors, processing }) => (
                             <>
                                 <div className="grid gap-3 sm:grid-cols-4">

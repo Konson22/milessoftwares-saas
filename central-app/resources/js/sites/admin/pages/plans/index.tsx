@@ -45,7 +45,7 @@ export default function PlansIndex({ plans, applications, products }: Props) {
                 applications.
             </p>
 
-            <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_24rem]">
+            <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_24rem]">
                 <ul className="space-y-4">
                     {plans.length === 0 && (
                         <p className="text-sm text-muted-foreground">

@@ -199,7 +199,7 @@ export default function Banking({
             />
 
             {(action === 'out' || action === 'in') && (
-                <Panel className="mb-5">
+                <Panel className="mb-3">
                     <PanelHeader
                         title={action === 'out' ? 'Money out' : 'Money in'}
                         description={
@@ -284,7 +284,7 @@ export default function Banking({
             )}
 
             {action === 'transfer' && (
-                <Panel className="mb-5">
+                <Panel className="mb-3">
                     <PanelHeader
                         title="Transfer between accounts"
                         description="For example, banking the day's cash."
@@ -351,7 +351,7 @@ export default function Banking({
             )}
 
             {action === 'account' && (
-                <Panel className="mb-5">
+                <Panel className="mb-3">
                     <PanelHeader title="New bank or cash account" />
                     <PanelBody>
                         <Form
@@ -442,19 +442,19 @@ export default function Banking({
             )}
 
             {banks.length === 0 ? (
-                <Panel className="mb-6">
+                <Panel className="mb-4">
                     <EmptyState
                         icon={Landmark}
                         title="No bank or cash accounts"
                     />
                 </Panel>
             ) : (
-                <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     {banks.map((bank) => (
                         <Link
                             key={bank.id}
                             href={showAccount(bank.id)}
-                            className="rounded-lg border bg-card p-4 shadow-xs transition-colors hover:border-primary/40"
+                            className="rounded-lg border bg-card p-4 transition-colors hover:border-primary/40"
                         >
                             <div className="flex items-start justify-between gap-2">
                                 <div>

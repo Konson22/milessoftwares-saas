@@ -78,6 +78,8 @@ class GoodsReceiptController extends Controller
                         'medicine' => $line->item->name,
                         'remaining' => $line->remaining(),
                         'pack' => $line->packLabel(),
+                        'packName' => $line->pack_name,
+                        'unitsPerPack' => $line->pack_name === null ? 1 : $line->units_per_pack,
                         'unitCost' => Money::toMajor($line->unit_cost_minor),
                     ]),
             ],

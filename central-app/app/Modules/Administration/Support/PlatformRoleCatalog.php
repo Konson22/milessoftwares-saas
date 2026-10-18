@@ -35,8 +35,8 @@ final class PlatformRoleCatalog
             ],
             'billing_admin' => [
                 'name' => 'Billing admin',
-                'description' => 'Manages plans, subscriptions and entitlements.',
-                'permissions' => [P::OrganizationsView, P::PlansManage, P::EntitlementsManage],
+                'description' => 'Manages plans, subscriptions, entitlements, invoices and payments.',
+                'permissions' => [P::OrganizationsView, P::PlansManage, P::EntitlementsManage, P::BillingManage],
             ],
             'catalog_admin' => [
                 'name' => 'Catalog admin',

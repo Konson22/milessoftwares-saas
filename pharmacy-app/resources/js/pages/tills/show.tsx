@@ -52,7 +52,7 @@ export default function ShowTill({ till, summary, methods }: Props) {
                 }
             />
 
-            <div className="grid gap-5 lg:grid-cols-2">
+            <div className="grid gap-3 lg:grid-cols-2">
                 <Panel>
                     <PanelHeader title="Taken" />
                     <PanelBody>
@@ -143,7 +143,7 @@ export default function ShowTill({ till, summary, methods }: Props) {
                         {till.status === 'open' && (
                             <Form
                                 {...close.form(till.id)}
-                                className="mt-5 grid gap-3 border-t pt-4"
+                                className="mt-3 grid gap-3 border-t pt-4"
                             >
                                 {({ errors, processing }) => (
                                     <>

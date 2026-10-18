@@ -118,7 +118,7 @@ export function QuickSearch({
             <button
                 type="button"
                 onClick={() => setOpen(true)}
-                className="hidden h-9 w-56 items-center gap-2 rounded-md border bg-background/60 px-2.5 text-sm text-muted-foreground transition-colors hover:bg-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none md:flex"
+                className="hidden h-8 w-56 items-center gap-2 border bg-background/60 px-2.5 text-sm text-muted-foreground transition-colors hover:bg-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none md:flex"
             >
                 <Search className="size-4" aria-hidden />
                 <span className="flex-1 text-left">Search…</span>
@@ -133,7 +133,7 @@ export function QuickSearch({
                 type="button"
                 onClick={() => setOpen(true)}
                 aria-label="Search"
-                className="grid size-9 place-items-center rounded-md text-muted-foreground hover:bg-accent md:hidden"
+                className="grid size-8 place-items-center text-muted-foreground hover:bg-accent md:hidden"
             >
                 <Search className="size-4" aria-hidden />
             </button>
@@ -188,7 +188,7 @@ export function QuickSearch({
                                 }}
                                 placeholder={placeholder}
                                 aria-label="Search"
-                                className="h-12 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                                className="h-10 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                             />
                             <kbd className="rounded border px-1.5 text-[11px] text-muted-foreground">
                                 Esc
@@ -217,7 +217,7 @@ export function QuickSearch({
                                             setSelected(position)
                                         }
                                         className={cn(
-                                            'flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm',
+                                            'flex w-full items-center gap-3 px-3 py-1.5 text-left text-sm',
                                             position === selected &&
                                                 'bg-accent',
                                         )}

@@ -124,7 +124,7 @@ export default function StockShow({
                 }
             />
 
-            <Panel className="mb-5">
+            <Panel className="mb-3">
                 <PanelHeader title="Batches" />
                 <Table>
                     <TableHeader>
@@ -310,7 +310,7 @@ export default function StockShow({
             </Panel>
 
             {(canHold || canAdjust) && batches.length > 0 && (
-                <div className="mb-5 grid gap-5 lg:grid-cols-2">
+                <div className="mb-3 grid gap-3 lg:grid-cols-2">
                     {canHold && holdBatch !== '' && (
                         <Panel>
                             <PanelHeader
@@ -518,7 +518,7 @@ export default function StockShow({
             )}
 
             {canAdjust && locations.length > 0 && movable && (
-                <Panel className="mb-5 max-w-3xl">
+                <Panel className="mb-3 max-w-3xl">
                     <PanelHeader
                         title="Put away or move"
                         description="Where the units are kept; what is on hand does not change."
@@ -622,7 +622,7 @@ export default function StockShow({
             )}
 
             {canAdjust && (
-                <Panel className="mb-5 max-w-3xl">
+                <Panel className="mb-3 max-w-3xl">
                     <PanelHeader
                         title="Add opening stock"
                         description="Stock already on the shelf, or found in a count. Goods from suppliers are received through purchasing."

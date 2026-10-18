@@ -1,6 +1,11 @@
 import { Form, Head, Link } from '@inertiajs/react';
 import BillingControls from '@/sites/admin/components/billing-controls';
 import type { Subscription } from '@/sites/admin/components/billing-controls';
+import {
+    InvoiceControls,
+    PlanRequestControls,
+} from '@/sites/admin/components/invoice-controls';
+import type { OrganizationBilling } from '@/sites/admin/components/invoice-controls';
 import InputError from '@/shared/components/input-error';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
@@ -38,6 +43,7 @@ type Props = {
         expiresAt: string;
     }[];
     subscriptions: Subscription[];
+    billing: OrganizationBilling;
     plans: { id: string; name: string; trial_days: number }[];
     applications: { id: string; name: string }[];
     activeGrant: { id: string; expiresAt: string } | null;
@@ -45,6 +51,7 @@ type Props = {
         suspend: boolean;
         requestSupport: boolean;
         manageEntitlements: boolean;
+        manageBilling: boolean;
     };
 };
 
@@ -55,6 +62,7 @@ export default function OrganizationShow({
     entitlements,
     supportGrants,
     subscriptions,
+    billing,
     plans,
     applications,
     activeGrant,
@@ -93,7 +101,7 @@ export default function OrganizationShow({
                 {organization.createdAt}
             </p>
 
-            <div className="mt-8 grid gap-10 lg:grid-cols-2">
+            <div className="mt-5 grid gap-5 lg:grid-cols-2">
                 <section className="space-y-4">
                     <h2 className="text-lg font-medium">Customer data</h2>
                     {activeGrant ? (
@@ -223,7 +231,7 @@ export default function OrganizationShow({
                     )}
                 </section>
 
-                <section className="space-y-6">
+                <section className="space-y-3">
                     <div className="space-y-3">
                         <h2 className="text-lg font-medium">Entitlements</h2>
                         {entitlements.length === 0 ? (
@@ -274,6 +282,22 @@ export default function OrganizationShow({
                             entitlements={entitlements}
                             plans={plans}
                             applications={applications}
+                        />
+                    )}
+
+                    {can.manageEntitlements && (
+                        <PlanRequestControls
+                            base={base}
+                            requests={billing.requests}
+                        />
+                    )}
+
+                    {can.manageBilling && (
+                        <InvoiceControls
+                            base={base}
+                            billing={billing}
+                            subscriptions={subscriptions}
+                            currency={organization.currency}
                         />
                     )}
 

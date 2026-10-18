@@ -4,10 +4,12 @@ use App\Modules\Identity\Http\Controllers\FirstPartySignInController;
 use App\Modules\Identity\Http\Controllers\SignOutController;
 use App\Sites\Central\Http\Controllers\Account\JoinController;
 use App\Sites\Central\Http\Controllers\Account\PasswordSetupController;
+use App\Sites\Central\Http\Controllers\Dashboard\BillingController;
 use App\Sites\Central\Http\Controllers\Dashboard\DashboardController;
 use App\Sites\Central\Http\Controllers\Dashboard\InvitationAcceptanceController;
 use App\Sites\Central\Http\Controllers\Dashboard\OrganizationController;
 use App\Sites\Central\Http\Controllers\Dashboard\OrganizationSettingsController;
+use App\Sites\Central\Http\Controllers\Dashboard\SubscriptionController;
 use App\Sites\Central\Http\Controllers\Workspace\AccessController;
 use App\Sites\Central\Http\Controllers\Workspace\InvitationController;
 use App\Sites\Central\Http\Controllers\Workspace\MemberAccountController;
@@ -92,10 +94,34 @@ Route::domain(PlatformHosts::app())->middleware(['auth', 'verified', 'current.or
 
     Route::get('organization/settings', [OrganizationSettingsController::class, 'edit'])->name('organization.settings');
     Route::put('organization/details', [OrganizationSettingsController::class, 'updateDetails'])->name('organization.details.update');
-    Route::get('organization/subscription', [OrganizationSettingsController::class, 'subscription'])->name('organization.subscription');
+    Route::put('organization/billing-details', [OrganizationSettingsController::class, 'updateBilling'])->name('organization.billing-details.update');
     Route::put('organization/slug', [OrganizationSettingsController::class, 'updateSlug'])
         ->middleware('throttle:10,60')
         ->name('organization.slug.update');
+
+    // Plans and subscriptions: changes are requests that staff decide.
+    Route::get('organization/subscription', [SubscriptionController::class, 'show'])->name('organization.subscription');
+    Route::get('organization/plans', [SubscriptionController::class, 'plans'])->name('organization.plans');
+    Route::post('organization/plan-requests', [SubscriptionController::class, 'requestPlan'])
+        ->middleware('throttle:20,60')
+        ->name('organization.plan-requests.store');
+    Route::post('organization/plan-requests/{planRequest}/withdraw', [SubscriptionController::class, 'withdraw'])
+        ->whereUuid('planRequest')
+        ->name('organization.plan-requests.withdraw');
+    Route::post('organization/subscriptions/{subscription}/cancellation', [SubscriptionController::class, 'requestCancellation'])
+        ->whereUuid('subscription')
+        ->middleware('throttle:20,60')
+        ->name('organization.subscriptions.cancellation');
+
+    // Billing: invoices issued by staff, payments made offline and reported here.
+    Route::get('organization/billing', [BillingController::class, 'index'])->name('organization.billing');
+    Route::get('organization/billing/invoices/{invoice}', [BillingController::class, 'invoice'])
+        ->whereUuid('invoice')
+        ->name('organization.invoices.show');
+    Route::post('organization/billing/invoices/{invoice}/payments', [BillingController::class, 'reportPayment'])
+        ->whereUuid('invoice')
+        ->middleware('throttle:20,60')
+        ->name('organization.invoices.payments.store');
 });
 
 // Signed-in hosts are never indexed.

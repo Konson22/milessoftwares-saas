@@ -23,7 +23,7 @@ export default function CustomerMembers({
             <Head title={`${organization.displayName} members`} />
             <SupportAccessBanner organization={organization} grant={grant} />
 
-            <h1 className="mt-6 text-2xl font-semibold">Members</h1>
+            <h1 className="mt-4 text-2xl font-semibold">Members</h1>
             <ul className="mt-4 divide-y rounded-lg border text-sm">
                 {members.map((member) => (
                     <li key={member.id} className="flex items-center gap-4 p-3">

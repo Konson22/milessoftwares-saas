@@ -46,7 +46,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
     const path = useCurrentPath();
 
     return (
-        <div className="flex min-h-screen flex-col overflow-x-clip bg-white font-public text-site-ink">
+        <div className="site-public flex min-h-screen flex-col overflow-x-clip bg-white font-public text-site-ink">
             <a
                 href="#main"
                 className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2"

@@ -25,7 +25,7 @@ export default function CustomerStructure({
             <Head title={`${organization.displayName} structure`} />
             <SupportAccessBanner organization={organization} grant={grant} />
 
-            <div className="mt-6 grid gap-8 md:grid-cols-2">
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
                 <section>
                     <h2 className="text-lg font-medium">Branches</h2>
                     <ul className="mt-3 divide-y rounded-lg border text-sm">

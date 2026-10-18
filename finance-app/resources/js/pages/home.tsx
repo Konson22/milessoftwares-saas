@@ -143,7 +143,7 @@ export default function Home({
                 )}
             </div>
 
-            <div className="mt-6 grid gap-6 xl:grid-cols-3">
+            <div className="mt-4 grid gap-3 xl:grid-cols-3">
                 {recent && (
                     <Panel className="xl:col-span-2">
                         <PanelHeader

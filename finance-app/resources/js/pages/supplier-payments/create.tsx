@@ -78,7 +78,7 @@ export default function PaySupplier({
                     <Field
                         id="supplier"
                         label="Supplier"
-                        className="mb-5 max-w-md"
+                        className="mb-3 max-w-md"
                     >
                         <Select
                             id="supplier"
@@ -106,7 +106,7 @@ export default function PaySupplier({
                     </Field>
 
                     {supplierId && (
-                        <Form {...store.form()} className="grid gap-5">
+                        <Form {...store.form()} className="grid gap-3">
                             {({ errors, processing }) => (
                                 <>
                                     <input
