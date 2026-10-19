@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\HomeController;
+use App\Modules\Documents\Http\Controllers\DocumentController;
 use App\Modules\Employees\Http\Controllers\EmployeeController;
 use App\Modules\Employees\Http\Controllers\EmploymentController;
 use App\Modules\Employees\Http\Controllers\PersonalDetailsController;
@@ -50,4 +51,12 @@ Route::prefix(app(PlatformConfig::class)->path())
         // Personal details: their own page, organization-wide permissions only.
         Route::get('employees/{employee}/personal', [PersonalDetailsController::class, 'show'])->whereUuid('employee')->can('hr.personal.view')->name('employees.personal.show');
         Route::put('employees/{employee}/personal', [PersonalDetailsController::class, 'update'])->whereUuid('employee')->can('hr.personal.manage')->name('employees.personal.update');
+
+        // Documents: listed and opened through HR, downloaded only by a
+        // short-lived signed link (relative: the host is the workspace's).
+        Route::get('employees/{employee}/documents', [DocumentController::class, 'index'])->whereUuid('employee')->can('hr.documents.view')->name('employees.documents.index');
+        Route::post('employees/{employee}/documents', [DocumentController::class, 'store'])->whereUuid('employee')->can('hr.documents.manage')->name('employees.documents.store');
+        Route::get('documents/{document}/open', [DocumentController::class, 'open'])->whereUuid('document')->can('hr.documents.view')->name('documents.open');
+        Route::get('documents/{document}/download', [DocumentController::class, 'download'])->whereUuid('document')->middleware('signed:relative')->can('hr.documents.view')->name('documents.download');
+        Route::delete('documents/{document}', [DocumentController::class, 'destroy'])->whereUuid('document')->can('hr.documents.manage')->name('documents.destroy');
     });

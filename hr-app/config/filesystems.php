@@ -38,6 +38,19 @@ return [
             'report' => false,
         ],
 
+        // Staff documents: never served by the web server or Laravel's
+        // file route, only by DocumentController through a signed link.
+        // Lives in the product's storage (kept across releases) and is
+        // backed up by ops/backup/backup-files.sh.
+        'hr_documents' => [
+            'driver' => 'local',
+            'root' => env('HR_DOCUMENTS_ROOT', storage_path('app/hr-documents')),
+            'visibility' => 'private',
+            'serve' => false,
+            'throw' => true,
+            'report' => true,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

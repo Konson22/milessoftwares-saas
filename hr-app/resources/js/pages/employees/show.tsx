@@ -21,6 +21,7 @@ import {
 import type { Option, StructureOptions } from '@/components/fields';
 import { show, update } from '@/routes/employees';
 import { store as storeContract } from '@/routes/employees/contracts';
+import { index as documents } from '@/routes/employees/documents';
 import { leave } from '@/routes/employees';
 import { store as storeMove } from '@/routes/employees/moves';
 import { show as personal } from '@/routes/employees/personal';
@@ -80,7 +81,12 @@ type Props = {
     employee: Employee;
     records: Record[];
     contracts: Contract[];
-    can: { edit: boolean; employment: boolean; personal: boolean };
+    can: {
+        edit: boolean;
+        employment: boolean;
+        personal: boolean;
+        documents: boolean;
+    };
     options:
         | (StructureOptions & {
               managers: { id: string; name: string }[];
@@ -161,6 +167,13 @@ export default function ShowEmployee({
                 }
                 actions={
                     <>
+                        {can.documents && (
+                            <Button asChild variant="outline">
+                                <Link href={documents(employee.id)}>
+                                    Documents
+                                </Link>
+                            </Button>
+                        )}
                         {can.personal && (
                             <Button asChild variant="outline">
                                 <Link href={personal(employee.id)}>

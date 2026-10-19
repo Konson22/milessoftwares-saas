@@ -6,7 +6,7 @@ Staff records and, from HR Phase H5, payroll for every Miles ERP product, served
 [`docs/erp/hr-roadmap.md`](../docs/erp/hr-roadmap.md)). Built from `templates/product-app` and
 connected through [`miles/platform-client`](../packages/platform-client/README.md).
 
-## What is here (H1)
+## What is here (H1–H2)
 
 - **Staff** (`app/Modules/Employees`): profiles with work details, employee numbers (`E-00001`),
   managers, an append-only employment history (hired, transfer, promotion, change, left),
@@ -17,6 +17,12 @@ connected through [`miles/platform-client`](../packages/platform-client/README.m
   never value. **Losing `APP_KEY` loses these details**: back it up with the database.
 - **Who sees whom** (`App\Support\StaffScope`): an organization role reaches everyone, a branch
   role that branch's staff, a department role that department's. Anyone out of reach answers 404.
+- **Documents** (`app/Modules/Documents`): contracts, permits, licences, ID copies on each
+  person's record, on the private `hr_documents` disk (`storage/app/hr-documents`, never served
+  directly). PDF, JPEG or PNG by content, up to 8 MB. Downloads go through a link signed for five
+  minutes and are logged; identity documents also need the personal permissions. Expired and
+  expiring documents are listed on the home page. Back the directory up with
+  `ops/backup/backup-files.sh` (`miles-backup-files@hr.timer`).
 - **Structure** (`App\Support\Structure`): branches, departments and positions come from the
   platform; HR stores only their ids.
 

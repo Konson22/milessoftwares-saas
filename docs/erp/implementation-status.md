@@ -23,6 +23,7 @@
 | 4 – 11 | Not started |
 | HR H0 Foundation (structure API, `hr-app`) | Done 2026-10-19 |
 | HR H1 Staff records | Done 2026-10-19 |
+| HR H2 Documents | Done 2026-10-19 |
 
 Decisions accepted 2026-10-16: D1 → `docs/adr/0003-erp-workspace-application.md`,
 D2 → `docs/adr/0004-companies-as-organizations.md`. Accepted 2026-10-19: D3 →
@@ -532,3 +533,40 @@ separate application, `hr-app` (registry code `hr`, status `planned`); Payroll w
 rotation yet); lists stop at 500 staff (search narrows); a department grant does not reach
 sub-departments; the platform's structure lists are cached for up to a minute, so a just-added
 branch may take that long to appear.
+
+## HR Phase H2 — 2026-10-19 (local, Windows)
+
+**Implemented** (`hr-app`, module `App\Modules\Documents`):
+- Migration `2026_10_20_100000_create_employee_documents_table`: `employee_documents` (category,
+  title, issued and expiry dates, file metadata with SHA-256, uploaded and removed by), and
+  `hr_audit_log.subject_id` (which document an entry is about).
+- Private `hr_documents` disk (`storage/app/hr-documents`, `serve: false`); files stored at
+  `{organization}/{employee}/{document id}`, nothing from the upload in the path. The uploaded
+  name is kept, cleaned, as the download name with the extension of what the file really is.
+- Upload: PDF, JPEG or PNG judged by content (`mimes`) and by name (`extensions`), up to 8 MB;
+  php-fpm pool `upload_max_filesize` 9M, `post_max_size` 10M (nginx allows 10 MB).
+- Access follows the staff (`hr.documents.view` / `.manage` where the employee works; out of
+  reach is 404). Identity documents also need the organization-wide `hr.personal.view` /
+  `.manage`; others see only that some are hidden.
+- Downloads: the page links to `documents/{id}/open` (checks access), which redirects to
+  `documents/{id}/download` signed for 5 minutes (`signed:relative`), which checks access again,
+  logs `documents.downloaded` and sends the file as an attachment with `nosniff`, `no-store` and
+  a sandboxing CSP.
+- Removing deletes the file after the commit and keeps the row (who, when).
+- Home: "Documents to renew", expired or expiring in 30 days, for current staff in reach.
+- Backups: `ops/backup/backup-files.sh` (tar, GPG, SHA-256, upload, retention; refuses
+  production without a GPG recipient) and `miles-backup-files@.{service,timer}` (02:30 UTC,
+  instance `hr`); runbook section "Product files".
+
+**Tests executed:**
+- HR: Pest 28 passed (`DocumentsTest` 6 new); PHPStan 0; Pint; `vp check`; `tsc`; build.
+- Local PostgreSQL (`hr`): `migrate`, `migrate:rollback --step=1`, `migrate`.
+- `backup-files.sh` run locally: archive lists the tree, `sha256sum -c` OK, refuses
+  `APP_ENV=production` without `BACKUP_GPG_RECIPIENT`, refuses a bad name.
+- Mutations: removing `signed:relative` fails the signed-link test; skipping the identity check
+  fails the identity test.
+
+**Known limitations:** reminders are the home-page list only (no e-mail yet); files are not
+encrypted at rest by the application (disk encryption and the encrypted backup cover them); no
+virus scanning. The nightly logical dump (`backup.sh`) covers only `PGDATABASE`; product databases
+(`hr`, also pharmacy and finance) rely on cluster-wide WAL archiving until a dump per database is added.

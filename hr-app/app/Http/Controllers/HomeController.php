@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Modules\Documents\Enums\DocumentCategory;
+use App\Modules\Documents\Http\Controllers\DocumentController;
+use App\Modules\Documents\Models\Document;
 use App\Modules\Employees\Models\Contract;
 use App\Modules\Employees\Models\Employee;
 use App\Support\StaffScope;
@@ -11,7 +14,8 @@ use Inertia\Response;
 
 /**
  * The staff at a glance, for the staff the member can see: headcount,
- * who joined and left this month, and contracts and probations ending soon.
+ * who joined and left this month, contracts and probations ending soon,
+ * and documents (permits, licences) that have expired or are about to.
  */
 class HomeController extends Controller
 {
@@ -58,7 +62,44 @@ class HomeController extends Controller
                 'leftThisMonth' => $visible()->where('status', Employee::LEFT)->where('left_on', '>=', $today->startOfMonth()->toDateString())->count(),
                 'soonDays' => self::SOON_DAYS,
                 'endingSoon' => $ending,
+                'documents' => $scope->holds('hr.documents.view') ? $this->expiringDocuments($scope, $today) : null,
             ],
         ]);
+    }
+
+    /**
+     * Documents of current staff that have expired or expire within
+     * DocumentController::EXPIRING_DAYS, for the staff whose documents the
+     * member can see (identity documents only with the personal permission).
+     *
+     * @return list<array{id: string, employeeId: string, name: string, title: string, category: string, expiresOn: string, expiry: string}>
+     */
+    private function expiringDocuments(StaffScope $scope, CarbonImmutable $today): array
+    {
+        $staff = $scope->apply(Employee::query(), 'hr.documents.view')->where('status', Employee::ACTIVE)->select('id');
+
+        return array_values(Document::query()
+            ->whereNull('removed_at')
+            ->whereNotNull('expires_on')
+            ->where('expires_on', '<=', $today->addDays(DocumentController::EXPIRING_DAYS)->toDateString())
+            ->whereIn('employee_id', $staff)
+            ->when(! $scope->organizationWide('hr.personal.view'), fn ($query) => $query->whereNotIn('category', array_map(
+                fn (DocumentCategory $category) => $category->value,
+                array_filter(DocumentCategory::cases(), fn (DocumentCategory $category) => $category->restricted()),
+            )))
+            ->with('employee')
+            ->orderBy('expires_on')
+            ->limit(20)
+            ->get()
+            ->map(fn (Document $document) => [
+                'id' => $document->id,
+                'employeeId' => $document->employee_id,
+                'name' => $document->employee->displayName(),
+                'title' => $document->title,
+                'category' => $document->category->label(),
+                'expiresOn' => (string) $document->expires_on?->toDateString(),
+                'expiry' => (string) DocumentController::expiry($document, $today),
+            ])
+            ->all());
     }
 }

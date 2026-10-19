@@ -7,6 +7,7 @@
 | Database (logical)       | `ops/backup/backup.sh` nightly 02:15 UTC (`miles-backup.timer`) | Off-site bucket, GPG-encrypted                             | 35 days in bucket, 14 local |
 | Database (point in time) | WAL archiving on the PostgreSQL server (e.g. pgBackRest/WAL-G)  | Off-site bucket                                            | 7 days of WAL               |
 | Audit trail              | `platform:audit-export` hourly, NDJSON with hashes              | `audit` disk: write-once (S3 Object Lock, compliance mode) | 7 years                     |
+| HR staff documents       | `ops/backup/backup-files.sh` nightly 02:30 UTC (`miles-backup-files@hr.timer`) | Off-site bucket, GPG-encrypted              | 35 days in bucket, 14 local |
 | Passport keys, `.env`    | Secret store                                                    | —                                                          | —                           |
 
 Redis holds sessions, cache and queued jobs only. Losing it signs everyone out and drops queued jobs;
@@ -27,6 +28,26 @@ BACKUP_UPLOAD_CMD=aws s3 cp --sse aws:kms
 `miles_backup` needs only `CONNECT` and `SELECT` on every table (`pg_read_all_data`).
 `backup.sh` refuses to run in production without `BACKUP_GPG_RECIPIENT`, writes files mode 0600, and
 deletes the unencrypted dump on any failure (checked on 2026-10-10).
+
+### Product files
+
+HR keeps staff documents on its private `hr_documents` disk, under
+`/srv/miles/shared/products/hr/storage/app/hr-documents` (outside the releases). The database row
+describes a document, the file is only in this archive, so the two are restored together.
+
+```bash
+install -d -o miles -g miles -m 0700 /var/backups/miles/files
+cp ops/systemd/miles-backup-files@.{service,timer} /etc/systemd/system/
+systemctl daemon-reload && systemctl enable --now miles-backup-files@hr.timer
+```
+
+The service runs as `miles` (the files are written 0600) with the same `backup.env`; the script
+refuses to run in production without `BACKUP_GPG_RECIPIENT` and never leaves an unencrypted archive.
+
+Restore: check the `.sha256`, `gpg --decrypt` with the offline key, then into an empty directory
+`tar -xzf <archive> -C <dir>` and move `hr-documents/` into the product's `storage/app` (owner
+`miles`, mode 0700 directories). A row whose file is missing gives a 404 on download, never another
+file: paths are `{organization}/{employee}/{document id}`.
 
 ## Restore drill (quarterly, and before go-live)
 

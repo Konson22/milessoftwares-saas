@@ -3,6 +3,7 @@
 namespace App\Modules\Employees\Models;
 
 use App\Models\User;
+use App\Modules\Documents\Models\Document;
 use App\Modules\Employees\Enums\EmploymentType;
 use App\Modules\Employees\Enums\LeavingReason;
 use Carbon\CarbonImmutable;
@@ -122,6 +123,14 @@ class Employee extends Model
     public function contracts(): HasMany
     {
         return $this->hasMany(Contract::class);
+    }
+
+    /**
+     * @return HasMany<Document, $this>
+     */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(Document::class);
     }
 
     /**

@@ -18,6 +18,7 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property string $actor_id
  * @property string $action
  * @property string|null $employee_id
+ * @property string|null $subject_id
  * @property list<string>|null $fields
  * @property CarbonImmutable $created_at
  * @property-read User $actor

@@ -186,6 +186,7 @@ class EmployeeController extends Controller
                 'edit' => $active && $this->scope->allows('hr.employees.manage', $employee),
                 'employment' => $active && $this->scope->allows('hr.employment.manage', $employee),
                 'personal' => $this->scope->organizationWide('hr.personal.view'),
+                'documents' => $this->scope->allows('hr.documents.view', $employee),
             ],
             'options' => $active ? [
                 ...$this->structure->options(),

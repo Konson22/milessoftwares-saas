@@ -1,0 +1,18 @@
+# Nightly encrypted archive of a product's private files
+# (ops/backup/backup-files.sh), via miles-backup-files@<code>.timer.
+# Enable for HR: systemctl enable --now miles-backup-files@hr.timer
+# Runs as miles, which owns the files (they are written 0600).
+# /etc/miles/backup.env holds BACKUP_GPG_RECIPIENT and BACKUP_UPLOAD_CMD
+# (its BACKUP_DIR is miles-backup's; this one, set on the command line
+# because the file would override Environment=, belongs to miles).
+[Unit]
+Description=Miles %i private files backup
+
+[Service]
+Type=oneshot
+User=miles
+EnvironmentFile=/etc/miles/backup.env
+Environment=APP_ENV=production
+ExecStart=/usr/bin/env BACKUP_DIR=/var/backups/miles/files /bin/bash /srv/miles/current/ops/backup/backup-files.sh /srv/miles/shared/products/%i/storage/app %i-files
+NoNewPrivileges=true
+PrivateTmp=true
