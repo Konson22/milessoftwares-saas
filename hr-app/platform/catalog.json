@@ -1,0 +1,99 @@
+{
+    "application": {
+        "code": "hr",
+        "name": "HR & Payroll",
+        "category": "products",
+        "kind": "shared_module",
+        "status": "planned"
+    },
+    "version": "1.0.0",
+    "permissions": [
+        {
+            "key": "hr.employees.view",
+            "name": "View staff profiles (work details)",
+            "description": "Name, job, branch, department, manager, work contacts and employment history. No personal or pay details.",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch", "department"]
+        },
+        {
+            "key": "hr.employees.manage",
+            "name": "Add staff and change work details",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch", "department"]
+        },
+        {
+            "key": "hr.employment.manage",
+            "name": "Record contracts, transfers, promotions and leaving",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "hr.personal.view",
+            "name": "View personal details",
+            "description": "Identity numbers, date of birth, home address, next of kin and bank details.",
+            "sensitivity": 4,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "hr.personal.manage",
+            "name": "Change personal details",
+            "sensitivity": 4,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "hr.documents.view",
+            "name": "View staff documents",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch", "department"]
+        },
+        {
+            "key": "hr.documents.manage",
+            "name": "Upload and remove staff documents",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        }
+    ],
+    "roles": [
+        {
+            "key": "line_manager",
+            "name": "Line manager",
+            "description": "Sees the work details of the staff in their branch or department.",
+            "sensitivity": 1,
+            "delegable": true,
+            "scopes": ["organization", "branch", "department"],
+            "permissions": ["hr.employees.view"]
+        },
+        {
+            "key": "hr_officer",
+            "name": "HR officer",
+            "description": "Keeps staff records, contracts and documents. No personal or bank details.",
+            "sensitivity": 3,
+            "delegable": true,
+            "scopes": ["organization", "branch"],
+            "permissions": [
+                "hr.employees.view",
+                "hr.employees.manage",
+                "hr.employment.manage",
+                "hr.documents.view",
+                "hr.documents.manage"
+            ]
+        },
+        {
+            "key": "hr_manager",
+            "name": "HR manager",
+            "description": "Everything in HR, including personal and bank details.",
+            "sensitivity": 4,
+            "delegable": false,
+            "scopes": ["organization"],
+            "permissions": [
+                "hr.employees.view",
+                "hr.employees.manage",
+                "hr.employment.manage",
+                "hr.personal.view",
+                "hr.personal.manage",
+                "hr.documents.view",
+                "hr.documents.manage"
+            ]
+        }
+    ]
+}
