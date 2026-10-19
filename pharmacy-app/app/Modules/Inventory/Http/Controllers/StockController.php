@@ -16,6 +16,7 @@ use App\Modules\Inventory\Models\StockDisposal;
 use App\Modules\Inventory\Models\StockLocation;
 use App\Modules\Inventory\Models\StockMovement;
 use App\Support\CurrentBranch;
+use App\Support\Industry;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -34,7 +35,10 @@ class StockController extends Controller
     /** "Expiring soon" means within this many days. */
     public const EXPIRING_DAYS = 90;
 
-    public function __construct(private readonly CurrentBranch $branch) {}
+    public function __construct(
+        private readonly CurrentBranch $branch,
+        private readonly Industry $industry,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -49,15 +53,16 @@ class StockController extends Controller
             ->where('quantity_on_hand', '>', 0)
             ->groupBy('item_id')
             ->select('item_id')
-            ->selectRaw("SUM(CASE WHEN expires_on > ? AND status = 'available' THEN quantity_on_hand ELSE 0 END) AS sellable", [$today->toDateString()])
+            ->selectRaw("SUM(CASE WHEN (expires_on IS NULL OR expires_on > ?) AND status = 'available' THEN quantity_on_hand ELSE 0 END) AS sellable", [$today->toDateString()])
             ->selectRaw('SUM(CASE WHEN expires_on <= ? THEN quantity_on_hand ELSE 0 END) AS expired', [$today->toDateString()])
-            ->selectRaw("SUM(CASE WHEN expires_on > ? AND status <> 'available' THEN quantity_on_hand ELSE 0 END) AS held", [$today->toDateString()])
+            ->selectRaw("SUM(CASE WHEN (expires_on IS NULL OR expires_on > ?) AND status <> 'available' THEN quantity_on_hand ELSE 0 END) AS held", [$today->toDateString()])
             ->selectRaw("MIN(CASE WHEN expires_on > ? AND status = 'available' THEN expires_on END) AS next_expiry", [$today->toDateString()])
             ->get()
             ->keyBy('item_id');
 
         $rows = Item::query()
             ->where('active', true)
+            ->ofKind($this->industry->itemKinds())
             ->search($request->string('search')->toString())
             ->orderBy('name')
             ->get()
@@ -92,7 +97,7 @@ class StockController extends Controller
             })
             ->values();
 
-        return Inertia::render('stock/index', [
+        return Inertia::render($this->industry->page('stock/index'), [
             'rows' => $rows,
             'filters' => ['search' => $request->string('search')->toString(), 'filter' => $filter],
             'expiringDays' => self::EXPIRING_DAYS,
@@ -101,12 +106,13 @@ class StockController extends Controller
 
     public function show(Request $request, Item $item): Response
     {
+        $this->ensureOurs($item);
         $today = CarbonImmutable::today();
 
         $batches = Batch::query()
             ->where('branch_id', $this->branch->id())
             ->where('item_id', $item->id)
-            ->orderBy('expires_on')
+            ->firstToExpire()
             ->get();
         // Where each batch's units are kept; the rest is not put away.
         $placed = BatchLocation::query()
@@ -119,7 +125,7 @@ class StockController extends Controller
             ->map(fn (Batch $batch) => [
                 'id' => $batch->id,
                 'batchNumber' => $batch->batch_number,
-                'expiresOn' => $batch->expires_on->toDateString(),
+                'expiresOn' => $batch->expires_on?->toDateString(),
                 'expired' => $batch->isExpired($today),
                 'quantity' => $batch->quantity_on_hand,
                 'unitCostMinor' => $batch->unit_cost_minor,
@@ -171,13 +177,14 @@ class StockController extends Controller
         $access = app(CurrentAccess::class)->get();
         $can = fn (string $permission) => $access?->allowsIn($permission, branchId: $this->branch->id()) ?? false;
 
-        return Inertia::render('stock/show', [
+        return Inertia::render($this->industry->page('stock/show'), [
             'medicine' => [
                 'id' => $item->id,
                 'label' => $item->name,
                 'unit' => $item->unit,
                 'controlled' => $item->controlled,
                 'reorderLevel' => $item->reorder_level,
+                'tracksExpiry' => $item->tracks_expiry,
             ],
             'batches' => $batches,
             'movements' => $movements,
@@ -185,8 +192,8 @@ class StockController extends Controller
             'locations' => StockLocation::query()->where('branch_id', $this->branch->id())->where('active', true)->orderBy('name')->get(['id', 'name'])->map(fn (StockLocation $location) => ['id' => $location->id, 'name' => $location->name]),
             'reasons' => array_map(fn (AdjustmentReason $reason) => ['value' => $reason->value, 'label' => $reason->label()], AdjustmentReason::cases()),
             'disposalReasons' => array_map(fn (DisposalReason $reason) => ['value' => $reason->value, 'label' => $reason->label()], DisposalReason::cases()),
-            'canAdjust' => $can('pharmacy.stock.adjust'),
-            'canHold' => $can('pharmacy.stock.hold'),
+            'canAdjust' => $can($this->industry->permission('stock.adjust')),
+            'canHold' => $can($this->industry->permission('stock.hold')),
         ]);
     }
 
@@ -196,9 +203,10 @@ class StockController extends Controller
      */
     public function storeOpening(Request $request, Item $item, Stock $stock): RedirectResponse
     {
+        $this->ensureOurs($item);
         $validated = $request->validate([
             'batch_number' => ['required', 'string', 'max:64'],
-            'expires_on' => ['required', 'date', 'after:today'],
+            'expires_on' => [Rule::requiredIf($item->tracks_expiry), 'nullable', 'date', 'after:today'],
             'quantity' => ['required', 'integer', 'min:1', 'max:1000000'],
             'unit_cost' => ['required', 'string', Money::rule()],
             'location_id' => ['nullable', 'uuid'],
@@ -208,7 +216,7 @@ class StockController extends Controller
             item: $item,
             branchId: $this->branch->id(),
             batchNumber: trim($validated['batch_number']),
-            expiresOn: CarbonImmutable::parse($validated['expires_on']),
+            expiresOn: isset($validated['expires_on']) ? CarbonImmutable::parse($validated['expires_on']) : null,
             quantity: (int) $validated['quantity'],
             unitCostMinor: Money::toMinor($validated['unit_cost']),
             user: $this->user($request),
@@ -278,5 +286,13 @@ class StockController extends Controller
         abort_unless($user instanceof User, 401);
 
         return $user;
+    }
+
+    /**
+     * Another industry's items look unknown here.
+     */
+    private function ensureOurs(Item $item): void
+    {
+        abort_unless(in_array($item->kind, $this->industry->itemKinds(), true), 404);
     }
 }

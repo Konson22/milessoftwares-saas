@@ -22,6 +22,8 @@ abstract class TestCase extends Orchestra
 
     public const WEBHOOK_SECRET = 'whsec_test_secret';
 
+    public const RETAIL_WEBHOOK_SECRET = 'whsec_retail_secret';
+
     protected function getPackageProviders($app): array
     {
         return [PlatformClientServiceProvider::class];
@@ -42,6 +44,13 @@ abstract class TestCase extends Orchestra
             'service' => ['client_id' => 'service-client', 'client_secret' => 'service-secret'],
             'webhook_secret' => self::WEBHOOK_SECRET,
             'user_model' => User::class,
+            // A second application served by the same deployment.
+            'hosted' => ['retail' => [
+                'path' => 'retail',
+                'sign_in' => ['client_id' => 'retail-sign-in-client', 'client_secret' => 'retail-sign-in-secret'],
+                'service' => ['client_id' => 'retail-service-client', 'client_secret' => 'retail-service-secret'],
+                'webhook_secret' => self::RETAIL_WEBHOOK_SECRET,
+            ]],
         ]));
     }
 
@@ -62,6 +71,14 @@ abstract class TestCase extends Orchestra
             ->group(function (Router $router) {
                 $router->get('/', fn () => 'pharmacy home')->name('home');
                 $router->get('/dispense', fn () => Gate::allows('pharmacy.dispense') ? 'can dispense' : 'cannot dispense');
+            });
+
+        // The hosted application's pages.
+        $router->prefix('retail')
+            ->middleware(['web', 'platform.app:retail', 'platform'])
+            ->group(function (Router $router) {
+                $router->get('/', fn () => 'retail home');
+                $router->get('/sell', fn () => Gate::allows('retail.sales.create') ? 'can sell' : 'cannot sell');
             });
     }
 

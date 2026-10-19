@@ -158,7 +158,7 @@ export default function ProductPage({
                     aria-labelledby="try-heading"
                     className="px-4 py-24 sm:px-6"
                 >
-                    <div className="relative isolate mx-auto flex max-w-7xl flex-col items-center gap-6 overflow-hidden rounded-3xl bg-linear-to-br from-[#c2410c] via-[#b93a0b] to-[#9a3412] px-6 py-16 text-center text-white sm:px-12">
+                    <div className="relative isolate mx-auto flex max-w-7xl flex-col items-center gap-6 overflow-hidden rounded-3xl bg-linear-to-br from-brand-blue-dark via-brand-blue to-[#0b6e63] px-6 py-16 text-center text-white sm:px-12">
                         <div
                             aria-hidden
                             className="absolute -top-24 -right-24 -z-10 size-72 rounded-full border-[40px] border-white/10"

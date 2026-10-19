@@ -8,6 +8,7 @@ use App\Modules\Sales\Actions\Tills;
 use App\Modules\Sales\Enums\PaymentMethod;
 use App\Modules\Sales\Models\TillSession;
 use App\Support\CurrentBranch;
+use App\Support\Industry;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -18,7 +19,7 @@ use Miles\PlatformClient\Access\CurrentAccess;
 
 /**
  * Tills of the branch being worked in. Cashiers open, see and close their
- * own; with pharmacy.tills.manage a manager sees and closes everyone's
+ * own; with <industry>.tills.manage a manager sees and closes everyone's
  * (the cashier reconciliation).
  */
 class TillController extends Controller
@@ -26,6 +27,7 @@ class TillController extends Controller
     public function __construct(
         private readonly CurrentBranch $branch,
         private readonly Tills $tills,
+        private readonly Industry $industry,
     ) {}
 
     public function index(Request $request): Response
@@ -46,7 +48,7 @@ class TillController extends Controller
 
         $mine = $this->tills->openFor($user, $this->branch->id());
 
-        return Inertia::render('tills/index', [
+        return Inertia::render($this->industry->page('tills/index'), [
             'day' => $day->toDateString(),
             'managing' => $managing,
             'mine' => $mine === null ? null : $this->present($mine),
@@ -68,7 +70,7 @@ class TillController extends Controller
         $this->ensureVisible($request, $till);
         $till->load(['opener:id,name', 'closer:id,name']);
 
-        return Inertia::render('tills/show', [
+        return Inertia::render($this->industry->page('tills/show'), [
             'till' => $this->present($till),
             'summary' => $this->tills->summary($till),
             'methods' => array_map(fn (PaymentMethod $method) => ['value' => $method->value, 'label' => $method->label()], PaymentMethod::cases()),
@@ -111,7 +113,7 @@ class TillController extends Controller
 
     private function manages(): bool
     {
-        return app(CurrentAccess::class)->get()?->allowsIn('pharmacy.tills.manage', branchId: $this->branch->id()) ?? false;
+        return app(CurrentAccess::class)->get()?->allowsIn($this->industry->permission('tills.manage'), branchId: $this->branch->id()) ?? false;
     }
 
     /**

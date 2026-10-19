@@ -178,3 +178,8 @@ Route::prefix(app(PlatformConfig::class)->path())
             });
         });
     });
+
+// Retail, when this deployment also serves it (PLATFORM_HOSTED=retail).
+if (app(PlatformConfig::class)->serves('retail')) {
+    require __DIR__.'/retail.php';
+}

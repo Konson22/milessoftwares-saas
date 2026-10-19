@@ -10,6 +10,7 @@ use App\Modules\Inventory\Models\Item;
 use App\Modules\Sales\Enums\PaymentMethod;
 use App\Modules\Sales\Models\Sale;
 use App\Support\DocumentNumbers;
+use App\Support\Industry;
 use App\Support\Money;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -25,10 +26,17 @@ use Miles\PlatformClient\Events\Outbox;
  * happened completely or not at all.
  *
  * Restricted items (prescription-only medicines) are only sold when the
- * industry module has authorized them for this sale ($authorized).
+ * industry module has authorized them for this sale ($authorized). Only
+ * items of the industry being served are sold, and the sale is recorded
+ * as its own (App\Support\Industry).
  *
  * The money goes into the seller's open till at the branch; without one
  * nothing is sold.
+ *
+ * On account (PaymentMethod::Account) nothing is paid now: the sale names an
+ * account customer, stays within their credit limit (checked with the
+ * customer locked), is due after their payment terms, and Finance gets the
+ * invoice with its due date but no payment (CustomerAccounts).
  *
  * A sale submitted with a $submissionId that was already used is that
  * sale again, not a second one (a double click, a retried request).
@@ -41,12 +49,15 @@ class Sell
         private readonly Outbox $outbox,
         private readonly Tills $tills,
         private readonly ItemPacks $packs,
+        private readonly Industry $industry,
+        private readonly CustomerAccounts $accounts,
     ) {}
 
     /**
      * @param  list<array{item_id: string, quantity: int, discount_percent?: int, pack_id?: string|null}>  $items  quantity in packs when a pack is named
      * @param  list<string>  $authorized  restricted item ids allowed in this sale (a verified prescription's)
      * @param  int  $maxDiscountPercent  the most this seller may take off a line (0: no discounts)
+     * @param  string|null  $customerId  an account customer of this industry (required on account)
      *
      * @throws ValidationException
      * @throws InsufficientStock
@@ -62,13 +73,14 @@ class Sell
         array $authorized = [],
         int $maxDiscountPercent = 0,
         ?string $submissionId = null,
+        ?string $customerId = null,
     ): Sale {
         if ($submissionId !== null && ($earlier = $this->submitted($submissionId)) !== null) {
             return $earlier;
         }
 
         try {
-            return $this->sell($by, $branchId, $items, $method, $paymentReference, $tenderedMinor, $customerName, $authorized, $maxDiscountPercent, $submissionId);
+            return $this->sell($by, $branchId, $items, $method, $paymentReference, $tenderedMinor, $customerName, $authorized, $maxDiscountPercent, $submissionId, $customerId);
         } catch (UniqueConstraintViolationException $e) {
             // The same submission, committed by a request running alongside.
             if ($submissionId !== null && ($earlier = $this->submitted($submissionId)) !== null) {
@@ -94,9 +106,16 @@ class Sell
         array $authorized,
         int $maxDiscountPercent,
         ?string $submissionId,
+        ?string $customerId,
     ): Sale {
-        return DB::transaction(function () use ($by, $branchId, $items, $method, $paymentReference, $tenderedMinor, $customerName, $authorized, $maxDiscountPercent, $submissionId) {
+        return DB::transaction(function () use ($by, $branchId, $items, $method, $paymentReference, $tenderedMinor, $customerName, $authorized, $maxDiscountPercent, $submissionId, $customerId) {
             $till = $this->tills->requireOpen($by, $branchId);
+
+            // Locked until the sale commits: its balance cannot move meanwhile.
+            $customer = $customerId === null ? null : $this->accounts->lock($customerId);
+            if ($method === PaymentMethod::Account && $customer === null) {
+                throw ValidationException::withMessages(['customer_id' => 'Choose the customer this sale goes on.']);
+            }
 
             // Price and check everything before touching stock.
             $priced = [];
@@ -106,7 +125,7 @@ class Sell
             foreach ($items as $index => $line) {
                 $item = Item::query()->find($line['item_id']);
 
-                if ($item === null || ! $item->active) {
+                if ($item === null || ! $item->active || ! $this->industry->handles($item->kind)) {
                     throw ValidationException::withMessages(["items.{$index}.item_id" => 'This item cannot be sold.']);
                 }
                 if ($item->restricted && ! in_array($item->id, $authorized, true)) {
@@ -133,6 +152,10 @@ class Sell
                 $discountTotal += $discount;
             }
 
+            if ($method === PaymentMethod::Account) {
+                $this->accounts->ensureCredit($customer, $total);
+            }
+
             $change = null;
             if ($method === PaymentMethod::Cash) {
                 if ($tenderedMinor === null || $tenderedMinor < $total) {
@@ -143,9 +166,12 @@ class Sell
 
             $sale = Sale::query()->create([
                 'branch_id' => $branchId,
+                'application' => $this->industry->code(),
                 'number' => $this->numbers->next('sale', 'S', 6),
                 'status' => Sale::COMPLETED,
-                'customer_name' => $customerName,
+                'customer_name' => $customer->name ?? $customerName,
+                'customer_id' => $customer?->id,
+                'due_on' => $method === PaymentMethod::Account ? today()->addDays($customer->payment_terms_days) : null,
                 'currency' => Money::currency(),
                 'total_minor' => $total,
                 'discount_minor' => $discountTotal,
@@ -204,15 +230,15 @@ class Sell
             $this->outbox->record('finance', 'finance.invoice.issued', 1, "sale:{$sale->id}:invoice", [
                 'invoice_number' => $sale->number,
                 'branch_id' => $branchId,
-                'customer_reference' => $customerName,
+                'customer_reference' => $customer === null ? $customerName : "{$customer->name} ({$customer->number})",
                 'currency' => $sale->currency,
                 'total_minor' => $total,
                 'tax_minor' => 0,
-                'due_on' => null,
+                'due_on' => $sale->due_on?->toDateString(),
                 'lines' => $invoiceLines,
             ], $sale->sold_at);
 
-            if ($total > 0) {
+            if ($total > 0 && $method->paidNow()) {
                 $this->outbox->record('finance', 'finance.payment.received', 1, "sale:{$sale->id}:payment", [
                     'payment_reference' => $sale->number,
                     'invoice_number' => $sale->number,

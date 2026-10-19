@@ -58,6 +58,8 @@ class ReturnGoods
 
             $return = SupplierReturn::query()->create([
                 'branch_id' => $locked->branch_id,
+                // The industry module that received the goods sends them back.
+                'application' => $locked->application,
                 'number' => $this->numbers->next('supplier_return', 'RTN'),
                 'supplier_id' => $locked->supplier_id,
                 'goods_receipt_id' => $locked->id,

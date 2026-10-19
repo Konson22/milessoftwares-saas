@@ -66,14 +66,14 @@ class LocationController extends Controller
                 ->where('quantity', '>', 0)
                 ->with('batch.item')
                 ->get()
-                ->sortBy(fn (BatchLocation $placement) => [$placement->batch->item->name, $placement->batch->expires_on->toDateString()])
+                ->sortBy(fn (BatchLocation $placement) => [$placement->batch->item->name, $placement->batch->expires_on?->toDateString()])
                 ->values()
                 ->map(fn (BatchLocation $placement) => [
                     'id' => $placement->id,
                     'itemId' => $placement->batch->item_id,
                     'medicine' => $placement->batch->item->name,
                     'batchNumber' => $placement->batch->batch_number,
-                    'expiresOn' => $placement->batch->expires_on->toDateString(),
+                    'expiresOn' => $placement->batch->expires_on?->toDateString(),
                     'status' => $placement->batch->status,
                     'quantity' => $placement->quantity,
                 ]),

@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Inventory\Actions\Stock;
 use App\Modules\Sales\Enums\PaymentMethod;
 use App\Modules\Sales\Events\SaleVoided;
+use App\Modules\Sales\Models\DeliveryNote;
 use App\Modules\Sales\Models\Sale;
 use App\Modules\Sales\Models\SaleLine;
 use Illuminate\Contracts\Events\Dispatcher;
@@ -17,7 +18,10 @@ use Miles\PlatformClient\Events\Outbox;
  * Cancels a sale: its stock goes back into the batches it came from, the
  * payment is refunded the same way, and Finance reverses both
  * (finance.invoice.voided). A sale is voided once. Cash given back comes
- * out of the open till of whoever voids it.
+ * out of the open till of whoever voids it. A sale on account is voided only
+ * while nothing has been paid against it, and nothing is refunded: the
+ * customer simply no longer owes it. The invoice of a delivery note is never
+ * voided: the goods left with the customer, and come back as a return.
  */
 class VoidSale
 {
@@ -38,6 +42,12 @@ class VoidSale
             }
             if ($locked->returns()->exists()) {
                 throw ValidationException::withMessages(['reason' => "Part of sale {$locked->number} was returned: return the rest instead."]);
+            }
+            if ($locked->onAccount() && $locked->allocations()->exists()) {
+                throw ValidationException::withMessages(['reason' => "The customer has paid towards sale {$locked->number}: take the goods back as a return instead."]);
+            }
+            if (($delivery = DeliveryNote::query()->where('sale_id', $locked->id)->value('number')) !== null) {
+                throw ValidationException::withMessages(['reason' => "Sale {$locked->number} invoices delivery {$delivery}: take the goods back as a return instead."]);
             }
 
             $till = $locked->payment_method === PaymentMethod::Cash && $locked->total_minor > 0
@@ -67,7 +77,7 @@ class VoidSale
                 'currency' => $locked->currency,
                 'total_minor' => $locked->total_minor,
                 'reason' => $reason,
-                'refund' => $locked->total_minor > 0 ? [
+                'refund' => $locked->total_minor > 0 && $locked->payment_method->paidNow() ? [
                     'method' => $locked->payment_method->value,
                     'amount_minor' => $locked->total_minor,
                     'payment_reference' => $locked->number,

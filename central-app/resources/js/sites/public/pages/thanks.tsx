@@ -13,7 +13,7 @@ export default function Thanks() {
             <section className={darkBand}>
                 <HeroBackdrop />
                 <div className="mx-auto flex min-h-[60vh] max-w-2xl flex-col items-center justify-center px-4 py-24 text-center">
-                    <span className="inline-flex size-16 items-center justify-center rounded-full bg-linear-to-br from-[#cf440c] to-[#9a3412] text-white shadow-xl ring-8 shadow-site-accent/30 ring-white/10">
+                    <span className="inline-flex size-16 items-center justify-center rounded-full bg-linear-to-br from-brand-teal to-[#0b6e63] text-white shadow-xl ring-8 shadow-brand-green/30 ring-white/10">
                         <Check className="size-8" aria-hidden />
                     </span>
                     <h1 className={`mt-8 text-4xl sm:text-5xl ${display}`}>

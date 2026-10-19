@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $batch_id
  * @property string|null $received_batch_id
  * @property string $batch_number
- * @property CarbonImmutable $expires_on
+ * @property CarbonImmutable|null $expires_on null: an item that does not track expiry
  * @property int $unit_cost_minor
  * @property int $quantity
  * @property-read Item $item

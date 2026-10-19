@@ -34,7 +34,7 @@ type Props = {
             id: string;
             medicine: string;
             batchNumber: string;
-            expiresOn: string;
+            expiresOn: string | null;
             quantity: number;
             pack: string | null;
             unit: string;
@@ -124,7 +124,7 @@ export default function ShowReceipt({ receipt, returns, canReturn }: Props) {
                                 <TableCell>{line.medicine}</TableCell>
                                 <TableCell>{line.batchNumber}</TableCell>
                                 <TableCell className="tabular-nums">
-                                    {line.expiresOn}
+                                    {line.expiresOn ?? '—'}
                                 </TableCell>
                                 <TableCell className="text-right tabular-nums">
                                     {line.quantity}

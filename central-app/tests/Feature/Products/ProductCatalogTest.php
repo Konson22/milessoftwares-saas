@@ -182,13 +182,15 @@ describe('catalog', function () {
     })->throws(QueryException::class);
 
     it('syncs the shipped definitions file', function () {
-        $this->artisan('platform:erp-products')
-            ->expectsOutputToContain('not registered yet, left out: retail')
-            ->assertSuccessful();
+        // Deploys import the catalogs (Retail & POS among them, pharmacy-app's
+        // platform/retail.json) before syncing the products.
+        registerApplication('retail');
+
+        $this->artisan('platform:erp-products')->assertSuccessful();
 
         expect(ErpProduct::query()->orderBy('sort_order')->pluck('status', 'code')->map->value->all())->toBe([
             'pharmacy' => 'pilot',
-            'retail_trading' => 'planned',
+            'retail_trading' => 'pilot',
             'education' => 'planned',
             'ngo' => 'planned',
             'finance_accounting' => 'pilot',

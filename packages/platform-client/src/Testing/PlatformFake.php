@@ -5,6 +5,7 @@ namespace Miles\PlatformClient\Testing;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Miles\PlatformClient\PlatformConfig;
 
 /**
  * The platform API, faked at the HTTP layer for product tests: service
@@ -16,8 +17,11 @@ final class PlatformFake
     /** @var array<string, array<string, mixed>> keyed by slug */
     public array $organizations = [];
 
-    /** @var array<string, array<string, mixed>> keyed by "orgId:subject" */
+    /** @var array<string, array<string, mixed>> keyed by "application:orgId:subject" */
     public array $access = [];
+
+    /** @var array<string, list<string>> slugs an application may not see (not entitled), by application */
+    public array $hiddenFrom = [];
 
     /** @var array<string, list<array<string, mixed>>> keyed by slug */
     public array $branches = [];
@@ -28,7 +32,7 @@ final class PlatformFake
     /** @var array<string, list<array<string, mixed>>> keyed by slug */
     public array $positions = [];
 
-    /** @var list<array{organization_id: string, audience: string}> */
+    /** @var list<array{organization_id: string, audience: string, application: string}> */
     public array $eventTokens = [];
 
     /** @var array<string, list<array<string, mixed>>> envelopes received, by module */
@@ -46,18 +50,19 @@ final class PlatformFake
             $path = (string) parse_url($request->url(), PHP_URL_PATH);
 
             if ($path === '/oauth/token') {
-                return Http::response(['token_type' => 'Bearer', 'access_token' => 'fake-service-token', 'expires_in' => 3600]);
+                // One token per service client: later calls tell the application by it.
+                return Http::response(['token_type' => 'Bearer', 'access_token' => 'fake-service-token:'.$request['client_id'], 'expires_in' => 3600]);
             }
 
             if (preg_match('#^/api/v1/organizations/([^/]+)/members/([^/]+)/effective-access$#', $path, $m) === 1) {
-                return isset($this->access[$m[1].':'.$m[2]])
-                    ? Http::response($this->access[$m[1].':'.$m[2]])
+                return isset($this->access[$this->caller($request).':'.$m[1].':'.$m[2]])
+                    ? Http::response($this->access[$this->caller($request).':'.$m[1].':'.$m[2]])
                     : Http::response(['message' => 'Not Found'], 404);
             }
 
             if (preg_match('#^/api/v1/organizations/([^/]+)/(branches|departments|positions)$#', $path, $m) === 1) {
                 foreach ($this->organizations as $slug => $organization) {
-                    if ($organization['id'] === $m[1]) {
+                    if ($organization['id'] === $m[1] && $this->visible($request, $slug)) {
                         return Http::response(['data' => $this->{$m[2]}[$slug] ?? []]);
                     }
                 }
@@ -66,8 +71,8 @@ final class PlatformFake
             }
 
             if (preg_match('#^/api/v1/organizations/([^/]+)$#', $path, $m) === 1) {
-                foreach ($this->organizations as $organization) {
-                    if ($organization['slug'] === $m[1] || $organization['id'] === $m[1]) {
+                foreach ($this->organizations as $slug => $organization) {
+                    if (($organization['slug'] === $m[1] || $organization['id'] === $m[1]) && $this->visible($request, $slug)) {
                         return Http::response($organization);
                     }
                 }
@@ -89,7 +94,7 @@ final class PlatformFake
                 if (in_array((string) $request['audience'], $this->notEntitledTo, true)) {
                     return Http::response(['error' => 'not_entitled'], 404);
                 }
-                $this->eventTokens[] = ['organization_id' => (string) $request['organization_id'], 'audience' => (string) $request['audience']];
+                $this->eventTokens[] = ['organization_id' => (string) $request['organization_id'], 'audience' => (string) $request['audience'], 'application' => $this->caller($request)];
 
                 return Http::response(['token' => 'fake-event-token', 'expires_in' => 300]);
             }
@@ -158,18 +163,20 @@ final class PlatformFake
     }
 
     /**
-     * Effective access for a member: roles as [permissions, scope] pairs.
+     * Effective access for a member: roles as [permissions, scope] pairs,
+     * in $application (default: the one being served, see PlatformConfig).
      *
      * @param  list<array{permissions: list<string>, scope?: array<string, string>, role?: string}>  $roles
      */
-    public function grant(string $slug, string $subject, array $roles = [], bool $owner = false, bool $allowed = true): void
+    public function grant(string $slug, string $subject, array $roles = [], bool $owner = false, bool $allowed = true, ?string $application = null): void
     {
         $organization = $this->organization($slug);
+        $application ??= app(PlatformConfig::class)->application();
 
-        $this->access[$organization['id'].':'.$subject] = [
+        $this->access[$application.':'.$organization['id'].':'.$subject] = [
             'allowed' => $allowed,
             'organization' => ['id' => $organization['id'], 'slug' => $slug, 'status' => $organization['status']],
-            'application' => ['code' => (string) config('platform-client.application'), 'catalog_version' => '1.0.0'],
+            'application' => ['code' => $application, 'catalog_version' => '1.0.0'],
             'subject' => $subject,
             'entitlement' => ['active' => true, 'source' => 'subscription', 'valid_until' => null, 'features' => []],
             'membership' => ['id' => (string) Str::uuid(), 'status' => 'active', 'is_owner' => $owner],
@@ -182,5 +189,28 @@ final class PlatformFake
             ], $roles),
             'max_age' => 60,
         ];
+    }
+
+    /**
+     * The application whose service client made the request: tokens are
+     * "fake-service-token:<client id>".
+     */
+    private function caller(Request $request): string
+    {
+        $client = substr((string) ($request->header('Authorization')[0] ?? ''), strlen('Bearer fake-service-token:'));
+        $config = app(PlatformConfig::class);
+
+        foreach ($config->applications() as $application) {
+            if ($config->runAs($application, fn () => $config->serviceClientId()) === $client) {
+                return $application;
+            }
+        }
+
+        return $config->primary();
+    }
+
+    private function visible(Request $request, string $slug): bool
+    {
+        return ! in_array($slug, $this->hiddenFrom[$this->caller($request)] ?? [], true);
     }
 }

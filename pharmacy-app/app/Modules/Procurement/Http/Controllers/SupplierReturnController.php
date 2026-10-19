@@ -10,6 +10,7 @@ use App\Modules\Procurement\Models\GoodsReceiptLine;
 use App\Modules\Procurement\Models\SupplierReturn;
 use App\Modules\Procurement\Models\SupplierReturnLine;
 use App\Support\CurrentBranch;
+use App\Support\Industry;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,13 +24,17 @@ use Inertia\Response;
  */
 class SupplierReturnController extends Controller
 {
-    public function __construct(private readonly CurrentBranch $branch) {}
+    public function __construct(
+        private readonly CurrentBranch $branch,
+        private readonly Industry $industry,
+    ) {}
 
     public function index(): Response
     {
-        return Inertia::render('supplier-returns/index', [
+        return Inertia::render($this->industry->page('supplier-returns/index'), [
             'returns' => SupplierReturn::query()
                 ->where('branch_id', $this->branch->id())
+                ->where('application', $this->industry->code())
                 ->with(['supplier:id,name', 'receipt:id,number'])
                 ->orderByDesc('returned_on')
                 ->orderByDesc('number')
@@ -49,10 +54,10 @@ class SupplierReturnController extends Controller
 
     public function show(SupplierReturn $return): Response
     {
-        abort_unless($return->branch_id === $this->branch->id(), 404);
+        abort_unless($return->branch_id === $this->branch->id() && $return->application === $this->industry->code(), 404);
         $return->load(['supplier:id,name', 'receipt:id,number', 'returner:id,name', 'lines.item', 'lines.batch']);
 
-        return Inertia::render('supplier-returns/show', [
+        return Inertia::render($this->industry->page('supplier-returns/show'), [
             'supplierReturn' => [
                 'id' => $return->id,
                 'number' => $return->number,
@@ -79,11 +84,11 @@ class SupplierReturnController extends Controller
      */
     public function create(GoodsReceipt $receipt): Response
     {
-        abort_unless($receipt->branch_id === $this->branch->id(), 404);
+        $this->ensureHere($receipt);
         $receipt->load(['supplier:id,name', 'lines.item', 'lines.batch']);
         $returned = $this->returned($receipt);
 
-        return Inertia::render('supplier-returns/create', [
+        return Inertia::render($this->industry->page('supplier-returns/create'), [
             'receipt' => [
                 'id' => $receipt->id,
                 'number' => $receipt->number,
@@ -93,7 +98,7 @@ class SupplierReturnController extends Controller
                     'id' => $line->id,
                     'medicine' => $line->item->name,
                     'batchNumber' => $line->batch_number,
-                    'expiresOn' => $line->expires_on->toDateString(),
+                    'expiresOn' => $line->expires_on?->toDateString(),
                     'received' => $line->inUnits($line->quantity),
                     'returnable' => min($line->inUnits($line->quantity) - (int) ($returned[$line->id] ?? 0), $line->batch->quantity_on_hand),
                     'unit' => $line->item->unit,
@@ -106,7 +111,7 @@ class SupplierReturnController extends Controller
 
     public function store(Request $request, GoodsReceipt $receipt, ReturnGoods $returnGoods): RedirectResponse
     {
-        abort_unless($receipt->branch_id === $this->branch->id(), 404);
+        $this->ensureHere($receipt);
         $validated = $request->validate([
             'returned_on' => ['required', 'date', 'before_or_equal:today', 'after_or_equal:'.$receipt->received_on->toDateString()],
             'reason' => ['required', 'string', 'max:255'],
@@ -127,7 +132,15 @@ class SupplierReturnController extends Controller
 
         $return = $returnGoods->handle($user, $receipt, $quantities, $validated['reason'], CarbonImmutable::parse($validated['returned_on']));
 
-        return to_route('supplier-returns.show', $return)->with('success', "Return {$return->number} recorded; Finance takes it off what is owed.");
+        return to_route($this->industry->route('supplier-returns.show'), $return)->with('success', "Return {$return->number} recorded; Finance takes it off what is owed.");
+    }
+
+    /**
+     * Deliveries of other branches, or of another industry module, look unknown.
+     */
+    private function ensureHere(GoodsReceipt $receipt): void
+    {
+        abort_unless($receipt->branch_id === $this->branch->id() && $receipt->application === $this->industry->code(), 404);
     }
 
     /**

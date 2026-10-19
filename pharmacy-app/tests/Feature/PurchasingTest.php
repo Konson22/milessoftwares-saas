@@ -14,6 +14,7 @@ use Inertia\Testing\AssertableInertia;
 use Miles\SharedModuleKit\Envelope;
 
 beforeEach(function () {
+    $this->deliveries = 0;
     config(['platform-client.modules.finance' => 'https://finance.internal/events']);
     $this->travelTo(now()->setDate(2026, 10, 12)->setTime(9, 0));
     $this->juba = $this->platform()->branch('acme', 'Juba');
@@ -45,12 +46,18 @@ function orderAmoxAndPara(): PurchaseOrder
     return $order->refresh()->load('lines');
 }
 
+/**
+ * Each delivery comes with its own invoice (INV-7781, INV-7782, …): the same
+ * one is never received twice.
+ */
 function receiveLines(?PurchaseOrder $order, array $lines)
 {
+    test()->deliveries++;
+
     return test()->post(test()->workspaceUrl('acme', 'receipts'), [
         'supplier_id' => test()->supplier->id,
         'purchase_order_id' => $order?->id,
-        'supplier_reference' => 'INV-7781',
+        'supplier_reference' => 'INV-'.(7780 + test()->deliveries),
         'received_on' => '2026-10-12',
         'lines' => $lines,
     ]);
@@ -103,7 +110,7 @@ it('receives an order in two deliveries, into batches, and tells Finance once pe
         ->and($envelope->sourceTransactionId)->toBe('goods_receipt:'.$receipts[1]->id)
         ->and($envelope->payload)->toMatchArray([
             'bill_number' => 'GRN-00002',
-            'supplier_reference' => 'INV-7781',
+            'supplier_reference' => 'INV-7782',
             'supplier_name' => 'Juba Medical Supplies',
             'branch_id' => $this->juba,
             'currency' => 'SSP',

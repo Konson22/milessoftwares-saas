@@ -137,12 +137,16 @@ for code in $PRODUCTS; do
     )
 done
 
-# The platform's own catalogs and each product's (roles and permissions).
+# The platform's own catalogs and each product's (roles and permissions):
+# its own application's, and those of applications it hosts (pharmacy-app
+# serves retail too, platform/retail.json).
 catalogs=(database/catalogs/*.json)
 for code in $PRODUCTS; do
-    catalogs+=("../$code-app/platform/catalog.json")
+    catalogs+=("../$code-app/platform/"*.json)
 done
 "$PHP" artisan platform:catalog-import "${catalogs[@]}" --no-ansi
+# The ERP products sold on the site and the applications they are made of.
+"$PHP" artisan platform:erp-products --no-ansi
 "$PHP" artisan optimize --no-ansi
 
 # Atomic switch.

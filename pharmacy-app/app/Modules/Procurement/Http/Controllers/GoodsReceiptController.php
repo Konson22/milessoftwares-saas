@@ -13,6 +13,7 @@ use App\Modules\Procurement\Models\PurchaseOrder;
 use App\Modules\Procurement\Models\PurchaseOrderLine;
 use App\Modules\Procurement\Models\SupplierReturn;
 use App\Support\CurrentBranch;
+use App\Support\Industry;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -27,13 +28,17 @@ use Miles\PlatformClient\Tenancy\CurrentTenant;
  */
 class GoodsReceiptController extends Controller
 {
-    public function __construct(private readonly CurrentBranch $branch) {}
+    public function __construct(
+        private readonly CurrentBranch $branch,
+        private readonly Industry $industry,
+    ) {}
 
     public function index(): Response
     {
-        return Inertia::render('receipts/index', [
+        return Inertia::render($this->industry->page('receipts/index'), [
             'receipts' => GoodsReceipt::query()
                 ->where('branch_id', $this->branch->id())
+                ->where('application', $this->industry->code())
                 ->with(['supplier:id,name', 'purchaseOrder:id,number'])
                 ->latest()
                 ->limit(200)
@@ -59,10 +64,10 @@ class GoodsReceiptController extends Controller
         $order = null;
         if (is_string($request->query('order'))) {
             $order = PurchaseOrder::query()->with('lines.item')->find($request->query('order'));
-            abort_if($order === null || $order->branch_id !== $this->branch->id() || ! $order->status->canReceive(), 404);
+            abort_if($order === null || $order->branch_id !== $this->branch->id() || $order->application !== $this->industry->code() || ! $order->status->canReceive(), 404);
         }
 
-        return Inertia::render('receipts/create', [
+        return Inertia::render($this->industry->page('receipts/create'), [
             'suppliers' => Supplier::query()->where('active', true)->orderBy('name')->get(['id', 'name']),
             'medicines' => PurchaseOrderController::itemOptions(),
             'order' => $order === null ? null : [
@@ -103,7 +108,8 @@ class GoodsReceiptController extends Controller
             'lines.*.pack_id' => ['nullable', 'uuid'],
             'lines.*.location_id' => ['nullable', 'uuid'],
             'lines.*.batch_number' => ['required', 'string', 'max:64'],
-            'lines.*.expires_on' => ['required', 'date', 'after:received_on'],
+            // Required for items that track expiry (ReceiveGoods checks per item).
+            'lines.*.expires_on' => ['nullable', 'date', 'after:received_on'],
             'lines.*.quantity' => ['required', 'integer', 'min:1', 'max:1000000'],
             'lines.*.unit_cost' => ['required', 'string', Money::rule()],
         ]);
@@ -130,22 +136,22 @@ class GoodsReceiptController extends Controller
                 'pack_id' => $line['pack_id'] ?? null,
                 'location_id' => $line['location_id'] ?? null,
                 'batch_number' => trim($line['batch_number']),
-                'expires_on' => $line['expires_on'],
+                'expires_on' => $line['expires_on'] ?? null,
                 'quantity' => (int) $line['quantity'],
                 'unit_cost_minor' => Money::toMinor($line['unit_cost']),
             ], $validated['lines'])),
         );
 
-        return to_route('receipts.show', $receipt)->with('success', "{$receipt->number} received into stock.");
+        return to_route($this->industry->route('receipts.show'), $receipt)->with('success', "{$receipt->number} received into stock.");
     }
 
     public function show(GoodsReceipt $receipt): Response
     {
-        abort_unless($receipt->branch_id === $this->branch->id(), 404);
+        abort_unless($receipt->branch_id === $this->branch->id() && $receipt->application === $this->industry->code(), 404);
         $receipt->load(['supplier:id,name', 'purchaseOrder:id,number', 'receiver:id,name', 'lines.item']);
         $returned = SupplierReturnController::returned($receipt);
 
-        return Inertia::render('receipts/show', [
+        return Inertia::render($this->industry->page('receipts/show'), [
             'returns' => SupplierReturn::query()
                 ->where('goods_receipt_id', $receipt->id)
                 ->orderBy('number')
@@ -171,7 +177,7 @@ class GoodsReceiptController extends Controller
                     'id' => $line->id,
                     'medicine' => $line->item->name,
                     'batchNumber' => $line->batch_number,
-                    'expiresOn' => $line->expires_on->toDateString(),
+                    'expiresOn' => $line->expires_on?->toDateString(),
                     'quantity' => $line->quantity,
                     'pack' => $line->packLabel(),
                     'unit' => $line->item->unit,

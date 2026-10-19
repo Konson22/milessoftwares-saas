@@ -4,23 +4,27 @@ namespace App\Modules\Procurement\Actions;
 
 use App\Models\User;
 use App\Modules\Inventory\Actions\ItemPacks;
+use App\Modules\Inventory\Models\Item;
 use App\Modules\MasterData\Models\Supplier;
 use App\Modules\Procurement\Enums\PurchaseOrderStatus;
 use App\Modules\Procurement\Models\PurchaseOrder;
 use App\Support\DocumentNumbers;
+use App\Support\Industry;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
  * Purchase orders: drafted, sent (ordered), then received in one or more
- * deliveries (ReceiveGoods), or cancelled before anything arrived.
+ * deliveries (ReceiveGoods), or cancelled before anything arrived. An order
+ * belongs to the industry module that drafted it and buys only its items.
  */
 class Purchasing
 {
     public function __construct(
         private readonly DocumentNumbers $numbers,
         private readonly ItemPacks $packs,
+        private readonly Industry $industry,
     ) {}
 
     /**
@@ -35,6 +39,7 @@ class Purchasing
         return DB::transaction(function () use ($by, $branchId, $supplier, $lines, $expectedOn, $notes) {
             $order = new PurchaseOrder([
                 'branch_id' => $branchId,
+                'application' => $this->industry->code(),
                 'number' => $this->numbers->next('purchase_order', 'PO'),
                 'supplier_id' => $supplier->id,
                 'expected_on' => $expectedOn,
@@ -45,6 +50,11 @@ class Purchasing
             $order->save();
 
             foreach ($lines as $index => $line) {
+                $item = Item::query()->find($line['item_id']);
+                if ($item === null || ! $this->industry->handles($item->kind)) {
+                    throw ValidationException::withMessages(["lines.{$index}.item_id" => 'This item is not bought here.']);
+                }
+
                 $pack = $this->packs->find($line['item_id'], $line['pack_id'] ?? null, "lines.{$index}.pack_id");
 
                 $order->lines()->create([

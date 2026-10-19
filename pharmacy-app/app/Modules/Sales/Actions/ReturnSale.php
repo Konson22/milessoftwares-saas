@@ -10,6 +10,7 @@ use App\Modules\Sales\Models\Sale;
 use App\Modules\Sales\Models\SaleLine;
 use App\Modules\Sales\Models\SaleReturn;
 use App\Support\DocumentNumbers;
+use App\Support\Money;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -23,6 +24,9 @@ use Miles\PlatformClient\Events\Outbox;
  * from the open till of whoever takes the return. Units fit to sell again
  * go back into their batch. Finance reverses the revenue, the payment and,
  * for restocked units, the cost of goods sold (finance.sales_return.issued).
+ *
+ * On a sale on account nothing is refunded: the return takes the amount off
+ * what the customer still owes on that sale, and never more than that.
  */
 class ReturnSale
 {
@@ -31,6 +35,7 @@ class ReturnSale
         private readonly DocumentNumbers $numbers,
         private readonly Outbox $outbox,
         private readonly Tills $tills,
+        private readonly CustomerAccounts $accounts,
     ) {}
 
     /**
@@ -89,6 +94,9 @@ class ReturnSale
             }
 
             $total = array_sum(array_column($returning, 2));
+            if ($locked->onAccount() && $total > ($owed = $this->accounts->owedOn($locked))) {
+                throw ValidationException::withMessages(['lines' => 'The customer owes only '.Money::format($owed)." on sale {$locked->number}: a return cannot take off more than is still owed."]);
+            }
             $till = $locked->payment_method === PaymentMethod::Cash && $total > 0
                 ? $this->tills->requireOpen($by, $locked->branch_id, 'lines')
                 : $this->tills->openFor($by, $locked->branch_id);
@@ -144,7 +152,7 @@ class ReturnSale
                 'tax_minor' => 0,
                 'reason' => $reason,
                 'lines' => $eventLines,
-                'refund' => $total > 0 ? [
+                'refund' => $total > 0 && $locked->payment_method->paidNow() ? [
                     'method' => $locked->payment_method->value,
                     'amount_minor' => $total,
                     'payment_reference' => $return->number,

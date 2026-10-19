@@ -99,3 +99,30 @@ it('refuses on production', function () {
     $this->artisan('platform:local-product', ['path' => $this->folder])->assertFailed();
     expect(Application::query()->where('code', 'retail')->exists())->toBeFalse();
 });
+
+it('registers another application of an already registered folder as hosted by it', function () {
+    // The folder is the finance product; retail is served by the same deployment.
+    File::copy(base_path('tests/Fixtures/catalogs/finance.json'), $this->folder.'/platform/catalog.json');
+    File::copy(base_path('tests/Fixtures/catalogs/retail.json'), $this->folder.'/platform/retail.json');
+    $this->artisan('platform:local-product', ['path' => $this->folder])->assertSuccessful();
+    $own = env_of($this->folder);
+
+    $this->artisan('platform:local-product', ['path' => $this->folder, '--catalog' => 'platform/retail.json', '--entitle' => ['acme']])->assertSuccessful();
+    $env = env_of($this->folder);
+    $retail = Application::query()->where('code', 'retail')->sole();
+
+    // Its own values, under its prefix; the folder's own are untouched.
+    expect($env)
+        ->PLATFORM_APPLICATION->toBe('finance')
+        ->PLATFORM_HOSTED->toBe('retail')
+        ->PLATFORM_RETAIL_PATH->toBe('retail')
+        ->and($env['PLATFORM_RETAIL_WEBHOOK_SECRET'])->toStartWith('whsec_')
+        ->and($env['PLATFORM_RETAIL_SERVICE_CLIENT_ID'])->not->toBe($own['PLATFORM_SERVICE_CLIENT_ID'])
+        ->and(array_intersect_key($env, $own))->toBe($own)
+        ->and($retail->integration_endpoint)->toBe('http://127.0.0.1:8400/retail/platform')
+        ->and(activeClients($retail))->toBe(['confidential', 'service']);
+
+    // Run again: nothing new issued.
+    $this->artisan('platform:local-product', ['path' => $this->folder, '--catalog' => 'platform/retail.json'])->assertSuccessful();
+    expect(env_of($this->folder))->toBe($env);
+});

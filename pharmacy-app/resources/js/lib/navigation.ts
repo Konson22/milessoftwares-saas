@@ -206,14 +206,16 @@ function itemVisible(
 }
 
 /**
- * The sections the member may use in this branch, without empty groups.
+ * The sections the member may use in this branch, without empty groups:
+ * the pharmacy's, or another industry's (Retail) when given.
  */
 export function visibleNavigation(
     can: (permission: string) => boolean,
     canHere: (permission: string) => boolean,
     hasBranch: boolean,
+    groups: NavGroup[] = navigation,
 ): NavGroup[] {
-    return navigation
+    return groups
         .map((group) => ({
             ...group,
             items: group.items.filter((item) =>

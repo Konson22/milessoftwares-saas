@@ -18,7 +18,7 @@ type Disposal = {
     itemId: string;
     medicine: string;
     batchNumber: string;
-    expiresOn: string;
+    expiresOn: string | null;
     quantity: number;
     costMinor: number;
     reason: string;
@@ -104,7 +104,7 @@ export default function Disposals({ status, disposals, canDecide }: Props) {
                                     </Link>
                                     <span className="text-sm text-muted-foreground">
                                         batch {disposal.batchNumber}, exp{' '}
-                                        {disposal.expiresOn}
+                                        {disposal.expiresOn ?? '—'}
                                     </span>
                                     <span className="ml-auto tabular-nums">
                                         {money(disposal.costMinor)} at cost

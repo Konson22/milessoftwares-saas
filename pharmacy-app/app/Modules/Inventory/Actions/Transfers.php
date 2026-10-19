@@ -9,6 +9,7 @@ use App\Modules\Inventory\Models\StockDisposal;
 use App\Modules\Inventory\Models\StockLocation;
 use App\Modules\Inventory\Models\StockTransfer;
 use App\Support\DocumentNumbers;
+use App\Support\Industry;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -25,6 +26,7 @@ class Transfers
     public function __construct(
         private readonly Stock $stock,
         private readonly DocumentNumbers $numbers,
+        private readonly Industry $industry,
     ) {}
 
     /**
@@ -42,6 +44,7 @@ class Transfers
             $transfer = StockTransfer::query()->create([
                 'number' => $this->numbers->next('stock_transfer', 'T', 5),
                 'from_branch_id' => $fromBranchId,
+                'application' => $this->industry->code(),
                 'to_branch_id' => $toBranchId,
                 'status' => StockTransfer::IN_TRANSIT,
                 'note' => $note,
@@ -59,10 +62,13 @@ class Transfers
 
                 $batch = Batch::query()->where('branch_id', $fromBranchId)->whereKey($line['batch_id'])->lockForUpdate()->first()
                     ?? throw ValidationException::withMessages(["lines.{$index}.batch_id" => 'Not a batch of this branch.']);
+                if (! $this->industry->handles($batch->item->kind)) {
+                    throw ValidationException::withMessages(["lines.{$index}.batch_id" => 'This item is not kept here.']);
+                }
                 if ($batch->onHold()) {
                     throw ValidationException::withMessages(["lines.{$index}.batch_id" => "Batch {$batch->batch_number} is on hold."]);
                 }
-                if ($batch->expires_on->lte(today())) {
+                if ($batch->isExpired()) {
                     throw ValidationException::withMessages(["lines.{$index}.batch_id" => "Batch {$batch->batch_number} has expired."]);
                 }
 

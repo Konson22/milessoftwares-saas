@@ -140,7 +140,7 @@ class ReportController extends Controller
 
         $sellable = $onHand()
             ->where('batches.status', Batch::AVAILABLE)
-            ->whereDate('batches.expires_on', '>', $today)
+            ->unexpired($today)
             ->join('items', 'items.id', '=', 'batches.item_id')
             ->selectRaw('SUM(batches.quantity_on_hand) AS units, SUM(batches.quantity_on_hand * batches.unit_cost_minor) AS cost, SUM(batches.quantity_on_hand * items.sell_price_minor) AS retail')
             ->toBase()
@@ -154,7 +154,7 @@ class ReportController extends Controller
 
         $held = $onHand()
             ->where('batches.status', '!=', Batch::AVAILABLE)
-            ->whereDate('batches.expires_on', '>', $today)
+            ->unexpired($today)
             ->selectRaw('SUM(batches.quantity_on_hand) AS units, SUM(batches.quantity_on_hand * batches.unit_cost_minor) AS cost')
             ->toBase()
             ->first();

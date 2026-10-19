@@ -18,9 +18,12 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property string $id
  * @property string $organization_id
  * @property string $branch_id
+ * @property string $application the industry module whose counter made it (pharmacy, retail)
  * @property string $number
  * @property string $status
  * @property string|null $customer_name
+ * @property string|null $customer_id an account customer's (Customer)
+ * @property CarbonImmutable|null $due_on sales on account: when it is to be paid
  * @property string $currency
  * @property int $total_minor
  * @property int $discount_minor
@@ -41,6 +44,8 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property-read User|null $voider
  * @property-read Collection<int, SaleLine> $lines
  * @property-read Collection<int, SaleReturn> $returns
+ * @property-read Customer|null $customer
+ * @property-read Collection<int, CustomerPaymentAllocation> $allocations
  */
 class Sale extends Model
 {
@@ -63,6 +68,7 @@ class Sale extends Model
             'change_minor' => 'integer',
             'sold_at' => 'immutable_datetime',
             'voided_at' => 'immutable_datetime',
+            'due_on' => 'immutable_date',
         ];
     }
 
@@ -89,6 +95,32 @@ class Sale extends Model
     {
         // Ids are time-ordered (UUID v7): lines in the order they were sold.
         return $this->hasMany(SaleLine::class)->orderBy('id');
+    }
+
+    /**
+     * Sold on account: paid later, against the customer's credit limit.
+     */
+    public function onAccount(): bool
+    {
+        return $this->payment_method === PaymentMethod::Account;
+    }
+
+    /**
+     * @return BelongsTo<Customer, $this>
+     */
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
+    }
+
+    /**
+     * Payments set against this sale (on account only).
+     *
+     * @return HasMany<CustomerPaymentAllocation, $this>
+     */
+    public function allocations(): HasMany
+    {
+        return $this->hasMany(CustomerPaymentAllocation::class);
     }
 
     /**

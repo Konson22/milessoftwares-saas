@@ -32,11 +32,16 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         // Signed out: sign in through the platform, on this workspace.
-        $middleware->redirectGuestsTo(fn () => route('platform.login'));
+        $middleware->redirectGuestsTo(fn () => route(app(PlatformConfig::class)->routeName('login')));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is(app(PlatformConfig::class)->path().'/platform/*')
-                || $request->expectsJson(),
-        );
+        // The platform's calls to any application served here answer JSON.
+        $exceptions->shouldRenderJsonWhen(function (Request $request) {
+            $platform = app(PlatformConfig::class);
+
+            return $request->expectsJson() || array_any(
+                $platform->applications(),
+                fn (string $application) => $request->is($platform->runAs($application, fn () => $platform->path()).'/platform/*'),
+            );
+        });
     })->create();

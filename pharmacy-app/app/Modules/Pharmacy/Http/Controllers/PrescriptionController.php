@@ -171,7 +171,7 @@ class PrescriptionController extends Controller
                 'cancel' => in_array($status, [PrescriptionStatus::Recorded, PrescriptionStatus::Verified, PrescriptionStatus::PartlyDispensed], true) && $can('pharmacy.prescriptions.record'),
                 'dispense' => in_array($status, [PrescriptionStatus::Verified, PrescriptionStatus::PartlyDispensed], true) && ! $prescription->isExpired() && $can('pharmacy.sales.create'),
             ],
-            'paymentMethods' => array_map(fn (PaymentMethod $method) => ['value' => $method->value, 'label' => $method->label()], PaymentMethod::cases()),
+            'paymentMethods' => array_map(fn (PaymentMethod $method) => ['value' => $method->value, 'label' => $method->label()], PaymentMethod::payments()),
         ]);
     }
 
@@ -204,7 +204,7 @@ class PrescriptionController extends Controller
     {
         $this->ensureHere($prescription);
         $validated = $request->validate([
-            'payment_method' => ['required', Rule::enum(PaymentMethod::class)],
+            'payment_method' => ['required', Rule::enum(PaymentMethod::class)->except(PaymentMethod::Account)],
             'payment_reference' => ['nullable', 'string', 'max:64'],
             'amount_tendered' => ['nullable', 'string', Money::rule()],
             // Item id => quantity given now; all that is left when omitted.

@@ -1,0 +1,219 @@
+{
+    "application": {
+        "code": "retail",
+        "name": "Retail",
+        "category": "products",
+        "kind": "standalone",
+        "status": "beta"
+    },
+    "version": "1.3.0",
+    "roles": [
+        {
+            "key": "manager",
+            "name": "Store Manager",
+            "sensitivity": 3,
+            "delegable": true,
+            "scopes": ["organization", "branch"],
+            "permissions": [
+                "retail.products.view",
+                "retail.products.manage",
+                "retail.stock.view",
+                "retail.stock.adjust",
+                "retail.stock.dispose",
+                "retail.purchasing.view",
+                "retail.purchasing.manage",
+                "retail.purchasing.receive",
+                "retail.sales.view",
+                "retail.sales.create",
+                "retail.sales.void",
+                "retail.sales.discount",
+                "retail.tills.manage",
+                "retail.sales.credit",
+                "retail.customers.view",
+                "retail.customers.manage",
+                "retail.orders.view",
+                "retail.orders.manage",
+                "retail.orders.deliver",
+                "retail.prices.manage"
+            ]
+        },
+        {
+            "key": "cashier",
+            "name": "Cashier",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization", "branch"],
+            "permissions": [
+                "retail.products.view",
+                "retail.sales.view",
+                "retail.sales.create",
+                "retail.customers.view"
+            ]
+        },
+        {
+            "key": "storekeeper",
+            "name": "Store Keeper",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization", "branch"],
+            "permissions": [
+                "retail.products.view",
+                "retail.stock.view",
+                "retail.stock.adjust",
+                "retail.purchasing.view",
+                "retail.purchasing.receive",
+                "retail.orders.view",
+                "retail.orders.deliver"
+            ]
+        }
+    ],
+    "permissions": [
+        {
+            "key": "retail.products.view",
+            "name": "View the product catalogue",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "retail.products.manage",
+            "name": "Add and change products and prices",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "retail.stock.view",
+            "name": "View stock",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "retail.stock.adjust",
+            "name": "Record opening stock and stock counts",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "retail.stock.dispose",
+            "name": "Approve write-offs of stock",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "retail.purchasing.view",
+            "name": "View suppliers, orders and deliveries",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "retail.purchasing.manage",
+            "name": "Manage suppliers and purchase orders",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "retail.purchasing.receive",
+            "name": "Receive goods into stock and return them to suppliers",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "retail.sales.view",
+            "name": "View sales and receipts",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "retail.sales.create",
+            "name": "Sell at the counter",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "retail.sales.void",
+            "name": "Void sales and take returns",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "retail.sales.discount",
+            "name": "Give discounts at the counter",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "retail.tills.manage",
+            "name": "See and close every cashier's till",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "retail.sales.credit",
+            "name": "Sell on account to customers",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "retail.customers.view",
+            "name": "View customers, what they owe and their statements",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "retail.customers.manage",
+            "name": "Add customers and set their credit limits",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "retail.orders.view",
+            "name": "View quotations, sales orders and deliveries",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "retail.orders.manage",
+            "name": "Quote customers and confirm their orders",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "retail.orders.deliver",
+            "name": "Deliver orders and invoice them on account",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "retail.prices.manage",
+            "name": "Set the prices of price lists",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        }
+    ],
+    "separation_of_duties": [
+        {
+            "permissions": ["retail.sales.create", "retail.stock.adjust"],
+            "mode": "warn",
+            "description": "One person selling and adjusting stock can hide shortages."
+        },
+        {
+            "permissions": ["retail.sales.create", "retail.sales.void"],
+            "mode": "warn",
+            "description": "Voiding sales you made yourself needs a second look."
+        },
+        {
+            "permissions": ["retail.stock.adjust", "retail.stock.dispose"],
+            "mode": "warn",
+            "description": "Asking for a write-off and approving it should be two people."
+        },
+        {
+            "permissions": ["retail.customers.manage", "retail.sales.credit"],
+            "mode": "warn",
+            "description": "Setting a customer's credit limit and selling to them on account should be two people."
+        },
+        {
+            "permissions": ["retail.prices.manage", "retail.orders.manage"],
+            "mode": "warn",
+            "description": "Setting trade prices and quoting customers at them should be two people."
+        }
+    ]
+}

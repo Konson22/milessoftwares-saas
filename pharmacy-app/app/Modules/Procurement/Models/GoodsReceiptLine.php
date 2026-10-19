@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $batch_id
  * @property string|null $purchase_order_line_id
  * @property string $batch_number
- * @property CarbonImmutable $expires_on
+ * @property CarbonImmutable|null $expires_on null: an item that does not track expiry
  * @property int $quantity
  * @property int $unit_cost_minor
  * @property int $line_total_minor

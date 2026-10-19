@@ -19,6 +19,7 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property string $organization_id
  * @property string $number
  * @property string $from_branch_id
+ * @property string $application the industry module that made it (pharmacy, retail)
  * @property string $to_branch_id
  * @property string $status
  * @property string|null $note

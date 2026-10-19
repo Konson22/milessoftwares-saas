@@ -12,7 +12,8 @@ use Miles\PlatformClient\PlatformConfig;
 
 /**
  * The product-facing platform API (docs/integration.md, sections 2 and 5),
- * called with client-credentials tokens of the service client.
+ * called with client-credentials tokens of the service client of the
+ * application being served (PlatformConfig::application()).
  *
  * Organization lookups and effective access are cached for at most
  * platform-client.cache_seconds (and never longer than the platform's
@@ -35,7 +36,7 @@ final class PlatformApi
      */
     public function organization(string $slugOrId): Organization
     {
-        $key = self::PREFIX.'org:'.strtolower($slugOrId);
+        $key = $this->prefix().'org:'.strtolower($slugOrId);
         $cached = $this->cache->get($key);
 
         if (is_array($cached) && is_array($cached['org'] ?? null) && ($cached['v'] ?? null) === $this->version((string) ($cached['org']['id'] ?? ''))) {
@@ -59,7 +60,7 @@ final class PlatformApi
      */
     public function effectiveAccess(string $organizationId, string $subject): EffectiveAccess
     {
-        $key = self::PREFIX.'access:'.$organizationId.':'.$this->version($organizationId).':'.$subject;
+        $key = $this->prefix().'access:'.$organizationId.':'.$this->version($organizationId).':'.$subject;
         $cached = $this->cache->get($key);
 
         if (is_array($cached)) {
@@ -86,7 +87,7 @@ final class PlatformApi
      */
     public function branches(string $organizationId): array
     {
-        $key = self::PREFIX.'branches:'.$organizationId.':'.$this->version($organizationId);
+        $key = $this->prefix().'branches:'.$organizationId.':'.$this->version($organizationId);
         $cached = $this->cache->get($key);
 
         if (! is_array($cached)) {
@@ -130,7 +131,7 @@ final class PlatformApi
      */
     private function structure(string $organizationId, string $list): array
     {
-        $key = self::PREFIX.$list.':'.$organizationId.':'.$this->version($organizationId);
+        $key = $this->prefix().$list.':'.$organizationId.':'.$this->version($organizationId);
         $cached = $this->cache->get($key);
 
         if (! is_array($cached)) {
@@ -188,6 +189,15 @@ final class PlatformApi
     public function forget(string $organizationId): void
     {
         $this->cache->forever(self::PREFIX.'v:'.$organizationId, Str::random(12));
+    }
+
+    /**
+     * Answers are the calling application's (what it may see, its roles):
+     * never served to another application of the same deployment.
+     */
+    private function prefix(): string
+    {
+        return self::PREFIX.$this->config->application().':';
     }
 
     private function version(string $organizationId): string

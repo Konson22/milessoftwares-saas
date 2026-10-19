@@ -54,6 +54,38 @@ return [
     // Signs webhooks and provisioning calls (whsec_...).
     'webhook_secret' => env('PLATFORM_WEBHOOK_SECRET'),
 
+    // Further applications served by this deployment (ADR-0003: industry
+    // modules of the ERP workspace application). Each is registered on the
+    // platform on its own and has its own path, clients and webhook secret;
+    // everything else above is shared. Its pages run behind
+    // ["web", "platform.app:<code>", "platform"].
+    //
+    // PLATFORM_HOSTED=retail reads PLATFORM_RETAIL_PATH, _SIGN_IN_CLIENT_ID,
+    // _SIGN_IN_CLIENT_SECRET, _SERVICE_CLIENT_ID, _SERVICE_CLIENT_SECRET and
+    // _WEBHOOK_SECRET into:
+    //
+    //   'retail' => [
+    //       'path' => 'retail',
+    //       'sign_in' => ['client_id' => ..., 'client_secret' => ...],
+    //       'service' => ['client_id' => ..., 'client_secret' => ...],
+    //       'webhook_secret' => ...,
+    //   ],
+    'hosted' => array_reduce(
+        array_filter(array_map('trim', explode(',', (string) env('PLATFORM_HOSTED', '')))),
+        function (array $hosted, string $code) {
+            $env = 'PLATFORM_'.strtoupper($code).'_';
+            $hosted[$code] = [
+                'path' => env($env.'PATH'),
+                'sign_in' => ['client_id' => env($env.'SIGN_IN_CLIENT_ID'), 'client_secret' => env($env.'SIGN_IN_CLIENT_SECRET')],
+                'service' => ['client_id' => env($env.'SERVICE_CLIENT_ID'), 'client_secret' => env($env.'SERVICE_CLIENT_SECRET')],
+                'webhook_secret' => env($env.'WEBHOOK_SECRET'),
+            ];
+
+            return $hosted;
+        },
+        [],
+    ),
+
     // Local mirror of platform users: primary key = the platform subject
     // (uuid), with name and email. Updated at every sign-in.
     'user_model' => env('PLATFORM_USER_MODEL', 'App\\Models\\User'),

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\Branches;
+use App\Support\Industry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -18,14 +19,14 @@ class BranchController extends Controller
     /**
      * With nothing to choose, the page says why: the organization has no
      * branch yet (owners get a link to add one in the workspace), or the
-     * member has no pharmacy role in any of them.
+     * member has no role here in any of them.
      */
-    public function edit(Request $request, Branches $branches, CurrentAccess $access): Response
+    public function edit(Request $request, Branches $branches, CurrentAccess $access, Industry $industry): Response
     {
         $available = $branches->available();
         $isOwner = $access->get()->isOwner ?? false;
 
-        return Inertia::render('branch', [
+        return Inertia::render($industry->page('branch'), [
             'branches' => array_map(fn (Branch $branch) => [
                 'id' => $branch->id,
                 'name' => $branch->name,
@@ -37,7 +38,7 @@ class BranchController extends Controller
         ]);
     }
 
-    public function update(Request $request, Branches $branches): RedirectResponse
+    public function update(Request $request, Branches $branches, Industry $industry): RedirectResponse
     {
         $validated = $request->validate(['branch_id' => ['required', 'uuid']]);
         $branch = $branches->find($validated['branch_id']);
@@ -47,6 +48,6 @@ class BranchController extends Controller
 
         $branches->choose($request, $branch);
 
-        return redirect()->intended(route('home'))->with('success', "Working in {$branch->name}.");
+        return redirect()->intended(route($industry->route('home')))->with('success', "Working in {$branch->name}.");
     }
 }

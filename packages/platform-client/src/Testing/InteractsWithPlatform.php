@@ -36,15 +36,17 @@ trait InteractsWithPlatform
     /**
      * Signs in a member of the workspace with these catalog permissions, at
      * organization scope or, with $branch, in that branch only. For several
-     * roles at different scopes use platform()->grant() directly.
+     * roles at different scopes use platform()->grant() directly. The access
+     * is in $application (default: the primary one), so a member can hold
+     * access in one application of the deployment and not another.
      *
      * @param  list<string>  $permissions
      */
-    protected function actingAsMember(string $slug = 'acme', array $permissions = [], bool $owner = false, ?Authenticatable $user = null, ?string $branch = null): Authenticatable
+    protected function actingAsMember(string $slug = 'acme', array $permissions = [], bool $owner = false, ?Authenticatable $user = null, ?string $branch = null, ?string $application = null): Authenticatable
     {
         $user ??= $this->platformUser();
         $scope = $branch === null ? ['scope_type' => 'organization'] : ['scope_type' => 'branch', 'branch_id' => $branch];
-        $this->platform()->grant($slug, (string) $user->getAuthIdentifier(), $permissions === [] ? [] : [['permissions' => $permissions, 'scope' => $scope]], $owner);
+        $this->platform()->grant($slug, (string) $user->getAuthIdentifier(), $permissions === [] ? [] : [['permissions' => $permissions, 'scope' => $scope]], $owner, application: $application);
 
         $this->actingAs($user);
         $this->withSession([RequirePlatformAccess::SESSION_TENANT => $this->platform()->organization($slug)['id']]);
@@ -87,12 +89,14 @@ trait InteractsWithPlatform
 
     /**
      * A URL of this product in a workspace: workspaceUrl('acme', 'records')
-     * is http://acme.<root>/<path>/records.
+     * is http://acme.<root>/<path>/records. With $application, under that
+     * hosted application's path instead.
      */
-    protected function workspaceUrl(string $slug, string $path = ''): string
+    protected function workspaceUrl(string $slug, string $path = '', ?string $application = null): string
     {
         $config = app(PlatformConfig::class);
+        $prefix = $config->runAs($application ?? $config->primary(), fn () => $config->path());
 
-        return rtrim('http://'.$slug.'.'.$config->rootDomain().'/'.$config->path().'/'.ltrim($path, '/'), '/');
+        return rtrim('http://'.$slug.'.'.$config->rootDomain().'/'.$prefix.'/'.ltrim($path, '/'), '/');
     }
 }

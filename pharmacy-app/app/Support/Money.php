@@ -52,6 +52,17 @@ final class Money
     }
 
     /**
+     * 125000 → "SSP 1,250.00", for messages.
+     */
+    public static function format(int $minor, ?string $currency = null): string
+    {
+        $currency ??= self::currency();
+        $decimals = self::decimals($currency);
+
+        return $currency.' '.number_format($minor / (10 ** $decimals), $decimals);
+    }
+
+    /**
      * Validation rule for an amount typed in major units.
      */
     public static function rule(?string $currency = null): string

@@ -35,7 +35,7 @@ type Props = {
             itemId: string;
             medicine: string;
             batchNumber: string;
-            expiresOn: string;
+            expiresOn: string | null;
             quantity: number;
             costMinor: number;
         }[];
@@ -135,7 +135,7 @@ export default function Transfer({
                                 </TableCell>
                                 <TableCell>{line.batchNumber}</TableCell>
                                 <TableCell className="tabular-nums">
-                                    {line.expiresOn}
+                                    {line.expiresOn ?? '—'}
                                 </TableCell>
                                 <TableCell className="text-right tabular-nums">
                                     {line.quantity}

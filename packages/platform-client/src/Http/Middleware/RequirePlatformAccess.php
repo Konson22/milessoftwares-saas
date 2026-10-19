@@ -10,6 +10,7 @@ use Miles\PlatformClient\Access\CurrentAccess;
 use Miles\PlatformClient\Api\NotVisible;
 use Miles\PlatformClient\Api\PlatformApi;
 use Miles\PlatformClient\Api\PlatformUnavailable;
+use Miles\PlatformClient\PlatformConfig;
 use Miles\PlatformClient\Tenancy\CurrentTenant;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -27,6 +28,7 @@ final class RequirePlatformAccess
         private readonly PlatformApi $api,
         private readonly CurrentTenant $tenant,
         private readonly CurrentAccess $access,
+        private readonly PlatformConfig $config,
     ) {}
 
     /**
@@ -44,7 +46,7 @@ final class RequirePlatformAccess
                 $request->session()->invalidate();
             }
 
-            return redirect()->guest(route('platform.login'));
+            return redirect()->guest(route($this->config->routeName('login')));
         }
 
         try {

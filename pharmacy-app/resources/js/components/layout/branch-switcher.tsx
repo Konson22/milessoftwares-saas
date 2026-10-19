@@ -3,15 +3,20 @@ import { Building2, Check, ChevronDown } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 import { useDismiss } from '@miles/ui/lib/use-dismiss';
 import { cn } from '@miles/ui/lib/utils';
-import { update } from '@/routes/branch';
+import { update as pharmacyUpdate } from '@/routes/branch';
 
 const PILL =
     'inline-flex h-9 max-w-56 items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 text-sm font-medium text-blue-700';
 
 /**
- * The branch being worked in; a menu to switch when more are open.
+ * The branch being worked in; a menu to switch when more are open. `update`
+ * is the industry's own branch.update route (Retail passes its own).
  */
-export function BranchSwitcher() {
+export function BranchSwitcher({
+    update = pharmacyUpdate,
+}: {
+    update?: typeof pharmacyUpdate;
+}) {
     const { branch, branches } = usePage().props;
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);

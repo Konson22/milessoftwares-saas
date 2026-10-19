@@ -26,7 +26,7 @@ type Props = {
             id: string;
             medicine: string;
             batchNumber: string;
-            expiresOn: string;
+            expiresOn: string | null;
             received: number;
             returnable: number;
             unit: string;
@@ -89,7 +89,7 @@ export default function CreateSupplierReturn({ receipt, today }: Props) {
                                                 {line.batchNumber}
                                             </TableCell>
                                             <TableCell className="tabular-nums">
-                                                {line.expiresOn}
+                                                {line.expiresOn ?? '—'}
                                             </TableCell>
                                             <TableCell className="text-right tabular-nums">
                                                 {line.received} {line.unit}

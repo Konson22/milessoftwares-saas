@@ -17,6 +17,19 @@ foreach (['MasterData', 'Inventory', 'Procurement', 'Sales'] as $module) {
         ->not->toUse('App\Modules\Pharmacy');
 }
 
+foreach (['MasterData', 'Inventory', 'Procurement', 'Sales'] as $module) {
+    arch("{$module} does not depend on retail")
+        ->expect("App\\Modules\\{$module}")
+        ->not->toUse('App\Modules\Retail');
+}
+
+// Industry modules share the engine, never each other.
+arch('retail and the pharmacy stay apart')
+    ->expect('App\Modules\Retail')
+    ->not->toUse('App\Modules\Pharmacy')
+    ->and('App\Modules\Pharmacy')
+    ->not->toUse('App\Modules\Retail');
+
 arch('workspace pages read items, not medicines')
     ->expect(['App\Http\Controllers\HomeController', 'App\Http\Controllers\ReportController'])
     ->not->toUse('App\Modules\Pharmacy');

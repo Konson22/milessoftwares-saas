@@ -9,6 +9,7 @@ import { login, register } from '@/routes';
 // Relative paths on the apex host; sign-in and registration live on the
 // auth host, so those are plain links.
 const nav = [
+    { title: 'Home', href: '/' },
     { title: 'ERP products', href: '/#erp' },
     { title: 'Applications', href: '/#products' },
     { title: 'How it works', href: '/#how-it-works' },
@@ -98,7 +99,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                     </p>
                 </div>
             </div>
-            <header className="sticky top-0 z-40 border-b border-site-line/80 bg-white/90 shadow-sm shadow-site-navy/5 backdrop-blur-xl">
+            <header className="sticky top-0 z-40 border-b border-site-line bg-white shadow-sm shadow-site-navy/5">
                 <nav
                     aria-label="Main"
                     className="mx-auto flex h-16 max-w-7xl items-center gap-8 px-4 sm:h-20 sm:px-6"
@@ -269,7 +270,7 @@ function FooterColumn({
             <h2 className="text-base font-semibold text-white">{title}</h2>
             <span
                 aria-hidden
-                className="mt-3 block h-0.5 w-8 rounded-full bg-site-accent"
+                className="mt-3 block h-0.5 w-8 rounded-full bg-linear-to-r from-brand-cyan via-brand-green to-brand-gold"
             />
             <ul className="mt-5 space-y-3">
                 {links.map((link) => (

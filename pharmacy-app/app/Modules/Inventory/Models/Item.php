@@ -31,6 +31,7 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property int $reorder_level
  * @property bool $restricted
  * @property bool $controlled
+ * @property bool $tracks_expiry its batches carry an expiry date (medicines, food); otherwise none
  * @property bool $active
  */
 #[UseFactory(ItemFactory::class)]
@@ -45,7 +46,7 @@ class Item extends Model
 
     protected $guarded = ['organization_id'];
 
-    protected $attributes = ['storage' => 'room'];
+    protected $attributes = ['storage' => 'room', 'tracks_expiry' => true];
 
     protected function casts(): array
     {
@@ -54,6 +55,7 @@ class Item extends Model
             'reorder_level' => 'integer',
             'restricted' => 'boolean',
             'controlled' => 'boolean',
+            'tracks_expiry' => 'boolean',
             'active' => 'boolean',
             'storage' => StorageCondition::class,
         ];
@@ -73,6 +75,17 @@ class Item extends Model
     public function packs(): HasMany
     {
         return $this->hasMany(ItemPack::class)->orderBy('units');
+    }
+
+    /**
+     * Items of these kinds only: an industry's own (App\Support\Industry).
+     *
+     * @param  Builder<self>  $query
+     * @param  list<string>  $kinds
+     */
+    public function scopeOfKind(Builder $query, array $kinds): void
+    {
+        $query->whereIn('kind', $kinds);
     }
 
     /**

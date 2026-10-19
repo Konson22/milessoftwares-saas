@@ -2,6 +2,8 @@ export type BuyableItem = {
     id: string;
     label: string;
     unit: string;
+    /** Its stock carries an expiry date. */
+    tracksExpiry: boolean;
     sellPriceMinor: number;
     /** null: never received, so no buying price yet. */
     lastUnitCostMinor: number | null;

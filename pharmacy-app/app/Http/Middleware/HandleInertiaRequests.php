@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Support\Branches;
 use App\Support\CurrentBranch;
+use App\Support\Industry;
 use App\Support\Money;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -24,9 +25,10 @@ class HandleInertiaRequests extends Middleware
         // platform.access have bound the workspace and access for this request.
         return [
             ...parent::share($request),
-            'product' => [
-                'name' => config('app.name'),
-                'code' => config('platform-client.application'),
+            // The industry module this page belongs to (pharmacy, retail).
+            'product' => fn () => [
+                'name' => (string) config('industries.'.app(Industry::class)->code().'.name', config('app.name')),
+                'code' => app(Industry::class)->code(),
             ],
             'workspace' => function () use ($request) {
                 $tenant = app(CurrentTenant::class)->get();

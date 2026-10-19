@@ -12,11 +12,8 @@ import type { LucideIcon } from 'lucide-react';
 import { ErpStatusBadge } from '@/sites/public/components/erp-product';
 import type { ErpProduct } from '@/sites/public/components/erp-product';
 import FaqList from '@/sites/public/components/faq';
-import {
-    Accent,
-    HeroBackdrop,
-    HeroBadge,
-} from '@/sites/public/components/page-hero';
+import HeroShowcase from '@/sites/public/components/hero-showcase';
+import { Accent, HeroBackdrop } from '@/sites/public/components/page-hero';
 import {
     ProductTile,
     productIcon,
@@ -37,7 +34,6 @@ import {
     trialLength,
     trialUrl,
 } from '@/sites/public/components/styles';
-import WorkspacePreview from '@/sites/public/components/workspace-preview';
 
 type Props = {
     products: Product[];
@@ -113,14 +109,11 @@ export default function MarketingHome({
                 }}
             />
 
-            {/* Hero: navy, text on the left, the workspace on the right. */}
+            {/* Hero: navy, text on the left, application photos on the right. */}
             <section className={darkBand}>
                 <HeroBackdrop />
                 <div className="mx-auto grid max-w-7xl items-center gap-14 px-4 pt-16 pb-32 sm:px-6 sm:pt-24 sm:pb-40 lg:grid-cols-[1.05fr_1fr] lg:gap-10">
                     <div className="text-center lg:text-left">
-                        <HeroBadge>
-                            {trial} free trial on every application
-                        </HeroBadge>
                         <h1
                             className={`text-[2.25rem] leading-[1.08] sm:text-6xl xl:text-[4.25rem] ${display}`}
                         >
@@ -164,10 +157,10 @@ export default function MarketingHome({
                         <div className="reveal-up relative mx-auto w-full max-w-2xl lg:max-w-none">
                             <div
                                 aria-hidden
-                                className="absolute -inset-4 -z-10 rounded-[2rem] bg-linear-to-br from-site-accent/30 via-transparent to-brand-blue/30 blur-2xl"
+                                className="absolute -inset-4 -z-10 rounded-[2rem] bg-linear-to-br from-brand-cyan/30 via-transparent to-brand-green/25 blur-2xl"
                             />
                             <FloatingApps products={products} />
-                            <WorkspacePreview products={products} />
+                            <HeroShowcase products={products} />
                         </div>
                     )}
                 </div>
@@ -300,7 +293,7 @@ export default function MarketingHome({
                 />
                 <div
                     aria-hidden
-                    className="pointer-events-none absolute -bottom-24 left-1/3 -z-10 size-80 rounded-full bg-site-accent/15 blur-3xl"
+                    className="pointer-events-none absolute -bottom-24 left-1/3 -z-10 size-80 rounded-full bg-brand-green/15 blur-3xl"
                 />
                 <dl className="mx-auto grid max-w-7xl grid-cols-2 gap-y-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-4">
                     {stats.map((stat) => (
@@ -441,7 +434,7 @@ export default function MarketingHome({
                 aria-labelledby="cta-heading"
                 className="px-4 pb-20 sm:px-6 sm:pb-28"
             >
-                <div className="relative isolate mx-auto grid max-w-7xl items-center gap-8 overflow-hidden rounded-3xl bg-linear-to-r from-[#c2410c] via-[#b93a0b] to-[#9a3412] px-6 py-14 text-white sm:px-14 sm:py-16 lg:grid-cols-[1fr_auto]">
+                <div className="relative isolate mx-auto grid max-w-7xl items-center gap-8 overflow-hidden rounded-3xl bg-linear-to-r from-brand-blue-dark via-brand-blue to-[#0b6e63] px-6 py-14 text-white sm:px-14 sm:py-16 lg:grid-cols-[1fr_auto]">
                     <div
                         aria-hidden
                         className="absolute -top-24 -right-16 -z-10 size-72 rounded-full border-[36px] border-white/10"
@@ -482,7 +475,7 @@ export default function MarketingHome({
 }
 
 /**
- * Two application drawings stacked at an angle, with an orange badge for
+ * Two application drawings stacked at an angle, with a gold badge for
  * the free trial, beside the platform story. Decorative: the same
  * applications are listed below.
  */
@@ -519,7 +512,7 @@ function AboutCollage({
                     <ProductArt code={second.code} />
                 </div>
             )}
-            <div className="absolute -top-6 right-6 flex flex-col items-center rounded-2xl bg-linear-to-br from-[#cf440c] to-[#9a3412] px-6 py-5 text-white shadow-xl shadow-site-accent/30 sm:-right-6">
+            <div className="absolute -top-6 right-6 flex flex-col items-center rounded-2xl bg-linear-to-br from-brand-gold-light to-brand-gold px-6 py-5 text-site-ink shadow-xl shadow-brand-gold/30 sm:-right-6">
                 <span className="font-public-display text-4xl leading-none font-bold">
                     {trialDays}
                 </span>
@@ -545,7 +538,7 @@ function ErpCard({ product, index }: { product: ErpProduct; index: number }) {
             </span>
             <span
                 aria-hidden
-                className="absolute inset-x-0 bottom-0 h-1 origin-left scale-x-0 bg-linear-to-r from-site-accent to-[#b93a0b] transition-transform duration-300 group-hover:scale-x-100"
+                className="absolute inset-x-0 bottom-0 h-1 origin-left scale-x-0 bg-linear-to-r from-brand-cyan via-brand-blue to-brand-green transition-transform duration-300 group-hover:scale-x-100"
             />
             <div className="relative flex items-start gap-3">
                 <h3

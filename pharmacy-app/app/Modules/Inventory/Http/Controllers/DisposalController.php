@@ -9,6 +9,7 @@ use App\Modules\Inventory\Enums\DisposalReason;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\StockDisposal;
 use App\Support\CurrentBranch;
+use App\Support\Industry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -22,7 +23,10 @@ use Miles\PlatformClient\Access\CurrentAccess;
  */
 class DisposalController extends Controller
 {
-    public function __construct(private readonly CurrentBranch $branch) {}
+    public function __construct(
+        private readonly CurrentBranch $branch,
+        private readonly Industry $industry,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -32,13 +36,14 @@ class DisposalController extends Controller
 
         $disposals = StockDisposal::query()
             ->where('branch_id', $this->branch->id())
+            ->where('application', $this->industry->code())
             ->where('status', $status)
             ->with(['item', 'batch:id,batch_number,expires_on,unit_cost_minor', 'requester:id,name', 'decider:id,name'])
             ->latest('requested_at')
             ->limit(200)
             ->get();
 
-        return Inertia::render('disposals/index', [
+        return Inertia::render($this->industry->page('disposals/index'), [
             'status' => $status,
             'disposals' => $disposals->map(fn (StockDisposal $disposal) => [
                 'id' => $disposal->id,
@@ -46,7 +51,7 @@ class DisposalController extends Controller
                 'itemId' => $disposal->item_id,
                 'medicine' => $disposal->item->name,
                 'batchNumber' => $disposal->batch->batch_number,
-                'expiresOn' => $disposal->batch->expires_on->toDateString(),
+                'expiresOn' => $disposal->batch->expires_on?->toDateString(),
                 'quantity' => $disposal->quantity,
                 'costMinor' => $disposal->quantity * $disposal->batch->unit_cost_minor,
                 'reason' => $disposal->reason->label(),
@@ -58,7 +63,7 @@ class DisposalController extends Controller
                 'decidedAt' => $disposal->decided_at?->toIso8601String(),
                 'decisionNote' => $disposal->decision_note,
             ]),
-            'canDecide' => app(CurrentAccess::class)->get()?->allowsIn('pharmacy.stock.dispose', branchId: $this->branch->id()) ?? false,
+            'canDecide' => app(CurrentAccess::class)->get()?->allowsIn($this->industry->permission('stock.dispose'), branchId: $this->branch->id()) ?? false,
         ]);
     }
 
@@ -99,7 +104,7 @@ class DisposalController extends Controller
 
     private function ensureHere(StockDisposal $disposal): void
     {
-        abort_unless($disposal->branch_id === $this->branch->id(), 404);
+        abort_unless($disposal->branch_id === $this->branch->id() && $disposal->application === $this->industry->code(), 404);
     }
 
     private function user(Request $request): User

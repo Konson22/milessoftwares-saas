@@ -35,10 +35,11 @@
     --color-brand-gold-dark: #c98a10;
 
     /* Public site: deep navy bands (hero, figures, footer) between white
-       and cool-grey sections, with an orange accent. The accent comes in
-       three strengths so text always passes WCAG AA: accent for shapes
-       and lines, accent-ink for orange text and buttons on light (5.2:1),
-       accent-glow for orange text on navy (6.8:1).
+       and cool-grey sections, accented in the logo's colours. The accent
+       is the logo blue in three strengths so text always passes WCAG AA:
+       accent for shapes and lines, accent-ink for blue text and buttons
+       on light (6.0:1), accent-glow (the logo cyan) for text on navy
+       (11:1). Cyan, teal, green and gold (brand-*) appear as highlights.
        site-black is the app sidebar in the home page's drawing. */
     --color-site-ink: #0b1220;
     --color-site-wash: #edf1ff;
@@ -47,9 +48,9 @@
     --color-site-black: #070707;
     --color-site-navy: #0a1f4e;
     --color-site-night: #050f2b;
-    --color-site-accent: #f2611d;
-    --color-site-accent-ink: #c2410c;
-    --color-site-accent-glow: #ff8a4c;
+    --color-site-accent: #0b7cf0;
+    --color-site-accent-ink: #0b5bd6;
+    --color-site-accent-glow: #4fd8f5;
     --font-public:
         'Nunito Variable', 'Nunito', ui-sans-serif, system-ui, sans-serif;
     --font-public-display:
@@ -97,7 +98,8 @@
 
 /*
  * Gentle motion for the public marketing site: floating app pills in the
- * hero, and a soft fade-up when the workspace drawing enters view.
+ * hero, a soft fade-up when the hero photos enter view, and the photo
+ * slideshow's slow zoom, caption entrance and progress bar.
  */
 @media (prefers-reduced-motion: no-preference) {
     .site-public .float-pill {
@@ -121,6 +123,54 @@
 
     .site-public .reveal-up {
         animation: site-reveal-up 0.7s ease-out both;
+    }
+
+    .site-public .hero-slide.is-active {
+        animation: site-ken-burns 6s ease-out both;
+    }
+
+    .site-public .hero-caption {
+        animation: site-caption-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    .site-public .hero-progress {
+        animation: site-progress linear both;
+    }
+
+    .site-public .hero-progress.is-paused {
+        animation-play-state: paused;
+    }
+}
+
+@keyframes site-ken-burns {
+    from {
+        transform: scale(1.12) translate(1%, 1%);
+    }
+
+    to {
+        transform: scale(1) translate(0, 0);
+    }
+}
+
+@keyframes site-caption-in {
+    from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.96);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes site-progress {
+    from {
+        transform: scaleX(0);
+    }
+
+    to {
+        transform: scaleX(1);
     }
 }
 

@@ -11,6 +11,7 @@ use App\Modules\Inventory\Models\StockTransfer;
 use App\Modules\Inventory\Models\StockTransferLine;
 use App\Support\Branches;
 use App\Support\CurrentBranch;
+use App\Support\Industry;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,6 +31,7 @@ class TransferController extends Controller
     public function __construct(
         private readonly CurrentBranch $branch,
         private readonly Branches $branches,
+        private readonly Industry $industry,
     ) {}
 
     public function index(Request $request): Response
@@ -40,6 +42,7 @@ class TransferController extends Controller
 
         $transfers = StockTransfer::query()
             ->where($direction === 'incoming' ? 'to_branch_id' : 'from_branch_id', $here)
+            ->where('application', $this->industry->code())
             ->with('sender:id,name')
             ->withCount('lines')
             ->withSum('lines', 'quantity')
@@ -48,7 +51,7 @@ class TransferController extends Controller
             ->limit(200)
             ->get();
 
-        return Inertia::render('transfers/index', [
+        return Inertia::render($this->industry->page('transfers/index'), [
             'direction' => $direction,
             'transfers' => $transfers->map(fn (StockTransfer $transfer) => [
                 'id' => $transfer->id,
@@ -61,7 +64,7 @@ class TransferController extends Controller
                 'sentBy' => $transfer->sender->name,
                 'sentAt' => $transfer->sent_at->toIso8601String(),
             ]),
-            'canSend' => $this->can('pharmacy.stock.adjust'),
+            'canSend' => $this->can($this->industry->permission('stock.adjust')),
         ]);
     }
 
@@ -69,7 +72,7 @@ class TransferController extends Controller
     {
         $here = $this->branch->id();
 
-        return Inertia::render('transfers/create', [
+        return Inertia::render($this->industry->page('transfers/create'), [
             'branches' => array_values(array_map(
                 fn (Branch $branch) => ['id' => $branch->id, 'name' => $branch->name],
                 array_filter($this->branches->allActive(), fn (Branch $branch) => $branch->id !== $here),
@@ -78,16 +81,17 @@ class TransferController extends Controller
                 ->where('branch_id', $here)
                 ->where('status', Batch::AVAILABLE)
                 ->where('quantity_on_hand', '>', 0)
-                ->where('expires_on', '>', CarbonImmutable::today())
+                ->unexpired(CarbonImmutable::today())
+                ->whereHas('item', fn ($item) => $item->ofKind($this->industry->itemKinds()))
                 ->with('item')
-                ->orderBy('expires_on')
+                ->firstToExpire()
                 ->limit(self::MAX_BATCHES)
                 ->get()
                 ->sortBy(fn (Batch $batch) => $batch->item->name)
                 ->values()
                 ->map(fn (Batch $batch) => [
                     'id' => $batch->id,
-                    'label' => "{$batch->item->name} · {$batch->batch_number} · exp {$batch->expires_on->toDateString()}",
+                    'label' => "{$batch->item->name} · {$batch->batch_number}".($batch->expires_on === null ? '' : " · exp {$batch->expires_on->toDateString()}"),
                     'onHand' => $batch->quantity_on_hand,
                 ]),
         ]);
@@ -109,7 +113,7 @@ class TransferController extends Controller
             'quantity' => (int) $line['quantity'],
         ], $validated['lines'])), $validated['note'] ?? null, $this->user($request));
 
-        return to_route('transfers.show', $transfer)->with('success', "Transfer {$transfer->number} is on its way.");
+        return to_route($this->industry->route('transfers.show'), $transfer)->with('success', "Transfer {$transfer->number} is on its way.");
     }
 
     public function show(StockTransfer $transfer): Response
@@ -118,9 +122,9 @@ class TransferController extends Controller
         $names = $this->branches->names();
         $transfer->load(['lines.item', 'sender:id,name', 'receiver:id,name', 'canceller:id,name']);
         $inTransit = $transfer->status === StockTransfer::IN_TRANSIT;
-        $mayAdjust = $this->can('pharmacy.stock.adjust');
+        $mayAdjust = $this->can($this->industry->permission('stock.adjust'));
 
-        return Inertia::render('transfers/show', [
+        return Inertia::render($this->industry->page('transfers/show'), [
             'transfer' => [
                 'id' => $transfer->id,
                 'number' => $transfer->number,
@@ -139,7 +143,7 @@ class TransferController extends Controller
                     'itemId' => $line->item_id,
                     'medicine' => $line->item->name,
                     'batchNumber' => $line->batch_number,
-                    'expiresOn' => $line->expires_on->toDateString(),
+                    'expiresOn' => $line->expires_on?->toDateString(),
                     'quantity' => $line->quantity,
                     'costMinor' => $line->quantity * $line->unit_cost_minor,
                 ]),
@@ -173,12 +177,13 @@ class TransferController extends Controller
     }
 
     /**
-     * Only the two branches of a transfer see it; returns the one worked in.
+     * Only the two branches of a transfer see it, in the industry module that
+     * sent it; returns the branch worked in.
      */
     private function ensureHere(StockTransfer $transfer): string
     {
         $here = $this->branch->id();
-        abort_unless($here === $transfer->from_branch_id || $here === $transfer->to_branch_id, 404);
+        abort_unless(($here === $transfer->from_branch_id || $here === $transfer->to_branch_id) && $transfer->application === $this->industry->code(), 404);
 
         return $here;
     }

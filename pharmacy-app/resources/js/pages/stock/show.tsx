@@ -23,7 +23,7 @@ import { adjust, hold, index, opening, release } from '@/routes/stock';
 type Batch = {
     id: string;
     batchNumber: string;
-    expiresOn: string;
+    expiresOn: string | null;
     expired: boolean;
     quantity: number;
     unitCostMinor: number;
@@ -52,6 +52,8 @@ type Props = {
         unit: string;
         controlled: boolean;
         reorderLevel: number;
+        /** Its batches carry an expiry date. */
+        tracksExpiry: boolean;
     };
     batches: Batch[];
     movements: Movement[];
@@ -152,7 +154,7 @@ export default function StockShow({
                                         {batch.batchNumber}
                                     </TableCell>
                                     <TableCell className="tabular-nums">
-                                        {batch.expiresOn}{' '}
+                                        {batch.expiresOn ?? '—'}{' '}
                                         {batch.expired && (
                                             <StatusBadge tone="neutral">
                                                 Expired
@@ -347,7 +349,9 @@ export default function StockShow({
                                                         >
                                                             {batch.batchNumber}{' '}
                                                             (exp{' '}
-                                                            {batch.expiresOn})
+                                                            {batch.expiresOn ??
+                                                                '—'}
+                                                            )
                                                         </option>
                                                     ))}
                                             </select>
@@ -654,37 +658,43 @@ export default function StockShow({
                                             ],
                                             ['unit_cost', 'Unit cost', 'text'],
                                         ] as const
-                                    ).map(([name, label, type]) => (
-                                        <div
-                                            key={name}
-                                            className="grid gap-1.5"
-                                        >
-                                            <Label htmlFor={name}>
-                                                {label}
-                                            </Label>
-                                            <Input
-                                                id={name}
-                                                name={name}
-                                                type={type}
-                                                required
-                                                inputMode={
-                                                    name === 'unit_cost'
-                                                        ? 'decimal'
-                                                        : undefined
-                                                }
-                                                aria-invalid={
-                                                    errors[name]
-                                                        ? true
-                                                        : undefined
-                                                }
-                                            />
-                                            {errors[name] && (
-                                                <p className="text-sm text-destructive">
-                                                    {errors[name]}
-                                                </p>
-                                            )}
-                                        </div>
-                                    ))}
+                                    )
+                                        .filter(
+                                            ([name]) =>
+                                                name !== 'expires_on' ||
+                                                medicine.tracksExpiry,
+                                        )
+                                        .map(([name, label, type]) => (
+                                            <div
+                                                key={name}
+                                                className="grid gap-1.5"
+                                            >
+                                                <Label htmlFor={name}>
+                                                    {label}
+                                                </Label>
+                                                <Input
+                                                    id={name}
+                                                    name={name}
+                                                    type={type}
+                                                    required
+                                                    inputMode={
+                                                        name === 'unit_cost'
+                                                            ? 'decimal'
+                                                            : undefined
+                                                    }
+                                                    aria-invalid={
+                                                        errors[name]
+                                                            ? true
+                                                            : undefined
+                                                    }
+                                                />
+                                                {errors[name] && (
+                                                    <p className="text-sm text-destructive">
+                                                        {errors[name]}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        ))}
                                     {locations.length > 0 && (
                                         <div className="grid gap-1.5">
                                             <Label htmlFor="location_id">

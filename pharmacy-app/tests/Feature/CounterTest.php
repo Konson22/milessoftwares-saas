@@ -13,7 +13,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 use Miles\SharedModuleKit\Envelope;
 
 beforeEach(function () {
-    config(['platform-client.modules.finance' => 'https://finance.internal/events', 'pharmacy.max_discount_percent' => 20]);
+    config(['platform-client.modules.finance' => 'https://finance.internal/events', 'industries.pharmacy.max_discount_percent' => 20]);
     $this->travelTo(CarbonImmutable::parse('2026-10-18 10:00'));
     $this->juba = $this->platform()->branch('acme', 'Juba');
     $this->wau = $this->platform()->branch('acme', 'Wau');

@@ -70,8 +70,14 @@ Once per product, before its first deploy:
 6. After its first deploy: `systemctl enable --now miles-product-queue@<code> miles-product-scheduler@<code>.timer`
    (the scheduler delivers the product's outbox of business events every minute).
 
+Retail is not a product folder of its own: pharmacy-app serves it at `/retail` (ADR-0003). Its
+setup is part of pharmacy's: `PLATFORM_HOSTED=retail` and the `PLATFORM_RETAIL_*` client values in
+the pharmacy `.env` (register Retail & POS in admin like any application), `SESSION_PATH=/` so the
+session reaches both `/pharmacy` and `/retail`, and `ops/nginx/products/retail.conf` next to
+`pharmacy.conf`. Its catalog, `pharmacy-app/platform/retail.json`, is imported with pharmacy's.
+
 Each release then installs and builds every product, migrates its database as `miles_owner` and runs
-`ops/postgres/product-grants.sql`, caches its configuration, imports its `platform/catalog.json`
+`ops/postgres/product-grants.sql`, caches its configuration, imports its `platform/*.json` catalogs
 into the platform, and restarts its queue worker after the switch. Product migrations follow the same
 expand → deploy → contract rule as the platform's.
 

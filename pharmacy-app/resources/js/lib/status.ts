@@ -19,6 +19,10 @@ const STATUS_TONES: Record<string, Tone> = {
     pending: 'warning',
     approved: 'success',
     in_transit: 'info',
+    quote: 'neutral',
+    confirmed: 'info',
+    partly_delivered: 'warning',
+    delivered: 'success',
 };
 
 export function statusTone(status: string): Tone {

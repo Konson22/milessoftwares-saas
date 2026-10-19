@@ -37,13 +37,15 @@ class Stock
      * the batch with the same number, or creates it; put straight at
      * $location when one is given, otherwise not put away.
      *
-     * @throws ValidationException when the batch exists with another expiry date
+     * @throws ValidationException when the batch exists with another expiry date, or
+     *                             the date is missing for an item that tracks expiry
+     *                             (or given for one that does not)
      */
     public function add(
         Item $item,
         string $branchId,
         string $batchNumber,
-        CarbonImmutable $expiresOn,
+        ?CarbonImmutable $expiresOn,
         int $quantity,
         int $unitCostMinor,
         User $user,
@@ -54,6 +56,12 @@ class Stock
     ): Batch {
         if ($quantity <= 0) {
             throw ValidationException::withMessages(['quantity' => 'The quantity must be at least 1.']);
+        }
+        if ($item->tracks_expiry && $expiresOn === null) {
+            throw ValidationException::withMessages(['expires_on' => "{$item->name} needs an expiry date."]);
+        }
+        if (! $item->tracks_expiry && $expiresOn !== null) {
+            throw ValidationException::withMessages(['expires_on' => "{$item->name} does not track expiry dates."]);
         }
 
         return DB::transaction(function () use ($item, $branchId, $batchNumber, $expiresOn, $quantity, $unitCostMinor, $user, $type, $referenceType, $referenceId, $location) {
@@ -73,9 +81,9 @@ class Stock
                     'unit_cost_minor' => $unitCostMinor,
                 ]);
                 $batch->quantity_on_hand = 0;
-            } elseif (! $batch->expires_on->isSameDay($expiresOn)) {
+            } elseif ($batch->expires_on?->toDateString() !== $expiresOn?->toDateString()) {
                 throw ValidationException::withMessages([
-                    'expires_on' => "Batch {$batchNumber} is already in stock with expiry {$batch->expires_on->toDateString()}.",
+                    'expires_on' => "Batch {$batchNumber} is already in stock with expiry ".($batch->expires_on?->toDateString() ?? 'none').'.',
                 ]);
             }
 
@@ -203,9 +211,9 @@ class Stock
     }
 
     /**
-     * Takes a quantity of an item from a branch for a sale: oldest expiry
-     * first (FEFO), never from expired batches or batches on hold. All or
-     * nothing.
+     * Takes a quantity of an item from a branch for a sale: soonest expiry
+     * first (FEFO; undated stock last, by batch), never from expired batches
+     * or batches on hold. All or nothing.
      *
      * @return list<array{batch: Batch, quantity: int}>
      *
@@ -225,8 +233,8 @@ class Stock
                 ->where('item_id', $item->id)
                 ->where('quantity_on_hand', '>', 0)
                 ->where('status', Batch::AVAILABLE)
-                ->whereDate('expires_on', '>', $today)
-                ->orderBy('expires_on')
+                ->unexpired($today)
+                ->firstToExpire()
                 ->orderBy('batch_number')
                 ->lockForUpdate()
                 ->get();
@@ -281,7 +289,7 @@ class Stock
             ->where('branch_id', $branchId)
             ->where('item_id', $item->id)
             ->where('status', Batch::AVAILABLE)
-            ->whereDate('expires_on', '>', ($today ?? CarbonImmutable::today())->startOfDay())
+            ->unexpired(($today ?? CarbonImmutable::today())->startOfDay())
             ->sum('quantity_on_hand');
     }
 

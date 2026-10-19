@@ -31,7 +31,7 @@ final class SignInController
 
     public function login(Request $request): RedirectResponse
     {
-        return redirect()->away($this->signIn->authorizationUrl($request, route('platform.callback')));
+        return redirect()->away($this->signIn->authorizationUrl($request, route($this->config->routeName('callback'))));
     }
 
     public function callback(Request $request): RedirectResponse

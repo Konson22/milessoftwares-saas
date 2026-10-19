@@ -11,6 +11,7 @@ use Miles\PlatformClient\Access\CurrentAccess;
 use Miles\PlatformClient\Events\DeliverDueEvents;
 use Miles\PlatformClient\Http\Middleware\RequirePlatformAccess;
 use Miles\PlatformClient\Http\Middleware\ResolveTenant;
+use Miles\PlatformClient\Http\Middleware\SelectApplication;
 use Miles\PlatformClient\Provisioning\NothingToProvision;
 use Miles\PlatformClient\Provisioning\ProvisionsTenants;
 use Miles\PlatformClient\Tenancy\CurrentTenant;
@@ -39,6 +40,7 @@ final class PlatformClientServiceProvider extends ServiceProvider
             $this->commands([DeliverDueEvents::class]);
         }
 
+        $router->aliasMiddleware('platform.app', SelectApplication::class);
         $router->aliasMiddleware('platform.tenant', ResolveTenant::class);
         $router->aliasMiddleware('platform.access', RequirePlatformAccess::class);
         // Everything a product page needs, in order.
@@ -50,6 +52,8 @@ final class PlatformClientServiceProvider extends ServiceProvider
             $kernel = $this->app->make(HttpKernel::class);
             $kernel->addToMiddlewarePriorityBefore(SubstituteBindings::class, ResolveTenant::class);
             $kernel->addToMiddlewarePriorityBefore(SubstituteBindings::class, RequirePlatformAccess::class);
+            // The application decides the clients the tenant is looked up with.
+            $kernel->addToMiddlewarePriorityBefore(ResolveTenant::class, SelectApplication::class);
         }
 
         if (config('platform-client.routes', true) && ! $this->app->routesAreCached() && $this->app->make(PlatformConfig::class)->configured()) {

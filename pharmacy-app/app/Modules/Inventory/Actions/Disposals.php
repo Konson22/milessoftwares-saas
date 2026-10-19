@@ -7,6 +7,7 @@ use App\Modules\Inventory\Enums\DisposalReason;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\StockDisposal;
 use App\Support\DocumentNumbers;
+use App\Support\Industry;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -20,6 +21,7 @@ class Disposals
     public function __construct(
         private readonly Stock $stock,
         private readonly DocumentNumbers $numbers,
+        private readonly Industry $industry,
     ) {}
 
     /**
@@ -29,6 +31,9 @@ class Disposals
     {
         return DB::transaction(function () use ($batch, $quantity, $reason, $note, $by) {
             $locked = Batch::query()->whereKey($batch->id)->lockForUpdate()->firstOrFail();
+            if (! $this->industry->handles($locked->item->kind)) {
+                throw ValidationException::withMessages(['quantity' => 'This item is not kept here.']);
+            }
 
             // What other requests already ask for comes off what can be asked.
             $asked = (int) StockDisposal::query()
@@ -47,6 +52,7 @@ class Disposals
 
             return StockDisposal::query()->create([
                 'branch_id' => $locked->branch_id,
+                'application' => $this->industry->code(),
                 'number' => $this->numbers->next('stock_disposal', 'D', 5),
                 'item_id' => $locked->item_id,
                 'batch_id' => $locked->id,

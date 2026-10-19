@@ -17,7 +17,7 @@
             "name": "Miles Retail & Trading ERP",
             "tagline": "Retail and wholesale trading on one set of books.",
             "description": "For retail stores, supermarkets, wholesalers and trading companies: point of sale, quotations, orders, invoices, delivery notes, purchasing, stock and accounting.",
-            "status": "planned",
+            "status": "pilot",
             "sort_order": 20,
             "applications": [
                 { "code": "retail", "requirement": "required" },

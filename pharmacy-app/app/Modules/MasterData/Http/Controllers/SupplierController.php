@@ -4,6 +4,7 @@ namespace App\Modules\MasterData\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\MasterData\Models\Supplier;
+use App\Support\Industry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -12,13 +13,14 @@ use Inertia\Response;
 use Miles\PlatformClient\Tenancy\CurrentTenant;
 
 /**
- * The organization's suppliers (shared by its branches).
+ * The organization's suppliers (shared by its branches and by every
+ * industry module: one supplier may sell to both the pharmacy and the shop).
  */
 class SupplierController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request, Industry $industry): Response
     {
-        return Inertia::render('suppliers/index', [
+        return Inertia::render($industry->page('suppliers/index'), [
             'suppliers' => Supplier::query()->orderBy('name')->get()->map(fn (Supplier $supplier) => [
                 'id' => $supplier->id,
                 'name' => $supplier->name,
@@ -27,7 +29,7 @@ class SupplierController extends Controller
                 'address' => $supplier->address,
                 'active' => $supplier->active,
             ]),
-            'canManage' => $request->user()?->can('pharmacy.purchasing.manage') ?? false,
+            'canManage' => $request->user()?->can($industry->permission('purchasing.manage')) ?? false,
         ]);
     }
 

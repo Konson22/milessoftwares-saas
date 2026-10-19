@@ -4,6 +4,7 @@ namespace App\Modules\Sales\Actions;
 
 use App\Models\User;
 use App\Modules\Sales\Enums\PaymentMethod;
+use App\Modules\Sales\Models\CustomerPayment;
 use App\Modules\Sales\Models\Sale;
 use App\Modules\Sales\Models\SaleReturn;
 use App\Modules\Sales\Models\TillSession;
@@ -128,10 +129,11 @@ class Tills
     }
 
     /**
-     * What went through a till: takings per payment method, cash given back,
-     * and the cash it should hold.
+     * What went through a till: takings per payment method (sales on account
+     * take no money), payments from account customers per method, cash given
+     * back, and the cash it should hold.
      *
-     * @return array{salesCount: int, takenMinor: array<string, int>, cashRefundsMinor: int, refundsCount: int, expectedCashMinor: int}
+     * @return array{salesCount: int, takenMinor: array<string, int>, collectedMinor: array<string, int>, collectionsCount: int, cashRefundsMinor: int, refundsCount: int, expectedCashMinor: int}
      */
     public function summary(TillSession $till): array
     {
@@ -163,12 +165,24 @@ class Tills
 
         $cashRefunds = (int) $refunds?->getAttribute('total') + (int) $returns?->getAttribute('total');
 
+        $collections = CustomerPayment::query()
+            ->where('till_session_id', $till->id)
+            ->groupBy('method')
+            ->selectRaw('method, COUNT(*) AS payments, COALESCE(SUM(amount_minor), 0) AS total')
+            ->get();
+        $collectedMinor = [];
+        foreach ($collections as $row) {
+            $collectedMinor[(string) $row->getRawOriginal('method')] = (int) $row->getAttribute('total');
+        }
+
         return [
             'salesCount' => (int) $taken->sum(fn ($row) => (int) $row->getAttribute('sales')),
             'takenMinor' => $takenMinor,
+            'collectedMinor' => $collectedMinor,
+            'collectionsCount' => (int) $collections->sum(fn ($row) => (int) $row->getAttribute('payments')),
             'cashRefundsMinor' => $cashRefunds,
             'refundsCount' => (int) $refunds?->getAttribute('refunds') + (int) $returns?->getAttribute('refunds'),
-            'expectedCashMinor' => $till->opening_float_minor + ($takenMinor[PaymentMethod::Cash->value] ?? 0) - $cashRefunds,
+            'expectedCashMinor' => $till->opening_float_minor + ($takenMinor[PaymentMethod::Cash->value] ?? 0) + ($collectedMinor[PaymentMethod::Cash->value] ?? 0) - $cashRefunds,
         ];
     }
 }

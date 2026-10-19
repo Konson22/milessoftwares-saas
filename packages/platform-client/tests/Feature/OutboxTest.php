@@ -52,7 +52,7 @@ it('delivers the envelope with an event token for the organization and module', 
     $row = outboxRow($id);
     expect($row->status)->toBe('delivered')
         ->and($row->delivered_at)->not->toBeNull()
-        ->and($this->platform()->eventTokens)->toBe([['organization_id' => $this->platform()->organization('acme')['id'], 'audience' => 'finance']]);
+        ->and($this->platform()->eventTokens)->toBe([['organization_id' => $this->platform()->organization('acme')['id'], 'audience' => 'finance', 'application' => 'pharmacy']]);
 
     $envelope = $this->platform()->moduleEvents['finance'][0];
     expect($envelope)

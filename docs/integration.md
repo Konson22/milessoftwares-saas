@@ -217,6 +217,22 @@ cd central-app
 php artisan platform:local-product pharmacy-app --entitle=acme   # --fresh issues new secrets
 ```
 
+### Several applications from one deployment
+
+The ERP workspace application (ADR-0003) serves industry modules that are registered as separate
+applications: `pharmacy-app` is registered as `pharmacy` and hosts `retail`. Each hosted
+application has its own catalog, route prefix, sign-in and service clients and webhook secret, set
+in `platform-client.hosted.<code>` (env `PLATFORM_<CODE>_*`). Its pages run behind
+`['web', 'platform.app:<code>', 'platform']`; the package registers its sign-in, webhook and
+provisioning routes under its path (route names `platform.<code>.login`, …). Organization lookups
+and effective access are asked and cached per application, so access to one never opens the other,
+and events it records are delivered with its clients and `source_app`. The proxy sends its path to
+the same product (`ops/nginx/products/retail.conf`, `apache-dev.conf`).
+
+```bash
+php artisan platform:local-product pharmacy-app --catalog=platform/retail.json --prefix=retail --entitle=acme
+```
+
 ## Sample app (local)
 
 ```

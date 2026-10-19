@@ -10,9 +10,16 @@ use RuntimeException;
 /**
  * Typed access to config/platform-client.php. A missing value fails loudly
  * with the env variable to set, instead of a confusing HTTP error later.
+ *
+ * A deployment is registered as one application (PLATFORM_APPLICATION) and
+ * may host more (platform-client.hosted), each with its own path, clients
+ * and webhook secret. The values of the application being served, the
+ * current one, are answered: the primary unless runAs() selected another.
  */
 final class PlatformConfig
 {
+    private ?string $current = null;
+
     public function __construct(private readonly Repository $config) {}
 
     /**
@@ -27,9 +34,70 @@ final class PlatformConfig
         return is_string($application) && $application !== '';
     }
 
+    /**
+     * The application being served.
+     */
     public function application(): string
     {
+        return $this->current ?? $this->primary();
+    }
+
+    /**
+     * The application the deployment is registered as (PLATFORM_APPLICATION).
+     */
+    public function primary(): string
+    {
         return $this->required('application', 'PLATFORM_APPLICATION');
+    }
+
+    /**
+     * Every application served here, the primary first.
+     *
+     * @return list<string>
+     */
+    public function applications(): array
+    {
+        $hosted = $this->config->get('platform-client.hosted');
+
+        return [$this->primary(), ...array_values(array_filter(array_keys(is_array($hosted) ? $hosted : []), 'is_string'))];
+    }
+
+    public function serves(string $application): bool
+    {
+        return in_array($application, $this->applications(), true);
+    }
+
+    /**
+     * Runs $callback as $application: its path, clients and secret.
+     *
+     * @template T
+     *
+     * @param  callable(): T  $callback
+     * @return T
+     */
+    public function runAs(string $application, callable $callback): mixed
+    {
+        if (! $this->serves($application)) {
+            throw new RuntimeException("Platform client does not serve [{$application}]: add it to platform-client.hosted.");
+        }
+
+        $previous = $this->current;
+        $this->current = $application === $this->primary() ? null : $application;
+
+        try {
+            return $callback();
+        } finally {
+            $this->current = $previous;
+        }
+    }
+
+    /**
+     * The name of a platform-client route of the current application:
+     * "platform.login" for the primary, "platform.retail.login" for a hosted one.
+     */
+    public function routeName(string $name): string
+    {
+        return $this->current === null ? "platform.{$name}" : "platform.{$this->current}.{$name}";
     }
 
     public function rootDomain(): string
@@ -82,27 +150,27 @@ final class PlatformConfig
      */
     public function signInClientId(): string
     {
-        return $this->required('sign_in.client_id', 'PLATFORM_SIGN_IN_CLIENT_ID');
+        return $this->own('sign_in.client_id', 'SIGN_IN_CLIENT_ID');
     }
 
     public function signInClientSecret(): string
     {
-        return $this->required('sign_in.client_secret', 'PLATFORM_SIGN_IN_CLIENT_SECRET');
+        return $this->own('sign_in.client_secret', 'SIGN_IN_CLIENT_SECRET');
     }
 
     public function serviceClientId(): string
     {
-        return $this->required('service.client_id', 'PLATFORM_SERVICE_CLIENT_ID');
+        return $this->own('service.client_id', 'SERVICE_CLIENT_ID');
     }
 
     public function serviceClientSecret(): string
     {
-        return $this->required('service.client_secret', 'PLATFORM_SERVICE_CLIENT_SECRET');
+        return $this->own('service.client_secret', 'SERVICE_CLIENT_SECRET');
     }
 
     public function webhookSecret(): string
     {
-        return $this->required('webhook_secret', 'PLATFORM_WEBHOOK_SECRET');
+        return $this->own('webhook_secret', 'WEBHOOK_SECRET');
     }
 
     /**
@@ -119,7 +187,7 @@ final class PlatformConfig
      */
     public function path(): string
     {
-        $path = $this->config->get('platform-client.path');
+        $path = $this->config->get($this->key('path'));
         $path = trim(is_string($path) && $path !== '' ? $path : $this->application(), '/');
 
         if (preg_match('/^[a-z][a-z0-9-]*$/', $path) !== 1) {
@@ -131,7 +199,7 @@ final class PlatformConfig
 
     public function home(): string
     {
-        $home = $this->config->get('platform-client.home');
+        $home = $this->config->get($this->key('home'));
 
         return is_string($home) && $home !== '' ? $home : '/'.$this->path();
     }
@@ -144,6 +212,28 @@ final class PlatformConfig
     public function httpTimeout(): int
     {
         return max(1, (int) $this->config->get('platform-client.http_timeout', 10));
+    }
+
+    /**
+     * A value of the current application: PLATFORM_<NAME> for the primary,
+     * PLATFORM_<APPLICATION>_<NAME> (platform-client.hosted.<application>)
+     * for a hosted one.
+     *
+     * @return non-empty-string
+     */
+    private function own(string $key, string $name): string
+    {
+        return $this->current === null
+            ? $this->required($key, 'PLATFORM_'.$name)
+            : $this->required('hosted.'.$this->current.'.'.$key, 'PLATFORM_'.strtoupper($this->current).'_'.$name);
+    }
+
+    /**
+     * The full config key of a value of the current application.
+     */
+    private function key(string $key): string
+    {
+        return $this->current === null ? 'platform-client.'.$key : 'platform-client.hosted.'.$this->current.'.'.$key;
     }
 
     /**

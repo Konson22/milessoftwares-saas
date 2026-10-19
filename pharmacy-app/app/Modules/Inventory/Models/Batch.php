@@ -3,6 +3,7 @@
 namespace App\Modules\Inventory\Models;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,7 +19,7 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property string $branch_id
  * @property string $item_id
  * @property string $batch_number
- * @property CarbonImmutable $expires_on
+ * @property CarbonImmutable|null $expires_on null: an item that does not track expiry
  * @property int $unit_cost_minor
  * @property int $quantity_on_hand
  * @property string $status
@@ -64,7 +65,7 @@ class Batch extends Model
      * What one unit of each item cost on its latest batch: the buying price
      * to show beside the selling price. Items never received are missing.
      *
-     * @param  list<string>|null  $itemIds  null: every item
+     * @param  array<int, int|string>|null  $itemIds  item keys (modelKeys()); null: every item
      * @return array<string, int> unit cost in minor units, by item id
      */
     public static function lastUnitCosts(?array $itemIds = null): array
@@ -84,10 +85,31 @@ class Batch extends Model
     }
 
     /**
-     * Expired on or before today: never sold.
+     * Expired on or before today: never sold. Undated stock never expires.
      */
     public function isExpired(?CarbonImmutable $today = null): bool
     {
-        return $this->expires_on->lessThanOrEqualTo(($today ?? CarbonImmutable::today())->startOfDay());
+        return $this->expires_on?->lessThanOrEqualTo(($today ?? CarbonImmutable::today())->startOfDay()) ?? false;
+    }
+
+    /**
+     * Not expired on $today: undated, or expiring after it.
+     *
+     * @param  Builder<self>  $query
+     */
+    public function scopeUnexpired(Builder $query, CarbonImmutable $today): void
+    {
+        $query->where(fn (Builder $q) => $q->whereNull('expires_on')->orWhereDate('expires_on', '>', $today));
+    }
+
+    /**
+     * Soonest expiry first, undated stock last (first expired, first out),
+     * the same way on every database.
+     *
+     * @param  Builder<self>  $query
+     */
+    public function scopeFirstToExpire(Builder $query): void
+    {
+        $query->orderByRaw('expires_on IS NULL')->orderBy('expires_on');
     }
 }

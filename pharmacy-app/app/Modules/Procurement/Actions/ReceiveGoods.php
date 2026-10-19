@@ -14,6 +14,7 @@ use App\Modules\Procurement\Models\GoodsReceipt;
 use App\Modules\Procurement\Models\PurchaseOrder;
 use App\Modules\Procurement\Models\PurchaseOrderLine;
 use App\Support\DocumentNumbers;
+use App\Support\Industry;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +30,11 @@ use Miles\PlatformClient\Events\Outbox;
  * A line counts packs at a cost per pack when it names a pack (against an
  * order: the order line's pack). Stock gets the units, at the pack cost
  * shared over its units; Finance is billed exactly packs x pack cost.
+ *
+ * A supplier's delivery note or invoice (its reference) is received once:
+ * receipts from one supplier are taken one at a time, so a second attempt
+ * at the same reference, even at the same moment, is refused. The receipt
+ * belongs to the industry module receiving it and takes only its items.
  */
 class ReceiveGoods
 {
@@ -37,20 +43,33 @@ class ReceiveGoods
         private readonly ItemPacks $packs,
         private readonly DocumentNumbers $numbers,
         private readonly Outbox $outbox,
+        private readonly Industry $industry,
     ) {}
 
     /**
-     * @param  list<array{item_id: string, batch_number: string, expires_on: string, quantity: int, unit_cost_minor: int, purchase_order_line_id?: string|null, pack_id?: string|null, location_id?: string|null}>  $lines
+     * @param  list<array{item_id: string, batch_number: string, expires_on?: string|null, quantity: int, unit_cost_minor: int, purchase_order_line_id?: string|null, pack_id?: string|null, location_id?: string|null}>  $lines
      *
      * @throws ValidationException
      */
     public function handle(User $by, string $branchId, Supplier $supplier, ?PurchaseOrder $order, ?string $supplierReference, CarbonImmutable $receivedOn, array $lines): GoodsReceipt
     {
         return DB::transaction(function () use ($by, $branchId, $supplier, $order, $supplierReference, $receivedOn, $lines) {
+            Supplier::query()->whereKey($supplier->id)->lockForUpdate()->firstOrFail();
+            $reference = trim((string) $supplierReference);
+            if ($reference !== '') {
+                $earlier = GoodsReceipt::query()
+                    ->where('supplier_id', $supplier->id)
+                    ->whereRaw('LOWER(supplier_reference) = ?', [mb_strtolower($reference)])
+                    ->value('number');
+                if ($earlier !== null) {
+                    throw ValidationException::withMessages(['supplier_reference' => "{$reference} from {$supplier->name} was already received as {$earlier}."]);
+                }
+            }
+
             if ($order !== null) {
                 $order = PurchaseOrder::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
 
-                if ($order->branch_id !== $branchId || $order->supplier_id !== $supplier->id) {
+                if ($order->branch_id !== $branchId || $order->supplier_id !== $supplier->id || $order->application !== $this->industry->code()) {
                     throw ValidationException::withMessages(['purchase_order_id' => 'That order is for another branch or supplier.']);
                 }
                 if (! $order->status->canReceive()) {
@@ -60,10 +79,11 @@ class ReceiveGoods
 
             $receipt = GoodsReceipt::query()->create([
                 'branch_id' => $branchId,
+                'application' => $this->industry->code(),
                 'number' => $this->numbers->next('goods_receipt', 'GRN'),
                 'supplier_id' => $supplier->id,
                 'purchase_order_id' => $order?->id,
-                'supplier_reference' => $supplierReference,
+                'supplier_reference' => $reference === '' ? null : $reference,
                 'received_on' => $receivedOn,
                 'total_minor' => 0,
                 'received_by' => $by->id,
@@ -75,6 +95,15 @@ class ReceiveGoods
             foreach ($lines as $index => $line) {
                 $item = Item::query()->find($line['item_id'])
                     ?? throw ValidationException::withMessages(["lines.{$index}.item_id" => 'Unknown item.']);
+                if (! $this->industry->handles($item->kind)) {
+                    throw ValidationException::withMessages(["lines.{$index}.item_id" => 'This item is not bought here.']);
+                }
+                $expiresOn = empty($line['expires_on']) ? null : CarbonImmutable::parse($line['expires_on']);
+                if ($item->tracks_expiry !== ($expiresOn !== null)) {
+                    throw ValidationException::withMessages(["lines.{$index}.expires_on" => $item->tracks_expiry
+                        ? "{$item->name} needs an expiry date."
+                        : "{$item->name} does not track expiry dates."]);
+                }
 
                 $orderLine = null;
                 if (! empty($line['purchase_order_line_id'])) {
@@ -109,7 +138,7 @@ class ReceiveGoods
                     item: $item,
                     branchId: $branchId,
                     batchNumber: $line['batch_number'],
-                    expiresOn: CarbonImmutable::parse($line['expires_on']),
+                    expiresOn: $expiresOn,
                     quantity: $line['quantity'] * $units,
                     unitCostMinor: (int) round($line['unit_cost_minor'] / $units),
                     user: $by,
@@ -127,7 +156,7 @@ class ReceiveGoods
                     'batch_id' => $batch->id,
                     'purchase_order_line_id' => $orderLine?->id,
                     'batch_number' => $line['batch_number'],
-                    'expires_on' => $line['expires_on'],
+                    'expires_on' => $expiresOn,
                     'quantity' => $line['quantity'],
                     'unit_cost_minor' => $line['unit_cost_minor'],
                     'line_total_minor' => $lineTotal,

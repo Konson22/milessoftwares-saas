@@ -24,7 +24,8 @@ use stdClass;
  *   exists exactly when the sale or receipt does, and queues delivery
  *   after commit.
  * - deliver() gets an event token for the organization and module and
- *   POSTs the envelope. The source_transaction_id stays the same on every
+ *   POSTs the envelope, as the application that recorded the event (its
+ *   clients, its source_app) when the deployment serves several. The source_transaction_id stays the same on every
  *   attempt; the module applies it once.
  *
  * Outcomes: delivered (201), duplicate (200, already applied), skipped (the
@@ -58,6 +59,7 @@ final class Outbox
         DB::table('platform_outbox')->insert([
             'id' => $id,
             'organization_id' => $this->tenant->require()->id,
+            'application' => $this->config->application() === $this->config->primary() ? null : $this->config->application(),
             'audience' => $audience,
             'event_type' => $eventType,
             'schema_version' => $schemaVersion,
@@ -98,6 +100,19 @@ final class Outbox
             return;
         }
 
+        $application = is_string($row->application) ? $row->application : $this->config->primary();
+        if (! $this->config->serves($application)) {
+            $this->retryLater($row, "Recorded by [{$application}], which this deployment no longer serves (platform-client.hosted).", final: false);
+
+            return;
+        }
+
+        $this->config->runAs($application, fn () => $this->send($row));
+    }
+
+    private function send(stdClass $row): void
+    {
+        $id = (string) $row->id;
         $url = $this->moduleUrl((string) $row->audience);
         if ($url === null) {
             $this->retryLater($row, "No events URL configured for module [{$row->audience}] (platform-client.modules).", final: false);

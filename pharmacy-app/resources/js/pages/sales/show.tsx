@@ -32,7 +32,7 @@ type Props = {
             id: string;
             medicine: string;
             batchNumber: string;
-            expiresOn: string;
+            expiresOn: string | null;
             quantity: number;
             unitPriceMinor: number;
             discountMinor: number;
@@ -129,7 +129,7 @@ export default function ShowSale({ sale, canVoid, canReturn }: Props) {
                                                 ? `${line.quantity} from ${line.packName}s of ${line.unitsPerPack} at ${money(line.packPriceMinor ?? 0)}`
                                                 : `${line.quantity} × ${money(line.unitPriceMinor)}`}{' '}
                                             · batch {line.batchNumber}, exp{' '}
-                                            {line.expiresOn}
+                                            {line.expiresOn ?? '—'}
                                             {line.discountMinor > 0 &&
                                                 ` · less ${money(line.discountMinor)}`}
                                         </span>

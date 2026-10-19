@@ -570,3 +570,212 @@ branch may take that long to appear.
 encrypted at rest by the application (disk encryption and the encrypted backup cover them); no
 virus scanning. The nightly logical dump (`backup.sh`) covers only `PGDATABASE`; product databases
 (`hr`, also pharmacy and finance) rely on cluster-wide WAL archiving until a dump per database is added.
+
+## Retail R0–R1 — 2026-10-19 (local, Windows)
+
+**Implemented** (`packages/platform-client`, `pharmacy-app`, `central-app`; plan in `retail-roadmap.md`):
+- R0, platform-client: one deployment serves several registry applications. `PLATFORM_HOSTED`
+  lists them, with `PLATFORM_<APP>_PATH`, sign-in and service clients, and a webhook secret per
+  application. `PlatformConfig::runAs()` / `application()`. Middleware `platform.app:<code>`.
+  Routes, cache keys and the organization and access lookups are per application. Outbox rows
+  record the application and are delivered with its clients and `source_app`. `PlatformFake` is
+  application-aware.
+- R0, central-app: `platform:local-product --catalog=platform/retail.json` registers a hosted
+  application and writes the prefixed keys. A test imports every repository catalog.
+- R1, shared engine: `items.tracks_expiry`; `expires_on` nullable on batches, goods-receipt lines
+  and transfer lines (undated stock never expires and sells after dated stock); `sales.application`.
+- R1, `App\Support\Industry` (config `config/industries.php`): the item kinds, permissions, pages,
+  route names and discount limit of the application being served. Sales, tills, stock, home and
+  branch controllers use it; `Sell` refuses another industry's items and records the application.
+- R1, Retail module: `Product` (an Inventory item of kind `product`, scoped to it) and
+  `ProductController` (catalogue with packs, barcode unique across all items, expiry tracking
+  fixed once stocked). `routes/retail.php` at `/retail`, named `retail.*`, loaded when the
+  deployment serves `retail`. Catalog `platform/retail.json` 1.0.0 (planned).
+- R1, pages under `resources/js/pages/retail` with `RetailLayout`: home, products, barcode counter
+  (Enter adds the scanned product), sales, receipt, tills, stock.
+- Arch rules: shared modules do not use Retail; Retail and Pharmacy do not use each other.
+
+**Tests executed:**
+- pharmacy-app: Pest 172 passed, 1 skipped (`RetailTest` 13 new, `UndatedStockTest` 6 new);
+  PHPStan 0; Pint; `vp check`; `tsc`; build.
+- platform-client: Pest 108 passed (`HostedApplicationTest` 12 new). central-app:
+  `LocalProductTest` 5 and `RepositoryCatalogsTest` 4 passed.
+- Migrations rolled back (3 steps) and forward on local PostgreSQL (`pharmacy`) and on SQLite.
+- Mutations: dropping the sales list's application filter fails the "kept apart" test; dropping
+  the `Product` kind scope fails two catalogue tests; delivering outbox rows outside `runAs`
+  fails the hosted outbox test.
+
+**Known limitations:** listed under "Status" in `retail-roadmap.md`. The architecture rule
+"workspace pages read items, not medicines" passes even though `HomeController` still uses
+Pharmacy's `Prescription` (Pest's array-target expectation does not check this case).
+
+## Retail R2 — 2026-10-20 (local, Windows)
+
+**Implemented** (`pharmacy-app`; plan in `retail-roadmap.md`):
+- Migration `2026_10_20_000000_add_application_to_stock_documents`: `application` (default
+  `pharmacy`) on purchase orders, goods receipts, supplier returns, stock disposals and stock
+  transfers.
+- Shared actions record the industry being served and refuse other industries' items:
+  - `Purchasing` and `ReceiveGoods` refuse them with "This item is not bought here."
+  - `Disposals` and `Transfers` refuse them with "This item is not kept here."
+  - `ReturnGoods` takes the application of the delivery it returns from.
+  - `ReceiveGoods` receives only into the same industry's order.
+- `ReceiveGoods` receives a supplier reference (delivery note or invoice) once per supplier,
+  ignoring case and spaces. Receipts of one supplier are taken one at a time (supplier row
+  locked), so a double submit is refused too. This applies to Pharmacy as well.
+- Purchase order, goods receipt, supplier return, disposal, transfer and supplier controllers go
+  through `Industry` for pages, permissions, route names and lists. Another industry's documents
+  are 404. Suppliers stay shared by both industries.
+- `Industry::handles($kind)`; buyable items carry `tracksExpiry`.
+- Retail routes and pages:
+  - suppliers, purchase orders, goods received (the expiry field shows only for dated products),
+    supplier returns, write-offs (disposals) and transfers;
+  - a write-off panel on a product's stock page;
+  - navigation sections Inventory and Purchasing.
+- Catalog `platform/retail.json` 1.1.0 adds `retail.stock.dispose`, `retail.purchasing.view`,
+  `.manage` and `.receive`, a write-off separation-of-duties warning, and the new permissions on
+  the manager and store keeper roles. Imported into the local platform.
+
+**Tests executed:**
+- pharmacy-app: Pest 182 passed, 1 skipped (`RetailPurchasingTest` 10 new). `PurchasingTest`
+  now gives each delivery its own invoice number. PHPStan 0; Pint; `vp check`; `tsc`; build.
+- central-app: `RepositoryCatalogsTest` 4 passed.
+- Migration rolled back and forward on local PostgreSQL (`pharmacy`).
+- Mutations, each failing a test:
+  - dropping the receipts list's application filter;
+  - dropping the transfer's application check;
+  - dropping the write-off kind check;
+  - dropping the duplicate-delivery check;
+  - dropping the order's application check.
+
+**Known limitations:** see "Open after R2" in `retail-roadmap.md`. Receipts without a supplier
+reference are not protected against being entered twice.
+
+## Retail R3 — 2026-10-19 (local, Windows)
+
+**Implemented** (`pharmacy-app`; plan in `retail-roadmap.md`):
+- Migration `2026_10_21_000000_create_customer_accounts`:
+  - `customers` (per organization and application): number, name, contact details, credit limit,
+    payment terms in days, active;
+  - `customer_id` and `due_on` on sales;
+  - `customer_payments` and `customer_payment_allocations`.
+- Payment method `account` ("On account"). It is never a way to pay a customer payment or a
+  prescription. `PaymentMethod::paidNow()` decides whether money changed hands.
+- `CustomerAccounts` (Sales module):
+  - What a customer owes is the total of their completed sales on account, less returns and
+    payments allocated to them. This is the same sum as Finance's receivable from
+    `finance.invoice.issued`, `finance.sales_return.issued` and `finance.payment.received`.
+  - Credit check: "Over {name}'s credit limit of …: they owe … and this sale is …."
+  - Customer payments (numbered `CP`) settle the oldest due sales first and never more than is
+    owed. Each part is sent to Finance as a payment of that sale's invoice, with reference
+    `{CP}/{sale}`. Cash needs the receiver's open till, and the till's expected cash includes it.
+    A payment is idempotent on its submission id.
+  - The customer row is locked while their account changes.
+- `Sell` takes an optional customer:
+  - on account it needs one, checks the credit limit with the customer locked, and sets the due
+    date from the payment terms;
+  - the invoice carries `due_on` and `customer_reference` "{name} ({number})";
+  - no payment event is sent for a sale on account.
+- `VoidSale` refuses a sale on account that the customer has paid towards (it must be returned
+  instead). A void or return on account sends no refund.
+- `ReturnSale` refuses to take off more than is still owed on a sale on account.
+- `Tills::summary` adds the collections from account customers by method.
+- `CustomerController` (customers list with balances and overdue flags, add, edit, statement,
+  take a payment). Another industry's customers are 404.
+- Retail pages:
+  - customers list, form, and statement (printable, with a payment form);
+  - "On account" at the counter, offered only to members with `retail.sales.credit`; it lists
+    the customers with what they can still buy;
+  - the customer, due date and amount owed on the sale page;
+  - account collections on the till page;
+  - Customers in the navigation.
+- Catalog `platform/retail.json` 1.2.0 adds:
+  - `retail.sales.credit`, `retail.customers.view` and `retail.customers.manage`;
+  - a separation-of-duties warning for managing customers together with selling on credit;
+  - the permissions on the manager role, and customers view on the cashier role.
+  Imported into the local platform (1.2.0 published).
+
+**Tests executed:**
+- pharmacy-app: Pest 202 passed, 1 skipped (`RetailCustomersTest` 20 new). PHPStan 0; Pint;
+  `vp check`; `tsc`; build.
+- central-app: `RepositoryCatalogsTest` 4 passed.
+- Migration rolled back and forward on local PostgreSQL (`pharmacy`).
+- Mutations, each failing a test:
+  - dropping the credit check;
+  - dropping the void-after-payment check;
+  - dropping the return limit;
+  - settling newest sales first;
+  - dropping the overpayment check;
+  - dropping the customer's application check;
+  - leaving account cash out of the till's expected cash;
+  - dropping the statement's application check;
+  - taking cash without an open till.
+
+**Known limitations:** see "Open after R3" in `retail-roadmap.md`.
+
+## Retail R4 — 2026-10-19 (local, Windows)
+
+**Implemented** (`pharmacy-app`; plan in `retail-roadmap.md`):
+- Migration `2026_10_22_000000_create_wholesale_documents`:
+  - `price_lists` and `price_list_prices` (per item, by the unit or by a pack);
+  - `price_list_id` on customers;
+  - `sales_orders` and `sales_order_lines`;
+  - `delivery_notes` and `delivery_note_lines`.
+- `PriceLists`: a pack the list prices sells at that price; otherwise at the list's unit price
+  times the pack's units; otherwise (no list, item not on it, list switched off) at the shop's own
+  price.
+- `SalesOrders`:
+  - a quotation (`QT`) is priced at the customer's list when made, less a discount within the
+    member's limit (`retail.sales.discount`, the industry's maximum);
+  - confirming it while valid makes it a sales order (`SO`); an expired quotation must be quoted
+    again;
+  - an order can be cancelled before anything was delivered, and closed short once partly
+    delivered.
+- `Deliver`:
+  - a delivery note (`DN`) takes stock (oldest expiry first) for what is still to deliver on each
+    line, never more, and invoices exactly that as a sale on account, due after the customer's
+    terms and within their credit limit;
+  - Finance gets `finance.invoice.issued` with the due date and the cost per line; no payment;
+  - order and customer are locked while delivering; idempotent on the submission id;
+  - discounts are shared over deliveries so a whole line invoices its total exactly
+    (`SalesOrderLine::amountFor`).
+- A delivery's invoice is paid, returned and shown on the statement like any sale on account;
+  `VoidSale` refuses it ("take the goods back as a return instead").
+- `SalesOrderController` (orders list, quotation form, order page with the delivery form, delivery
+  note) and `PriceListController` (lists, prices). Orders are the branch's; other branches' and
+  other industries' are 404.
+- Retail pages:
+  - orders list, quotation form (live prices from the customer's list, stock per line);
+  - order page, printable as the quotation, with a delivery form and the deliveries;
+  - delivery note, printable with a signature line;
+  - price lists and their prices;
+  - "Buys at" on the customer form;
+  - the delivery on the invoice's sale page;
+  - a Wholesale navigation section.
+- Catalog `platform/retail.json` 1.3.0 adds:
+  - `retail.orders.view`, `.manage` and `.deliver`, and `retail.prices.manage`;
+  - a separation-of-duties warning for setting prices together with quoting;
+  - the permissions on the manager role, and orders view and deliver on the store keeper role.
+  Imported into the local platform (1.3.0 published).
+
+**Tests executed:**
+- pharmacy-app: Pest 219 passed, 1 skipped (`RetailWholesaleTest` 17 new). The architecture test
+  caught Sales borrowing Procurement's pack trait; the order line has its own helpers now.
+  PHPStan 0; Pint; `vp check`; `tsc`; build.
+- central-app: `RepositoryCatalogsTest` 4 passed.
+- Migration rolled back and forward on local PostgreSQL (`pharmacy`).
+- Mutations, each failing a test:
+  - delivering beyond what is left;
+  - dropping the credit check on delivery;
+  - rounding each delivery's discount on its own;
+  - delivering on a quotation or closed order;
+  - never marking an order delivered;
+  - voiding a delivery's invoice;
+  - confirming an expired quotation;
+  - dropping the discount limit;
+  - pricing a pack at the list's unit price;
+  - using a list that is switched off;
+  - dropping the order's branch check;
+  - dropping the price list's industry check.
+
+**Known limitations:** see "Open after R4" in `retail-roadmap.md`.

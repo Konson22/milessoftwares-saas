@@ -22,7 +22,7 @@ type Props = {
         itemId: string;
         medicine: string;
         batchNumber: string;
-        expiresOn: string;
+        expiresOn: string | null;
         status: string;
         quantity: number;
     }[];
@@ -96,7 +96,7 @@ export default function Location({ location, contents }: Props) {
                                         )}
                                     </TableCell>
                                     <TableCell className="tabular-nums">
-                                        {row.expiresOn}
+                                        {row.expiresOn ?? '—'}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
                                         {row.quantity}

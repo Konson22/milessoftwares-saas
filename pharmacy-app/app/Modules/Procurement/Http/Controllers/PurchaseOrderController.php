@@ -12,6 +12,7 @@ use App\Modules\Procurement\Actions\Purchasing;
 use App\Modules\Procurement\Models\PurchaseOrder;
 use App\Modules\Procurement\Models\PurchaseOrderLine;
 use App\Support\CurrentBranch;
+use App\Support\Industry;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -27,13 +28,17 @@ use Miles\PlatformClient\Tenancy\CurrentTenant;
  */
 class PurchaseOrderController extends Controller
 {
-    public function __construct(private readonly CurrentBranch $branch) {}
+    public function __construct(
+        private readonly CurrentBranch $branch,
+        private readonly Industry $industry,
+    ) {}
 
     public function index(): Response
     {
-        return Inertia::render('purchase-orders/index', [
+        return Inertia::render($this->industry->page('purchase-orders/index'), [
             'orders' => PurchaseOrder::query()
                 ->where('branch_id', $this->branch->id())
+                ->where('application', $this->industry->code())
                 ->with(['supplier:id,name', 'lines'])
                 ->latest()
                 ->limit(200)
@@ -47,13 +52,13 @@ class PurchaseOrderController extends Controller
                     'totalMinor' => $order->totalMinor(),
                     'createdAt' => $order->created_at->toIso8601String(),
                 ]),
-            'canManage' => $this->allows('pharmacy.purchasing.manage'),
+            'canManage' => $this->allows($this->industry->permission('purchasing.manage')),
         ]);
     }
 
     public function create(): Response
     {
-        return Inertia::render('purchase-orders/create', [
+        return Inertia::render($this->industry->page('purchase-orders/create'), [
             'suppliers' => Supplier::query()->where('active', true)->orderBy('name')->get(['id', 'name']),
             'medicines' => self::itemOptions(),
         ]);
@@ -86,7 +91,7 @@ class PurchaseOrderController extends Controller
             notes: $validated['notes'] ?? null,
         );
 
-        return to_route('purchase-orders.show', $order)->with('success', "Order {$order->number} drafted.");
+        return to_route($this->industry->route('purchase-orders.show'), $order)->with('success', "Order {$order->number} drafted.");
     }
 
     public function show(PurchaseOrder $order): Response
@@ -94,7 +99,7 @@ class PurchaseOrderController extends Controller
         $this->ensureHere($order);
         $order->load(['supplier:id,name', 'lines.item']);
 
-        return Inertia::render('purchase-orders/show', [
+        return Inertia::render($this->industry->page('purchase-orders/show'), [
             'order' => [
                 'id' => $order->id,
                 'number' => $order->number,
@@ -113,8 +118,8 @@ class PurchaseOrderController extends Controller
                     'unitCostMinor' => $line->unit_cost_minor,
                 ]),
             ],
-            'canManage' => $this->allows('pharmacy.purchasing.manage'),
-            'canReceive' => $this->allows('pharmacy.purchasing.receive') && $order->status->canReceive(),
+            'canManage' => $this->allows($this->industry->permission('purchasing.manage')),
+            'canReceive' => $this->allows($this->industry->permission('purchasing.receive')) && $order->status->canReceive(),
         ]);
     }
 
@@ -139,11 +144,11 @@ class PurchaseOrderController extends Controller
      * its selling prices and what a unit last cost, so a line can show what
      * it costs per unit against what it sells for.
      *
-     * @return list<array{id: string, label: string, unit: string, sellPriceMinor: int, lastUnitCostMinor: int|null, packs: list<array{id: string, label: string, name: string, units: int, sellPriceMinor: int}>}>
+     * @return list<array{id: string, label: string, unit: string, tracksExpiry: bool, sellPriceMinor: int, lastUnitCostMinor: int|null, packs: list<array{id: string, label: string, name: string, units: int, sellPriceMinor: int}>}>
      */
     public static function itemOptions(): array
     {
-        $items = Item::query()->where('active', true)->with('packs')->orderBy('name')->get();
+        $items = Item::query()->where('active', true)->ofKind(app(Industry::class)->itemKinds())->with('packs')->orderBy('name')->get();
         $lastCosts = Batch::lastUnitCosts($items->modelKeys());
 
         return array_values($items
@@ -151,6 +156,7 @@ class PurchaseOrderController extends Controller
                 'id' => $item->id,
                 'label' => $item->name,
                 'unit' => $item->unit,
+                'tracksExpiry' => $item->tracks_expiry,
                 'sellPriceMinor' => $item->sell_price_minor,
                 'lastUnitCostMinor' => $lastCosts[$item->id] ?? null,
                 'packs' => array_values($item->packs->map(fn (ItemPack $pack) => [
@@ -165,11 +171,11 @@ class PurchaseOrderController extends Controller
     }
 
     /**
-     * Orders of other branches look unknown.
+     * Orders of other branches, or of another industry module, look unknown.
      */
     private function ensureHere(PurchaseOrder $order): void
     {
-        abort_unless($order->branch_id === $this->branch->id(), 404);
+        abort_unless($order->branch_id === $this->branch->id() && $order->application === $this->industry->code(), 404);
     }
 
     private function allows(string $permission): bool

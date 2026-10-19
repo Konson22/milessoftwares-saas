@@ -29,14 +29,16 @@ class RegisterLocalProduct extends Command
         {--url=http://127.0.0.1:8400 : Where the product answers platform calls (webhooks, provisioning)}
         {--prefix= : Path on workspace hosts (default: the application code)}
         {--entitle=* : Workspace slugs to entitle to the product}
-        {--fresh : Issue new clients and secrets even if the product .env has them}';
+        {--fresh : Issue new clients and secrets even if the product .env has them}
+        {--catalog=platform/catalog.json : Catalog to register, relative to the folder. Another application than the folder\'s own is hosted by it}';
 
     protected $description = 'Register a product folder with the local platform and write its .env';
 
+    // After PLATFORM_ (the folder's own application) or PLATFORM_<CODE>_ (one it hosts).
     private const ENV_KEYS = [
-        'PLATFORM_SIGN_IN_CLIENT_ID', 'PLATFORM_SIGN_IN_CLIENT_SECRET',
-        'PLATFORM_SERVICE_CLIENT_ID', 'PLATFORM_SERVICE_CLIENT_SECRET',
-        'PLATFORM_WEBHOOK_SECRET',
+        'SIGN_IN_CLIENT_ID', 'SIGN_IN_CLIENT_SECRET',
+        'SERVICE_CLIENT_ID', 'SERVICE_CLIENT_SECRET',
+        'WEBHOOK_SECRET',
     ];
 
     public function handle(CatalogImporter $catalogs, ManageIntegration $integration, ManageEntitlements $entitlements, TenantContext $tenant): int
@@ -52,7 +54,7 @@ class RegisterLocalProduct extends Command
             return self::FAILURE;
         }
 
-        $catalog = json_decode((string) file_get_contents($folder.'/platform/catalog.json'), true, flags: JSON_THROW_ON_ERROR);
+        $catalog = json_decode((string) file_get_contents($folder.'/'.$this->catalogPath()), true, flags: JSON_THROW_ON_ERROR);
         $catalogs->import($catalog);
         $application = Application::query()->where('code', $catalog['application']['code'])->sole();
 
@@ -77,14 +79,23 @@ class RegisterLocalProduct extends Command
 
         $envPath = $folder.'/.env';
         $env = $this->readEnv($envPath, $folder.'/.env.example');
-        $values = [
+        // A folder registered as another application serves this one too
+        // (platform-client.hosted): only its own values, under its prefix.
+        $primary = $this->envValue($env, 'PLATFORM_APPLICATION') ?? '';
+        $hosted = $primary !== '' && $primary !== $application->code;
+        $key = $hosted ? 'PLATFORM_'.strtoupper($application->code).'_' : 'PLATFORM_';
+
+        $values = $hosted ? [
+            'PLATFORM_HOSTED' => $this->withCode((string) $this->envValue($env, 'PLATFORM_HOSTED'), $application->code),
+            $key.'PATH' => $prefix,
+        ] : [
             'PLATFORM_APPLICATION' => $application->code,
             'PLATFORM_ROOT_DOMAIN' => PlatformHosts::root(),
             'PLATFORM_ISSUER' => PlatformHosts::url(PlatformHosts::auth()),
             'PLATFORM_BACKCHANNEL_URL' => (string) config('platform.oidc.backchannel_url'),
         ];
 
-        $registered = collect(self::ENV_KEYS)->every(fn (string $key) => ($this->envValue($env, $key) ?? '') !== '');
+        $registered = collect(self::ENV_KEYS)->every(fn (string $name) => ($this->envValue($env, $key.$name) ?? '') !== '');
 
         if (! $registered || $this->option('fresh')) {
             DB::table('application_clients')->where('application_id', $application->id)->where('status', 'active')->get()
@@ -94,13 +105,13 @@ class RegisterLocalProduct extends Command
             $service = $integration->registerServiceClient($application, "{$application->name} backend", null);
 
             $values += [
-                'PLATFORM_SIGN_IN_CLIENT_ID' => $signIn['client_id'],
-                'PLATFORM_SIGN_IN_CLIENT_SECRET' => (string) $signIn['client_secret'],
-                'PLATFORM_SERVICE_CLIENT_ID' => $service['client_id'],
-                'PLATFORM_SERVICE_CLIENT_SECRET' => (string) $service['client_secret'],
-                'PLATFORM_WEBHOOK_SECRET' => (string) $integration->configureWebhook($application, "{$base}/{$prefix}/platform/webhooks", true, null),
+                $key.'SIGN_IN_CLIENT_ID' => $signIn['client_id'],
+                $key.'SIGN_IN_CLIENT_SECRET' => (string) $signIn['client_secret'],
+                $key.'SERVICE_CLIENT_ID' => $service['client_id'],
+                $key.'SERVICE_CLIENT_SECRET' => (string) $service['client_secret'],
+                $key.'WEBHOOK_SECRET' => (string) $integration->configureWebhook($application, "{$base}/{$prefix}/platform/webhooks", true, null),
             ];
-            $this->components->info("Registered clients for {$application->name}.");
+            $this->components->info("Registered clients for {$application->name}".($hosted ? ", hosted by {$primary}." : '.'));
         } else {
             $integration->configureWebhook($application, "{$base}/{$prefix}/platform/webhooks", false, null);
             $this->components->info("{$application->name} is already registered (use --fresh to issue new clients).");
@@ -136,13 +147,28 @@ class RegisterLocalProduct extends Command
             ? $path
             : base_path('../'.trim($path, '/\\'));
 
-        if (! is_file($folder.'/platform/catalog.json')) {
-            $this->components->error("No product at [{$path}]: expected {$path}/platform/catalog.json.");
+        if (! is_file($folder.'/'.$this->catalogPath())) {
+            $this->components->error("No product at [{$path}]: expected {$path}/{$this->catalogPath()}.");
 
             return null;
         }
 
         return rtrim($folder, '/\\');
+    }
+
+    /**
+     * PLATFORM_HOSTED (comma-separated codes) with $code added once.
+     */
+    private function withCode(string $list, string $code): string
+    {
+        $codes = array_filter(array_map('trim', explode(',', $list)));
+
+        return implode(',', array_values(array_unique([...$codes, $code])));
+    }
+
+    private function catalogPath(): string
+    {
+        return trim((string) ($this->option('catalog') ?: 'platform/catalog.json'), '/\\');
     }
 
     private function readEnv(string $path, string $example): string

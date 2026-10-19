@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { display, eyebrow } from '@/sites/public/components/styles';
 
 /**
- * Orange label, h2 and an optional lead, as every section of the public
+ * Blue label, h2 and an optional lead, as every section of the public
  * site opens: centred, or left-aligned beside other content. Reads on
  * white, grey or (inside a navy band) dark.
  */

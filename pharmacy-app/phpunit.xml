@@ -44,6 +44,12 @@
         <env name="PLATFORM_SERVICE_CLIENT_ID" value="test-service-client"/>
         <env name="PLATFORM_SERVICE_CLIENT_SECRET" value="test-service-secret"/>
         <env name="PLATFORM_WEBHOOK_SECRET" value="whsec_test"/>
+        <env name="PLATFORM_HOSTED" value="retail"/>
+        <env name="PLATFORM_RETAIL_SIGN_IN_CLIENT_ID" value="test-retail-sign-in-client"/>
+        <env name="PLATFORM_RETAIL_SIGN_IN_CLIENT_SECRET" value="test-retail-sign-in-secret"/>
+        <env name="PLATFORM_RETAIL_SERVICE_CLIENT_ID" value="test-retail-service-client"/>
+        <env name="PLATFORM_RETAIL_SERVICE_CLIENT_SECRET" value="test-retail-service-secret"/>
+        <env name="PLATFORM_RETAIL_WEBHOOK_SECRET" value="whsec_retail_test"/>
         <env name="SESSION_PATH" value="/"/>
         <env name="TRUSTED_PROXIES" value=""/>
     </php>
