@@ -21,7 +21,7 @@ export default function WorkspacePreview({
     return (
         <div
             aria-hidden
-            className="overflow-hidden rounded-2xl border border-site-line bg-white text-left shadow-2xl ring-8 shadow-brand-blue/10 ring-white/60"
+            className="overflow-hidden rounded-2xl border border-site-line bg-white text-left shadow-2xl ring-4 shadow-site-night/40 ring-white/10 sm:ring-8"
         >
             <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-3">
                 <span className="size-2.5 rounded-full bg-slate-200" />

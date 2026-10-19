@@ -106,7 +106,7 @@ export default function ProductArt({ code }: { code: string }) {
         >
             {/* Soft rings in the corner, behind the window. */}
             <span className="absolute -top-10 -right-10 size-32 rounded-full border-[18px] border-white/50" />
-            <div className="relative w-full max-w-64 translate-y-2 rounded-t-xl bg-white shadow-xl ring-1 shadow-slate-900/10 ring-slate-900/5 transition-transform duration-300 group-hover:translate-y-0">
+            <div className="relative w-full max-w-64 translate-y-3 rounded-t-xl bg-white shadow-xl ring-1 shadow-slate-900/10 ring-slate-900/5 transition-transform duration-300 ease-out group-hover:translate-y-0">
                 <div className="flex items-center gap-1.5 border-b border-slate-100 px-3 py-2">
                     <span className="size-1.5 rounded-full bg-slate-200" />
                     <span className="size-1.5 rounded-full bg-slate-200" />

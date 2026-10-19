@@ -55,7 +55,7 @@ export default function ProductPage({
                     <>
                         <Link
                             href="/#products"
-                            className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 transition-colors hover:text-brand-blue"
+                            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-300 transition-colors hover:text-site-accent-glow"
                         >
                             <ArrowLeft className="size-4" aria-hidden />
                             All applications
@@ -74,7 +74,7 @@ export default function ProductPage({
                 intro={product.tagline}
             >
                 {product.description && (
-                    <p className="mt-3 max-w-2xl text-slate-600">
+                    <p className="mt-3 max-w-2xl text-slate-400">
                         {product.description}
                     </p>
                 )}
@@ -93,7 +93,7 @@ export default function ProductPage({
                         </Link>
                     )}
                     {trialable && plans.length > 0 && (
-                        <a href="#plans" className={button.outline}>
+                        <a href="#plans" className={button.outlineDark}>
                             See plans
                         </a>
                     )}
@@ -120,7 +120,7 @@ export default function ProductPage({
                                 key={feature}
                                 className={`${card} flex items-start gap-4 p-6`}
                             >
-                                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
+                                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-site-accent/10 text-site-accent-ink">
                                     <Check className="size-5" aria-hidden />
                                 </span>
                                 <span className="pt-2 font-semibold">
@@ -158,19 +158,19 @@ export default function ProductPage({
                     aria-labelledby="try-heading"
                     className="px-4 py-24 sm:px-6"
                 >
-                    <div className="relative isolate mx-auto flex max-w-7xl flex-col items-center gap-6 overflow-hidden rounded-3xl bg-linear-to-br from-brand-blue to-brand-blue-dark px-6 py-16 text-center text-white sm:px-12">
+                    <div className="relative isolate mx-auto flex max-w-7xl flex-col items-center gap-6 overflow-hidden rounded-3xl bg-linear-to-br from-[#c2410c] via-[#b93a0b] to-[#9a3412] px-6 py-16 text-center text-white sm:px-12">
                         <div
                             aria-hidden
                             className="absolute -top-24 -right-24 -z-10 size-72 rounded-full border-[40px] border-white/10"
                         />
                         <h2
                             id="try-heading"
-                            className="text-3xl font-bold tracking-tight text-balance sm:text-5xl"
+                            className="text-3xl font-semibold tracking-tight text-balance sm:text-5xl"
                         >
                             Try {product.name} free for{' '}
                             {trialDuration(trialDays)}
                         </h2>
-                        <p className="max-w-xl text-white/85">
+                        <p className="max-w-xl text-white/90">
                             Create your workspace and start today. No payment
                             details are needed.
                         </p>

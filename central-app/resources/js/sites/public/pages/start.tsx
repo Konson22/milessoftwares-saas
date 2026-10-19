@@ -8,6 +8,7 @@ import Seo from '@/sites/public/components/seo';
 import {
     button,
     card,
+    eyebrow,
     textLink,
     trialDuration,
     trialLength,
@@ -97,15 +98,13 @@ export default function Start({
 
                         <aside
                             aria-label="Your trial"
-                            className="relative isolate flex flex-col overflow-hidden rounded-2xl bg-linear-to-br from-site-wash to-white p-6 text-slate-600 ring-1 ring-site-line"
+                            className="relative isolate flex flex-col overflow-hidden rounded-2xl bg-linear-to-br from-site-soft to-white p-6 text-slate-600 ring-1 ring-site-line"
                         >
                             <div
                                 aria-hidden
-                                className="absolute -top-20 -right-20 -z-10 size-56 rounded-full bg-brand-blue/15 blur-3xl"
+                                className="absolute -top-20 -right-20 -z-10 size-56 rounded-full bg-site-accent/15 blur-3xl"
                             />
-                            <p className="text-sm font-semibold text-brand-blue">
-                                Your trial
-                            </p>
+                            <p className={eyebrow}>Your trial</p>
                             <div className="mt-3 flex items-center gap-3">
                                 {product && (
                                     <ProductTile
@@ -121,11 +120,11 @@ export default function Start({
                                 {[
                                     `${trial} free trial, from today`,
                                     'A workspace with its own address',
-                                    'Your team on one sign-in',
+                                    'Invite your team when you are ready',
                                     'No payment details needed',
                                 ].map((line) => (
                                     <li key={line} className="flex gap-2.5">
-                                        <span className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
+                                        <span className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-site-accent text-white">
                                             <Check
                                                 className="size-3"
                                                 aria-hidden
@@ -177,17 +176,17 @@ function Stepper({ current }: { current: number }) {
                     className="flex items-center gap-2"
                 >
                     <span
-                        className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 ${i === current ? 'bg-white font-semibold text-site-ink shadow-sm ring-1 ring-site-line' : 'text-slate-500'}`}
+                        className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 ${i === current ? 'bg-white font-semibold text-site-ink shadow-lg shadow-site-night/30' : 'text-slate-300'}`}
                     >
                         <span
-                            className={`inline-flex size-5 items-center justify-center rounded-full text-xs ${i === current ? 'bg-brand-blue text-white' : 'bg-slate-200 text-slate-600'}`}
+                            className={`inline-flex size-5 items-center justify-center rounded-full text-xs ${i === current ? 'bg-site-accent-ink text-white' : 'bg-white/10 text-slate-300'}`}
                         >
                             {i + 1}
                         </span>
                         {step}
                     </span>
                     {i < steps.length - 1 && (
-                        <span aria-hidden className="h-px w-6 bg-site-line" />
+                        <span aria-hidden className="h-px w-6 bg-white/20" />
                     )}
                 </li>
             ))}
@@ -205,7 +204,7 @@ function AppOption({
     onSelect: () => void;
 }) {
     return (
-        <label className="relative flex cursor-pointer gap-4 rounded-xl border border-site-line bg-white p-5 transition-all hover:border-brand-blue/40 hover:shadow-md has-[:checked]:border-brand-blue has-[:checked]:bg-brand-blue/[0.04] has-[:checked]:shadow-md has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-blue">
+        <label className="relative flex cursor-pointer gap-4 rounded-xl border border-site-line bg-white p-5 transition-all hover:border-site-accent/40 hover:shadow-md has-[:checked]:border-site-accent has-[:checked]:bg-site-accent/[0.04] has-[:checked]:shadow-md has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-site-accent">
             <input
                 type="radio"
                 name="application"
@@ -232,7 +231,7 @@ function AppOption({
             </span>
             <span
                 aria-hidden
-                className={`mt-1 inline-flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${checked ? 'border-brand-blue bg-brand-blue text-white' : 'border-slate-300'}`}
+                className={`mt-1 inline-flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${checked ? 'border-site-accent-ink bg-site-accent-ink text-white' : 'border-slate-300'}`}
             >
                 {checked && <Check className="size-3" />}
             </span>

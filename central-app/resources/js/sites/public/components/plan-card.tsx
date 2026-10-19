@@ -47,14 +47,14 @@ export default function PlanCard({
 
     return (
         <li
-            className={`${card} relative flex flex-col p-8 ${featured ? 'border-brand-blue ring-1 ring-brand-blue' : ''}`}
+            className={`${card} relative flex flex-col p-8 ${featured ? 'border-site-accent ring-1 ring-site-accent' : ''}`}
         >
             <div className="flex items-start justify-between gap-4">
-                <Heading className="text-xl font-bold tracking-tight">
+                <Heading className="text-xl font-semibold tracking-tight">
                     {plan.name}
                 </Heading>
                 {featured && (
-                    <span className="rounded-full bg-brand-blue px-3 py-1 text-xs font-semibold text-white">
+                    <span className="rounded-full bg-site-accent-ink px-3 py-1 text-xs font-bold tracking-wide text-white uppercase">
                         Bundle
                     </span>
                 )}
@@ -63,7 +63,7 @@ export default function PlanCard({
                 <p className="mt-2 text-sm font-semibold">
                     <Link
                         href={`/erp/${plan.product.code}`}
-                        className="text-brand-blue hover:underline"
+                        className="text-site-accent-ink hover:underline"
                     >
                         {plan.product.name}
                     </Link>
@@ -76,7 +76,7 @@ export default function PlanCard({
                 </p>
             )}
             <p className="mt-8 flex flex-wrap items-baseline gap-x-2">
-                <span className="text-4xl font-bold tracking-tight tabular-nums">
+                <span className="font-public-display text-4xl font-bold tracking-tight tabular-nums">
                     {plan.price}
                 </span>
                 {plan.price !== 'Free' && (
@@ -109,7 +109,7 @@ export default function PlanCard({
                 <ul className="mt-4 space-y-3 text-sm">
                     {plan.applications.map((application) => (
                         <li key={application} className="flex gap-2.5">
-                            <span className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
+                            <span className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-site-accent text-white">
                                 <Check className="size-3" aria-hidden />
                             </span>
                             {application}

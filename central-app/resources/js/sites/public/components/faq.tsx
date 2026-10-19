@@ -9,13 +9,14 @@ export function faq(trialDays: number) {
         },
         {
             question: 'Can I add more applications later?',
-            answer: 'Yes. Your organization keeps one workspace and one subscription, and new applications use the team, branches and roles you have already set up.',
+            answer: 'Yes. Add another application whenever you need it. Your team, branches and roles are already set up, so you do not start from scratch.',
         },
         {
             question:
                 'Do my people need a separate account for each application?',
-            answer: 'No. Everyone signs in once, and you decide which applications and which parts of them each person can use.',
+            answer: 'No. Everyone uses the same sign-in, and you decide which applications and which parts of them each person can use.',
         },
+
         {
             question: 'We need something different. Can you help?',
             answer: 'Larger organizations and special arrangements are billed by agreement. Contact us and we will put together a quote.',
@@ -31,18 +32,20 @@ export default function FaqList({ trialDays }: { trialDays: number }) {
                 <details
                     key={question}
                     name="faq"
-                    className="group rounded-2xl border border-site-line bg-white px-6 transition-shadow open:shadow-lg open:shadow-site-ink/5"
+                    className="group rounded-2xl border border-site-line bg-white px-5 transition-[border-color,box-shadow] duration-200 open:border-site-accent/40 open:shadow-lg open:shadow-site-ink/5 sm:px-6"
                 >
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-5 font-semibold [&::-webkit-details-marker]:hidden">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 font-semibold sm:gap-6 sm:py-5 [&::-webkit-details-marker]:hidden">
                         {question}
-                        <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-blue/10 text-brand-blue transition-colors group-open:bg-brand-blue group-open:text-white">
+                        <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-site-accent/10 text-site-accent-ink transition-colors group-open:bg-site-accent-ink group-open:text-white">
                             <Plus
-                                className="size-4 transition-transform group-open:rotate-45"
+                                className="size-4 transition-transform duration-200 group-open:rotate-45"
                                 aria-hidden
                             />
                         </span>
                     </summary>
-                    <p className="pr-12 pb-5 text-slate-600">{answer}</p>
+                    <p className="pr-10 pb-5 text-sm leading-relaxed text-slate-600 sm:pr-12 sm:text-base">
+                        {answer}
+                    </p>
                 </details>
             ))}
         </div>

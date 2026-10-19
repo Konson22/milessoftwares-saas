@@ -18,7 +18,7 @@ export const statusLabel: Record<Product['status'], string | null> = {
 /** The application's icon (shared with the signed-in apps). */
 export const productIcon = appIcon;
 
-/** The application's icon on a soft blue rounded square. */
+/** The application's icon on a soft orange rounded square (white-tinted on navy). */
 export function ProductTile({
     code,
     size = 'md',
@@ -36,7 +36,7 @@ export function ProductTile({
 
     return (
         <span
-            className={`inline-flex shrink-0 items-center justify-center bg-brand-blue/10 text-brand-blue ${box}`}
+            className={`inline-flex shrink-0 items-center justify-center bg-site-accent/10 text-site-accent-ink in-[.site-dark]:bg-white/10 in-[.site-dark]:text-site-accent-glow ${box}`}
         >
             <Icon className={glyph} aria-hidden />
         </span>

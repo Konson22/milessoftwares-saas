@@ -45,10 +45,10 @@ export default function Pricing({ plans, trialDays, canonical }: Props) {
                 }
                 title={
                     <>
-                        Simple pricing, <Accent>one subscription</Accent>
+                        Simple pricing for <Accent>every application</Accent>
                     </>
                 }
-                intro="Pick the applications you need. Your whole team shares one workspace and one subscription."
+                intro="Pick the applications you need. Pay for what you use, and add more as your organization grows."
             />
 
             <section

@@ -46,7 +46,7 @@ export default function ErpProductPage({ product, plans, canonical }: Props) {
                     <>
                         <Link
                             href="/#erp"
-                            className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 transition-colors hover:text-brand-blue"
+                            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-300 transition-colors hover:text-site-accent-glow"
                         >
                             <ArrowLeft className="size-4" aria-hidden />
                             All ERP products
@@ -67,7 +67,7 @@ export default function ErpProductPage({ product, plans, canonical }: Props) {
                 intro={product.tagline}
             >
                 {product.description && (
-                    <p className="mt-3 max-w-2xl text-slate-600">
+                    <p className="mt-3 max-w-2xl text-slate-400">
                         {product.description}
                     </p>
                 )}
@@ -77,7 +77,7 @@ export default function ErpProductPage({ product, plans, canonical }: Props) {
                         <ArrowRight className="size-4" aria-hidden />
                     </Link>
                     {plans.length > 0 && (
-                        <a href="#plans" className={button.outline}>
+                        <a href="#plans" className={button.outlineDark}>
                             See plans
                         </a>
                     )}
@@ -110,7 +110,7 @@ export default function ErpProductPage({ product, plans, canonical }: Props) {
                                     {application.listed ? (
                                         <Link
                                             href={`/products/${application.code}`}
-                                            className="hover:text-brand-blue"
+                                            className="transition-colors hover:text-site-accent-ink"
                                         >
                                             {application.name}
                                         </Link>
@@ -122,7 +122,7 @@ export default function ErpProductPage({ product, plans, canonical }: Props) {
                                     {application.requirement === 'required' ? (
                                         <>
                                             <Check
-                                                className="size-4 text-emerald-500"
+                                                className="size-4 text-site-accent"
                                                 aria-hidden
                                             />
                                             Included
