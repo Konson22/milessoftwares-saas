@@ -22,6 +22,12 @@ final class PlatformFake
     /** @var array<string, list<array<string, mixed>>> keyed by slug */
     public array $branches = [];
 
+    /** @var array<string, list<array<string, mixed>>> keyed by slug */
+    public array $departments = [];
+
+    /** @var array<string, list<array<string, mixed>>> keyed by slug */
+    public array $positions = [];
+
     /** @var list<array{organization_id: string, audience: string}> */
     public array $eventTokens = [];
 
@@ -49,10 +55,10 @@ final class PlatformFake
                     : Http::response(['message' => 'Not Found'], 404);
             }
 
-            if (preg_match('#^/api/v1/organizations/([^/]+)/branches$#', $path, $m) === 1) {
+            if (preg_match('#^/api/v1/organizations/([^/]+)/(branches|departments|positions)$#', $path, $m) === 1) {
                 foreach ($this->organizations as $slug => $organization) {
                     if ($organization['id'] === $m[1]) {
-                        return Http::response(['data' => $this->branches[$slug] ?? []]);
+                        return Http::response(['data' => $this->{$m[2]}[$slug] ?? []]);
                     }
                 }
 
@@ -123,6 +129,30 @@ final class PlatformFake
         $this->organization($slug);
         $id = (string) Str::uuid();
         $this->branches[$slug][] = ['id' => $id, 'name' => $name, 'code' => $code ?? strtoupper(substr($name, 0, 3)), 'city' => $name, 'status' => 'active'];
+
+        return $id;
+    }
+
+    /**
+     * Adds a department to the organization (company-wide without a branch); returns its id.
+     */
+    public function department(string $slug, string $name, ?string $branchId = null, ?string $code = null): string
+    {
+        $this->organization($slug);
+        $id = (string) Str::uuid();
+        $this->departments[$slug][] = ['id' => $id, 'branch_id' => $branchId, 'parent_department_id' => null, 'name' => $name, 'code' => $code ?? strtoupper(substr($name, 0, 3)), 'status' => 'active'];
+
+        return $id;
+    }
+
+    /**
+     * Adds a position (job title) to the organization; returns its id.
+     */
+    public function position(string $slug, string $title, ?string $departmentId = null, ?string $code = null): string
+    {
+        $this->organization($slug);
+        $id = (string) Str::uuid();
+        $this->positions[$slug][] = ['id' => $id, 'department_id' => $departmentId, 'title' => $title, 'code' => $code ?? strtoupper(substr($title, 0, 3)), 'status' => 'active'];
 
         return $id;
     }

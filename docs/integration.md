@@ -62,6 +62,12 @@ Then, with `Authorization: Bearer <token>`:
 | `GET /api/v1/organizations/{slug-or-id}`                        | id, slug, name, status, country, currency |
 | `GET /api/v1/organizations/{id}/members/{sub}/effective-access` | see below                                 |
 | `GET /api/v1/organizations/{id}/branches`                       | `data`: id, name, code, city, status      |
+| `GET /api/v1/organizations/{id}/departments`                    | `data`: id, branch_id, parent_department_id, name, code, status |
+| `GET /api/v1/organizations/{id}/positions`                      | `data`: id, department_id, title, code, status |
+
+Branches, departments and positions are business structure, never personal data; the platform
+offers no member directory to products (a product learns about a person when they sign in).
+`PlatformApi::branches()`, `departments()` and `positions()` cache them like access answers.
 
 Your token only ever sees **your own application**: organizations that never used it answer
 `404`, and roles are those of your catalog only.

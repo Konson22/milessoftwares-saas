@@ -127,6 +127,29 @@ final readonly class EffectiveAccess
     }
 
     /**
+     * Department ids where the permission is granted by a department-scoped
+     * role; null means every department (organization scope or owner).
+     * Branch grants are not included: see branchesFor().
+     *
+     * @return list<string>|null
+     */
+    public function departmentsFor(string $permission): ?array
+    {
+        $departments = [];
+
+        foreach ($this->scopesFor($permission) as $scope) {
+            if (($scope['scope_type'] ?? null) === 'organization') {
+                return null;
+            }
+            if (($scope['scope_type'] ?? null) === 'department' && isset($scope['department_id'])) {
+                $departments[] = $scope['department_id'];
+            }
+        }
+
+        return array_values(array_unique($departments));
+    }
+
+    /**
      * @return list<array<string, string>>
      */
     public function scopesFor(string $permission): array

@@ -58,7 +58,8 @@ Inertia SSR for SEO.
 
 Outside the platform: **Finance** owns CoA, GL, journals, AR/AP, cash, statements, budget accounting.
 **HR** owns employees, employment records, contracts, leave, attendance, extended position data.
-**Payroll** owns salary structures, periods, runs, payslips, payroll approvals. **Procurement /
+**Payroll** owns salary structures, periods, runs, payslips, payroll approvals (HR and Payroll are one
+application, `hr-app`: ADR-0005). **Procurement /
 Inventory / Documents / Projects** — system of record defined per module in Phase 9 contracts.
 
 Boundary rules (enforced by Pest architecture tests):

@@ -94,7 +94,7 @@ foreach ($files as $file) {
 
         // One level shallower than the template.
         if (in_array($relative, ['composer.json', 'package.json', 'package-lock.json'], true)) {
-            $contents = str_replace('"../../packages/', '"../packages/', $contents);
+            $contents = str_replace(['"../../packages/', '"file:../../packages/'], ['"../packages/', '"file:../packages/'], $contents);
         }
     }
 

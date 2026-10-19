@@ -25,6 +25,9 @@ check and build green; migrations rolled back and forward on the test DB; result
   into the ERP workspace application; the code reorganisation starts in Phase 3).
 - **D2** accepted: [ADR-0004](../adr/0004-companies-as-organizations.md) (a company is an
   organization).
+- **D3** accepted: [ADR-0005](../adr/0005-hr-and-payroll-application.md) (HR and Payroll as one
+  separate application, `hr-app`; Payroll a plan feature). Phases in [hr-roadmap.md](hr-roadmap.md),
+  run alongside this roadmap.
 
 ## Recommended next slice
 

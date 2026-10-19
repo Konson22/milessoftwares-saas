@@ -34,8 +34,7 @@
             "applications": [
                 { "code": "school", "requirement": "required" },
                 { "code": "finance", "requirement": "required" },
-                { "code": "hr", "requirement": "optional" },
-                { "code": "payroll", "requirement": "optional" }
+                { "code": "hr", "requirement": "optional" }
             ]
         },
         {
@@ -48,8 +47,7 @@
             "applications": [
                 { "code": "ngo", "requirement": "required" },
                 { "code": "finance", "requirement": "required" },
-                { "code": "hr", "requirement": "optional" },
-                { "code": "payroll", "requirement": "optional" }
+                { "code": "hr", "requirement": "optional" }
             ]
         },
         {

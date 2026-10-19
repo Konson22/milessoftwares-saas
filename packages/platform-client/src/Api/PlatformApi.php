@@ -100,6 +100,50 @@ final class PlatformApi
     }
 
     /**
+     * The organization's departments, by name. Cached like branches.
+     *
+     * @return list<Department>
+     *
+     * @throws NotVisible
+     * @throws PlatformUnavailable
+     */
+    public function departments(string $organizationId): array
+    {
+        return array_map(fn (array $department) => Department::fromArray($department), $this->structure($organizationId, 'departments'));
+    }
+
+    /**
+     * The organization's positions (job titles), by title. Cached like branches.
+     *
+     * @return list<Position>
+     *
+     * @throws NotVisible
+     * @throws PlatformUnavailable
+     */
+    public function positions(string $organizationId): array
+    {
+        return array_map(fn (array $position) => Position::fromArray($position), $this->structure($organizationId, 'positions'));
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function structure(string $organizationId, string $list): array
+    {
+        $key = self::PREFIX.$list.':'.$organizationId.':'.$this->version($organizationId);
+        $cached = $this->cache->get($key);
+
+        if (! is_array($cached)) {
+            $data = $this->get('/api/v1/organizations/'.rawurlencode($organizationId).'/'.$list, 'access.read');
+            $cached = array_values(array_filter(is_array($data['data'] ?? null) ? $data['data'] : [], 'is_array'));
+            $this->cache->put($key, $cached, $this->config->cacheSeconds());
+        }
+
+        /** @var list<array<string, mixed>> $cached */
+        return $cached;
+    }
+
+    /**
      * Short-lived token for sending one business event to a shared module
      * (docs/shared-modules.md). Never cached: one token per event.
      *

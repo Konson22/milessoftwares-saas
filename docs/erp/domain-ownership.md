@@ -21,7 +21,8 @@ another owner's tables. Platform-side ownership is unchanged from `docs/architec
 | Sales, voids | pharmacy-app | ✅ | finance-app | shared sales/POS (D1) |
 | Prescriptions, controlled register | pharmacy-app | ✅ | — | stays Pharmacy-specific |
 | Customers | — (free-text name on a sale) | ❌ | — | shared Sales (Phase 3/7) |
-| HR, payroll | — | ❌ | contracts only | Phase 10 |
+| Employees, employment history, contracts, personal details | hr-app (`Employees`, HR Phase H1) | new | — | leave, documents, payroll ([hr-roadmap](hr-roadmap.md)) |
+| Payroll | — | ❌ | contracts only | hr-app, HR Phase H5 (ADR-0005) |
 | Audit (platform) | central-app `Audit` | ✅ | admin | products keep their own operational history |
 
 ## Decision D1 — where shared Inventory, Procurement and Sales live (accepted: ADR-0003)

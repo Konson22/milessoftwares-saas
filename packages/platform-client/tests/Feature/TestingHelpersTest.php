@@ -56,6 +56,35 @@ it('lists an organization\'s branches, cached until the organization changes', f
     expect(array_map(fn ($b) => $b->name, $api->branches($orgId)))->toBe(['Juba', 'Wau']);
 });
 
+it('lists an organization\'s departments and positions, cached until the organization changes', function () {
+    $juba = $this->platform()->branch('acme', 'Juba', 'JUB');
+    $sales = $this->platform()->department('acme', 'Sales', $juba, 'SALES');
+    $this->platform()->department('acme', 'Head office');
+    $clerk = $this->platform()->position('acme', 'Clerk', $sales, 'CLERK');
+    $orgId = $this->platform()->organization('acme')['id'];
+    $api = app(PlatformApi::class);
+
+    $departments = $api->departments($orgId);
+    expect($departments)->toHaveCount(2)
+        ->and($departments[0]->id)->toBe($sales)
+        ->and($departments[0]->branchId)->toBe($juba)
+        ->and($departments[0]->code)->toBe('SALES')
+        ->and($departments[1]->branchId)->toBeNull()
+        ->and($departments[1]->isActive())->toBeTrue();
+
+    $positions = $api->positions($orgId);
+    expect($positions)->toHaveCount(1)
+        ->and($positions[0]->id)->toBe($clerk)
+        ->and($positions[0]->departmentId)->toBe($sales)
+        ->and($positions[0]->title)->toBe('Clerk');
+
+    $this->platform()->position('acme', 'Driver');
+    expect($api->positions($orgId))->toHaveCount(1); // cached
+
+    $api->forget($orgId);
+    expect(array_map(fn ($p) => $p->title, $api->positions($orgId)))->toBe(['Clerk', 'Driver']);
+});
+
 it('treats branches of an organization it cannot see as not visible', function () {
     $this->platform()->organization('acme');
 

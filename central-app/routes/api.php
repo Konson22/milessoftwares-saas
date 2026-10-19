@@ -24,6 +24,12 @@ Route::prefix('api/v1')->middleware('throttle:600,1')->name('api.')->group(funct
         Route::get('organizations/{organization}/branches', [IntegrationController::class, 'branches'])
             ->whereUuid('organization')
             ->name('organizations.branches');
+        Route::get('organizations/{organization}/departments', [IntegrationController::class, 'departments'])
+            ->whereUuid('organization')
+            ->name('organizations.departments');
+        Route::get('organizations/{organization}/positions', [IntegrationController::class, 'positions'])
+            ->whereUuid('organization')
+            ->name('organizations.positions');
         Route::get('organizations/{organization}/members/{subject}/effective-access', [IntegrationController::class, 'effectiveAccess'])
             ->whereUuid('organization')
             ->name('effective-access');

@@ -38,8 +38,8 @@ Initial catalog:
 | --- | --- | --- | --- | --- |
 | `pharmacy` | Miles Pharmacy ERP | pilot | pharmacy, finance | — |
 | `retail_trading` | Miles Retail & Trading ERP | planned | retail, finance | — |
-| `education` | Miles Education ERP | planned | school, finance | hr, payroll |
-| `ngo` | Miles NGO ERP | planned | ngo, finance | hr, payroll |
+| `education` | Miles Education ERP | planned | school, finance | hr |
+| `ngo` | Miles NGO ERP | planned | ngo, finance | hr |
 | `finance_accounting` | Miles Finance & Accounting | pilot | finance | — |
 
 Pharmacy is `pilot`, not `available`: see the gaps in `pharmacy-requirements.md`.

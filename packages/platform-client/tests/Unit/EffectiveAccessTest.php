@@ -38,6 +38,17 @@ it('limits a department-scoped permission to that department', function () {
         ->and($access->allowsIn('pharmacy.stock.adjust', branchId: 'b-1', departmentId: 'd-2'))->toBeFalse();
 });
 
+it('lists the departments of department-scoped grants, and every one for an organization grant', function () {
+    $access = access([
+        FakePlatform::role('storekeeper', ['pharmacy.stock.adjust'], ['scope_type' => 'department', 'department_id' => 'd-1']),
+        FakePlatform::role('pharmacist', ['pharmacy.stock.adjust'], ['scope_type' => 'branch', 'branch_id' => 'b-1']),
+    ]);
+
+    expect($access->departmentsFor('pharmacy.stock.adjust'))->toBe(['d-1'])
+        ->and($access->branchesFor('pharmacy.stock.adjust'))->toBe(['b-1'])
+        ->and(access([], owner: true)->departmentsFor('pharmacy.stock.adjust'))->toBeNull();
+});
+
 it('never widens a resource-scoped grant', function () {
     $access = access([FakePlatform::role('auditor', ['pharmacy.reports.view'], ['scope_type' => 'resource', 'resource_type' => 'report', 'resource_id' => 'r-1'])]);
 

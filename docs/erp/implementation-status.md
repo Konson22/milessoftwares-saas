@@ -21,9 +21,12 @@
 | 3.13 CSV export of reports | Done 2026-10-18 |
 | 3.14 Stock transfers between branches | Done 2026-10-18 |
 | 4 – 11 | Not started |
+| HR H0 Foundation (structure API, `hr-app`) | Done 2026-10-19 |
+| HR H1 Staff records | Done 2026-10-19 |
 
 Decisions accepted 2026-10-16: D1 → `docs/adr/0003-erp-workspace-application.md`,
-D2 → `docs/adr/0004-companies-as-organizations.md`.
+D2 → `docs/adr/0004-companies-as-organizations.md`. Accepted 2026-10-19: D3 →
+`docs/adr/0005-hr-and-payroll-application.md` (HR phases: `hr-roadmap.md`).
 
 ## Phase 1.1 — 2026-10-16 (local, Windows)
 
@@ -478,3 +481,54 @@ Stock sent from one branch to another.
 **Known limitations:** a transfer is received whole (no partial receipt or discrepancy note);
 the sending branch cannot be changed once sent. Branch-level figures in Finance do not move with
 the stock (Finance does not split inventory by branch).
+
+## HR Phase H0 — 2026-10-19 (local, Windows)
+
+Decision D3 ([ADR-0005](../adr/0005-hr-and-payroll-application.md)): HR and Payroll are one
+separate application, `hr-app` (registry code `hr`, status `planned`); Payroll will be the
+`payroll` plan feature. Phases in [`hr-roadmap.md`](hr-roadmap.md).
+
+**Implemented:**
+- `central-app`: `GET /api/v1/organizations/{id}/departments` and `.../positions` (scope
+  `access.read`, only for organizations ever entitled to the caller, like branches). No member
+  directory is offered to products.
+- `packages/platform-client`: `PlatformApi::departments()` / `positions()` (cached per
+  organization like branches), `Department` / `Position`, `EffectiveAccess::departmentsFor()`,
+  `PlatformFake::department()` / `position()`.
+- `hr-app` from `templates/product-app` (port 8600); catalog 1.0.0 (`platform/catalog.json`):
+  seven permissions, roles Line manager / HR officer / HR manager.
+- `erp-products.json`: Education and NGO list `hr` (optional); no `payroll` application.
+- Ops: `ops/nginx/products/hr.conf`, `ops/php-fpm/hr.conf`, local-dev proxy for `/hr`. Not in
+  the deploy scripts' default `PRODUCTS` until the server has the `hr` database and `.env`.
+- `templates/new-product.php`: also rewrites `file:../../packages/` (package.json and its lock),
+  so a new product links `@miles/ui` from the repository's `packages/`.
+
+## HR Phase H1 — 2026-10-19 (local, Windows)
+
+**Implemented** (`hr-app`, module `App\Modules\Employees`):
+- Migration `2026_10_19_100000_create_employee_tables`: `employees`, `employee_personal_details`
+  (one encrypted array), `employment_records` (append-only), `employment_contracts`,
+  `hr_audit_log`, `document_numbers`. Children reference `(organization_id, employee_id)`.
+- Actions: `Staff` (hire: number `E-00001`, hired record, first contract; work details; managers
+  without loops), `Employment` (transfer / promotion / change of job from a date never before the
+  latest record; new contract ends the previous the day before; leaving ends the contract and
+  unassigns reports), `ManagePersonalDetails` (view and change, audited by field name).
+- `StaffScope`: organization, branch and department grants decide whom a member reaches; out of
+  reach is 404. A move needs `hr.employment.manage` where the person is and where they go.
+- Pages: home (headcount, joiners, leavers, contracts and probations ending in 30 days),
+  `employees` (search, status, branch, department), `employees/create`, `employees/{id}` (work
+  details, history, contracts; edit, move, new contract, leaving), `employees/{id}/personal`.
+
+**Tests executed:**
+- Central: Pest 625 passed, 1 skipped (4 new in `Integration/StructureApiTest`); PHPStan 0; Pint.
+- HR: Pest 22 passed (`EmployeesTest` 7, `EmploymentTest` 5, `PersonalDetailsTest` 2, access and
+  provisioning); PHPStan 0; Pint; `vp check`; `tsc`; build.
+- platform-client: Pest 96 passed; PHPStan 0; Pint.
+- Local PostgreSQL (`hr`): `migrate`, `migrate:rollback --step=1`, `migrate`.
+- Mutation: returning the unfiltered query from `StaffScope::apply()` fails the branch and
+  department visibility tests.
+
+**Known limitations:** personal details are encrypted with `APP_KEY` (no separate key or
+rotation yet); lists stop at 500 staff (search narrows); a department grant does not reach
+sub-departments; the platform's structure lists are cached for up to a minute, so a just-added
+branch may take that long to appear.

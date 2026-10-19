@@ -8,6 +8,8 @@ use App\Modules\Integration\Support\EffectiveAccess;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationSlug;
 use App\Modules\Structure\Models\Branch;
+use App\Modules\Structure\Models\Department;
+use App\Modules\Structure\Models\Position;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -62,6 +64,56 @@ class IntegrationController extends Controller
             ->all());
 
         return response()->json(['data' => $branches])
+            ->header('Cache-Control', 'private, max-age='.EffectiveAccess::TTL_SECONDS);
+    }
+
+    /**
+     * The organization's departments: products that keep records per
+     * department (HR) need the names for the ids in effective access. A null
+     * branch_id is a company-wide department.
+     */
+    public function departments(Request $request, string $organization, TenantContext $tenant): JsonResponse
+    {
+        $record = $this->visibleOrganization($this->application($request), $organization, allowSlug: false);
+
+        $departments = $tenant->run($record, fn () => Department::query()
+            ->orderBy('name')
+            ->get(['id', 'branch_id', 'parent_department_id', 'name', 'code', 'status'])
+            ->map(fn (Department $department) => [
+                'id' => $department->id,
+                'branch_id' => $department->branch_id,
+                'parent_department_id' => $department->parent_department_id,
+                'name' => $department->name,
+                'code' => $department->code,
+                'status' => $department->status,
+            ])
+            ->all());
+
+        return response()->json(['data' => $departments])
+            ->header('Cache-Control', 'private, max-age='.EffectiveAccess::TTL_SECONDS);
+    }
+
+    /**
+     * The organization's positions (job titles). Business structure only:
+     * a position grants no permissions.
+     */
+    public function positions(Request $request, string $organization, TenantContext $tenant): JsonResponse
+    {
+        $record = $this->visibleOrganization($this->application($request), $organization, allowSlug: false);
+
+        $positions = $tenant->run($record, fn () => Position::query()
+            ->orderBy('title')
+            ->get(['id', 'department_id', 'title', 'code', 'status'])
+            ->map(fn (Position $position) => [
+                'id' => $position->id,
+                'department_id' => $position->department_id,
+                'title' => $position->title,
+                'code' => $position->code,
+                'status' => $position->status,
+            ])
+            ->all());
+
+        return response()->json(['data' => $positions])
             ->header('Cache-Control', 'private, max-age='.EffectiveAccess::TTL_SECONDS);
     }
 

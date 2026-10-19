@@ -46,6 +46,8 @@ JSON Schemas in `contracts/events/`:
 - **Sensitive HR and payroll data never travels in events**: pay, rates, bank details, identity
   numbers, dates of birth, health. The envelope validator rejects these keys at any depth
   (`Envelope::SENSITIVE_KEYS`); such data is entered inside the HR or Payroll module itself.
+- HR and Payroll are one module (`hr-app`, ADR-0005): `hr.*` and `payroll.*` events go to
+  audience `hr`.
 - A breaking payload change is a new `schema_version`; receivers support old versions for a
   published deprecation period.
 
