@@ -3,7 +3,25 @@ import { PageHeader } from '@miles/ui/components/page-header';
 import { Panel, PanelToolbar } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
+import type {
+    RouteDefinition,
+    RouteFormDefinition,
+    RouteQueryOptions,
+} from '@/wayfinder';
 import { cashiers, index, profitability, purchases } from '@/routes/reports';
+
+type ReportRoute = ((options?: RouteQueryOptions) => RouteDefinition<'get'>) & {
+    form: (options?: RouteQueryOptions) => RouteFormDefinition<'get'>;
+};
+
+/** One report of an industry's set: its tab and the tables it downloads. */
+export type Report = {
+    key: string;
+    title: string;
+    route: ReportRoute;
+    /** The tables it downloads as CSV (?export=<key>). */
+    exports: { key: string; title: string }[];
+};
 
 const REPORTS = [
     { key: 'overview', title: 'Overview', route: index },
@@ -14,8 +32,7 @@ const REPORTS = [
 
 export type ReportKey = (typeof REPORTS)[number]['key'];
 
-/** The tables each report downloads as CSV (?export=<key>). */
-const EXPORTS: Record<ReportKey, { key: string; title: string }[]> = {
+const EXPORTS: Record<ReportKey, Report['exports']> = {
     overview: [
         { key: 'days', title: 'Sales by day' },
         { key: 'methods', title: 'By payment' },
@@ -34,7 +51,7 @@ const EXPORTS: Record<ReportKey, { key: string; title: string }[]> = {
 };
 
 /**
- * The reports' title, tabs and period; switching tabs keeps the period.
+ * The pharmacy's reports' title, tabs and period.
  */
 export function ReportHeader({
     current,
@@ -45,16 +62,39 @@ export function ReportHeader({
     from: string;
     to: string;
 }) {
+    return (
+        <ReportTabs
+            reports={REPORTS.map((r) => ({ ...r, exports: EXPORTS[r.key] }))}
+            current={current}
+            from={from}
+            to={to}
+        />
+    );
+}
+
+/**
+ * A set of reports' title, tabs and period; switching tabs keeps the
+ * period. The first report is the overview.
+ */
+export function ReportTabs({
+    reports,
+    current,
+    from,
+    to,
+}: {
+    reports: Report[];
+    current: string;
+    from: string;
+    to: string;
+}) {
     const { branch } = usePage().props;
-    const report = REPORTS.find((r) => r.key === current) ?? REPORTS[0];
+    const report = reports.find((r) => r.key === current) ?? reports[0];
 
     return (
         <>
             <Head
                 title={
-                    current === 'overview'
-                        ? 'Reports'
-                        : `${report.title} report`
+                    report === reports[0] ? 'Reports' : `${report.title} report`
                 }
             />
             <PageHeader title="Reports" description={branch?.name} />
@@ -63,7 +103,7 @@ export function ReportHeader({
                 aria-label="Reports"
                 className="mb-3 flex flex-wrap gap-1 print:hidden"
             >
-                {REPORTS.map((r) => (
+                {reports.map((r) => (
                     <Button
                         key={r.key}
                         variant={r.key === current ? 'secondary' : 'ghost'}
@@ -129,7 +169,7 @@ export function ReportHeader({
                                     <span className="text-muted-foreground">
                                         CSV:
                                     </span>
-                                    {EXPORTS[current].map((table) => (
+                                    {report.exports.map((table) => (
                                         <Button
                                             key={table.key}
                                             variant="link"

@@ -11,6 +11,7 @@ use App\Modules\Sales\Models\SaleReturn;
 use App\Modules\Sales\Models\SaleReturnLine;
 use App\Support\CsvExport;
 use App\Support\CurrentBranch;
+use App\Support\Industry;
 use App\Support\ReportPeriod;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -23,13 +24,14 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * The branch's figures for a period: takings, what they cost, how they were
  * paid, what sold best; and what the stock on the shelves is worth today.
  * Cost is the batch's unit cost, so profit follows the stock actually sold;
- * returns come off both.
+ * returns come off both. Only this industry's sales and stock (Industry): a
+ * branch that runs both reports each on its own.
  */
 class ReportController extends Controller
 {
     public const TOP_MEDICINES = 10;
 
-    public function __invoke(Request $request, CurrentBranch $branch): Response|StreamedResponse
+    public function __invoke(Request $request, CurrentBranch $branch, Industry $industry): Response|StreamedResponse
     {
         $period = ReportPeriod::fromRequest($request);
         $today = CarbonImmutable::today();
@@ -37,6 +39,7 @@ class ReportController extends Controller
 
         $sales = fn (string $status) => Sale::query()
             ->where('branch_id', $branch->id())
+            ->where('application', $industry->code())
             ->where('status', $status)
             ->whereBetween('sold_at', [$from->startOfDay(), $to->endOfDay()]);
 
@@ -49,6 +52,7 @@ class ReportController extends Controller
         // what went back on the shelf off the cost.
         $returns = fn () => SaleReturn::query()
             ->where('branch_id', $branch->id())
+            ->whereRelation('sale', 'application', $industry->code())
             ->whereBetween('returned_at', [$from->startOfDay(), $to->endOfDay()]);
         $returnedMinor = (int) $returns()->sum('total_minor');
         $restockedCost = (int) SaleReturnLine::query()
@@ -112,12 +116,12 @@ class ReportController extends Controller
                 'revenueMinor' => (int) $row->revenue,
                 'costMinor' => (int) $row->cost,
             ]),
-            'stock' => $this->stockValue($branch->id(), $today),
+            'stock' => $this->stockValue($branch->id(), $industry->itemKinds(), $today),
         ];
         $name = "{$period->from->toDateString()}-to-{$period->to->toDateString()}";
 
         return match ($request->query('export')) {
-            null => Inertia::render('reports/index', $props),
+            null => Inertia::render($industry->page('reports/index'), $props),
             'days' => CsvExport::download("sales-by-day-{$name}", ['Day' => 'day', 'Sales' => 'count', 'Takings' => 'totalMinor'], $props['byDay']),
             'methods' => CsvExport::download("sales-by-payment-{$name}", ['Payment method' => 'method', 'Sales' => 'count', 'Takings' => 'totalMinor'], $props['byMethod']),
             'top' => CsvExport::download("top-medicines-{$name}", ['Medicine' => 'medicine', 'Quantity' => 'quantity', 'Revenue' => 'revenueMinor', 'Cost' => 'costMinor'], $props['topMedicines']),
@@ -130,18 +134,20 @@ class ReportController extends Controller
      * prices; expired stock separately, at cost, as it can only be lost, and
      * unexpired stock on hold (quarantined or recalled) at cost.
      *
+     * @param  list<string>  $kinds  the item kinds of this industry
      * @return array{units: int, costMinor: int, retailMinor: int, expiredUnits: int, expiredCostMinor: int, heldUnits: int, heldCostMinor: int}
      */
-    private function stockValue(string $branchId, CarbonImmutable $today): array
+    private function stockValue(string $branchId, array $kinds, CarbonImmutable $today): array
     {
         $onHand = fn () => Batch::query()
             ->where('batches.branch_id', $branchId)
-            ->where('batches.quantity_on_hand', '>', 0);
+            ->where('batches.quantity_on_hand', '>', 0)
+            ->join('items', 'items.id', '=', 'batches.item_id')
+            ->whereIn('items.kind', $kinds);
 
         $sellable = $onHand()
             ->where('batches.status', Batch::AVAILABLE)
             ->unexpired($today)
-            ->join('items', 'items.id', '=', 'batches.item_id')
             ->selectRaw('SUM(batches.quantity_on_hand) AS units, SUM(batches.quantity_on_hand * batches.unit_cost_minor) AS cost, SUM(batches.quantity_on_hand * items.sell_price_minor) AS retail')
             ->toBase()
             ->first();

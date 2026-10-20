@@ -8,6 +8,7 @@ use App\Modules\Sales\Enums\PaymentMethod;
 use App\Modules\Sales\Models\TillSession;
 use App\Support\CsvExport;
 use App\Support\CurrentBranch;
+use App\Support\Industry;
 use App\Support\ReportPeriod;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -17,13 +18,14 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 /**
  * Cashier reconciliation over a period: every till opened in it, what went
  * through it and how the count came out, and per cashier the totals and
- * how much they were over or short.
+ * how much they were over or short. A till is the cashier's drawer, not an
+ * industry's: one used at both counters of a branch shows in both reports.
  */
 class CashierReportController extends Controller
 {
     public const MAX_TILLS = 500;
 
-    public function __invoke(Request $request, CurrentBranch $branch, Tills $tills): Response|StreamedResponse
+    public function __invoke(Request $request, CurrentBranch $branch, Tills $tills, Industry $industry): Response|StreamedResponse
     {
         $period = ReportPeriod::fromRequest($request);
 
@@ -73,7 +75,7 @@ class CashierReportController extends Controller
         $name = "{$period->from->toDateString()}-to-{$period->to->toDateString()}";
 
         return match ($request->query('export')) {
-            null => Inertia::render('reports/cashiers', [
+            null => Inertia::render($industry->page('reports/cashiers'), [
                 ...$period->toArray(),
                 'byCashier' => $byCashier,
                 'tills' => $rows->values(),

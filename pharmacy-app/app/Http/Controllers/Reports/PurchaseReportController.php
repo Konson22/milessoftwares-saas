@@ -10,6 +10,7 @@ use App\Modules\Procurement\Models\GoodsReceiptLine;
 use App\Modules\Procurement\Models\SupplierReturn;
 use App\Support\CsvExport;
 use App\Support\CurrentBranch;
+use App\Support\Industry;
 use App\Support\ReportPeriod;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -19,20 +20,23 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 /**
  * What the branch bought in the period: per supplier (received less sent
  * back), per medicine (quantity and average cost), and each delivery.
- * What is still owed to suppliers lives in Finance payables.
+ * What is still owed to suppliers lives in Finance payables. Only this
+ * industry's deliveries and returns (Industry).
  */
 class PurchaseReportController extends Controller
 {
     public const MAX_RECEIPTS = 200;
 
-    public function __invoke(Request $request, CurrentBranch $branch): Response|StreamedResponse
+    public function __invoke(Request $request, CurrentBranch $branch, Industry $industry): Response|StreamedResponse
     {
         $period = ReportPeriod::fromRequest($request);
         $dates = [$period->from->toDateString(), $period->to->toDateString()];
 
         $receipts = fn () => GoodsReceipt::query()
             ->where('branch_id', $branch->id())
-            ->whereBetween('received_on', $dates);
+            ->where('application', $industry->code())
+            ->whereDate('received_on', '>=', $dates[0])
+            ->whereDate('received_on', '<=', $dates[1]);
 
         $received = $receipts()
             ->groupBy('supplier_id')
@@ -42,7 +46,9 @@ class PurchaseReportController extends Controller
             ->keyBy('supplier_id');
         $sentBack = SupplierReturn::query()
             ->where('branch_id', $branch->id())
-            ->whereBetween('returned_on', $dates)
+            ->where('application', $industry->code())
+            ->whereDate('returned_on', '>=', $dates[0])
+            ->whereDate('returned_on', '<=', $dates[1])
             ->groupBy('supplier_id')
             ->selectRaw('supplier_id, COUNT(*) AS returns, SUM(total_minor) AS total')
             ->toBase()
@@ -106,9 +112,9 @@ class PurchaseReportController extends Controller
         $name = "{$period->from->toDateString()}-to-{$period->to->toDateString()}";
 
         return match ($request->query('export')) {
-            null => Inertia::render('reports/purchases', $props),
+            null => Inertia::render($industry->page('reports/purchases'), $props),
             'suppliers' => CsvExport::download("purchases-by-supplier-{$name}", ['Supplier' => 'supplier', 'Deliveries' => 'receipts', 'Received' => 'receivedMinor', 'Returned' => 'returnedMinor', 'Net' => 'netMinor'], $bySupplier),
-            'medicines' => CsvExport::download("purchases-by-medicine-{$name}", ['Medicine' => 'medicine', 'Quantity' => 'quantity', 'Total' => 'totalMinor', 'Average cost' => 'averageCostMinor', 'Lowest cost' => 'lowestCostMinor', 'Highest cost' => 'highestCostMinor'], $props['byItem']),
+            'medicines', 'items' => CsvExport::download("purchases-by-medicine-{$name}", ['Medicine' => 'medicine', 'Quantity' => 'quantity', 'Total' => 'totalMinor', 'Average cost' => 'averageCostMinor', 'Lowest cost' => 'lowestCostMinor', 'Highest cost' => 'highestCostMinor'], $props['byItem']),
             'deliveries' => CsvExport::download("deliveries-{$name}", ['Number' => 'number', 'Received on' => 'receivedOn', 'Supplier' => 'supplier', 'Supplier reference' => 'supplierReference', 'Total' => 'totalMinor'], $props['receipts']),
             default => abort(404),
         };

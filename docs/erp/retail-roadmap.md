@@ -21,7 +21,7 @@ stay `planned` (shown as coming soon, not sold) until the pilot list below is me
 | R5 Reports | sales by product, category, cashier and branch; margins; slow movers; reorder list; CSV export | totals equal the sales and Finance postings for the period |
 | Later | promotions and loyalty, multiple price levels per branch, serial numbers, SUNMI / offline POS (Phase 11) | — |
 
-## Permissions (catalog 1.3.0)
+## Permissions (catalog 1.4.0)
 
 | Permission | Sensitivity | Scopes |
 | --- | --- | --- |
@@ -45,13 +45,14 @@ stay `planned` (shown as coming soon, not sold) until the pilot list below is me
 | `retail.orders.manage` | 2 | organization, branch |
 | `retail.orders.deliver` | 3 | organization, branch |
 | `retail.prices.manage` | 3 | organization |
+| `retail.reports.view` | 2 | organization, branch |
 
 Roles: Cashier (sell, own till), Store keeper (products view, stock, purchasing view and receive),
 Store manager (everything at the branch, discounts, voids, tills, purchase orders, write-off
-approvals, selling on account, customers, orders, price lists), Owner (everything). Cashiers can
+approvals, selling on account, customers, orders, price lists, reports), Owner (everything). Cashiers can
 look customers up; store keepers see orders and deliver them.
 Catalog 1.1.0 (R2) added write-off approval and purchasing; 1.2.0 (R3) added credit and
-customers; 1.3.0 (R4) added orders and price lists.
+customers; 1.3.0 (R4) added orders and price lists; 1.4.0 (R5) added reports.
 
 ## Pilot list (`planned` → `beta`)
 
@@ -70,13 +71,14 @@ scanner); one week of sales reconciled against Finance; backups restored once.
 - **R4 Wholesale documents: done** 2026-10-19; details in `implementation-status.md`
   ("Retail R4"). A delivery note and its invoice are made together: the invoice is always
   exactly what was delivered.
+- **R5 Reports: done** 2026-10-20; details in `implementation-status.md` ("Retail R5"). Every
+  report shows one industry only, so the shop and the pharmacy at one branch report apart.
 
 Open after R2:
 - Stock locations (shelves) and quarantine or recall holds are Pharmacy screens only.
 - No stock-take count sheets yet (in either industry): counts are corrected with per-batch
   adjustments.
 - Tills are shared with Pharmacy: a member who sells in both uses one cash drawer per branch.
-- Reports are Pharmacy's only and do not separate the two industries yet (R5).
 - The shared counter, purchasing and stock screens still name their item prop `medicines`.
 
 Open after R3:
@@ -92,3 +94,14 @@ Open after R4:
 - A quotation cannot be edited; cancel it and quote again.
 - One price list per customer; no price levels per branch, quantity breaks or dated prices.
 - No tax on invoices yet (`tax_minor` is 0, as at the counter).
+
+Open after R5:
+- Reports are per branch: there is no side-by-side of branches yet. Each branch's figures are
+  read in turn by switching branch.
+- Tills are cashier drawers shared by both industries: the till reconciliation of a branch that
+  runs both shows each drawer whole in both industries' reports.
+- The reorder list does not suggest quantities; it shows the shortfall, the period's pace and the
+  last cost.
+- Pharmacy keeps its four reports; the sales-by-category, sales-by-cashier and stock reports are
+  the shop's only so far (the controllers are shared, the pages are not).
+- The shared report props still name items `medicine` (`rows.*.medicine`, `topMedicines`).

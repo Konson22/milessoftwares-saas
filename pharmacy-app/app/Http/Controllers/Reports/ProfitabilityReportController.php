@@ -10,6 +10,7 @@ use App\Modules\Sales\Models\SaleReturn;
 use App\Modules\Sales\Models\SaleReturnLine;
 use App\Support\CsvExport;
 use App\Support\CurrentBranch;
+use App\Support\Industry;
 use App\Support\ReportPeriod;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -17,18 +18,20 @@ use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * What each medicine earned in the period: sold less returned, at what it
- * sold for and what its batches cost. Totals agree with the overview.
+ * What each item earned in the period: sold less returned, at what it sold
+ * for and what its batches cost. Totals agree with the overview, for this
+ * industry's sales only.
  */
 class ProfitabilityReportController extends Controller
 {
-    public function __invoke(Request $request, CurrentBranch $branch): Response|StreamedResponse
+    public function __invoke(Request $request, CurrentBranch $branch, Industry $industry): Response|StreamedResponse
     {
         $period = ReportPeriod::fromRequest($request);
 
         $sold = SaleLine::query()
             ->whereIn('sale_lines.sale_id', Sale::query()
                 ->where('branch_id', $branch->id())
+                ->where('application', $industry->code())
                 ->where('status', Sale::COMPLETED)
                 ->whereBetween('sold_at', $period->between())
                 ->select('id'))
@@ -43,6 +46,7 @@ class ProfitabilityReportController extends Controller
         $returned = SaleReturnLine::query()
             ->whereIn('sale_return_id', SaleReturn::query()
                 ->where('branch_id', $branch->id())
+                ->whereRelation('sale', 'application', $industry->code())
                 ->whereBetween('returned_at', $period->between())
                 ->select('id'))
             ->groupBy('item_id')
@@ -63,6 +67,7 @@ class ProfitabilityReportController extends Controller
             return [
                 'id' => (string) $id,
                 'medicine' => $items->get($id)->name ?? '',
+                'category' => $items->get($id)->category ?? null,
                 'quantity' => (int) ($s->quantity ?? 0) - (int) ($r->quantity ?? 0),
                 'returnedQuantity' => (int) ($r->quantity ?? 0),
                 'discountMinor' => (int) ($s->discount ?? 0),
@@ -84,8 +89,8 @@ class ProfitabilityReportController extends Controller
         ];
 
         return match ($request->query('export')) {
-            null => Inertia::render('reports/profitability', $props),
-            'medicines' => CsvExport::download("profitability-{$period->from->toDateString()}-to-{$period->to->toDateString()}", [
+            null => Inertia::render($industry->page('reports/profitability'), $props),
+            'medicines', 'items' => CsvExport::download("profitability-{$period->from->toDateString()}-to-{$period->to->toDateString()}", [
                 'Medicine' => 'medicine',
                 'Quantity sold' => 'quantity',
                 'Quantity returned' => 'returnedQuantity',

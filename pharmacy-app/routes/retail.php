@@ -2,6 +2,12 @@
 
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\Reports\CashierReportController;
+use App\Http\Controllers\Reports\ProfitabilityReportController;
+use App\Http\Controllers\Reports\PurchaseReportController;
+use App\Http\Controllers\Reports\SalesAnalysisReportController;
+use App\Http\Controllers\Reports\StockReportController;
 use App\Modules\Inventory\Http\Controllers\DisposalController;
 use App\Modules\Inventory\Http\Controllers\StockController;
 use App\Modules\Inventory\Http\Controllers\TransferController;
@@ -151,6 +157,16 @@ Route::prefix($path)
             Route::middleware('branch.can:retail.stock.dispose')->group(function () {
                 Route::post('disposals/{disposal}/approve', [DisposalController::class, 'approve'])->whereUuid('disposal')->name('disposals.approve');
                 Route::post('disposals/{disposal}/reject', [DisposalController::class, 'reject'])->whereUuid('disposal')->name('disposals.reject');
+            });
+
+            // The branch's figures for a period: the shop's sales and stock only.
+            Route::middleware('branch.can:retail.reports.view')->group(function () {
+                Route::get('reports', ReportController::class)->name('reports.index');
+                Route::get('reports/sales', SalesAnalysisReportController::class)->name('reports.sales');
+                Route::get('reports/profitability', ProfitabilityReportController::class)->name('reports.profitability');
+                Route::get('reports/stock', StockReportController::class)->name('reports.stock');
+                Route::get('reports/purchases', PurchaseReportController::class)->name('reports.purchases');
+                Route::get('reports/cashiers', CashierReportController::class)->name('reports.cashiers');
             });
 
             // Purchasing for the branch being worked in.

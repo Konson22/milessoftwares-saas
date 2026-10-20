@@ -1,5 +1,6 @@
 import {
     ArrowLeftRight,
+    BarChart3,
     Boxes,
     BookOpen,
     ClipboardList,
@@ -24,6 +25,7 @@ import { index as priceLists } from '@/routes/retail/price-lists';
 import { index as products } from '@/routes/retail/products';
 import { index as purchaseOrders } from '@/routes/retail/purchase-orders';
 import { index as receipts } from '@/routes/retail/receipts';
+import { index as reports } from '@/routes/retail/reports';
 import { create as counter, index as sales } from '@/routes/retail/sales';
 import { index as stock } from '@/routes/retail/stock';
 import { index as supplierReturns } from '@/routes/retail/supplier-returns';
@@ -32,8 +34,7 @@ import { index as tills } from '@/routes/retail/tills';
 import { index as transfers } from '@/routes/retail/transfers';
 
 /**
- * The shop's sections, in menu order (retail-roadmap.md adds reports in a
- * later phase).
+ * The shop's sections, in menu order.
  */
 export const retailNavigation: NavGroup[] = [
     {
@@ -45,6 +46,13 @@ export const retailNavigation: NavGroup[] = [
                 icon: LayoutDashboard,
                 permission: null,
                 scope: 'org',
+            },
+            {
+                title: 'Reports',
+                href: reports(),
+                icon: BarChart3,
+                permission: 'retail.reports.view',
+                scope: 'branch',
             },
         ],
     },

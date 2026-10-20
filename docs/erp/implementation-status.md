@@ -779,3 +779,50 @@ reference are not protected against being entered twice.
   - dropping the price list's industry check.
 
 **Known limitations:** see "Open after R4" in `retail-roadmap.md`.
+
+## Retail R5 — 2026-10-20 (local, Windows)
+
+**Implemented** (`pharmacy-app`; plan in `retail-roadmap.md`):
+- The report controllers serve the industry of the request (`Industry`):
+  - overview, profitability and purchases filter sales, returns (by their sale), deliveries and
+    supplier returns on `application`;
+  - the stock value counts only the industry's item kinds;
+  - each renders the industry's page (`reports/*` or `retail/reports/*`).
+  - The cashier report stays per drawer: tills belong to no industry.
+- `SalesAnalysisReportController` (`reports/sales`):
+  - sales by category and by cashier, sold less returned, with cost, profit and margin;
+  - returns count in the period they were taken, against the cashier who made the sale, so both
+    cuts add up to the overview and the profitability report;
+  - CSV `categories` and `cashiers`.
+- `StockReportController` (`reports/stock`):
+  - reorder list: sellable stock at or under the reorder level (the stock page's rule), with the
+    shortfall, units sold, pace per day and the last batch cost;
+  - slow movers: stock that sold nothing in the period or would last more than 90 days at its
+    pace, most money tied up first, with the last sale date;
+  - CSV `reorder` and `slow`.
+- Routes `retail.reports.*` (`branch.can:retail.reports.view`): overview, sales, margins,
+  stock, purchases, tills. CSV `items` is an alias of `medicines` on margins and purchases.
+- Pages `retail/reports/{index,sales,profitability,stock,purchases,cashiers}` and a Reports
+  item in the shop's menu. `ReportTabs` is the report header for any set of reports;
+  `ReportHeader` (pharmacy) and `RetailReportHeader` use it.
+- Catalog `platform/retail.json` 1.4.0 adds `retail.reports.view` (sensitivity 2: it shows
+  costs and margins), on the manager role.
+
+**Tests executed:**
+- pharmacy-app: Pest 231 passed, 1 skipped (`RetailReportsTest` 12 new):
+  - access, and keeping each industry out of the other's reports at the same branch;
+  - category and cashier cuts adding up to the overview;
+  - margins agreeing with the overview;
+  - takings equal to the retail Finance postings (invoices less returns);
+  - CSV downloads;
+  - reorder list, slow movers and the pace over a chosen period;
+  - pharmacy returns and deliveries kept out of the shop's reports.
+- PHPStan 0; Pint; `vp check`; `tsc`. central-app catalog tests 38 passed; catalog 1.4.0 imported
+  locally.
+- Mutations, each failing a test: dropping the industry filter on the overview's sales, its
+  returns, its stock value, profitability, the sales cuts' returns and purchases; counting returns
+  against the returner; ignoring restocked cost; slow movers ignoring cover; the reorder rule. One
+  survives as equivalent: the stock report's sales filter (it lists only the industry's items).
+- Fixed on the way: the purchases report missed deliveries on the last day of the period on
+  SQLite (dates stored with a time); it compares dates now.
+
