@@ -55,6 +55,18 @@ it('lets someone new choose a password and join in one step, with their email pr
     ])->assertSessionHasErrors('invitation');
 });
 
+it('sends the browser to the workspace with a full page load after joining from the form', function () {
+    // The form posts with Inertia (XHR), which cannot follow a redirect to
+    // another host itself.
+    $this->withHeader('X-Inertia', 'true')->post(joinUrl($this->token), [
+        'name' => 'Nyandeng Akol',
+        'password' => 'a-Much-better-one-42',
+        'password_confirmation' => 'a-Much-better-one-42',
+    ])
+        ->assertStatus(409)
+        ->assertHeader('X-Inertia-Location', (string) $this->organization->workspaceUrl());
+});
+
 it('sends people who already have an account to sign in and accept instead', function () {
     User::factory()->create(['email' => 'Nyandeng@example.test']);
     $accept = PlatformHosts::url(PlatformHosts::app(), 'invitations/'.$this->token);

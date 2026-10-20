@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use App\Support\Hosts\PlatformHosts;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Fortify\Features;
@@ -29,7 +30,20 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect($this->authUrl(config('fortify.home')));
+        $response->assertRedirect(PlatformHosts::url(PlatformHosts::app(), 'dashboard'));
+    }
+
+    public function test_the_login_form_reaches_the_dashboard_with_a_full_page_load()
+    {
+        $user = User::factory()->create();
+
+        // Inertia posts with XHR, which cannot follow a redirect to the app host.
+        $this->withHeader('X-Inertia', 'true')->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => 'password',
+        ])
+            ->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', PlatformHosts::url(PlatformHosts::app(), 'dashboard'));
     }
 
     public function test_users_with_two_factor_enabled_are_redirected_to_two_factor_challenge()

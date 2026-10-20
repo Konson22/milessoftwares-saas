@@ -1,41 +1,85 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import AppLogoIcon from '@/shared/components/app-logo-icon';
 import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/shared/types';
+import { Accent, HeroBackdrop } from '@/sites/public/components/page-hero';
+import { display } from '@/sites/public/components/styles';
+
+function BrandLink({
+    className,
+    inverted = false,
+}: {
+    className?: string;
+    inverted?: boolean;
+}) {
+    return (
+        <Link
+            href={home()}
+            className={`flex items-center gap-3 font-public-display font-semibold tracking-tight ${inverted ? 'text-white' : 'text-site-ink'} ${className ?? ''}`}
+        >
+            <AppLogoIcon className="size-10" alt="" />
+            <span className="text-xl sm:text-2xl">Miles Softwares</span>
+        </Link>
+    );
+}
 
 export default function AuthSplitLayout({
     children,
     title,
     description,
 }: AuthLayoutProps) {
-    const { name } = usePage().props;
+    const year = new Date().getFullYear();
 
     return (
-        <div className="relative grid h-dvh flex-col items-center justify-center px-8 sm:px-0 lg:max-w-none lg:grid-cols-2 lg:px-0">
-            <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
-                <div className="absolute inset-0 bg-zinc-900" />
-                <Link
-                    href={home()}
-                    className="relative z-20 flex items-center text-lg font-medium"
-                >
-                    <AppLogoIcon className="mr-2 size-8 fill-current text-white" />
-                    {name}
-                </Link>
-            </div>
-            <div className="w-full lg:p-8">
-                <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-                    <Link
-                        href={home()}
-                        className="relative z-20 flex items-center justify-center lg:hidden"
+        <div className="site-public grid min-h-svh font-public text-site-ink lg:grid-cols-2">
+            <aside className="site-dark relative isolate hidden min-h-svh flex-col justify-between overflow-hidden bg-site-night p-10 text-slate-300 xl:p-14 lg:flex">
+                <HeroBackdrop />
+
+                <BrandLink inverted className="relative z-10" />
+
+                <div className="reveal-up relative z-10 max-w-md space-y-5">
+                    <h2
+                        className={`text-3xl leading-tight xl:text-4xl ${display}`}
                     >
-                        <AppLogoIcon className="h-10 fill-current text-black sm:h-12" />
-                    </Link>
-                    <div className="flex flex-col items-start gap-2 text-left sm:items-center sm:text-center">
-                        <h1 className="text-xl font-medium">{title}</h1>
-                        <p className="text-sm text-balance text-muted-foreground">
-                            {description}
-                        </p>
+                        One sign-in for{' '}
+                        <Accent>every application</Accent>
+                    </h2>
+                    <p className="text-base text-pretty text-slate-300 xl:text-lg">
+                        Access your workspace, apps, and team from a single
+                        Miles Softwares account.
+                    </p>
+                </div>
+
+                <p className="relative z-10 text-sm text-slate-500">
+                    © {year} Miles Global Link Co. Ltd
+                </p>
+            </aside>
+
+            <div className="relative flex flex-col justify-center bg-site-soft px-6 py-12 sm:px-10">
+                <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 overflow-hidden"
+                >
+                    <div className="absolute -top-24 -right-16 size-72 rounded-full bg-site-wash blur-3xl" />
+                    <div className="absolute -bottom-28 -left-20 size-80 rounded-full bg-brand-cyan/10 blur-3xl" />
+                </div>
+
+                <div className="reveal-up relative z-10 mx-auto flex w-full max-w-[400px] flex-col gap-8">
+                    <BrandLink className="lg:hidden" />
+
+                    <div className="space-y-2">
+                        <h1
+                            className={`text-2xl sm:text-[1.75rem] ${display}`}
+                        >
+                            {title}
+                        </h1>
+                        {description && (
+                            <p className="text-sm text-pretty text-slate-600 sm:text-base">
+                                {description}
+                            </p>
+                        )}
                     </div>
+
                     {children}
                 </div>
             </div>

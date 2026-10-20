@@ -113,6 +113,10 @@ type Module = {
         | 'available'
         | 'on_request'
         | 'coming_soon';
+    /** Name of the installed product this one works best with. */
+    pairsWith: string | null;
+    /** How closely it pairs (lower is closer); null when unrelated. */
+    rank: number | null;
 };
 
 type Current = {
@@ -222,14 +226,17 @@ export default function Dashboard({ organizations, current }: Props) {
                 )}
 
                 {current?.billing && (
+                    <RecommendationsPanel
+                        modules={current.billing.modules}
+                        workspace={current.displayName}
+                    />
+                )}
+
+                {current?.billing && (
                     <div className="grid gap-3 lg:grid-cols-2">
                         <SubscriptionsPanel billing={current.billing} />
                         <PaymentsPanel billing={current.billing} />
                     </div>
-                )}
-
-                {current?.billing && (
-                    <ModulesPanel modules={current.billing.modules} />
                 )}
 
                 <Organizations organizations={organizations} />
@@ -699,24 +706,40 @@ const moduleStates: Record<
     coming_soon: { label: 'Coming soon', tone: 'neutral', cta: null },
 };
 
-function ModulesPanel({ modules }: { modules: Module[] }) {
-    // Installed first, then what can be added, then what is coming.
+/**
+ * The rest of the ERP, for the owner to add on: what they can add today
+ * first, then what they asked for, then what is coming. Within each group,
+ * modules that work with an installed application come first.
+ */
+function RecommendationsPanel({
+    modules,
+    workspace,
+}: {
+    modules: Module[];
+    workspace: string;
+}) {
     const order: Module['state'][] = [
-        'installed',
-        'requested',
         'available',
         'on_request',
+        'requested',
         'coming_soon',
     ];
-    const sorted = [...modules].sort(
-        (a, b) => order.indexOf(a.state) - order.indexOf(b.state),
-    );
+    const sorted = modules
+        .filter((module) => module.state !== 'installed')
+        .map((module, index) => ({ module, index }))
+        .sort(
+            (a, b) =>
+                order.indexOf(a.module.state) - order.indexOf(b.module.state) ||
+                (a.module.rank ?? Infinity) - (b.module.rank ?? Infinity) ||
+                a.index - b.index,
+        )
+        .map(({ module }) => module);
 
     return (
-        <Panel aria-labelledby="modules">
+        <Panel aria-labelledby="recommendations">
             <PanelHeader
-                title={<span id="modules">Modules</span>}
-                description="Everything you can add to your workspace."
+                title={<span id="recommendations">Recommended for you</span>}
+                description={`More of the Miles Softwares ERP to add to ${workspace}.`}
                 actions={
                     <Button asChild size="sm" variant="ghost">
                         <Link href={organizationPlans()}>See plans</Link>
@@ -724,7 +747,7 @@ function ModulesPanel({ modules }: { modules: Module[] }) {
                 }
             />
             {sorted.length === 0 ? (
-                <EmptyState icon={Puzzle} title="No modules listed yet">
+                <EmptyState icon={Puzzle} title="You have everything">
                     New modules will appear here as they are released.
                 </EmptyState>
             ) : (
@@ -754,6 +777,11 @@ function ModulesPanel({ modules }: { modules: Module[] }) {
                                         <span className="mt-0.5 line-clamp-2 block text-sm text-muted-foreground">
                                             {module.tagline ??
                                                 module.description}
+                                        </span>
+                                    )}
+                                    {module.pairsWith && (
+                                        <span className="mt-1 block text-xs font-medium text-primary">
+                                            Works with {module.pairsWith}
                                         </span>
                                     )}
                                     {state.cta && (

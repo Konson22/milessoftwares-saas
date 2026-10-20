@@ -40,6 +40,22 @@ class IdentityServiceProvider extends ServiceProvider
         }
 
         $this->configureOpenIdProvider();
+        $this->configureSignInDestination();
+    }
+
+    /**
+     * A sign-in with nowhere else to go (no workspace or product waiting in
+     * url.intended) lands on the customer dashboard. Fortify copied the
+     * passkey destination while booting, so it is set again here.
+     */
+    private function configureSignInDestination(): void
+    {
+        $dashboard = PlatformHosts::url(PlatformHosts::app(), 'dashboard');
+
+        config([
+            'fortify.redirects.login' => $dashboard,
+            'passkeys.redirect' => $dashboard,
+        ]);
     }
 
     private function configureOpenIdProvider(): void

@@ -1,4 +1,4 @@
-import AuthLayoutTemplate from '@/sites/central/layouts/auth/auth-simple-layout';
+import AuthLayoutTemplate from '@/sites/central/layouts/auth/auth-split-layout';
 
 export default function AuthLayout({
     title = '',

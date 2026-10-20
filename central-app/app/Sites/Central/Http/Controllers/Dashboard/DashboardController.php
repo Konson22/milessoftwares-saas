@@ -130,11 +130,33 @@ class DashboardController extends Controller
     }
 
     /**
+     * Products that work best alongside each product, most useful first.
+     * Drives the "Recommended for you" ranking on the dashboard.
+     *
+     * @var array<string, list<string>>
+     */
+    private const PAIRS_WELL_WITH = [
+        'pharmacy' => ['finance', 'inventory', 'hr', 'payroll', 'crm'],
+        'retail' => ['inventory', 'finance', 'crm', 'hr', 'payroll'],
+        'finance' => ['advanced_accounting', 'payroll', 'hr', 'inventory'],
+        'inventory' => ['retail', 'finance'],
+        'hr' => ['payroll', 'finance'],
+        'payroll' => ['hr', 'finance'],
+        'advanced_accounting' => ['finance', 'payroll'],
+        'crm' => ['finance', 'retail'],
+        'school' => ['finance', 'hr', 'payroll'],
+        'clinic' => ['pharmacy', 'finance', 'hr', 'payroll'],
+        'restaurant' => ['inventory', 'finance', 'retail', 'hr'],
+    ];
+
+    /**
      * Every module in the catalog (HR, Payroll, accounting, ...) and where
      * the organization stands with it: installed, asked for, on a plan it
-     * can ask for, sold on request, or not released yet.
+     * can ask for, sold on request, or not released yet. Modules that pair
+     * with an installed one name it in pairsWith and carry a lower rank
+     * (null when nothing installed points to them).
      *
-     * @return list<array{code: string, name: string, tagline: string|null, description: string|null, state: string}>
+     * @return list<array{code: string, name: string, tagline: string|null, description: string|null, state: string, pairsWith: string|null, rank: int|null}>
      */
     private function modules(MarketingCatalog $catalog): array
     {
@@ -159,18 +181,53 @@ class DashboardController extends Controller
             ->flatMap(fn (Plan $plan) => $plan->applications->pluck('code'))
             ->all();
 
-        return array_map(fn (array $product) => [
-            'code' => $product['code'],
-            'name' => $product['name'],
-            'tagline' => $product['tagline'],
-            'description' => $product['description'],
-            'state' => match (true) {
-                in_array($product['code'], $installed, true) => 'installed',
-                in_array($product['code'], $requested, true) => 'requested',
-                $product['status'] === 'planned' => 'coming_soon',
-                in_array($product['code'], $onPlans, true) => 'available',
-                default => 'on_request',
-            },
-        ], $catalog->products());
+        $products = $catalog->products();
+        $names = array_column($products, 'name', 'code');
+
+        return array_map(function (array $product) use ($installed, $requested, $onPlans, $names) {
+            [$pairsWith, $rank] = $this->pairing($product['code'], $installed);
+
+            return [
+                'code' => $product['code'],
+                'name' => $product['name'],
+                'tagline' => $product['tagline'],
+                'description' => $product['description'],
+                'state' => match (true) {
+                    in_array($product['code'], $installed, true) => 'installed',
+                    in_array($product['code'], $requested, true) => 'requested',
+                    $product['status'] === 'planned' => 'coming_soon',
+                    in_array($product['code'], $onPlans, true) => 'available',
+                    default => 'on_request',
+                },
+                'pairsWith' => $pairsWith === null ? null : ($names[$pairsWith] ?? null),
+                'rank' => $rank,
+            ];
+        }, $products);
+    }
+
+    /**
+     * The installed product this one pairs best with, and how closely (its
+     * position in that product's list; lower is closer).
+     *
+     * @param  array<mixed>  $installed  application codes
+     * @return array{0: string|null, 1: int|null}
+     */
+    private function pairing(string $code, array $installed): array
+    {
+        $best = [null, null];
+
+        foreach ($installed as $installedCode) {
+            if (! is_string($installedCode)) {
+                continue;
+            }
+
+            $position = array_search($code, self::PAIRS_WELL_WITH[$installedCode] ?? [], true);
+
+            if ($position !== false && ($best[1] === null || $position < $best[1])) {
+                $best = [$installedCode, $position];
+            }
+        }
+
+        return $best;
     }
 }

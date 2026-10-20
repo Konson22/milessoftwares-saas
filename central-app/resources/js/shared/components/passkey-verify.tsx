@@ -31,7 +31,20 @@ export default function PasskeyVerify({
             },
         }),
         onSuccess: (response) => {
-            router.visit(response.redirect ?? '/dashboard');
+            const destination = new URL(
+                response.redirect ?? '/dashboard',
+                window.location.href,
+            );
+
+            // Another host (the app dashboard, a workspace) needs a full
+            // page load; Inertia visits stay on this origin.
+            if (destination.origin !== window.location.origin) {
+                window.location.assign(destination.href);
+
+                return;
+            }
+
+            router.visit(destination.href);
         },
     });
 
@@ -45,7 +58,7 @@ export default function PasskeyVerify({
                 <Button
                     type="button"
                     variant="outline"
-                    className="w-full"
+                    className="w-full in-[.site-public]:h-11 in-[.site-public]:border-site-line in-[.site-public]:bg-white in-[.site-public]:shadow-sm in-[.site-public]:shadow-site-navy/5 in-[.site-public]:hover:border-site-accent/50 in-[.site-public]:hover:bg-white in-[.site-public]:hover:text-site-accent-ink"
                     onClick={verify}
                     disabled={isLoading}
                 >
@@ -64,7 +77,7 @@ export default function PasskeyVerify({
                     <Separator className="w-full" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">
+                    <span className="bg-background px-2 text-muted-foreground in-[.site-public]:bg-site-soft">
                         {separator ?? 'Or continue with email'}
                     </span>
                 </div>

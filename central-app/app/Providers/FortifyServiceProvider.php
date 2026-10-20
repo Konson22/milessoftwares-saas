@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Models\User;
+use App\Modules\Identity\Http\Controllers\GoogleSignInController;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -76,6 +77,7 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::loginView(fn (Request $request) => Inertia::render('central/auth/login', [
             'canResetPassword' => Features::enabled(Features::resetPasswords()),
+            'canSignInWithGoogle' => GoogleSignInController::configured(),
             'status' => $request->session()->get('status'),
         ]));
 

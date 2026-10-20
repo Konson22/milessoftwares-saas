@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Identity\Http\Controllers\FirstPartySignInController;
+use App\Modules\Identity\Http\Controllers\GoogleSignInController;
 use App\Modules\Identity\Http\Controllers\SignOutController;
 use App\Sites\Central\Http\Controllers\Account\JoinController;
 use App\Sites\Central\Http\Controllers\Account\PasswordSetupController;
@@ -38,12 +39,18 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// auth.milessoftwares.com — identity: sign-in flows (Fortify) and account security
+// auth.milesoftwares.com — identity: sign-in flows (Fortify) and account security
 Route::domain(PlatformHosts::auth())->group(function () {
     // GET-only redirects: Route::redirect() also registers QUERY, which
     // Wayfinder's generated TypeScript does not support yet.
     Route::get('/', fn () => redirect('/settings/profile'));
     Route::get('signout', SignOutController::class)->name('signout');
+
+    // Sign in with Google (not configured: 404).
+    Route::middleware(['guest:'.config('fortify.guard'), 'throttle:20,1'])->group(function () {
+        Route::get('auth/google', [GoogleSignInController::class, 'redirect'])->name('google.redirect');
+        Route::get('auth/google/callback', [GoogleSignInController::class, 'callback'])->name('google.callback');
+    });
 
     // First sign-in with a temporary password: choose your own.
     Route::middleware('auth')->group(function () {
@@ -69,7 +76,7 @@ Route::domain(PlatformHosts::app())->name('app.')->group(function () {
     Route::post('logout', [FirstPartySignInController::class, 'logout'])->middleware('auth')->name('logout');
 });
 
-// app.milessoftwares.com — customer dashboard. The current organization is
+// app.milesoftwares.com — customer dashboard. The current organization is
 // re-validated on every request (ResolveCurrentOrganization).
 Route::domain(PlatformHosts::app())->middleware(['auth', 'verified', 'current.organization'])->group(function () {
     Route::get('/', fn () => redirect('/dashboard'));
@@ -129,7 +136,7 @@ foreach ([PlatformHosts::auth(), PlatformHosts::app()] as $host) {
     Route::domain($host)->get('robots.txt', [SeoController::class, 'disallowAll']);
 }
 
-// {business}.milessoftwares.com — tenant workspace shell. Signs in through
+// {business}.milesoftwares.com — tenant workspace shell. Signs in through
 // the auth host with the shared workspace client and keeps a host-only session.
 Route::domain('{tenant}.'.PlatformHosts::root())
     ->where(['tenant' => '[a-z0-9-]+'])

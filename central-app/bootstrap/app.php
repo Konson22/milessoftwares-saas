@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\RedirectAcrossHostsWithInertia;
 use App\Http\Middleware\SecurityHeaders;
 use App\Modules\Identity\Http\Middleware\EnforceSessionState;
 use App\Modules\Identity\Http\Middleware\RequirePasswordChange;
@@ -74,6 +75,7 @@ return Application::configure(basePath: dirname(__DIR__))
             RequirePasswordChange::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,
+            RedirectAcrossHostsWithInertia::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
     })

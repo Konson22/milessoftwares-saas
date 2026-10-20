@@ -28,6 +28,17 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // Sign in with Google (auth host). Google only accepts http redirect URIs
+    // on plain localhost, so local development registers
+    // http://localhost/auth/google/callback and Apache forwards it to the
+    // auth host (ops/local-dev/apache-dev.conf). Production uses
+    // https://auth.<root domain>/auth/google/callback.
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
