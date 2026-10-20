@@ -19,12 +19,14 @@
 - Modular monolith under `app/Modules/*`; architecture in `docs/architecture.md`.
 - OIDC provider: Passport 13 + jeremy379/laravel-openid-connect, hardened per `docs/adr/0002-oidc-provider.md`.
 - One role assignment = one scope (folds `role_assignment_scopes` into `role_assignments`).
-- Dev root domain: `.env.example` uses `milessoftwares.localhost`; this machine uses `milessoftwares.local`
+- Dev root domain: `.env.example` uses `milesoftwares.localhost`; this machine uses `milesoftwares.local`
   on port 8100 (hosts-file entries per subdomain, server bound to 0.0.0.0) — user decision 2026-10-09.
 - Dev is served on port 80 since 2026-10-11 (user decision): XAMPP Apache (`D:/srv/apache/miles-dev.conf`)
-  forwards `*.milessoftwares.local` to `artisan serve` on :8100, `APP_URL` has no port and
+  forwards `*.milesoftwares.local` to `artisan serve` on :8100, `APP_URL` has no port and
   `TRUSTED_PROXIES=127.0.0.1`. Wayfinder bakes route hosts into the bundle without a port, so every
   cross-host link and form broke on :8100.
+- Dev domain is `milesoftwares.localhost` since 2026-10-20 (user decision): Google OAuth accepts
+  `.localhost` redirect URIs but not `.local`. Same Apache/Acrylic setup, new name.
 - Repository layout since 2026-10-11 (user decision): the Laravel app is `central-app/`; inside it each
   site (public, admin, central) owns its routes, controllers, pages and layouts, and page names are
   `{site}/{page}` (`docs/architecture.md` section 8). Run `composer run dev` and every artisan command
@@ -85,7 +87,7 @@ _(test, migration and build results are recorded here per phase — actual outpu
 - Local back-channel: `composer dev` also serves 127.0.0.1:8101 for the token endpoint
   (`PLATFORM_OIDC_BACKCHANNEL_URL`), because `php artisan serve` on Windows cannot call itself.
 - `composer ci:check`: all pass; Pest 209 passed (641 assertions); PHPStan 0 errors.
-- Live smoke test on milessoftwares.local:8100 with curl: app login → auth sign-in → code → token via
+- Live smoke test on milesoftwares.local:8100 with curl: app login → auth sign-in → code → token via
   8101 → app dashboard 200; app logout → auth signout page 200 → app dashboard redirects to sign-in.
   Throwaway user deleted afterwards.
 

@@ -10,8 +10,8 @@ turns the ones below into alerts. Keep `LOG_LEVEL=info` or higher in production.
 
 | Check                                | Interval | Alert when                |
 | ------------------------------------ | -------- | ------------------------- |
-| `https://milessoftwares.com/up`      | 1 min    | 2 failures in a row: page |
-| `https://auth.milessoftwares.com/up` | 1 min    | 2 failures in a row: page |
+| `https://milesoftwares.com/up`      | 1 min    | 2 failures in a row: page |
+| `https://auth.milesoftwares.com/up` | 1 min    | 2 failures in a row: page |
 | Certificate expiry                   | daily    | < 14 days: ticket         |
 
 ## Alerts from logs

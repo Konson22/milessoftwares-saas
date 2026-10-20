@@ -36,7 +36,7 @@ class LocalDemoSeeder extends Seeder
         PlatformRoleCatalog::sync();
 
         // Admin requires confirmed two-factor authentication.
-        $admin = $this->user('Platform Admin', 'admin@milessoftwares.local');
+        $admin = $this->user('Platform Admin', 'admin@milesoftwares.local');
         if ($admin->two_factor_confirmed_at === null) {
             $admin->forceFill([
                 'two_factor_secret' => encrypt($totp->generateSecretKey()),
@@ -72,7 +72,7 @@ class LocalDemoSeeder extends Seeder
 
         $secret = decrypt((string) $admin->fresh()?->two_factor_secret);
         $this->command->table(['Account', 'Password', 'Notes'], [
-            ['admin@milessoftwares.local', self::PASSWORD, "super_admin; authenticator secret {$secret}"],
+            ['admin@milesoftwares.local', self::PASSWORD, "super_admin; authenticator secret {$secret}"],
             ['owner@acme.test', self::PASSWORD, 'owns Acme Trading (acme)'],
             ['owner@globex.test', self::PASSWORD, 'owns Globex Supplies (globex)'],
             ['member@example.test', self::PASSWORD, 'no organization; invite them'],

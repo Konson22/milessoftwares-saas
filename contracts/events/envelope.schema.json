@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milessoftwares.com/contracts/events/envelope.schema.json",
+    "$id": "https://milesoftwares.com/contracts/events/envelope.schema.json",
     "title": "Business event envelope",
     "description": "Every event a product sends to a shared module (Finance, HR, Payroll). The receiver keeps a unique key on (source_app, organization_id, source_transaction_id), so a retried event is never applied twice. organization_id must equal the 'org' claim of the event token. Sensitive HR and payroll fields (pay, bank details, identity numbers, health) are never allowed in payloads.",
     "type": "object",

@@ -10,7 +10,7 @@ use Illuminate\Console\Command;
 /**
  * Bootstraps staff from the server console, e.g. the first super admin:
  *
- *   php artisan platform:staff ops@milessoftwares.com --role=super_admin
+ *   php artisan platform:staff ops@milesoftwares.com --role=super_admin
  */
 class AddPlatformStaff extends Command
 {

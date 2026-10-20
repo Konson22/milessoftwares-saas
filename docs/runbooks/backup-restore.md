@@ -21,7 +21,7 @@ lost permanently.
 ```
 PGHOST=…  PGPORT=5432  PGUSER=miles_backup  PGPASSWORD=…  PGDATABASE=miles_platform
 BACKUP_DIR=/var/backups/miles
-BACKUP_GPG_RECIPIENT=backups@milessoftwares.com
+BACKUP_GPG_RECIPIENT=backups@milesoftwares.com
 BACKUP_UPLOAD_CMD=aws s3 cp --sse aws:kms
 ```
 

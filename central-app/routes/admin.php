@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Route;
 | Admin site
 |--------------------------------------------------------------------------
 |
-| admin.milessoftwares.com — internal staff only. Pages live in
+| admin.milesoftwares.com — internal staff only. Pages live in
 | resources/js/sites/admin.
 |
 */

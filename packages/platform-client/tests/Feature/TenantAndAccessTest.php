@@ -22,13 +22,13 @@ describe('tenant from the host', function () {
     it('finds the slug only on first-level subdomains of the root domain', function (string $host, ?string $slug) {
         expect(ResolveTenant::slugFor($host, TestCase::ROOT))->toBe($slug);
     })->with([
-        ['acme.milessoftwares.test', 'acme'],
-        ['ACME.milessoftwares.test.', 'acme'],
-        ['milessoftwares.test', null],
-        ['a.b.milessoftwares.test', null],
-        ['acme.milessoftwares.test.evil.com', null],
-        ['acme.evilmilessoftwares.test', null],
-        ['-bad.milessoftwares.test', null],
+        ['acme.milesoftwares.test', 'acme'],
+        ['ACME.milesoftwares.test.', 'acme'],
+        ['milesoftwares.test', null],
+        ['a.b.milesoftwares.test', null],
+        ['acme.milesoftwares.test.evil.com', null],
+        ['acme.evilmilesoftwares.test', null],
+        ['-bad.milesoftwares.test', null],
     ]);
 
     it('answers 404 for hosts that are not a workspace', function (string $url) {

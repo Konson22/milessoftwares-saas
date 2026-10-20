@@ -24,7 +24,7 @@ return new class extends Migration
             $table->string('category', 32);
             $table->string('kind', 24);
             $table->string('status', 16)->default('planned');
-            // Workspace module path, e.g. "retail" for {slug}.milessoftwares.com/retail
+            // Workspace module path, e.g. "retail" for {slug}.milesoftwares.com/retail
             $table->string('route_prefix', 32)->nullable()->unique();
             $table->string('gateway_upstream')->nullable();
             $table->string('integration_endpoint')->nullable();

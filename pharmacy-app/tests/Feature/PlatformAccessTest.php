@@ -19,7 +19,7 @@ it('shows the product to a member with access, inside their workspace', function
             ->component('home')
             ->where('product.code', 'pharmacy')
             ->where('workspace.slug', 'acme')
-            ->where('workspace.url', 'http://acme.milessoftwares.test/')
+            ->where('workspace.url', 'http://acme.milesoftwares.test/')
             ->where('access.permissions', ['pharmacy.sales.create']));
 });
 
@@ -35,7 +35,7 @@ it('refuses a platform user without access to the product', function () {
 });
 
 it('does not serve hosts that are not a workspace', function () {
-    $this->get('http://milessoftwares.test/')->assertNotFound();
+    $this->get('http://milesoftwares.test/')->assertNotFound();
     $this->get('http://evil.example/')->assertNotFound();
 });
 

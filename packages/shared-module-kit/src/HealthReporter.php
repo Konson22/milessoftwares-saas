@@ -13,7 +13,7 @@ use RuntimeException;
 final class HealthReporter
 {
     /**
-     * @param  string  $platformUrl  the auth host, e.g. https://auth.milessoftwares.com
+     * @param  string  $platformUrl  the auth host, e.g. https://auth.milesoftwares.com
      * @param  string|null  $hostHeader  set when calling an internal back-channel address
      */
     public function __construct(

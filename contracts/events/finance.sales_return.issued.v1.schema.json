@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milessoftwares.com/contracts/events/finance.sales_return.issued.v1.schema.json",
+    "$id": "https://milesoftwares.com/contracts/events/finance.sales_return.issued.v1.schema.json",
     "title": "finance.sales_return.issued, schema_version 1",
     "description": "A customer brought back part of what an invoice or receipt (finance.invoice.issued) sold, and was refunded. Finance reverses that much revenue against the invoice, moves the cost of goods put back on the shelf from cost of goods sold to inventory, and records the refund. Amounts are integers in the currency's minor unit.",
     "type": "object",

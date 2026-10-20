@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milessoftwares.com/contracts/events/payroll.timesheet.submitted.v1.schema.json",
+    "$id": "https://milesoftwares.com/contracts/events/payroll.timesheet.submitted.v1.schema.json",
     "title": "payroll.timesheet.submitted, schema_version 1",
     "description": "Hours worked, for Payroll to price. Products send time only; rates and pay are computed inside the Payroll module and never leave it.",
     "type": "object",

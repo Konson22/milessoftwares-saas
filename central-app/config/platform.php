@@ -8,12 +8,12 @@ return [
     |--------------------------------------------------------------------------
     |
     | The registrable domain every platform host hangs off. Production uses
-    | milessoftwares.com; local development uses milessoftwares.localhost,
+    | milesoftwares.com; local development uses milesoftwares.localhost,
     | which browsers resolve to 127.0.0.1 without hosts-file entries.
     |
     */
 
-    'root_domain' => env('PLATFORM_ROOT_DOMAIN', 'milessoftwares.localhost'),
+    'root_domain' => env('PLATFORM_ROOT_DOMAIN', 'milesoftwares.localhost'),
 
     /*
     |--------------------------------------------------------------------------
@@ -46,7 +46,7 @@ return [
         'auth', 'billing', 'blog', 'cdn', 'console', 'contact', 'dashboard', 'demo', 'dev',
         'developer', 'developers', 'docs', 'download', 'email', 'files', 'ftp', 'gateway',
         'help', 'id', 'identity', 'images', 'imap', 'info', 'internal', 'legal', 'login',
-        'mail', 'manage', 'marketing', 'media', 'miles', 'milesglobal', 'milessoftwares',
+        'mail', 'manage', 'marketing', 'media', 'miles', 'milesglobal', 'milesoftwares', 'milessoftwares',
         'mx', 'news', 'ns', 'ns1', 'ns2', 'oauth', 'pop', 'portal', 'pricing', 'privacy',
         'register', 'root', 'sandbox', 'secure', 'security', 'signin', 'signup', 'smtp',
         'sso', 'staging', 'static', 'status', 'store', 'support', 'system', 'terms', 'test',
@@ -87,7 +87,7 @@ return [
         // Brand and abuse terms that cannot appear anywhere in a slug.
         // Admins can still assign one through an override (Phase 5).
         'blocked_terms' => [
-            'milessoftwares', 'milesglobal', 'phishing', 'paypal', 'mpesa',
+            'milesoftwares', 'milessoftwares', 'milesglobal', 'phishing', 'paypal', 'mpesa',
             'mastercard', 'bank-login', 'verify-account',
         ],
     ],

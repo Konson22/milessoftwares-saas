@@ -38,8 +38,8 @@ subject**, plus `name` and `email`. No passwords. Sign-in creates and updates th
 ```dotenv
 PLATFORM_APPLICATION=pharmacy
 PLATFORM_PATH=                       # optional; defaults to PLATFORM_APPLICATION
-PLATFORM_ROOT_DOMAIN=milessoftwares.com
-PLATFORM_ISSUER=https://auth.milessoftwares.com
+PLATFORM_ROOT_DOMAIN=milesoftwares.com
+PLATFORM_ISSUER=https://auth.milesoftwares.com
 PLATFORM_BACKCHANNEL_URL=            # optional internal address of the auth host
 PLATFORM_SIGN_IN_CLIENT_ID=
 PLATFORM_SIGN_IN_CLIENT_SECRET=

@@ -27,7 +27,7 @@ $Keep = [int]($env:KEEP_RELEASES ?? 5)
 $Php = $env:MILES_PHP ?? 'C:\php84\php.exe'
 $PhpIni = Join-Path $Base 'shared\php\php.ini'
 $Psql = $env:MILES_PSQL ?? 'C:\Program Files\PostgreSQL\17\bin\psql.exe'
-$HealthUrl = $env:HEALTH_URL ?? 'https://staging.milessoftwares.com/up'
+$HealthUrl = $env:HEALTH_URL ?? 'https://staging.milesoftwares.com/up'
 $CaFile = Join-Path $Base 'shared\php\cacert.pem'
 if (-not $env:MIGRATION_DB_USERNAME) { throw 'set MIGRATION_DB_USERNAME' }
 if (-not $env:MIGRATION_DB_PASSWORD) { throw 'set MIGRATION_DB_PASSWORD' }

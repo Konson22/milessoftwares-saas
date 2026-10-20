@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milessoftwares.com/contracts/events/finance.invoice.issued.v1.schema.json",
+    "$id": "https://milesoftwares.com/contracts/events/finance.invoice.issued.v1.schema.json",
     "title": "finance.invoice.issued, schema_version 1",
     "description": "A product issued an invoice or receipt. Finance posts it to receivables/revenue. Amounts are integers in the currency's minor unit.",
     "type": "object",

@@ -91,7 +91,7 @@ return [
     'prefix' => '',
 
     // All sign-in routes are served only on auth.<root>.
-    'domain' => 'auth.'.env('PLATFORM_ROOT_DOMAIN', 'milessoftwares.localhost'),
+    'domain' => 'auth.'.env('PLATFORM_ROOT_DOMAIN', 'milesoftwares.localhost'),
 
     /*
     |--------------------------------------------------------------------------

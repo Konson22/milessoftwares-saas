@@ -34,7 +34,7 @@ is enough to start; the layout below also works per node behind a load balancer.
 
 5. php-fpm pool `miles` listening on `/run/php/php8.4-fpm.sock`, `user = miles`. Allow the deploy user to
    run `sudo systemctl reload php8.4-fpm` without a password, and nothing else.
-6. nginx: copy `ops/nginx/milessoftwares.conf` (for another root domain, replace `milessoftwares.com`
+6. nginx: copy `ops/nginx/milesoftwares.conf` (for another root domain, replace `milesoftwares.com`
    throughout), then follow [dns-tls.md](dns-tls.md) for the certificate.
 7. First deploy: `ops/deploy/deploy.sh <ref> --bootstrap`. It migrates and creates the first-party OIDC
    clients (written into `shared/.env`) before the configuration gate, which refuses to pass without them.
@@ -62,7 +62,7 @@ Once per product, before its first deploy:
    `DB_USERNAME=miles_app`, and the `PLATFORM_*` values. Register the product on the platform
    (admin → Applications, or `php artisan platform:local-product` on a staging copy) for its
    sign-in and service clients and webhook secret. Products that send business events set
-   `PLATFORM_FINANCE_EVENTS_URL=https://milessoftwares.com/finance/events` (any host the nginx
+   `PLATFORM_FINANCE_EVENTS_URL=https://milesoftwares.com/finance/events` (any host the nginx
    server block answers; the event token, not the host, proves who sends what).
 3. `/srv/miles/shared/products/<code>/storage/` with `app`, `framework/{cache,sessions,views}`, `logs`.
 4. php-fpm pool: copy `ops/php-fpm/<code>.conf` to `/etc/php/8.4/fpm/pool.d/`.
@@ -112,7 +112,7 @@ ops/deploy/rollback.sh
 ```
 
 Points `current` at the newest release older than the current one, reloads php-fpm, restarts workers
-and SSR. Then run `curl -fsS https://milessoftwares.com/up` and check the logs. If the bad release
+and SSR. Then run `curl -fsS https://milesoftwares.com/up` and check the logs. If the bad release
 wrote data the old code cannot read, restore is a data incident: see [incidents.md](incidents.md).
 
 ## Maintenance mode

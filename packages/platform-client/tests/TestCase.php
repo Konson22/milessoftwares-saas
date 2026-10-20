@@ -14,9 +14,9 @@ abstract class TestCase extends Orchestra
 {
     use RefreshDatabase;
 
-    public const ROOT = 'milessoftwares.test';
+    public const ROOT = 'milesoftwares.test';
 
-    public const ISSUER = 'https://auth.milessoftwares.test';
+    public const ISSUER = 'https://auth.milesoftwares.test';
 
     public const BACKCHANNEL = 'http://10.0.0.5:8101';
 

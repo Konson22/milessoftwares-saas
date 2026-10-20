@@ -24,7 +24,7 @@ return [
     'path' => env('PLATFORM_PATH'),
 
     // Public URL of the auth host: the id_token issuer and where browsers
-    // are sent to sign in, e.g. https://auth.milessoftwares.com
+    // are sent to sign in, e.g. https://auth.milesoftwares.com
     'issuer' => env('PLATFORM_ISSUER'),
 
     // Optional internal address of the auth host for server-to-server calls

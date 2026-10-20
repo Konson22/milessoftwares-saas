@@ -36,7 +36,7 @@ cd ../hr-app && composer dev     # :8600, queue, Vite
 composer ci:check                # format, lint, types, Pint, PHPStan, Pest
 ```
 
-Open `http://<workspace-slug>.milessoftwares.local/hr` (proxy entry in
+Open `http://<workspace-slug>.milesoftwares.localhost/hr` (proxy entry in
 `ops/local-dev/apache-dev.conf`). Production: `ops/nginx/products/hr.conf`,
 `ops/php-fpm/hr.conf`, and `PRODUCTS="pharmacy finance hr"` for `ops/deploy/deploy.sh` once the
 server has the `hr` database and `.env`.

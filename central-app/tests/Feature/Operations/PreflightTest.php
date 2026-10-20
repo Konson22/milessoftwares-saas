@@ -14,8 +14,8 @@ function productionLikeConfig(): void
 
     config([
         'app.debug' => false,
-        'app.url' => 'https://milessoftwares.com',
-        'platform.root_domain' => 'milessoftwares.com',
+        'app.url' => 'https://milesoftwares.com',
+        'platform.root_domain' => 'milesoftwares.com',
         'logging.default' => 'stack',
         'logging.channels.stack.level' => 'warning',
         'session.secure' => true,
@@ -67,10 +67,10 @@ it('fails the release on unsafe settings and names each one', function (string $
         ->and($output)->toMatch('/FAIL\S*\s*\|\s*'.preg_quote($label, '/').'/');
 })->with([
     'debug on' => ['app.debug', true, 'APP_DEBUG is off'],
-    'plain http' => ['app.url', 'http://milessoftwares.com', 'APP_URL uses HTTPS'],
-    'dev domain' => ['platform.root_domain', 'milessoftwares.localhost', 'Root domain is a public domain'],
+    'plain http' => ['app.url', 'http://milesoftwares.com', 'APP_URL uses HTTPS'],
+    'dev domain' => ['platform.root_domain', 'milesoftwares.localhost', 'Root domain is a public domain'],
     'insecure cookie' => ['session.secure', null, 'Session cookie is Secure'],
-    'shared cookie domain' => ['session.domain', '.milessoftwares.com', 'Session cookie is host-only'],
+    'shared cookie domain' => ['session.domain', '.milesoftwares.com', 'Session cookie is host-only'],
     'no __Host- prefix' => ['session.cookie', 'miles-session', 'Session cookie uses the __Host- prefix'],
     'file sessions' => ['session.driver', 'file', 'Session store is shared'],
     'sync queue' => ['queue.default', 'sync', 'Queue runs asynchronously'],

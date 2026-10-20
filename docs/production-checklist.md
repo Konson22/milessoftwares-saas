@@ -11,8 +11,8 @@ Runbooks: [deploy](runbooks/deploy.md) · [backup & restore](runbooks/backup-res
 
 ## 1. Application configuration
 
-- [ ] `APP_ENV=production`, `APP_DEBUG=false`, `APP_KEY` set, `APP_URL=https://milessoftwares.com` **(auto)**
-- [ ] `PLATFORM_ROOT_DOMAIN=milessoftwares.com` (not a `.local`/`.localhost`/`.test` name) **(auto)**
+- [ ] `APP_ENV=production`, `APP_DEBUG=false`, `APP_KEY` set, `APP_URL=https://milesoftwares.com` **(auto)**
+- [ ] `PLATFORM_ROOT_DOMAIN=milesoftwares.com` (not a `.local`/`.localhost`/`.test` name) **(auto)**
 - [ ] `LOG_LEVEL` is `info` or higher (preflight warns on `debug`)
 - [ ] `SESSION_SECURE_COOKIE=true`, `SESSION_HTTP_ONLY=true`, `SESSION_SAME_SITE=lax`, `SESSION_DOMAIN` empty **(auto)**
 - [ ] `SESSION_COOKIE=__Host-miles-session` (host-only, Secure, path `/`) **(auto)**
@@ -46,11 +46,11 @@ Runbooks: [deploy](runbooks/deploy.md) · [backup & restore](runbooks/backup-res
 
 ## 4. Network, DNS and TLS — see [dns-tls.md](runbooks/dns-tls.md)
 
-- [ ] `A`/`AAAA` for `milessoftwares.com` and `*.milessoftwares.com` point at the load balancer
-- [ ] Wildcard certificate covers apex and `*.milessoftwares.com`, renews automatically (DNS-01)
+- [ ] `A`/`AAAA` for `milesoftwares.com` and `*.milesoftwares.com` point at the load balancer
+- [ ] Wildcard certificate covers apex and `*.milesoftwares.com`, renews automatically (DNS-01)
 - [ ] `https://` works for apex, `www`, `auth`, `app`, `admin` and one real workspace; `http://` redirects
 - [ ] An unknown host (`curl -H 'Host: evil.example'`) is refused by nginx
-- [ ] An unknown workspace (`nope-xyz.milessoftwares.com`) answers 404
+- [ ] An unknown workspace (`nope-xyz.milesoftwares.com`) answers 404
 - [ ] `/robots.txt` on a signed-in host disallows everything
 - [ ] SSL Labs grade A or better; `securityheaders.com` grade A or better
 
@@ -98,7 +98,7 @@ Runbooks: [deploy](runbooks/deploy.md) · [backup & restore](runbooks/backup-res
 
 ## 10. Monitoring — see [monitoring.md](runbooks/monitoring.md)
 
-- [ ] Uptime check on `https://milessoftwares.com/up` and `https://auth.milessoftwares.com/up`
+- [ ] Uptime check on `https://milesoftwares.com/up` and `https://auth.milesoftwares.com/up`
 - [ ] Log alerts on `critical` and on `Queued job failed`
 - [ ] On-call rota and escalation contacts filled in [incidents.md](runbooks/incidents.md)
 

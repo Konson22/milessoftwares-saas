@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milessoftwares.com/contracts/events/finance.invoice.voided.v1.schema.json",
+    "$id": "https://milesoftwares.com/contracts/events/finance.invoice.voided.v1.schema.json",
     "title": "finance.invoice.voided, schema_version 1",
     "description": "A product cancelled an invoice or receipt it had issued (finance.invoice.issued) and, if it was paid, refunded the payment. Finance reverses the revenue and the payment. Amounts are integers in the currency's minor unit.",
     "type": "object",

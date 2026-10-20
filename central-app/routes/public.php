@@ -12,13 +12,13 @@ use Illuminate\Support\Facades\Route;
 | Public site
 |--------------------------------------------------------------------------
 |
-| milessoftwares.com and www. Pages live in resources/js/sites/public.
+| milesoftwares.com and www. Pages live in resources/js/sites/public.
 | Route files load in the order public, admin, central (bootstrap/app.php):
 | central ends with the {tenant} wildcard, which must come last.
 |
 */
 
-// milessoftwares.com — public marketing site
+// milesoftwares.com — public marketing site
 Route::domain(PlatformHosts::root())->group(function () {
     Route::get('/', [PageController::class, 'home'])->name('home');
 
@@ -42,7 +42,7 @@ Route::domain(PlatformHosts::root())->group(function () {
     });
 });
 
-// www.milessoftwares.com — permanent redirect to the apex, path preserved
+// www.milesoftwares.com — permanent redirect to the apex, path preserved
 Route::domain(PlatformHosts::www())->group(function () {
     Route::get('{path?}', WwwRedirectController::class)->where('path', '.*');
 });

@@ -13,7 +13,7 @@ const env = loadEnv(process.env.NODE_ENV ?? 'development', process.cwd(), '');
 // Pages on every platform host (apex, auth., app., admin., workspaces) load
 // scripts from the dev server, and module scripts need CORS.
 const rootDomain = (
-    env.PLATFORM_ROOT_DOMAIN || 'milessoftwares.localhost'
+    env.PLATFORM_ROOT_DOMAIN || 'milesoftwares.localhost'
 ).replaceAll('.', '\\.');
 const platformOrigin = new RegExp(
     `^https?://([a-z0-9-]+\\.)?${rootDomain}(:\\d+)?$`,
@@ -62,7 +62,7 @@ export default defineConfig({
     server: {
         // DEV_SERVER_HOST: the address to listen on (0.0.0.0 for every one).
         // DEV_SERVER_PUBLIC_HOST: the name pages load scripts from, e.g.
-        // milessoftwares.local. It resolves to the same address as the page
+        // milesoftwares.localhost. It resolves to the same address as the page
         // (browsers block a LAN-address page from loading loopback assets)
         // and follows the hosts file when the machine's IP changes.
         host: env.DEV_SERVER_HOST || undefined,

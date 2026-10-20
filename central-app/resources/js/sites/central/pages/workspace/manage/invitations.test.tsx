@@ -100,7 +100,7 @@ describe('manage invitations', () => {
                 email: 'deng@example.test',
                 password: 'hK7m-Qx3p-Tz9a',
                 expiresAt: '2026-10-23',
-                signInUrl: 'http://acme.milessoftwares.local',
+                signInUrl: 'http://acme.milesoftwares.local',
                 roleNote: 'The role was not given: not allowed.',
             },
         };
@@ -124,7 +124,7 @@ describe('manage invitations', () => {
                 email: 'deng@example.test',
                 password: 'hK7m-Qx3p-Tz9a',
                 expiresAt: '2026-10-23',
-                signInUrl: 'http://acme.milessoftwares.local',
+                signInUrl: 'http://acme.milesoftwares.local',
                 roleNote: null,
             },
         };

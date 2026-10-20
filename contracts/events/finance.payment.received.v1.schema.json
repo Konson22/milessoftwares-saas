@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milessoftwares.com/contracts/events/finance.payment.received.v1.schema.json",
+    "$id": "https://milesoftwares.com/contracts/events/finance.payment.received.v1.schema.json",
     "title": "finance.payment.received, schema_version 1",
     "description": "A product took a payment (cash, mobile money, card). No card or account numbers: only the method and the processor's reference.",
     "type": "object",

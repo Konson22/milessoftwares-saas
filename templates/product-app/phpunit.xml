@@ -36,8 +36,8 @@
         <env name="NIGHTWATCH_ENABLED" value="false"/>
         <!-- A fixed platform for tests: InteractsWithPlatform fakes its API. -->
         <env name="PLATFORM_APPLICATION" value="blueprint"/>
-        <env name="PLATFORM_ROOT_DOMAIN" value="milessoftwares.test"/>
-        <env name="PLATFORM_ISSUER" value="https://auth.milessoftwares.test"/>
+        <env name="PLATFORM_ROOT_DOMAIN" value="milesoftwares.test"/>
+        <env name="PLATFORM_ISSUER" value="https://auth.milesoftwares.test"/>
         <env name="PLATFORM_BACKCHANNEL_URL" value=""/>
         <env name="PLATFORM_SIGN_IN_CLIENT_ID" value="test-sign-in-client"/>
         <env name="PLATFORM_SIGN_IN_CLIENT_SECRET" value="test-sign-in-secret"/>

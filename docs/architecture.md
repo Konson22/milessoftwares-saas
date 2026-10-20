@@ -8,9 +8,9 @@ Decisions that later phases may revisit are recorded as ADRs in `docs/adr/`.
 ## 1. Proposed application architecture
 
 ```
-                         ┌──────────────────────── Edge (TLS *.milessoftwares.com, apex) ───────────────────────┐
+                         ┌──────────────────────── Edge (TLS *.milesoftwares.com, apex) ───────────────────────┐
  Browser ───────────────►│ Reverse proxy / workspace gateway (Nginx or Caddy)                                     │
-                         │  milessoftwares.com, www → apex          ─┐                                            │
+                         │  milesoftwares.com, www → apex          ─┐                                            │
                          │  auth. / app. / admin.                     ├─► CENTRAL PLATFORM (Laravel 13 monolith)  │
                          │  {slug}.  /  (workspace shell)            ─┘                                            │
                          │  {slug}.  /retail/*     ──────────────────────► Retail POS (independent deployment)    │
@@ -30,7 +30,7 @@ application registry, role assignments, subscriptions, entitlements, provisionin
 deployed. They are OIDC relying parties of `auth.` and consume platform APIs. They own their operational
 data and enforce their own operational permissions.
 
-**Workspace gateway**: the edge proxy maps `{slug}.milessoftwares.com/{module}/…` to the product's
+**Workspace gateway**: the edge proxy maps `{slug}.milesoftwares.com/{module}/…` to the product's
 upstream, forwarding `X-Forwarded-Host`/`-Prefix`. The proxy does _not_ make authorization decisions; the
 product validates the user's token and tenant context itself. Routing table is generated from the
 application registry (`applications.gateway_upstream`, `applications.route_prefix`).
@@ -124,7 +124,7 @@ Spec mapping notes:
 
 ## 4. Identity and authorization design
 
-**Identity (auth.milessoftwares.com).** Laravel Fortify for registration, verification, password reset,
+**Identity (auth.milesoftwares.com).** Laravel Fortify for registration, verification, password reset,
 TOTP MFA + recovery codes, behind our own Inertia UI. OAuth 2.0 / OIDC provider: **Laravel Passport
 
 - a vetted OIDC layer** (ID tokens, discovery, JWKS, `nonce`) is the default proposal; Keycloak stays
@@ -133,11 +133,11 @@ TOTP MFA + recovery codes, behind our own Inertia UI. OAuth 2.0 / OIDC provider:
 
 * Authorization Code + PKCE for all browser and mobile clients; client credentials for service-to-service.
 * Redirect URIs matched exactly. Per-tenant callback URIs
-  (`https://manggala.milessoftwares.com/retail/auth/callback`) are written into
+  (`https://manggala.milesoftwares.com/retail/auth/callback`) are written into
   `application_client_redirect_uris` by provisioning. No wildcard matching.
 * `state` and `nonce` are mandatory.
 * Every host (auth, app, admin, each workspace, each product) has its own **host-only** session cookie
-  (`__Host-` prefix where possible). No `Domain=.milessoftwares.com` cookies. SSO happens through the IdP
+  (`__Host-` prefix where possible). No `Domain=.milesoftwares.com` cookies. SSO happens through the IdP
   session on `auth.` only.
 * Tokens: short-lived access tokens (≤10 min) held server-side by each product's backend (BFF pattern).
   Browser JS never sees refresh tokens.
@@ -173,7 +173,7 @@ to customer data requires a `support_access_grant` that is time-boxed, justified
 
 ## 5. Multi-tenant routing design
 
-Host classes (config `platform.root_domain`; dev uses `milessoftwares.localhost`, which browsers
+Host classes (config `platform.root_domain`; dev uses `milesoftwares.localhost`, which browsers
 resolve to 127.0.0.1 without hosts-file edits):
 
 | Host                                                                                       | Handler                                      |
@@ -212,10 +212,10 @@ Path-based product compatibility checklist (must pass before a product is placed
   `api.` host per product, not tenant hosts.
 - **PWA/offline**: service worker scope `/{module}/`, manifest `start_url` under the prefix, cache
   names namespaced.
-  If a product fails the checklist, the fallback is a dedicated host `{module}.milessoftwares.com`
+  If a product fails the checklist, the fallback is a dedicated host `{module}.milesoftwares.com`
   using `org` from token and an org picker, documented per product (ADR).
 
-TLS: `*.milessoftwares.com` + apex via ACME DNS-01. Wildcards cover one level only, so no
+TLS: `*.milesoftwares.com` + apex via ACME DNS-01. Wildcards cover one level only, so no
 multi-level tenant hosts. DNS: wildcard A/AAAA record. Provisioning never touches DNS.
 
 ## 6. SaaS application integration strategy

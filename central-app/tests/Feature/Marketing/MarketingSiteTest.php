@@ -16,7 +16,7 @@ uses(AdminFixtures::class);
 
 beforeEach(function () {
     Notification::fake();
-    config(['platform.marketing.sales_email' => 'sales@milessoftwares.test']);
+    config(['platform.marketing.sales_email' => 'sales@milesoftwares.test']);
 
     $this->retail = Application::query()->forceCreate([
         'code' => 'retail', 'name' => 'Retail', 'category' => 'operations', 'kind' => 'standalone', 'status' => 'available',
@@ -148,7 +148,7 @@ it('stores a contact message and tells sales', function () {
         ->and($lead->status)->toBe('new')
         ->and($lead->email)->toBe('amina@example.test');
 
-    Notification::assertSentTo(new AnonymousNotifiable, LeadReceived::class, fn (LeadReceived $mail, $channels, $notifiable) => $notifiable->routes['mail'] === 'sales@milessoftwares.test' && $mail->leadId === $lead->id);
+    Notification::assertSentTo(new AnonymousNotifiable, LeadReceived::class, fn (LeadReceived $mail, $channels, $notifiable) => $notifiable->routes['mail'] === 'sales@milesoftwares.test' && $mail->leadId === $lead->id);
 });
 
 it('quietly files bot submissions as spam', function (Closure $tamper) {

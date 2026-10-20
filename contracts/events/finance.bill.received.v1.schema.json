@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milessoftwares.com/contracts/events/finance.bill.received.v1.schema.json",
+    "$id": "https://milesoftwares.com/contracts/events/finance.bill.received.v1.schema.json",
     "title": "finance.bill.received, schema_version 1",
     "description": "A product received goods or services from a supplier and owes them. Finance posts it to payables (and inventory or expense). Amounts are integers in the currency's minor unit.",
     "type": "object",

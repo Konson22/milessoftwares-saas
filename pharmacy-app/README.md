@@ -66,4 +66,4 @@ composer ci:check     # format, lint, types, Pint, PHPStan, Pest
 
 Local platform: `cd ../central-app && php artisan platform:local-product pharmacy-app
 --url=http://127.0.0.1:8400 --entitle=<workspace-slug>`, then open
-`http://<workspace-slug>.milessoftwares.local/pharmacy`.
+`http://<workspace-slug>.milesoftwares.localhost/pharmacy`.

@@ -4,25 +4,25 @@
 
 | Name                   | Type     | Value                                                           |
 | ---------------------- | -------- | --------------------------------------------------------------- |
-| `milessoftwares.com`   | A / AAAA | load balancer                                                   |
-| `*.milessoftwares.com` | A / AAAA | load balancer                                                   |
-| `milessoftwares.com`   | CAA      | `0 issuewild "letsencrypt.org"` and `0 issue "letsencrypt.org"` |
+| `milesoftwares.com`   | A / AAAA | load balancer                                                   |
+| `*.milesoftwares.com` | A / AAAA | load balancer                                                   |
+| `milesoftwares.com`   | CAA      | `0 issuewild "letsencrypt.org"` and `0 issue "letsencrypt.org"` |
 | `_acme-challenge`      | TXT      | written by the ACME client (DNS-01)                             |
-| `milessoftwares.com`   | MX/TXT   | mail provider, SPF, DMARC; DKIM selector records                |
+| `milesoftwares.com`   | MX/TXT   | mail provider, SPF, DMARC; DKIM selector records                |
 
 The wildcard covers `www`, `auth`, `app`, `admin` and every `{slug}` workspace. The application decides
-which hosts exist: reserved names and unknown slugs answer 404, and multi-level names (`a.b.milessoftwares.com`)
+which hosts exist: reserved names and unknown slugs answer 404, and multi-level names (`a.b.milesoftwares.com`)
 are rejected (`tests/Feature/Routing`, `tests/Feature/Tenancy`). Products on their own hosts
-(`retail.milessoftwares.com`) get their own records and certificates from their teams.
+(`retail.milesoftwares.com`) get their own records and certificates from their teams.
 
 ## Certificate
 
-One certificate for `milessoftwares.com` and `*.milessoftwares.com`. Wildcards need the DNS-01
+One certificate for `milesoftwares.com` and `*.milesoftwares.com`. Wildcards need the DNS-01
 challenge:
 
 ```bash
 certbot certonly --dns-<provider> --dns-<provider>-credentials /etc/letsencrypt/<provider>.ini \
-  -d milessoftwares.com -d '*.milessoftwares.com' --deploy-hook 'systemctl reload nginx'
+  -d milesoftwares.com -d '*.milesoftwares.com' --deploy-hook 'systemctl reload nginx'
 ```
 
 The DNS API token must be limited to TXT records under `_acme-challenge`. `certbot renew` runs from its
@@ -34,7 +34,7 @@ internal certificate, and set `TRUSTED_PROXIES` to the balancer's address range.
 ## Verification after any DNS, certificate or nginx change
 
 ```bash
-ROOT=milessoftwares.com
+ROOT=milesoftwares.com
 for h in $ROOT www.$ROOT auth.$ROOT app.$ROOT admin.$ROOT <a-real-slug>.$ROOT; do
   printf '%-40s ' "$h"; curl -sS -o /dev/null -w '%{http_code} %{ssl_verify_result}\n' "https://$h/"
 done

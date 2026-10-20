@@ -5,7 +5,7 @@
 
 ## Context
 
-`auth.milessoftwares.com` must be an OpenID Provider for the platform's own hosts (`app.`, `admin.`, every
+`auth.milesoftwares.com` must be an OpenID Provider for the platform's own hosts (`app.`, `admin.`, every
 workspace) and for each product. The architecture requires authorization code + PKCE for every browser
 client, exact redirect-URI matching (including per-tenant URIs written by provisioning), mandatory
 `state` and `nonce`, short-lived access tokens, and endpoints on the auth host only.

@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milessoftwares.com/contracts/events/hr.employee.joined.v1.schema.json",
+    "$id": "https://milesoftwares.com/contracts/events/hr.employee.joined.v1.schema.json",
     "title": "hr.employee.joined, schema_version 1",
     "description": "A product added a person who works for the organization (e.g. a school added a teacher). Only organizational facts: pay, bank details, identity numbers and health data are entered in the HR module itself, never sent in events.",
     "type": "object",

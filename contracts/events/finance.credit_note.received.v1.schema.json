@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milessoftwares.com/contracts/events/finance.credit_note.received.v1.schema.json",
+    "$id": "https://milesoftwares.com/contracts/events/finance.credit_note.received.v1.schema.json",
     "title": "finance.credit_note.received, schema_version 1",
     "description": "A product sent goods back to a supplier (or the supplier allowed a reduction) and is owed less. Finance takes it off payables (and inventory or expense), against the named bill when given. Amounts are integers in the currency's minor unit.",
     "type": "object",

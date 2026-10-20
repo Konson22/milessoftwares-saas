@@ -1,7 +1,7 @@
 // k6 load test for the platform's hot paths. Run against staging, never production:
 //
 //   k6 run ops/load/platform.js \
-//     -e ROOT=staging.milessoftwares.com \
+//     -e ROOT=staging.milesoftwares.com \
 //     -e CLIENT_ID=... -e CLIENT_SECRET=... \
 //     -e ORG_ID=<organization uuid> -e MEMBER_SUB=<user uuid> \
 //     -e MODULE=finance

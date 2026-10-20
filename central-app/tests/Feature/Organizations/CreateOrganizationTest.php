@@ -100,7 +100,7 @@ it('rejects unusable slugs', function (string $slug) {
 })->with([
     'reserved' => 'support',
     'platform host' => 'admin',
-    'blocked brand term' => 'milessoftwares-shop',
+    'blocked brand term' => 'milesoftwares-shop',
     'too short' => 'abc',
     'double hyphen' => 'my--shop',
     'leading digit' => '1shop',

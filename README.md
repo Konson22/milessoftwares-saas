@@ -21,7 +21,7 @@ Work incrementally, following the phases below.
 
 **Software Brand:** Miles Global Softwares
 
-**Primary Domain:** milessoftwares.com
+**Primary Domain:** milesoftwares.com
 
 The platform must support:
 
@@ -48,22 +48,22 @@ Implement the following hostname structure:
 
 | Domain | Function |
 |---|---|
-| milessoftwares.com | Public marketing website |
-| www.milessoftwares.com | Redirect to primary website |
-| auth.milessoftwares.com | Central authentication |
-| app.milessoftwares.com | Customer dashboard |
-| admin.milessoftwares.com | Internal system administration |
-| {business}.milessoftwares.com | Individual customer workspace |
+| milesoftwares.com | Public marketing website |
+| www.milesoftwares.com | Redirect to primary website |
+| auth.milesoftwares.com | Central authentication |
+| app.milesoftwares.com | Customer dashboard |
+| admin.milesoftwares.com | Internal system administration |
+| {business}.milesoftwares.com | Individual customer workspace |
 
 Each registered business receives a unique subdomain.
 
 Examples:
 
-manggala.milessoftwares.com
+manggala.milesoftwares.com
 
-abcpharmacy.milessoftwares.com
+abcpharmacy.milesoftwares.com
 
-jubaschool.milessoftwares.com
+jubaschool.milesoftwares.com
 
 Within a business workspace, use module routing:
 
@@ -150,7 +150,7 @@ Keep module boundaries explicit through interfaces, services, policies, and doma
 
 Domain:
 
-milessoftwares.com
+milesoftwares.com
 
 Develop a professional public-facing software website.
 
@@ -207,7 +207,7 @@ Use a reusable product catalog rather than maintaining duplicated hardcoded prod
 
 Domain:
 
-auth.milessoftwares.com
+auth.milesoftwares.com
 
 Implement centralized identity management.
 
@@ -588,7 +588,7 @@ Provide reusable role and scope selection components.
 
 Domain:
 
-app.milessoftwares.com
+app.milesoftwares.com
 
 This is the customer-facing control panel.
 
@@ -619,7 +619,7 @@ The dashboard should link users to the correct business workspace.
 
 Example:
 
-manggala.milessoftwares.com
+manggala.milesoftwares.com
 
 ---
 
@@ -629,7 +629,7 @@ Each organization gets a unique workspace.
 
 Example:
 
-manggala.milessoftwares.com
+manggala.milesoftwares.com
 
 Build a workspace shell containing:
 
@@ -773,7 +773,7 @@ For example, purchasing may be centralized while pharmacy-specific medicine batc
 
 Domain:
 
-admin.milessoftwares.com
+admin.milesoftwares.com
 
 This application is strictly for Miles Global Softwares internal staff.
 
