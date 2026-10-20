@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Administration\Models\PlatformStaff;
 use App\Modules\Applications\Enums\ApplicationKind;
 use App\Modules\Applications\Models\Application;
+use App\Modules\Applications\Models\ApplicationFeature;
 use App\Modules\Entitlements\Actions\ManageEntitlements;
 use App\Modules\Entitlements\Models\Entitlement;
 use App\Modules\Organizations\Models\Organization;
@@ -16,6 +17,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 /**
@@ -77,11 +79,53 @@ class EntitlementController extends Controller
         return $this->done('Entitlement granted.');
     }
 
+    /**
+     * Grant or deny one registered feature, whatever the organization's plans
+     * say. Denials take no limit; a grant without one is unlimited.
+     */
+    public function feature(Request $request, Organization $organization): RedirectResponse
+    {
+        $validated = $request->validate([
+            'feature_key' => ['required', 'string', 'max:100'],
+            'effect' => ['required', Rule::in([Entitlement::GRANT, Entitlement::DENY])],
+            'limit' => ['nullable', 'integer', 'min:0', Rule::prohibitedIf($request->input('effect') === Entitlement::DENY)],
+            'valid_until' => ['nullable', 'date', 'after:now'],
+            'reason' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $feature = ApplicationFeature::query()->registered()->where('key', $validated['feature_key'])->first();
+
+        if ($feature === null) {
+            throw ValidationException::withMessages(['feature_key' => 'No product declares this feature.']);
+        }
+
+        if (isset($validated['limit']) && $feature->limit_unit === null) {
+            throw ValidationException::withMessages(['limit' => 'This feature is on or off; it takes no limit.']);
+        }
+
+        $this->entitlements->overrideFeature(
+            $organization,
+            $feature,
+            $validated['effect'],
+            isset($validated['limit']) ? (int) $validated['limit'] : null,
+            $this->staff($request),
+            $validated['reason'],
+            isset($validated['valid_until']) ? CarbonImmutable::parse($validated['valid_until']) : null,
+        );
+
+        return $this->done($validated['effect'] === Entitlement::DENY ? 'Feature denied.' : 'Feature granted.');
+    }
+
     public function revoke(Request $request, Organization $organization, string $entitlement): RedirectResponse
     {
         $validated = $request->validate(['reason' => ['required', 'string', 'max:1000']]);
 
         $record = $this->tenant->run($organization, fn () => Entitlement::query()->findOrFail($entitlement));
+
+        // A plan's features follow the plan; staff deny them instead.
+        if ($record->feature_key !== null && $record->source !== 'manual') {
+            throw ValidationException::withMessages(['reason' => 'Features from a plan follow the plan. Deny the feature instead.']);
+        }
 
         $this->entitlements->revoke($organization, $record, $this->staff($request), $validated['reason']);
 

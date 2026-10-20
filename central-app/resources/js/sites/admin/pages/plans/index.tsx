@@ -1,4 +1,5 @@
 import { Form, Head } from '@inertiajs/react';
+import { useState } from 'react';
 import InputError from '@/shared/components/input-error';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
@@ -20,6 +21,21 @@ type Plan = {
     status: string;
     applicationIds: string[];
     applications: string[];
+    features: {
+        key: string;
+        applicationId: string | null;
+        limit: number | null;
+    }[];
+};
+
+/** A feature a product declares in its current catalog. */
+type Feature = {
+    key: string;
+    name: string;
+    description: string | null;
+    status: 'available' | 'beta' | 'deprecated';
+    limitUnit: string | null;
+    applicationId: string;
 };
 
 type ProductOption = { id: string; name: string; status: string };
@@ -28,12 +44,18 @@ type Props = {
     plans: Plan[];
     applications: { id: string; name: string }[];
     products: ProductOption[];
+    features: Feature[];
 };
 
 const selectClass =
     'h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm';
 
-export default function PlansIndex({ plans, applications, products }: Props) {
+export default function PlansIndex({
+    plans,
+    applications,
+    products,
+    features,
+}: Props) {
     return (
         <>
             <Head title="Plans" />
@@ -42,7 +64,8 @@ export default function PlansIndex({ plans, applications, products }: Props) {
             <p className="mt-1 text-sm text-muted-foreground">
                 Prices are in the currency&apos;s minor unit (e.g. cents).
                 Assigning an active plan to an organization grants its
-                applications.
+                applications and features. Feature changes reach organizations
+                already on the plan; staff overrides stay.
             </p>
 
             <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_24rem]">
@@ -81,6 +104,20 @@ export default function PlansIndex({ plans, applications, products }: Props) {
                                     ` · ${plan.trialDays}-day trial`}{' '}
                                 · {plan.applications.join(', ')}
                             </p>
+                            {plan.features.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                    {plan.features.map((feature) => (
+                                        <Badge
+                                            key={feature.key}
+                                            variant="outline"
+                                        >
+                                            {feature.key}
+                                            {feature.limit !== null &&
+                                                ` ≤ ${feature.limit}`}
+                                        </Badge>
+                                    ))}
+                                </div>
+                            )}
                             <details className="mt-3">
                                 <summary className="cursor-pointer text-sm">
                                     Edit
@@ -91,6 +128,7 @@ export default function PlansIndex({ plans, applications, products }: Props) {
                                     plan={plan}
                                     applications={applications}
                                     products={products}
+                                    features={features}
                                 />
                             </details>
                         </li>
@@ -104,6 +142,7 @@ export default function PlansIndex({ plans, applications, products }: Props) {
                         method="post"
                         applications={applications}
                         products={products}
+                        features={features}
                     />
                 </section>
             </div>
@@ -117,14 +156,62 @@ function PlanForm({
     plan,
     applications,
     products,
+    features,
 }: {
     action: string;
     method: 'post' | 'put';
     plan?: Plan;
     applications: { id: string; name: string }[];
     products: ProductOption[];
+    features: Feature[];
 }) {
     const id = (field: string) => `${plan?.id ?? 'new'}-${field}`;
+    const [applicationIds, setApplicationIds] = useState<string[]>(
+        plan?.applicationIds ?? [],
+    );
+    // Chosen feature key => limit as typed ('' = no limit).
+    const [chosen, setChosen] = useState<Record<string, string>>(() =>
+        Object.fromEntries(
+            (plan?.features ?? []).map((feature) => [
+                feature.key,
+                feature.limit === null ? '' : String(feature.limit),
+            ]),
+        ),
+    );
+    // Features already on the plan stay listed after their product drops them.
+    const offered: Feature[] = [
+        ...features.filter(
+            (feature) =>
+                feature.status !== 'deprecated' || feature.key in chosen,
+        ),
+        ...(plan?.features ?? [])
+            .filter(
+                (feature) =>
+                    !features.some((declared) => declared.key === feature.key),
+            )
+            .map((feature) => ({
+                key: feature.key,
+                name: `${feature.key} (no longer in the catalog)`,
+                description: null,
+                status: 'deprecated' as const,
+                limitUnit: null,
+                applicationId: feature.applicationId ?? '',
+            })),
+    ].filter((feature) => applicationIds.includes(feature.applicationId));
+    // Only features of applications still on the plan are sent.
+    const submitted = offered.filter((feature) => feature.key in chosen);
+    const toggle = (key: string, on: boolean) =>
+        setChosen((current) => {
+            const next = { ...current };
+
+            if (on) {
+                next[key] = '';
+            } else {
+                delete next[key];
+            }
+
+            return next;
+        });
 
     return (
         <Form
@@ -253,14 +340,101 @@ function PlanForm({
                                     type="checkbox"
                                     name="application_ids[]"
                                     value={application.id}
-                                    defaultChecked={plan?.applicationIds.includes(
+                                    checked={applicationIds.includes(
                                         application.id,
                                     )}
+                                    onChange={(event) =>
+                                        setApplicationIds((current) =>
+                                            event.target.checked
+                                                ? [...current, application.id]
+                                                : current.filter(
+                                                      (value) =>
+                                                          value !==
+                                                          application.id,
+                                                  ),
+                                        )
+                                    }
                                 />
                                 {application.name}
                             </label>
                         ))}
                         <InputError message={errors.application_ids} />
+                    </fieldset>
+                    <fieldset className="space-y-1">
+                        <legend className="text-sm font-medium">
+                            Features
+                        </legend>
+                        <input type="hidden" name="manage_features" value="1" />
+                        {submitted.map((feature, index) => (
+                            <input
+                                key={feature.key}
+                                type="hidden"
+                                name={`features[${index}][key]`}
+                                value={feature.key}
+                            />
+                        ))}
+                        {offered.length === 0 && (
+                            <p className="text-sm text-muted-foreground">
+                                The chosen applications declare no features.
+                            </p>
+                        )}
+                        {offered.map((feature) => {
+                            const index = submitted.indexOf(feature);
+
+                            return (
+                                <div
+                                    key={feature.key}
+                                    className="flex flex-wrap items-center gap-2 text-sm"
+                                >
+                                    <label
+                                        className="flex flex-1 items-center gap-2"
+                                        title={feature.description ?? undefined}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={index >= 0}
+                                            onChange={(event) =>
+                                                toggle(
+                                                    feature.key,
+                                                    event.target.checked,
+                                                )
+                                            }
+                                        />
+                                        {feature.name}
+                                        {feature.status === 'beta' && (
+                                            <Badge variant="outline">
+                                                beta
+                                            </Badge>
+                                        )}
+                                    </label>
+                                    {index >= 0 && feature.limitUnit && (
+                                        <Input
+                                            name={`features[${index}][limit]`}
+                                            type="number"
+                                            min={0}
+                                            placeholder={`No limit (${feature.limitUnit})`}
+                                            aria-label={`${feature.name} limit`}
+                                            value={chosen[feature.key]}
+                                            onChange={(event) =>
+                                                setChosen((current) => ({
+                                                    ...current,
+                                                    [feature.key]:
+                                                        event.target.value,
+                                                }))
+                                            }
+                                            className="h-8 w-40"
+                                        />
+                                    )}
+                                </div>
+                            );
+                        })}
+                        <InputError
+                            message={
+                                Object.entries(errors).find(([field]) =>
+                                    field.startsWith('features'),
+                                )?.[1]
+                            }
+                        />
                     </fieldset>
                     <label className="flex items-center gap-2 text-sm">
                         <input type="hidden" name="is_public" value="0" />

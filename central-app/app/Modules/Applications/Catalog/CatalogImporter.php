@@ -68,6 +68,7 @@ final class CatalogImporter
             $permissionIds = $this->insertPermissions($application->id, $version->id, $catalog['permissions']);
             $this->insertRoles($application->id, $version->id, $catalog['roles'], $permissionIds);
             $this->insertSodConstraints($version->id, $catalog['separation_of_duties'] ?? [], $permissionIds);
+            $this->insertFeatures($application->id, $version->id, $catalog['features'] ?? []);
 
             ApplicationCatalogVersion::query()
                 ->where('application_id', $application->id)
@@ -112,6 +113,27 @@ final class CatalogImporter
         }
 
         return $ids;
+    }
+
+    /**
+     * @param  list<array{key: string, name: string, description?: string|null, status?: string, limit_unit?: string|null}>  $features
+     */
+    private function insertFeatures(string $applicationId, string $versionId, array $features): void
+    {
+        foreach ($features as $feature) {
+            DB::table('application_features')->insert([
+                'id' => (string) Str::uuid7(),
+                'application_id' => $applicationId,
+                'catalog_version_id' => $versionId,
+                'key' => $feature['key'],
+                'name' => $feature['name'],
+                'description' => $feature['description'] ?? null,
+                'status' => $feature['status'] ?? 'available',
+                'limit_unit' => $feature['limit_unit'] ?? null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
     }
 
     /**
@@ -178,7 +200,7 @@ final class CatalogImporter
 
     /**
      * @param  array<string, mixed>  $definition
-     * @return array{application: array{code: string, name: string, category: string, kind: string, status?: string}, version: string, permissions: list<array{key: string, name: string, description?: string|null, sensitivity: int, scopes: list<string>}>, roles: list<array{key: string, name: string, description?: string|null, sensitivity: int, delegable: bool, scopes: list<string>, permissions: list<string>}>, separation_of_duties?: list<array{permissions: array{0: string, 1: string}, mode: string, description?: string|null}>}
+     * @return array{application: array{code: string, name: string, category: string, kind: string, status?: string}, version: string, permissions: list<array{key: string, name: string, description?: string|null, sensitivity: int, scopes: list<string>}>, roles: list<array{key: string, name: string, description?: string|null, sensitivity: int, delegable: bool, scopes: list<string>, permissions: list<string>}>, separation_of_duties?: list<array{permissions: array{0: string, 1: string}, mode: string, description?: string|null}>, features?: list<array{key: string, name: string, description?: string|null, status?: string, limit_unit?: string|null}>}
      *
      * @throws ValidationException
      */
@@ -215,6 +237,13 @@ final class CatalogImporter
             'separation_of_duties.*.permissions.*' => ['string'],
             'separation_of_duties.*.mode' => ['required', Rule::in(['block', 'warn'])],
             'separation_of_duties.*.description' => ['nullable', 'string'],
+            // Plan features: optional, so catalogs without them keep their checksum.
+            'features' => ['sometimes', 'array'],
+            'features.*.key' => ['required', 'string', 'max:100', 'distinct', 'regex:/^[a-z][a-z0-9_.]*$/'],
+            'features.*.name' => ['required', 'string', 'max:255'],
+            'features.*.description' => ['nullable', 'string'],
+            'features.*.status' => ['sometimes', Rule::in(['available', 'beta', 'deprecated'])],
+            'features.*.limit_unit' => ['nullable', 'string', 'max:32'],
         ]);
 
         $validator->after(function ($validator) use ($definition): void {
@@ -241,6 +270,14 @@ final class CatalogImporter
                 }
             }
 
+            // A feature belongs to the application declaring it.
+            $code = (string) ($definition['application']['code'] ?? '');
+            foreach ((array) ($definition['features'] ?? []) as $i => $feature) {
+                if (! str_starts_with((string) ($feature['key'] ?? ''), $code.'.')) {
+                    $validator->errors()->add("features.{$i}.key", "Feature keys start with [{$code}.].");
+                }
+            }
+
             foreach ((array) ($definition['separation_of_duties'] ?? []) as $i => $constraint) {
                 $pair = (array) ($constraint['permissions'] ?? []);
 
@@ -256,7 +293,7 @@ final class CatalogImporter
             }
         });
 
-        /** @var array{application: array{code: string, name: string, category: string, kind: string, status?: string}, version: string, permissions: list<array{key: string, name: string, description?: string|null, sensitivity: int, scopes: list<string>}>, roles: list<array{key: string, name: string, description?: string|null, sensitivity: int, delegable: bool, scopes: list<string>, permissions: list<string>}>, separation_of_duties?: list<array{permissions: array{0: string, 1: string}, mode: string, description?: string|null}>} */
+        /** @var array{application: array{code: string, name: string, category: string, kind: string, status?: string}, version: string, permissions: list<array{key: string, name: string, description?: string|null, sensitivity: int, scopes: list<string>}>, roles: list<array{key: string, name: string, description?: string|null, sensitivity: int, delegable: bool, scopes: list<string>, permissions: list<string>}>, separation_of_duties?: list<array{permissions: array{0: string, 1: string}, mode: string, description?: string|null}>, features?: list<array{key: string, name: string, description?: string|null, status?: string, limit_unit?: string|null}>} */
         return $validator->validate();
     }
 }

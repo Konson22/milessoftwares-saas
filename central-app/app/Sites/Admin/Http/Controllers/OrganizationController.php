@@ -7,9 +7,12 @@ use App\Modules\Administration\Actions\SupportAccess;
 use App\Modules\Administration\Enums\PlatformPermission;
 use App\Modules\Administration\Models\PlatformStaff;
 use App\Modules\Administration\Models\SupportAccessGrant;
+use App\Modules\Applications\Models\ApplicationFeature;
 use App\Modules\Audit\AuditLogger;
 use App\Modules\Billing\Models\Invoice;
 use App\Modules\Billing\Models\Payment;
+use App\Modules\Entitlements\Models\Entitlement;
+use App\Modules\Entitlements\Support\EffectiveFeatures;
 use App\Modules\Integration\Support\IntegrationEvents;
 use App\Modules\Organizations\Enums\OrganizationStatus;
 use App\Modules\Organizations\Models\Organization;
@@ -84,10 +87,12 @@ class OrganizationController extends Controller
             ],
             'entitlements' => DB::table('entitlements')
                 ->join('applications', 'applications.id', '=', 'entitlements.application_id')
+                ->leftJoin('users', 'users.id', '=', 'entitlements.created_by')
                 ->where('entitlements.organization_id', $organization->id)
                 ->orderByDesc('entitlements.valid_from')
-                ->get(['entitlements.id', 'applications.name as application', 'entitlements.feature_key', 'entitlements.source', 'entitlements.valid_from', 'entitlements.valid_until', 'entitlements.revoked_at'])
+                ->get(['entitlements.id', 'applications.name as application', 'entitlements.feature_key', 'entitlements.source', 'entitlements.effect', 'entitlements.reason', 'users.name as created_by', 'entitlements.valid_from', 'entitlements.valid_until', 'entitlements.revoked_at'])
                 ->all(),
+            'features' => $this->tenant->run($organization, fn () => $this->features()),
             'supportGrants' => SupportAccessGrant::query()
                 ->where('organization_id', $organization->id)
                 ->with(['staff.user:id,name', 'approver.user:id,name'])
@@ -204,6 +209,46 @@ class OrganizationController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => $suspend ? __('Organization suspended.') : __('Organization reactivated.')]);
 
         return back();
+    }
+
+    /**
+     * Every feature of the applications the organization can use, as
+     * products will see it, with the staff override it rests on, if any.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function features(): array
+    {
+        $entitled = Entitlement::query()->current()->whereNull('feature_key')->pluck('application_id')->unique()->values();
+        $decisions = EffectiveFeatures::resolve(Entitlement::query()->current()->whereNotNull('feature_key')->whereIn('application_id', $entitled)->get());
+        $declared = ApplicationFeature::query()->registered()->whereIn('application_id', $entitled)->with('application:id,name')->get()->keyBy('key');
+        $keys = collect([...$declared->keys(), ...array_keys($decisions)])->unique()->sort()->values();
+        $names = DB::table('users')->whereIn('id', array_filter(array_map(fn (array $decision) => $decision['entitlement']->created_by, $decisions)))->pluck('name', 'id');
+
+        return $keys->map(function (string $key) use ($declared, $decisions, $names): array {
+            $feature = $declared->get($key);
+            $decision = $decisions[$key] ?? null;
+            $override = $decision !== null && $decision['entitlement']->source === 'manual' ? $decision['entitlement'] : null;
+
+            return [
+                'key' => $key,
+                'name' => $feature->name ?? $key,
+                'description' => $feature?->description,
+                'application' => $feature?->application->name,
+                'declared' => $feature !== null,
+                'limitUnit' => $feature?->limit_unit,
+                'granted' => $decision['granted'] ?? false,
+                'source' => $decision['source'] ?? null,
+                'limit' => $decision['limit'] ?? null,
+                'override' => $override === null ? null : [
+                    'id' => $override->id,
+                    'effect' => $override->effect,
+                    'reason' => $override->reason,
+                    'by' => $override->created_by === null ? null : $names->get($override->created_by),
+                    'validUntil' => $override->valid_until?->toIso8601String(),
+                ],
+            ];
+        })->all();
     }
 
     private function staff(Request $request): PlatformStaff

@@ -92,6 +92,7 @@ Route::domain(PlatformHosts::admin())
             Route::post('subscriptions/{subscription}/cancel', [Admin\EntitlementController::class, 'cancelSubscription'])->whereUuid('subscription')->name('subscriptions.cancel');
             Route::post('entitlements', [Admin\EntitlementController::class, 'grant'])->name('entitlements.store');
             Route::post('entitlements/{entitlement}/revoke', [Admin\EntitlementController::class, 'revoke'])->whereUuid('entitlement')->name('entitlements.revoke');
+            Route::post('features', [Admin\EntitlementController::class, 'feature'])->name('features.store');
 
             // Customers' plan requests: approving assigns or cancels the plan.
             Route::post('plan-requests/{planRequest}/approve', [Admin\BillingController::class, 'approveRequest'])->whereUuid('planRequest')->name('plan-requests.approve');

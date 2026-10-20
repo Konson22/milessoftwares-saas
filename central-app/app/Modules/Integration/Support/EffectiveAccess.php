@@ -8,6 +8,7 @@ use App\Modules\Applications\Models\ApplicationPermission;
 use App\Modules\Authorization\Models\RoleAssignment;
 use App\Modules\Authorization\Support\Scope;
 use App\Modules\Entitlements\Models\Entitlement;
+use App\Modules\Entitlements\Support\EffectiveFeatures;
 use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Organizations\Models\Organization;
 use App\Support\Tenancy\TenantContext;
@@ -49,14 +50,8 @@ final class EffectiveAccess
             ->orderByRaw('valid_until IS NULL DESC, valid_until DESC')
             ->first();
 
-        $features = Entitlement::query()
-            ->current()
-            ->where('application_id', $application->id)
-            ->whereNotNull('feature_key')
-            ->get(['feature_key', 'limit_value'])
-            ->map(fn (Entitlement $feature) => ['key' => $feature->feature_key, 'limit' => $feature->limit_value])
-            ->values()
-            ->all();
+        // Features mean nothing without the application itself.
+        $features = $entitlement === null ? [] : EffectiveFeatures::granted($application->id);
 
         $membership = OrganizationMembership::query()->where('user_id', $subject)->first();
         $memberActive = $membership !== null && $membership->isActive();

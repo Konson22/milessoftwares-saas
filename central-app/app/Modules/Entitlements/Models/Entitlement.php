@@ -21,10 +21,19 @@ use Illuminate\Support\Carbon;
  * @property Carbon $valid_from
  * @property Carbon|null $valid_until
  * @property Carbon|null $revoked_at
+ * @property string $effect grant|deny (deny: manual feature rows only)
+ * @property string|null $reason why staff granted or denied it
+ * @property string|null $created_by staff user who made a manual row
  */
 class Entitlement extends Model
 {
     use BelongsToOrganization, HasUuids;
+
+    public const GRANT = 'grant';
+
+    public const DENY = 'deny';
+
+    protected $attributes = ['effect' => self::GRANT];
 
     protected function casts(): array
     {

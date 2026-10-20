@@ -209,13 +209,18 @@ export default function BillingControls({
                 </Form>
 
                 {entitlements.some(
-                    (entitlement) => entitlement.revoked_at === null,
+                    (entitlement) =>
+                        entitlement.revoked_at === null &&
+                        entitlement.feature_key === null,
                 ) && (
                     <ul className="divide-y rounded-lg border text-sm">
                         {entitlements
                             .filter(
+                                // Feature overrides are managed under Features,
+                                // and a plan's features follow the plan.
                                 (entitlement) =>
-                                    entitlement.revoked_at === null,
+                                    entitlement.revoked_at === null &&
+                                    entitlement.feature_key === null,
                             )
                             .map((entitlement) => (
                                 <li

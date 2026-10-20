@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Applications\Catalog\CatalogImporter;
+use App\Modules\Applications\Models\ApplicationFeature;
 use App\Modules\Applications\Models\ApplicationPermission;
 
 /*
@@ -23,4 +24,8 @@ it('imports the catalog', function (string $path) {
     expect(ApplicationPermission::query()->where('catalog_version_id', $version->id)->pluck('key')->all())
         ->not->toBeEmpty()
         ->each->toStartWith($catalog['application']['code'].'.');
+
+    // And declares only its own plan features.
+    expect(ApplicationFeature::query()->where('catalog_version_id', $version->id)->pluck('key')->all())
+        ->toEqualCanonicalizing(array_column($catalog['features'] ?? [], 'key'));
 })->with('repository catalogs');

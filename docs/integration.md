@@ -102,6 +102,10 @@ Your token only ever sees **your own application**: organizations that never use
   ownership). Then check each role's **scope** against the record being touched (branch,
   department); that check lives in your backend.
 - Cache for at most `max_age` seconds, and drop the cache when a webhook arrives (section 3).
+- `entitlement.features` lists the plan features the organization may use now, as
+  `{ "key": "finance.fixed_assets", "limit": null }` (`limit` only for features that count
+  something; `null` = no limit). A key that is missing means **off**: hide the pages and refuse
+  the requests server-side, but never delete the records (section 5a).
 - Errors: `401 invalid_token`, `403 insufficient_scope | client_credentials_required | unknown_client`,
   `404` (not visible to your application).
 
@@ -179,6 +183,54 @@ Roles and permissions are declared in a versioned JSON catalog (format:
 admin → Applications. A published version never changes: publish a new version instead.
 Assignments keep pointing at the version they were made under; `catalog_version` in the API shows
 which.
+
+## 5a. Plan features
+
+A product declares its plan features in the same catalog, next to its permissions:
+
+```json
+"features": [
+    { "key": "finance.fixed_assets", "name": "Fixed assets", "description": "…" },
+    { "key": "retail.branches", "name": "Branches", "limit_unit": "branches", "status": "beta" }
+]
+```
+
+Keys start with the application code. `status` is `available` (default), `beta` or `deprecated`
+(cannot be added to more plans; existing plans keep it). `limit_unit` makes the feature take a
+numeric limit; without it the feature is on or off. Adding features changes the catalog, so it
+needs a new version.
+
+Central then decides, per organization, which features are on. Staff can only choose features a
+current catalog declares:
+
+- **Plans** (admin → Plans) list the features of the applications they sell, with an optional
+  limit. Editing a plan's features applies to every **active** subscription on it: a queued,
+  retried job (`SyncPlanFeatures`), backed by a daily `platform:sync-plan-features`, revokes the
+  rows of dropped features, writes rows for added ones and replaces changed limits. It is
+  idempotent, so running it again changes nothing.
+- **Overrides** (admin → Organization → Features) grant or deny one feature for one
+  organization, with a required reason, an optional end date and the staff member recorded on
+  the row and in the audit log. One override per feature is in effect; a new one replaces it,
+  and "Back to the plan" removes it. Plan changes never touch overrides.
+
+What a product receives is resolved from the current entitlement rows, first match wins:
+
+1. an explicit denial in effect,
+2. an explicit grant in effect,
+3. a plan (subscription or trial) in effect (several plans: the largest limit; no limit wins),
+4. otherwise off.
+
+Expired or revoked rows never count, so a lapsed override falls back to the plan and a trial's
+features end with the trial. Features are only sent while the organization has the application
+itself.
+
+Every change bumps the organization's access version and sends `entitlement.changed`, so
+products see it on their next request; an override or trial reaching its end date shows within
+`max_age` (60 s). Products must check features on every request (Finance: the `RequireFeature`
+route middleware and the shared `multicurrency` / `fixedAssets` props), never only in the menu.
+Withdrawing a feature hides and refuses it; the organization's records stay, and come back
+unchanged if the feature is granted again. Tenant users have no API or page that changes
+features; only staff with `plans.manage` (plans) and `entitlements.manage` (overrides) do.
 
 ## 6. Serving a product on workspace hosts
 

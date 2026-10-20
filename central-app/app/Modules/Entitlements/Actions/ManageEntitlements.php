@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Administration\Models\PlatformStaff;
 use App\Modules\Applications\Enums\ApplicationKind;
 use App\Modules\Applications\Models\Application;
+use App\Modules\Applications\Models\ApplicationFeature;
 use App\Modules\Applications\Support\TenantRedirectUris;
 use App\Modules\Audit\AuditLogger;
 use App\Modules\Entitlements\Models\Entitlement;
@@ -96,7 +97,7 @@ final class ManageEntitlements
 
     public function grantManual(Organization $organization, Application $application, ?PlatformStaff $actor, string $reason, ?CarbonInterface $validUntil = null): Entitlement
     {
-        $entitlement = $this->tenant->run($organization, fn () => $this->writeEntitlement($application->id, null, null, 'manual', $validUntil, null));
+        $entitlement = $this->tenant->run($organization, fn () => $this->writeEntitlement($application->id, null, null, 'manual', $validUntil, null, reason: $reason, createdBy: $actor?->user_id));
 
         $this->afterEntitlementChange($organization, [$application->id], provision: true);
         $this->record('entitlement.granted', $entitlement, $organization, $actor, [
@@ -187,7 +188,147 @@ final class ManageEntitlements
         $this->tenant->run($organization, fn () => $entitlement->forceFill(['revoked_at' => now()])->save());
 
         $this->afterEntitlementChange($organization, [$entitlement->application_id]);
-        $this->record('entitlement.revoked', $entitlement, $organization, $actor, ['reason' => $reason]);
+        $this->record('entitlement.revoked', $entitlement, $organization, $actor, array_filter([
+            'feature' => $entitlement->feature_key,
+            'effect' => $entitlement->feature_key === null ? null : $entitlement->effect,
+            'reason' => $reason,
+        ], fn ($value) => $value !== null));
+    }
+
+    /**
+     * Staff grant or deny one feature for the organization, whatever its
+     * plans say (EffectiveFeatures). One override per feature is in effect:
+     * a new one replaces the previous. Plan changes never touch overrides,
+     * and removing one (revoke) falls back to the plans.
+     */
+    public function overrideFeature(Organization $organization, ApplicationFeature $feature, string $effect, ?int $limit, PlatformStaff $actor, string $reason, ?CarbonInterface $validUntil = null): Entitlement
+    {
+        if (! in_array($effect, [Entitlement::GRANT, Entitlement::DENY], true)) {
+            throw new RuntimeException("Unknown effect [{$effect}].");
+        }
+
+        [$entitlement, $replaced] = $this->tenant->run($organization, fn () => DB::transaction(function () use ($feature, $effect, $limit, $actor, $reason, $validUntil): array {
+            $previous = Entitlement::query()
+                ->current()
+                ->where('application_id', $feature->application_id)
+                ->where('feature_key', $feature->key)
+                ->where('source', 'manual')
+                ->lockForUpdate()
+                ->get();
+
+            Entitlement::query()->whereKey($previous->modelKeys())->update(['revoked_at' => now()]);
+
+            $entitlement = $this->writeEntitlement($feature->application_id, $feature->key, $effect === Entitlement::DENY ? null : $limit, 'manual', $validUntil, null, $effect, $reason, $actor->user_id);
+
+            return [$entitlement, $previous->modelKeys()];
+        }));
+
+        $this->afterEntitlementChange($organization, [$feature->application_id]);
+        $this->record($effect === Entitlement::DENY ? 'entitlement.feature_denied' : 'entitlement.feature_granted', $entitlement, $organization, $actor, array_filter([
+            'feature' => $feature->key,
+            'limit' => $entitlement->limit_value,
+            'valid_until' => $validUntil?->toIso8601String(),
+            'reason' => $reason,
+            'replaced' => $replaced === [] ? null : $replaced,
+        ], fn ($value) => $value !== null));
+
+        return $entitlement;
+    }
+
+    /**
+     * Brings every active subscription to the plan's current features: rows
+     * for features the plan dropped (or whose limit changed) are revoked,
+     * new ones written with the subscription's own source and end date.
+     * Staff overrides are not touched. Safe to run again: an organization
+     * already in step changes nothing and hears nothing.
+     *
+     * @return int organizations changed
+     */
+    public function syncPlanFeatures(Plan $plan): int
+    {
+        $desired = DB::table('plan_features')
+            ->where('plan_id', $plan->id)
+            ->whereNotNull('application_id')
+            ->get()
+            ->mapWithKeys(fn (object $feature) => [(string) $feature->feature_key => [
+                'application_id' => (string) $feature->application_id,
+                'limit' => $feature->limit_value === null ? null : (int) $feature->limit_value,
+            ]])
+            ->all();
+
+        $items = DB::table('subscription_items')
+            ->where('plan_id', $plan->id)
+            ->where('status', 'active')
+            ->get(['id', 'organization_id'])
+            ->groupBy('organization_id');
+
+        $changed = 0;
+
+        foreach ($items as $organizationId => $organizationItems) {
+            $organization = Organization::query()->find($organizationId);
+
+            if ($organization === null) {
+                continue;
+            }
+
+            $applicationIds = $this->tenant->run($organization, fn () => DB::transaction(
+                fn () => $this->syncItemFeatures($organizationItems->pluck('id')->map(fn ($id) => (string) $id)->all(), $desired),
+            ));
+
+            if ($applicationIds !== []) {
+                $this->afterEntitlementChange($organization, $applicationIds);
+                $this->audit->record('subscription.features_synced', $plan, ['plan' => $plan->code, 'features' => array_keys($desired)], organizationId: $organization->id);
+                $changed++;
+            }
+        }
+
+        return $changed;
+    }
+
+    /**
+     * @param  list<string>  $itemIds
+     * @param  array<string, array{application_id: string, limit: int|null}>  $desired
+     * @return list<string> applications whose features changed
+     */
+    private function syncItemFeatures(array $itemIds, array $desired): array
+    {
+        $touched = [];
+
+        foreach ($itemIds as $itemId) {
+            // Serializes concurrent syncs of the same subscription.
+            SubscriptionItem::query()->whereKey($itemId)->lockForUpdate()->first();
+
+            // Feature rows follow the item's application rows: trial or paid, and until when.
+            $access = Entitlement::query()->current()->where('subscription_item_id', $itemId)->whereNull('feature_key')->first();
+            $rows = Entitlement::query()->current()->where('subscription_item_id', $itemId)->whereNotNull('feature_key')->get();
+            $kept = [];
+
+            foreach ($rows as $row) {
+                $want = $desired[(string) $row->feature_key] ?? null;
+
+                if ($access !== null && $want !== null && $want['application_id'] === $row->application_id && $want['limit'] === $row->limit_value && ! isset($kept[$row->feature_key])) {
+                    $kept[(string) $row->feature_key] = true;
+
+                    continue;
+                }
+
+                $row->forceFill(['revoked_at' => now()])->save();
+                $touched[] = $row->application_id;
+            }
+
+            if ($access === null) {
+                continue;
+            }
+
+            foreach ($desired as $key => $want) {
+                if (! isset($kept[$key])) {
+                    $this->writeEntitlement($want['application_id'], $key, $want['limit'], $access->source, $access->valid_until, $itemId);
+                    $touched[] = $want['application_id'];
+                }
+            }
+        }
+
+        return array_values(array_unique($touched));
     }
 
     /**
@@ -213,7 +354,7 @@ final class ManageEntitlements
         }
     }
 
-    private function writeEntitlement(string $applicationId, ?string $featureKey, ?int $limit, string $source, ?CarbonInterface $validUntil, ?string $itemId): Entitlement
+    private function writeEntitlement(string $applicationId, ?string $featureKey, ?int $limit, string $source, ?CarbonInterface $validUntil, ?string $itemId, string $effect = Entitlement::GRANT, ?string $reason = null, ?string $createdBy = null): Entitlement
     {
         $entitlement = new Entitlement;
         $entitlement->forceFill([
@@ -224,6 +365,9 @@ final class ManageEntitlements
             'subscription_item_id' => $itemId,
             'valid_from' => now(),
             'valid_until' => $validUntil,
+            'effect' => $effect,
+            'reason' => $reason,
+            'created_by' => $createdBy,
         ])->save();
 
         return $entitlement;

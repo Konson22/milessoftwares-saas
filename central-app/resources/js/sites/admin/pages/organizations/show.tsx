@@ -1,6 +1,8 @@
 import { Form, Head, Link } from '@inertiajs/react';
 import BillingControls from '@/sites/admin/components/billing-controls';
 import type { Subscription } from '@/sites/admin/components/billing-controls';
+import FeatureControls from '@/sites/admin/components/feature-controls';
+import type { OrganizationFeature } from '@/sites/admin/components/feature-controls';
 import {
     InvoiceControls,
     PlanRequestControls,
@@ -29,10 +31,14 @@ type Props = {
         application: string;
         feature_key: string | null;
         source: string;
+        effect: 'grant' | 'deny';
+        reason: string | null;
+        created_by: string | null;
         valid_from: string;
         valid_until: string | null;
         revoked_at: string | null;
     }[];
+    features: OrganizationFeature[];
     supportGrants: {
         id: string;
         requestedBy: string;
@@ -60,6 +66,7 @@ const formatDate = (iso: string) => new Date(iso).toLocaleString();
 export default function OrganizationShow({
     organization,
     entitlements,
+    features,
     supportGrants,
     subscriptions,
     billing,
@@ -252,6 +259,12 @@ export default function OrganizationShow({
                                             <span className="text-muted-foreground">
                                                 {' '}
                                                 · {entitlement.source}
+                                                {entitlement.effect ===
+                                                    'deny' && ' denial'}
+                                                {entitlement.created_by &&
+                                                    ` · ${entitlement.created_by}`}
+                                                {entitlement.reason &&
+                                                    ` · ${entitlement.reason}`}
                                             </span>
                                         </span>
                                         {entitlement.revoked_at ? (
@@ -274,6 +287,12 @@ export default function OrganizationShow({
                             </ul>
                         )}
                     </div>
+
+                    <FeatureControls
+                        base={base}
+                        features={features}
+                        canManage={can.manageEntitlements}
+                    />
 
                     {can.manageEntitlements && (
                         <BillingControls
