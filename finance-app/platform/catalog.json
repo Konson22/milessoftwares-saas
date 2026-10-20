@@ -6,7 +6,7 @@
         "kind": "shared_module",
         "status": "beta"
     },
-    "version": "1.6.0",
+    "version": "1.7.0",
     "permissions": [
         {
             "key": "finance.accounts.view",
@@ -109,6 +109,18 @@
             "name": "Lock months, close years and enter opening balances",
             "sensitivity": 3,
             "scopes": ["organization"]
+        }
+    ],
+    "features": [
+        {
+            "key": "finance.multicurrency",
+            "name": "Multiple currencies",
+            "description": "Accounts, invoices, bills and payments in other currencies, with exchange rates and month-end revaluation."
+        },
+        {
+            "key": "finance.fixed_assets",
+            "name": "Fixed assets",
+            "description": "Asset register, monthly depreciation and disposals with gain or loss."
         }
     ],
     "roles": [

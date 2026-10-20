@@ -92,6 +92,28 @@ it('is not found without the plan feature', function () {
     $this->post(faUrl('asset-categories'), ['name' => 'X'])->assertNotFound();
 });
 
+it('keeps the assets and their journals when the plan feature is withdrawn', function () {
+    $tools = faCategory('Tools', AssetCategory::STRAIGHT_LINE, 10);
+    $drill = faPurchase('2026-01-05', '100', 'Drill');
+    faRegister(['asset_category_id' => $tools->id, 'name' => 'Drill', 'acquired_on' => '2026-01-05', 'cost' => '100', 'journal_id' => $drill->id])->assertRedirect();
+    faRun('2026-01')->assertRedirect();
+    $charged = faBalance('1590');
+
+    // The next request after central withdraws it: no pages, no actions, no menu.
+    $this->actingAsMember('acme', ASSET_KEEPER);
+    $this->get(faUrl('fixed-assets'))->assertNotFound();
+    faRun('2026-02')->assertNotFound();
+    $this->get(faUrl('accounts'))->assertInertia(fn (Assert $page) => $page->where('fixedAssets', false));
+
+    expect($charged)->toBeLessThan(0)
+        ->and(faBalance('1590'))->toBe($charged)
+        ->and($this->asTenant('acme', fn () => [FixedAsset::query()->count(), DepreciationRun::query()->count()]))->toBe([1, 1]);
+
+    // Granted again, everything is where it was.
+    $this->actingAsMember('acme', ASSET_KEEPER, features: [FixedAssets::FEATURE]);
+    $this->get(faUrl('fixed-assets'))->assertOk()->assertInertia(fn (Assert $page) => $page->has('assets', 1));
+});
+
 it('registers assets against the bill or journal that bought them, never more than it put in', function () {
     $vehicles = faCategory('Vehicles', AssetCategory::STRAIGHT_LINE, 36);
     $supplier = $this->asTenant('acme', fn () => Supplier::query()->create(['name' => 'Motors']));
