@@ -18,7 +18,7 @@ Runbooks: [deploy](runbooks/deploy.md) · [backup & restore](runbooks/backup-res
 - [ ] `SESSION_COOKIE=__Host-miles-session` (host-only, Secure, path `/`) **(auto)**
 - [ ] `SESSION_ENCRYPT=true` (preflight warns otherwise)
 - [ ] `SESSION_DRIVER=redis`, `CACHE_STORE=redis`, `QUEUE_CONNECTION=redis` **(auto)**
-- [ ] `MAIL_MAILER` is a real transport (SMTP/SES/…), sender domain has SPF, DKIM and DMARC **(auto for the mailer)**
+- [ ] `MAIL_MAILER` is a real transport (production: `resend` with `RESEND_API_KEY`; SMTP/SES also work), sender domain has SPF, DKIM and DMARC **(auto for the mailer)**
 - [ ] `TRUSTED_PROXIES` lists the load balancer addresses explicitly, never `*` (preflight warns)
 - [ ] `PLATFORM_OIDC_BACKCHANNEL_URL` is empty (the local-only Windows workaround)
 - [ ] First-party OIDC clients for app, admin and workspace are set **(auto)**
