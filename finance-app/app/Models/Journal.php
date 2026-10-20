@@ -40,6 +40,26 @@ class Journal extends Model
 
     public const REVERSAL = 'reversal';
 
+    /** Moves a year's revenue and expenses into retained earnings. */
+    public const YEAR_CLOSE = 'year_close';
+
+    /** Reverses a year's closing journal. */
+    public const YEAR_REOPEN = 'year_reopen';
+
+    public const OPENING_BALANCES = 'opening_balances';
+
+    /** Foreign-currency balances brought to a day's rates (unrealised gains and losses). */
+    public const FX_REVALUATION = 'fx_revaluation';
+
+    /** Reverses a revaluation the next day. */
+    public const FX_REVALUATION_REVERSAL = 'fx_revaluation_reversal';
+
+    /** A month's depreciation of fixed assets. */
+    public const DEPRECIATION = 'depreciation';
+
+    /** A fixed asset sold or written off. */
+    public const ASSET_DISPOSAL = 'asset_disposal';
+
     protected $guarded = ['organization_id'];
 
     protected function casts(): array

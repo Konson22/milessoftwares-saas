@@ -1,4 +1,4 @@
-import { Form, Head, Link } from '@inertiajs/react';
+import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { ListTree, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Amount } from '@/components/amount';
@@ -35,7 +35,12 @@ type Account = {
     bankKind: string | null;
     bankName: string | null;
     bankAccountNumber: string | null;
+    currency: string | null;
     description: string | null;
+    cashFlow: string | null;
+    cashFlowLabel: string | null;
+    requiresCostCentre: boolean;
+    requiresProject: boolean;
     system: boolean;
     active: boolean;
     balanceMinor: number;
@@ -43,7 +48,12 @@ type Account = {
 
 type Option = { value: string; label: string };
 
-type Props = { accounts: Account[]; types: Option[]; bankKinds: Option[] };
+type Props = {
+    accounts: Account[];
+    types: Option[];
+    bankKinds: Option[];
+    cashFlows: Option[];
+};
 
 const TYPE_TONES: Record<
     string,
@@ -60,16 +70,19 @@ function AccountFields({
     account,
     types,
     bankKinds,
+    cashFlows,
     errors,
 }: {
     account?: Account;
     types: Option[];
     bankKinds: Option[];
+    cashFlows: Option[];
     errors: Record<string, string>;
 }) {
     const id = account?.id ?? 'new';
     const [type, setType] = useState(account?.type ?? 'expense');
     const [bankKind, setBankKind] = useState(account?.bankKind ?? '');
+    const { currency: books, multicurrency } = usePage().props;
 
     return (
         <>
@@ -171,8 +184,46 @@ function AccountFields({
                             defaultValue={account?.bankAccountNumber ?? ''}
                         />
                     </Field>
+                    {multicurrency && (
+                        <Field
+                            id={`${id}-currency`}
+                            label="Currency"
+                            error={errors.currency}
+                            hint={`Blank for ${books ?? 'the books’ currency'}. Fixed once posted to.`}
+                        >
+                            <Input
+                                id={`${id}-currency`}
+                                name="currency"
+                                maxLength={3}
+                                placeholder={books ?? ''}
+                                className="uppercase"
+                                defaultValue={account?.currency ?? ''}
+                            />
+                        </Field>
+                    )}
                 </>
             )}
+            {['asset', 'liability', 'equity'].includes(type) &&
+                bankKind === '' && (
+                    <Field
+                        id={`${id}-cash-flow`}
+                        label="In the cash flow under"
+                        error={errors.cash_flow}
+                    >
+                        <Select
+                            id={`${id}-cash-flow`}
+                            name="cash_flow"
+                            defaultValue={account?.cashFlow ?? ''}
+                        >
+                            <option value="">Automatic</option>
+                            {cashFlows.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </Select>
+                    </Field>
+                )}
             <Field
                 id={`${id}-description`}
                 label="Description"
@@ -185,6 +236,36 @@ function AccountFields({
                     defaultValue={account?.description ?? ''}
                 />
             </Field>
+            <fieldset className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm sm:col-span-4">
+                <legend className="sr-only">Required on lines</legend>
+                <span className="text-muted-foreground">
+                    Lines entered by hand need:
+                </span>
+                <label className="flex items-center gap-2">
+                    <input
+                        type="hidden"
+                        name="requires_cost_centre"
+                        value="0"
+                    />
+                    <input
+                        type="checkbox"
+                        name="requires_cost_centre"
+                        value="1"
+                        defaultChecked={account?.requiresCostCentre ?? false}
+                    />
+                    a cost centre
+                </label>
+                <label className="flex items-center gap-2">
+                    <input type="hidden" name="requires_project" value="0" />
+                    <input
+                        type="checkbox"
+                        name="requires_project"
+                        value="1"
+                        defaultChecked={account?.requiresProject ?? false}
+                    />
+                    a project
+                </label>
+            </fieldset>
         </>
     );
 }
@@ -192,7 +273,12 @@ function AccountFields({
 /**
  * The chart of accounts, by type, with balances.
  */
-export default function Accounts({ accounts, types, bankKinds }: Props) {
+export default function Accounts({
+    accounts,
+    types,
+    bankKinds,
+    cashFlows,
+}: Props) {
     const can = useCan();
     const canManage = can('finance.accounts.manage');
     const [adding, setAdding] = useState(false);
@@ -243,6 +329,7 @@ export default function Accounts({ accounts, types, bankKinds }: Props) {
                                     <AccountFields
                                         types={types}
                                         bankKinds={bankKinds}
+                                        cashFlows={cashFlows}
                                         errors={errors}
                                     />
                                     <div className="flex gap-2 sm:col-span-4">
@@ -335,6 +422,9 @@ export default function Accounts({ accounts, types, bankKinds }: Props) {
                                                             types={types}
                                                             bankKinds={
                                                                 bankKinds
+                                                            }
+                                                            cashFlows={
+                                                                cashFlows
                                                             }
                                                             errors={errors}
                                                         />
@@ -433,6 +523,11 @@ export default function Accounts({ accounts, types, bankKinds }: Props) {
                                                                 account.bankKind,
                                                         )?.label
                                                     }
+                                                </StatusBadge>
+                                            )}
+                                            {account.currency && (
+                                                <StatusBadge tone="info">
+                                                    {account.currency}
                                                 </StatusBadge>
                                             )}
                                             {!account.active && (

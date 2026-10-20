@@ -34,6 +34,10 @@ type Props = {
         dueOn: string | null;
         totalMinor: number;
         taxMinor: number;
+        currency: string | null;
+        exchangeRate: string | null;
+        currencyTotalMinor: number | null;
+        currencyOutstandingMinor: number | null;
         paidMinor: number;
         creditedMinor: number;
         outstandingMinor: number;
@@ -55,11 +59,13 @@ type Props = {
         kind: string;
         method: string;
         amountMinor: number;
+        currencyAmountMinor: number | null;
+        fxMinor: number;
         receivedOn: string;
         account: string | null;
         journalId: string;
     }[];
-    banks: { id: string; label: string }[];
+    banks: { id: string; label: string; currency: string | null }[];
     methods: { value: string; label: string }[];
     today: string;
 };
@@ -77,6 +83,11 @@ export default function ShowInvoice({
     const can = useCan();
     const canManage = can('finance.receivables.manage');
     const [voiding, setVoiding] = useState(false);
+    const taxShown =
+        invoice.currencyTotalMinor === null
+            ? invoice.taxMinor
+            : invoice.currencyTotalMinor -
+              invoice.lines.reduce((sum, line) => sum + line.amount_minor, 0);
 
     return (
         <>
@@ -173,26 +184,51 @@ export default function ShowInvoice({
                                         {line.quantity ?? ''}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <Amount minor={line.amount_minor} />
+                                        <Amount
+                                            minor={line.amount_minor}
+                                            currency={invoice.currency}
+                                        />
                                     </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
                         <TableFooter>
-                            {invoice.taxMinor > 0 && (
+                            {taxShown > 0 && (
                                 <TableRow className="hover:bg-transparent">
                                     <TableCell colSpan={3}>Tax</TableCell>
                                     <TableCell className="text-right">
-                                        <Amount minor={invoice.taxMinor} />
+                                        <Amount
+                                            minor={taxShown}
+                                            currency={invoice.currency}
+                                        />
                                     </TableCell>
                                 </TableRow>
                             )}
                             <TableRow className="hover:bg-transparent">
                                 <TableCell colSpan={3}>Total</TableCell>
                                 <TableCell className="text-right">
-                                    <Amount minor={invoice.totalMinor} />
+                                    <Amount
+                                        minor={
+                                            invoice.currencyTotalMinor ??
+                                            invoice.totalMinor
+                                        }
+                                        currency={invoice.currency}
+                                    />
                                 </TableCell>
                             </TableRow>
+                            {invoice.currency && (
+                                <TableRow className="hover:bg-transparent">
+                                    <TableCell
+                                        colSpan={3}
+                                        className="font-normal text-muted-foreground"
+                                    >
+                                        In the books at {invoice.exchangeRate}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Amount minor={invoice.totalMinor} />
+                                    </TableCell>
+                                </TableRow>
+                            )}
                         </TableFooter>
                     </Table>
                 </Panel>
@@ -227,6 +263,22 @@ export default function ShowInvoice({
                             <dd className="font-semibold">
                                 <Amount minor={invoice.outstandingMinor} />
                             </dd>
+                            {invoice.currency && (
+                                <>
+                                    <dt className="text-muted-foreground">
+                                        Outstanding in {invoice.currency}
+                                    </dt>
+                                    <dd className="font-semibold">
+                                        <Amount
+                                            minor={
+                                                invoice.currencyOutstandingMinor ??
+                                                0
+                                            }
+                                            currency={invoice.currency}
+                                        />
+                                    </dd>
+                                </>
+                            )}
                             {invoice.journalId && (
                                 <>
                                     <dt className="text-muted-foreground">
@@ -295,14 +347,22 @@ export default function ShowInvoice({
                                                     <option value="">
                                                         Choose an account…
                                                     </option>
-                                                    {banks.map((bank) => (
-                                                        <option
-                                                            key={bank.id}
-                                                            value={bank.id}
-                                                        >
-                                                            {bank.label}
-                                                        </option>
-                                                    ))}
+                                                    {banks
+                                                        .filter(
+                                                            (bank) =>
+                                                                bank.currency ===
+                                                                    null ||
+                                                                bank.currency ===
+                                                                    invoice.currency,
+                                                        )
+                                                        .map((bank) => (
+                                                            <option
+                                                                key={bank.id}
+                                                                value={bank.id}
+                                                            >
+                                                                {bank.label}
+                                                            </option>
+                                                        ))}
                                                 </Select>
                                             </Field>
                                             <Field
@@ -328,7 +388,11 @@ export default function ShowInvoice({
                                             <div className="grid grid-cols-2 gap-3">
                                                 <Field
                                                     id="amount"
-                                                    label="Amount"
+                                                    label={
+                                                        invoice.currency
+                                                            ? `Amount (${invoice.currency})`
+                                                            : 'Amount'
+                                                    }
                                                     error={errors.amount}
                                                 >
                                                     <Input
@@ -353,6 +417,20 @@ export default function ShowInvoice({
                                                     />
                                                 </Field>
                                             </div>
+                                            {invoice.currency && (
+                                                <Field
+                                                    id="rate"
+                                                    label="Rate"
+                                                    error={errors.rate}
+                                                    hint={`Blank for the ${invoice.currency} rate on the date. The difference from ${invoice.exchangeRate} is an exchange gain or loss.`}
+                                                >
+                                                    <Input
+                                                        id="rate"
+                                                        name="rate"
+                                                        inputMode="decimal"
+                                                    />
+                                                </Field>
+                                            )}
                                             <Field
                                                 id="memo"
                                                 label="Memo"
@@ -415,6 +493,30 @@ export default function ShowInvoice({
                                         <span className="text-right text-xs text-muted-foreground">
                                             {payment.account}
                                         </span>
+                                        {payment.currencyAmountMinor !==
+                                            null && (
+                                            <span className="col-span-2 text-xs text-muted-foreground">
+                                                <Amount
+                                                    minor={
+                                                        payment.currencyAmountMinor
+                                                    }
+                                                    currency={invoice.currency}
+                                                />
+                                                {payment.fxMinor !== 0 && (
+                                                    <>
+                                                        {' · exchange '}
+                                                        {payment.fxMinor > 0
+                                                            ? 'gain'
+                                                            : 'loss'}{' '}
+                                                        <Amount
+                                                            minor={Math.abs(
+                                                                payment.fxMinor,
+                                                            )}
+                                                        />
+                                                    </>
+                                                )}
+                                            </span>
+                                        )}
                                     </li>
                                 ))}
                             </ul>

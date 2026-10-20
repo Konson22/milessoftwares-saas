@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\AccountType;
 use App\Enums\BankKind;
+use App\Enums\CashFlowActivity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -21,9 +22,14 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property BankKind|null $bank_kind
  * @property string|null $bank_name
  * @property string|null $bank_account_number
+ * @property array<string, mixed>|null $bank_import how the bank's CSV export is laid out
  * @property string|null $system_key
+ * @property CashFlowActivity|null $cash_flow
  * @property string|null $description
  * @property bool $active
+ * @property bool $requires_cost_centre lines entered by hand must name a cost centre
+ * @property bool $requires_project lines entered by hand must name a project
+ * @property string|null $currency a bank or cash account held in another currency (null: the books')
  */
 class Account extends Model
 {
@@ -51,6 +57,15 @@ class Account extends Model
 
     public const RETAINED_EARNINGS = 'retained_earnings';
 
+    /** Takes the difference when opening balances are entered. */
+    public const OPENING_BALANCE = 'opening_balance';
+
+    /** Takes realised and unrealised exchange gains and losses (a gain is a credit). */
+    public const FX = 'fx';
+
+    /** Takes the gain or loss when a fixed asset is disposed of (a gain is a credit). */
+    public const DISPOSAL = 'asset_disposal';
+
     public const SALES = 'sales';
 
     public const PURCHASES = 'purchases';
@@ -66,7 +81,11 @@ class Account extends Model
         return [
             'type' => AccountType::class,
             'bank_kind' => BankKind::class,
+            'cash_flow' => CashFlowActivity::class,
+            'bank_import' => 'array',
             'active' => 'boolean',
+            'requires_cost_centre' => 'boolean',
+            'requires_project' => 'boolean',
         ];
     }
 
@@ -86,6 +105,29 @@ class Account extends Model
     public function isBank(): bool
     {
         return $this->bank_kind !== null;
+    }
+
+    /**
+     * Where the account's movements show in the cash flow statement: null
+     * for banks and cash (the cash itself) and for revenue and expenses (in
+     * the profit). Unless the accountant chose otherwise: receivable,
+     * inventory, payable and tax are operating, other assets investing,
+     * other liabilities and equity financing.
+     */
+    public function cashFlowActivity(): ?CashFlowActivity
+    {
+        if ($this->isBank() || in_array($this->type, [AccountType::Revenue, AccountType::Expense], true)) {
+            return null;
+        }
+        if ($this->cash_flow !== null) {
+            return $this->cash_flow;
+        }
+
+        return match (true) {
+            in_array($this->system_key, [self::RECEIVABLE, self::INVENTORY, self::PAYABLE, self::TAX], true) => CashFlowActivity::Operating,
+            $this->type === AccountType::Asset => CashFlowActivity::Investing,
+            default => CashFlowActivity::Financing,
+        };
     }
 
     /**

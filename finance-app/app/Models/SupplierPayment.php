@@ -24,6 +24,10 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property string|null $memo
  * @property string $journal_id
  * @property string $created_by
+ * @property string|null $currency set when paid in another currency than the books'
+ * @property string|null $exchange_rate books-currency units per unit of the currency, on the day
+ * @property int|null $currency_amount_minor the amount in the currency
+ * @property int $fx_minor realised exchange gain (negative: loss), in the books' currency
  * @property-read Supplier $supplier
  * @property-read Account $account
  * @property-read Collection<int, BillPayment> $allocations
@@ -40,6 +44,9 @@ class SupplierPayment extends Model
         return [
             'paid_on' => 'immutable_date',
             'amount_minor' => 'integer',
+            'currency_amount_minor' => 'integer',
+            'fx_minor' => 'integer',
+            'exchange_rate' => 'decimal:10',
         ];
     }
 

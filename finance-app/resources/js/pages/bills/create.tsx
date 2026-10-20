@@ -1,7 +1,14 @@
 import { Form, Head } from '@inertiajs/react';
+import { useState } from 'react';
+import { CurrencyFields } from '@/components/currency-fields';
+import type { CurrencyOption } from '@/components/currency-fields';
 import { Field, Select } from '@/components/field';
 import { LinesEditor } from '@/components/lines-editor';
-import type { AccountOption } from '@/components/lines-editor';
+import type {
+    AccountOption,
+    DimensionOptions,
+    TaxCodeOption,
+} from '@/components/lines-editor';
 import { PageHeader } from '@miles/ui/components/page-header';
 import { Panel, PanelBody } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
@@ -12,6 +19,9 @@ type Props = {
     suppliers: { id: string; name: string }[];
     supplierId: string | null;
     accounts: AccountOption[];
+    taxCodes: TaxCodeOption[];
+    dimensions: DimensionOptions;
+    currencies: CurrencyOption[];
     today: string;
 };
 
@@ -23,8 +33,13 @@ export default function CreateBill({
     suppliers,
     supplierId,
     accounts,
+    taxCodes,
+    dimensions,
+    currencies,
     today,
 }: Props) {
+    const [currency, setCurrency] = useState('');
+
     return (
         <>
             <Head title="New bill" />
@@ -116,26 +131,37 @@ export default function CreateBill({
                                                 maxLength={255}
                                             />
                                         </Field>
+                                        <CurrencyFields
+                                            currencies={currencies}
+                                            value={currency}
+                                            onChange={setCurrency}
+                                            errors={errors}
+                                        />
                                     </div>
                                     <LinesEditor
                                         accounts={accounts}
                                         mode="amount"
                                         errors={errors}
+                                        taxCodes={taxCodes}
+                                        dimensions={dimensions}
+                                        currency={currency || null}
                                     />
-                                    <div className="grid gap-3 sm:grid-cols-4">
-                                        <Field
-                                            id="tax"
-                                            label="Tax"
-                                            error={errors.tax}
-                                            hint="Leave blank when there is none."
-                                        >
-                                            <Input
+                                    {taxCodes.length === 0 && (
+                                        <div className="grid gap-3 sm:grid-cols-4">
+                                            <Field
                                                 id="tax"
-                                                name="tax"
-                                                inputMode="decimal"
-                                            />
-                                        </Field>
-                                    </div>
+                                                label="Tax"
+                                                error={errors.tax}
+                                                hint="Leave blank when there is none. Add tax codes to record tax per line."
+                                            >
+                                                <Input
+                                                    id="tax"
+                                                    name="tax"
+                                                    inputMode="decimal"
+                                                />
+                                            </Field>
+                                        </div>
+                                    )}
                                     <div>
                                         <Button
                                             type="submit"

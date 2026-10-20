@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Finance\Currencies;
 use App\Finance\Money;
 use App\Finance\Payables;
 use App\Models\Account;
@@ -36,6 +37,10 @@ class BillController extends Controller
             'billDate' => $bill->bill_date->toDateString(),
             'dueOn' => $bill->due_on?->toDateString(),
             'totalMinor' => $bill->total_minor,
+            'currency' => $bill->currency,
+            'exchangeRate' => $bill->exchange_rate === null ? null : Currencies::normalize((string) $bill->exchange_rate),
+            'currencyTotalMinor' => $bill->currency_total_minor,
+            'currencyOutstandingMinor' => $bill->currency === null ? null : $bill->currencyOutstanding(),
             'paidMinor' => $bill->paid_minor,
             'outstandingMinor' => $bill->outstanding(),
             'status' => $bill->status(),
@@ -97,6 +102,7 @@ class BillController extends Controller
                 'number' => (string) $payment->getAttribute('number'),
                 'paidOn' => substr((string) $payment->getAttribute('paid_on'), 0, 10),
                 'amountMinor' => $payment->amount_minor,
+                'currencyAmountMinor' => $payment->currency_amount_minor,
                 'journalId' => (string) $payment->getAttribute('journal_id'),
             ]),
         ]);
@@ -108,6 +114,9 @@ class BillController extends Controller
             'suppliers' => Supplier::query()->orderBy('name')->get(['id', 'name']),
             'supplierId' => $request->query('supplier'),
             'accounts' => $this->accountOptions(bank: false),
+            'taxCodes' => $this->taxCodeOptions('purchases'),
+            'dimensions' => $this->dimensionOptions(),
+            'currencies' => $this->currencyOptions(),
             'today' => CarbonImmutable::today()->toDateString(),
         ]);
     }
@@ -125,22 +134,32 @@ class BillController extends Controller
             'lines.*.account_id' => ['required', 'uuid', $this->openAccount(bank: false)],
             'lines.*.description' => ['required', 'string', 'max:255'],
             'lines.*.amount' => ['required', 'string', Money::rule(), 'not_regex:/^0+(\.0+)?$/'],
+            'lines.*.tax_code_id' => ['nullable', 'uuid', $this->taxCodeRule('purchases')],
+            ...$this->lineDimensionRules(),
+            ...$this->currencyRules(),
         ]);
+        $billDate = CarbonImmutable::parse($data['bill_date']);
+        $foreign = $this->foreignTerms($data, $billDate);
+        $currency = $foreign['currency'] ?? null;
 
         $accounts = Account::query()->whereIn('id', array_column($data['lines'], 'account_id'))->get()->keyBy('id');
+        $taxCodes = $this->chosenTaxCodes($data['lines']);
+        $dimensions = $this->chosenDimensions($data['lines']);
         $bill = $payables->recordBill(
             Supplier::query()->findOrFail((string) $data['supplier_id']),
-            CarbonImmutable::parse($data['bill_date']),
+            $billDate,
             isset($data['due_on']) ? CarbonImmutable::parse($data['due_on']) : null,
             $data['supplier_reference'] ?? null,
-            array_values(array_map(fn (array $line) => [
+            array_map(fn (array $line, int|string $i) => [
                 'account' => $accounts->get($line['account_id']) ?? abort(422),
                 'description' => $line['description'],
-                'amount_minor' => Money::toMinor($line['amount']),
-            ], $data['lines'])),
-            ($data['tax'] ?? '') === '' ? 0 : Money::toMinor($data['tax']),
+                'amount_minor' => $this->amountIn($line['amount'], $currency, "lines.{$i}.amount"),
+                'tax_code' => isset($line['tax_code_id']) ? $taxCodes->get($line['tax_code_id']) : null,
+            ] + $this->lineDimensions($line, $dimensions), $data['lines'], array_keys($data['lines'])),
+            ($data['tax'] ?? '') === '' ? 0 : $this->amountIn($data['tax'], $currency, 'tax'),
             $data['memo'] ?? null,
             $this->user($request),
+            $foreign,
         );
 
         return redirect()->route('bills.show', $bill)->with('success', "Bill {$bill->number} recorded.");

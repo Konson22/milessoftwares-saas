@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\AccountType;
 use App\Enums\PaymentMethod;
+use App\Finance\Currencies;
 use App\Finance\Money;
 use App\Finance\Receivables;
 use App\Models\Account;
@@ -35,6 +36,10 @@ class InvoiceController extends Controller
             'issuedOn' => $invoice->issued_on->toDateString(),
             'dueOn' => $invoice->due_on?->toDateString(),
             'totalMinor' => $invoice->total_minor,
+            'currency' => $invoice->currency,
+            'exchangeRate' => $invoice->exchange_rate === null ? null : Currencies::normalize((string) $invoice->exchange_rate),
+            'currencyTotalMinor' => $invoice->currency_total_minor,
+            'currencyOutstandingMinor' => $invoice->currency === null ? null : $invoice->currencyOutstanding(),
             'paidMinor' => $invoice->paid_minor,
             'creditedMinor' => $invoice->credited_minor,
             'outstandingMinor' => $invoice->outstanding(),
@@ -92,6 +97,9 @@ class InvoiceController extends Controller
     {
         return Inertia::render('invoices/create', [
             'accounts' => array_values(array_filter($this->accountOptions(bank: false), fn (array $account) => $account['type'] === AccountType::Revenue->value)),
+            'taxCodes' => $this->taxCodeOptions('sales'),
+            'dimensions' => $this->dimensionOptions(),
+            'currencies' => $this->currencyOptions(),
             'today' => CarbonImmutable::today()->toDateString(),
         ]);
     }
@@ -107,20 +115,30 @@ class InvoiceController extends Controller
             'lines.*.account_id' => ['required', 'uuid', $this->openAccount(bank: false)->where('type', AccountType::Revenue->value)],
             'lines.*.description' => ['required', 'string', 'max:255'],
             'lines.*.amount' => ['required', 'string', Money::rule(), 'not_regex:/^0+(\.0+)?$/'],
+            'lines.*.tax_code_id' => ['nullable', 'uuid', $this->taxCodeRule('sales')],
+            ...$this->lineDimensionRules(),
+            ...$this->currencyRules(),
         ]);
+        $issuedOn = CarbonImmutable::parse($data['issued_on']);
+        $foreign = $this->foreignTerms($data, $issuedOn);
+        $currency = $foreign['currency'] ?? null;
 
         $accounts = Account::query()->whereIn('id', array_column($data['lines'], 'account_id'))->get()->keyBy('id');
+        $taxCodes = $this->chosenTaxCodes($data['lines']);
+        $dimensions = $this->chosenDimensions($data['lines']);
         $invoice = $receivables->raise(
             $data['customer_name'],
-            CarbonImmutable::parse($data['issued_on']),
+            $issuedOn,
             isset($data['due_on']) ? CarbonImmutable::parse($data['due_on']) : null,
-            array_values(array_map(fn (array $line) => [
+            array_map(fn (array $line, int|string $i) => [
                 'account' => $accounts->get($line['account_id']) ?? abort(422),
                 'description' => $line['description'],
-                'amount_minor' => Money::toMinor($line['amount']),
-            ], $data['lines'])),
-            ($data['tax'] ?? '') === '' ? 0 : Money::toMinor($data['tax']),
+                'amount_minor' => $this->amountIn($line['amount'], $currency, "lines.{$i}.amount"),
+                'tax_code' => isset($line['tax_code_id']) ? $taxCodes->get($line['tax_code_id']) : null,
+            ] + $this->lineDimensions($line, $dimensions), $data['lines'], array_keys($data['lines'])),
+            ($data['tax'] ?? '') === '' ? 0 : $this->amountIn($data['tax'], $currency, 'tax'),
             $this->user($request),
+            $foreign,
         );
 
         return redirect()->route('invoices.show', $invoice)->with('success', "Invoice {$invoice->number} raised.");

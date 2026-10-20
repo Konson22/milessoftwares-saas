@@ -167,8 +167,9 @@ final class PlatformFake
      * in $application (default: the one being served, see PlatformConfig).
      *
      * @param  list<array{permissions: list<string>, scope?: array<string, string>, role?: string}>  $roles
+     * @param  list<string>  $features  plan features the organization has, without limits
      */
-    public function grant(string $slug, string $subject, array $roles = [], bool $owner = false, bool $allowed = true, ?string $application = null): void
+    public function grant(string $slug, string $subject, array $roles = [], bool $owner = false, bool $allowed = true, ?string $application = null, array $features = []): void
     {
         $organization = $this->organization($slug);
         $application ??= app(PlatformConfig::class)->application();
@@ -178,7 +179,7 @@ final class PlatformFake
             'organization' => ['id' => $organization['id'], 'slug' => $slug, 'status' => $organization['status']],
             'application' => ['code' => $application, 'catalog_version' => '1.0.0'],
             'subject' => $subject,
-            'entitlement' => ['active' => true, 'source' => 'subscription', 'valid_until' => null, 'features' => []],
+            'entitlement' => ['active' => true, 'source' => 'subscription', 'valid_until' => null, 'features' => array_map(fn (string $key) => ['key' => $key, 'limit' => null], $features)],
             'membership' => ['id' => (string) Str::uuid(), 'status' => 'active', 'is_owner' => $owner],
             'roles' => array_map(fn (array $role) => [
                 'role' => $role['role'] ?? 'role',

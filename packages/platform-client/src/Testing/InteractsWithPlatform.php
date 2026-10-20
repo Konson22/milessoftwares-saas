@@ -41,12 +41,13 @@ trait InteractsWithPlatform
      * access in one application of the deployment and not another.
      *
      * @param  list<string>  $permissions
+     * @param  list<string>  $features  plan features the organization has (see EffectiveAccess::feature)
      */
-    protected function actingAsMember(string $slug = 'acme', array $permissions = [], bool $owner = false, ?Authenticatable $user = null, ?string $branch = null, ?string $application = null): Authenticatable
+    protected function actingAsMember(string $slug = 'acme', array $permissions = [], bool $owner = false, ?Authenticatable $user = null, ?string $branch = null, ?string $application = null, array $features = []): Authenticatable
     {
         $user ??= $this->platformUser();
         $scope = $branch === null ? ['scope_type' => 'organization'] : ['scope_type' => 'branch', 'branch_id' => $branch];
-        $this->platform()->grant($slug, (string) $user->getAuthIdentifier(), $permissions === [] ? [] : [['permissions' => $permissions, 'scope' => $scope]], $owner, application: $application);
+        $this->platform()->grant($slug, (string) $user->getAuthIdentifier(), $permissions === [] ? [] : [['permissions' => $permissions, 'scope' => $scope]], $owner, application: $application, features: $features);
 
         $this->actingAs($user);
         $this->withSession([RequirePlatformAccess::SESSION_TENANT => $this->platform()->organization($slug)['id']]);

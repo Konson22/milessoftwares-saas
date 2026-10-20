@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Finance\Currencies;
+use App\Finance\FixedAssets;
 use App\Finance\Money;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -51,6 +53,9 @@ class HandleInertiaRequests extends Middleware
             },
             // The books' currency: amounts are sent in its minor unit.
             'currency' => fn () => app(CurrentTenant::class)->has() ? Money::currency() : null,
+            // Whether the plan includes other currencies (UI only, like access).
+            'multicurrency' => fn () => Currencies::enabled(),
+            'fixedAssets' => fn () => FixedAssets::enabled(),
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
             ],

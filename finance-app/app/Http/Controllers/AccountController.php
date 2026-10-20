@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Enums\AccountType;
 use App\Enums\BankKind;
+use App\Enums\CashFlowActivity;
 use App\Finance\Balances;
+use App\Finance\Currencies;
+use App\Finance\Money;
 use App\Models\Account;
 use App\Models\JournalLine;
 use Carbon\CarbonImmutable;
@@ -33,13 +36,19 @@ class AccountController extends Controller
                 'bankKind' => $account->bank_kind?->value,
                 'bankName' => $account->bank_name,
                 'bankAccountNumber' => $account->bank_account_number,
+                'currency' => $account->currency,
                 'description' => $account->description,
+                'cashFlow' => $account->cash_flow?->value,
+                'cashFlowLabel' => $account->cashFlowActivity()?->label(),
+                'requiresCostCentre' => $account->requires_cost_centre,
+                'requiresProject' => $account->requires_project,
                 'system' => $account->system_key !== null,
                 'active' => $account->active,
                 'balanceMinor' => $account->type->balance($totals[$account->id]['debits'] ?? 0, $totals[$account->id]['credits'] ?? 0),
             ]),
             'types' => array_map(fn (AccountType $type) => ['value' => $type->value, 'label' => $type->label()], AccountType::cases()),
             'bankKinds' => array_map(fn (BankKind $kind) => ['value' => $kind->value, 'label' => $kind->label()], BankKind::cases()),
+            'cashFlows' => array_map(fn (CashFlowActivity $activity) => ['value' => $activity->value, 'label' => $activity->label()], CashFlowActivity::cases()),
         ]);
     }
 
@@ -95,6 +104,7 @@ class AccountController extends Controller
                 'type' => $account->type->value,
                 'typeLabel' => $account->type->label(),
                 'bankKind' => $account->bank_kind?->label(),
+                'currency' => $account->currency,
                 'active' => $account->active,
             ],
             'from' => $from->toDateString(),
@@ -121,6 +131,9 @@ class AccountController extends Controller
         if ($used && $data['type'] !== $account->type->value) {
             throw ValidationException::withMessages(['type' => 'An account with postings keeps its type.']);
         }
+        if ($used && $data['currency'] !== $account->currency) {
+            throw ValidationException::withMessages(['currency' => 'An account with postings keeps its currency.']);
+        }
         if ($account->system_key !== null && ($data['type'] !== $account->type->value || ! $data['active'] || ($data['bank_kind'] ?? null) !== $account->bank_kind?->value)) {
             throw ValidationException::withMessages(['active' => 'Finance posts to this account automatically: it stays open, with its type.']);
         }
@@ -131,7 +144,7 @@ class AccountController extends Controller
     }
 
     /**
-     * @return array{code: string, name: string, type: string, bank_kind: string|null, bank_name: string|null, bank_account_number: string|null, description: string|null, active: bool}
+     * @return array{code: string, name: string, type: string, bank_kind: string|null, currency: string|null, bank_name: string|null, bank_account_number: string|null, description: string|null, cash_flow: string|null, requires_cost_centre: bool, requires_project: bool, active: bool}
      */
     private function validated(Request $request, ?Account $account = null): array
     {
@@ -142,12 +155,30 @@ class AccountController extends Controller
             'bank_kind' => ['nullable', Rule::enum(BankKind::class)],
             'bank_name' => ['nullable', 'string', 'max:255'],
             'bank_account_number' => ['nullable', 'string', 'max:64'],
+            'currency' => ['nullable', 'string', 'size:3', 'alpha'],
             'description' => ['nullable', 'string', 'max:255'],
+            'cash_flow' => ['nullable', Rule::enum(CashFlowActivity::class)],
+            'requires_cost_centre' => ['sometimes', 'boolean'],
+            'requires_project' => ['sometimes', 'boolean'],
             'active' => ['sometimes', 'boolean'],
         ]);
+        $balanceSheet = ! in_array($data['type'], [AccountType::Revenue->value, AccountType::Expense->value], true) && ($data['bank_kind'] ?? null) === null;
 
         if (($data['bank_kind'] ?? null) !== null && $data['type'] !== AccountType::Asset->value) {
             throw ValidationException::withMessages(['bank_kind' => 'Bank and cash accounts are assets.']);
+        }
+
+        // Only bank and cash accounts are held in another currency, and only
+        // with the plan feature (without it, an account keeps its currency).
+        $currency = $account?->currency;
+        if (Currencies::enabled()) {
+            $currency = ($data['bank_kind'] ?? null) === null || ($data['currency'] ?? null) === null ? null : strtoupper((string) $data['currency']);
+            if ($currency === Money::currency()) {
+                $currency = null;
+            }
+            if ($currency !== null) {
+                Currencies::check($currency);
+            }
         }
 
         return [
@@ -157,7 +188,12 @@ class AccountController extends Controller
             'bank_kind' => $data['bank_kind'] ?? null,
             'bank_name' => ($data['bank_kind'] ?? null) === null ? null : ($data['bank_name'] ?? null),
             'bank_account_number' => ($data['bank_kind'] ?? null) === null ? null : ($data['bank_account_number'] ?? null),
+            'currency' => $currency,
             'description' => $data['description'] ?? null,
+            // Only balance sheet accounts other than banks are classified.
+            'cash_flow' => $balanceSheet ? ($data['cash_flow'] ?? null) : null,
+            'requires_cost_centre' => (bool) ($data['requires_cost_centre'] ?? false),
+            'requires_project' => (bool) ($data['requires_project'] ?? false),
             'active' => (bool) ($data['active'] ?? true),
         ];
     }

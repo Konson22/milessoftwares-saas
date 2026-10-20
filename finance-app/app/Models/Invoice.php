@@ -29,6 +29,10 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property CarbonImmutable|null $voided_at
  * @property string|null $void_reason
  * @property string|null $void_journal_id
+ * @property string|null $currency set when issued in another currency than the books'
+ * @property string|null $exchange_rate books-currency units per unit of the currency, at issue
+ * @property int|null $currency_total_minor the total in the currency
+ * @property int $currency_paid_minor received so far, in the currency
  * @property-read Collection<int, CustomerPayment> $payments
  */
 class Invoice extends Model
@@ -49,12 +53,28 @@ class Invoice extends Model
             'paid_minor' => 'integer',
             'credited_minor' => 'integer',
             'lines' => 'array',
+            'currency_total_minor' => 'integer',
+            'currency_paid_minor' => 'integer',
+            'exchange_rate' => 'decimal:10',
         ];
     }
 
     public function outstanding(): int
     {
         return $this->voided_at === null ? max(0, $this->total_minor - $this->credited_minor - $this->paid_minor) : 0;
+    }
+
+    /**
+     * What is left to receive in the invoice's own currency (the books' for
+     * an invoice in the books' currency).
+     */
+    public function currencyOutstanding(): int
+    {
+        if ($this->currency === null) {
+            return $this->outstanding();
+        }
+
+        return $this->voided_at === null ? max(0, (int) $this->currency_total_minor - $this->currency_paid_minor) : 0;
     }
 
     public function status(): string

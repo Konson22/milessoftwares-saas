@@ -3,21 +3,24 @@ import type { Tone } from '@miles/ui/components/status-badge';
 import { formatMoney } from '@/lib/money';
 
 /**
- * Formats minor units in the books' currency.
+ * Formats minor units in the books' currency, or another one.
  */
-export function useMoney(): (minor: number) => string {
+export function useMoney(other?: string | null): (minor: number) => string {
     const { currency } = usePage().props;
 
-    return (minor) => formatMoney(minor, currency ?? 'USD');
+    return (minor) => formatMoney(minor, other || (currency ?? 'USD'));
 }
 
 /**
- * The decimals amounts are typed with in the books' currency (input step).
+ * The decimals amounts are typed with (input step), in the books' currency
+ * or another one.
  */
-export function useAmountStep(): string {
+export function useAmountStep(other?: string | null): string {
     const { currency } = usePage().props;
 
-    return formatMoney(1, currency ?? 'USD').includes('.') ? '0.01' : '1';
+    return formatMoney(1, other || (currency ?? 'USD')).includes('.')
+        ? '0.01'
+        : '1';
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -60,6 +63,14 @@ const SOURCE_TYPES: Record<string, string> = {
     'finance.invoice.voided': 'Void',
     'finance.bill.received': 'Supplier bill',
     'finance.credit_note.received': 'Supplier credit',
+    year_close: 'Year-end close',
+    year_reopen: 'Year reopened',
+    opening_balances: 'Opening balances',
+    tax_settlement: 'Tax settlement',
+    fx_revaluation: 'Currency revaluation',
+    fx_revaluation_reversal: 'Revaluation reversed',
+    depreciation: 'Depreciation',
+    asset_disposal: 'Asset disposal',
 };
 
 export function sourceTypeLabel(type: string): string {

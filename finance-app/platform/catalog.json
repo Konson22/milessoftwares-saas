@@ -6,7 +6,7 @@
         "kind": "shared_module",
         "status": "beta"
     },
-    "version": "1.0.0",
+    "version": "1.6.0",
     "permissions": [
         {
             "key": "finance.accounts.view",
@@ -69,9 +69,45 @@
             "scopes": ["organization"]
         },
         {
+            "key": "finance.banking.reconcile",
+            "name": "Import bank statements, match and reconcile them",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.tax.manage",
+            "name": "Manage tax codes, file and settle tax returns",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.currencies.manage",
+            "name": "Set exchange rates and revalue foreign-currency balances",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.budgets.manage",
+            "name": "Add, change and delete budgets",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.assets.manage",
+            "name": "Register and dispose of fixed assets, run depreciation",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
             "key": "finance.reports.view",
             "name": "View financial statements",
             "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.periods.manage",
+            "name": "Lock months, close years and enter opening balances",
+            "sensitivity": 3,
             "scopes": ["organization"]
         }
     ],
@@ -93,7 +129,13 @@
                 "finance.receivables.manage",
                 "finance.banking.view",
                 "finance.banking.manage",
-                "finance.reports.view"
+                "finance.banking.reconcile",
+                "finance.reports.view",
+                "finance.periods.manage",
+                "finance.tax.manage",
+                "finance.currencies.manage",
+                "finance.budgets.manage",
+                "finance.assets.manage"
             ]
         },
         {
@@ -110,7 +152,8 @@
                 "finance.receivables.view",
                 "finance.receivables.manage",
                 "finance.banking.view",
-                "finance.banking.manage"
+                "finance.banking.manage",
+                "finance.banking.reconcile"
             ]
         },
         {

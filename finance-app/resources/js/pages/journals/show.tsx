@@ -43,6 +43,8 @@ type Props = {
             description: string | null;
             debitMinor: number;
             creditMinor: number;
+            costCentre: string | null;
+            project: string | null;
         }[];
         totalMinor: number;
     };
@@ -185,6 +187,13 @@ export default function ShowJournal({ journal }: Props) {
                                     </TableCell>
                                     <TableCell className="text-muted-foreground">
                                         {line.description}
+                                        {(line.costCentre || line.project) && (
+                                            <span className="mt-0.5 block text-xs">
+                                                {[line.costCentre, line.project]
+                                                    .filter(Boolean)
+                                                    .join(' · ')}
+                                            </span>
+                                        )}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Amount

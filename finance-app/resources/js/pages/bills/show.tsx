@@ -33,6 +33,10 @@ type Props = {
         dueOn: string | null;
         totalMinor: number;
         taxMinor: number;
+        currency: string | null;
+        exchangeRate: string | null;
+        currencyTotalMinor: number | null;
+        currencyOutstandingMinor: number | null;
         paidMinor: number;
         outstandingMinor: number;
         status: string;
@@ -49,6 +53,7 @@ type Props = {
         number: string;
         paidOn: string;
         amountMinor: number;
+        currencyAmountMinor: number | null;
         journalId: string;
     }[];
     credits: {
@@ -66,6 +71,11 @@ type Props = {
  */
 export default function ShowBill({ bill, payments, credits }: Props) {
     const can = useCan();
+    const taxShown =
+        bill.currencyTotalMinor === null
+            ? bill.taxMinor
+            : bill.currencyTotalMinor -
+              bill.lines.reduce((sum, line) => sum + line.amount_minor, 0);
 
     return (
         <>
@@ -138,26 +148,51 @@ export default function ShowBill({ bill, payments, credits }: Props) {
                                         {line.quantity ?? ''}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <Amount minor={line.amount_minor} />
+                                        <Amount
+                                            minor={line.amount_minor}
+                                            currency={bill.currency}
+                                        />
                                     </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
                         <TableFooter>
-                            {bill.taxMinor > 0 && (
+                            {taxShown > 0 && (
                                 <TableRow className="hover:bg-transparent">
                                     <TableCell colSpan={3}>Tax</TableCell>
                                     <TableCell className="text-right">
-                                        <Amount minor={bill.taxMinor} />
+                                        <Amount
+                                            minor={taxShown}
+                                            currency={bill.currency}
+                                        />
                                     </TableCell>
                                 </TableRow>
                             )}
                             <TableRow className="hover:bg-transparent">
                                 <TableCell colSpan={3}>Total</TableCell>
                                 <TableCell className="text-right">
-                                    <Amount minor={bill.totalMinor} />
+                                    <Amount
+                                        minor={
+                                            bill.currencyTotalMinor ??
+                                            bill.totalMinor
+                                        }
+                                        currency={bill.currency}
+                                    />
                                 </TableCell>
                             </TableRow>
+                            {bill.currency && (
+                                <TableRow className="hover:bg-transparent">
+                                    <TableCell
+                                        colSpan={3}
+                                        className="font-normal text-muted-foreground"
+                                    >
+                                        In the books at {bill.exchangeRate}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Amount minor={bill.totalMinor} />
+                                    </TableCell>
+                                </TableRow>
+                            )}
                         </TableFooter>
                     </Table>
                 </Panel>
@@ -182,6 +217,22 @@ export default function ShowBill({ bill, payments, credits }: Props) {
                             <dd className="font-semibold">
                                 <Amount minor={bill.outstandingMinor} />
                             </dd>
+                            {bill.currency && (
+                                <>
+                                    <dt className="text-muted-foreground">
+                                        Outstanding in {bill.currency}
+                                    </dt>
+                                    <dd className="font-semibold">
+                                        <Amount
+                                            minor={
+                                                bill.currencyOutstandingMinor ??
+                                                0
+                                            }
+                                            currency={bill.currency}
+                                        />
+                                    </dd>
+                                </>
+                            )}
                             {bill.journalId && (
                                 <>
                                     <dt className="text-muted-foreground">
@@ -232,7 +283,21 @@ export default function ShowBill({ bill, payments, credits }: Props) {
                                         <span className="text-muted-foreground tabular-nums">
                                             {payment.paidOn}
                                         </span>
-                                        <Amount minor={payment.amountMinor} />
+                                        <span className="text-right">
+                                            <Amount
+                                                minor={payment.amountMinor}
+                                            />
+                                            {payment.currencyAmountMinor !==
+                                                null && (
+                                                <Amount
+                                                    minor={
+                                                        payment.currencyAmountMinor
+                                                    }
+                                                    currency={bill.currency}
+                                                    className="block text-xs text-muted-foreground"
+                                                />
+                                            )}
+                                        </span>
                                     </li>
                                 ))}
                             </ul>

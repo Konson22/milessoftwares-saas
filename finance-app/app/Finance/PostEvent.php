@@ -8,6 +8,7 @@ use App\Models\Bill;
 use App\Models\CustomerPayment;
 use App\Models\Invoice;
 use App\Models\Journal;
+use App\Models\JournalLine;
 use App\Models\Supplier;
 use App\Models\SupplierCredit;
 use Carbon\CarbonImmutable;
@@ -81,7 +82,7 @@ class PostEvent
                 $journalLines[] = ['account' => $account, 'credit' => $amount];
             }
             if ($tax > 0) {
-                $journalLines[] = ['account' => Account::system(Account::TAX), 'credit' => $tax];
+                $journalLines[] = ['account' => Account::system(Account::TAX), 'credit' => $tax, 'tax' => ['kind' => JournalLine::OUTPUT, 'base' => $total - $tax]];
             }
         }
 
@@ -177,6 +178,7 @@ class PostEvent
             $date,
             "Void of invoice {$invoice->number}: {$p['reason']}",
             sourceType: $event->eventType,
+            periods: Periods::MOVE,
         );
         $invoice->forceFill([
             'voided_at' => CarbonImmutable::instance($event->occurredAt),
@@ -241,7 +243,7 @@ class PostEvent
                 $journalLines[] = ['account' => $account, 'debit' => $amount];
             }
             if ($tax > 0) {
-                $journalLines[] = ['account' => Account::system(Account::TAX), 'debit' => $tax];
+                $journalLines[] = ['account' => Account::system(Account::TAX), 'debit' => $tax, 'tax' => ['kind' => JournalLine::OUTPUT, 'base' => $tax - $total]];
             }
             $journalLines[] = ['account' => Account::system(Account::RECEIVABLE), 'credit' => $total, 'description' => $invoice->customer_name];
         }
@@ -352,7 +354,7 @@ class PostEvent
             $journalLines[] = ['account' => $account, 'debit' => $amount];
         }
         if ($tax > 0) {
-            $journalLines[] = ['account' => Account::system(Account::TAX), 'debit' => $tax];
+            $journalLines[] = ['account' => Account::system(Account::TAX), 'debit' => $tax, 'tax' => ['kind' => JournalLine::INPUT, 'base' => $total - $tax]];
         }
         $journalLines[] = ['account' => Account::system(Account::PAYABLE), 'credit' => $total, 'description' => $supplier->name];
 
@@ -410,7 +412,7 @@ class PostEvent
                 $journalLines[] = ['account' => $account, 'credit' => $amount];
             }
             if ($tax > 0) {
-                $journalLines[] = ['account' => Account::system(Account::TAX), 'credit' => $tax];
+                $journalLines[] = ['account' => Account::system(Account::TAX), 'credit' => $tax, 'tax' => ['kind' => JournalLine::INPUT, 'base' => $tax - $total]];
             }
 
             $journal = $this->ledger->post($date, "Credit {$p['credit_note_number']} from {$supplier->name}: {$p['reason']}", $journalLines, $this->source($event, $p['credit_note_number']));
@@ -502,6 +504,8 @@ class PostEvent
             'source_type' => $event->eventType,
             'source_reference' => $reference,
             'branch_id' => $event->payload['branch_id'] ?? null,
+            // A product's event is never refused for a locked month.
+            'periods' => Periods::MOVE,
         ];
     }
 

@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $bill_id
  * @property string $supplier_payment_id
  * @property int $amount_minor
+ * @property int|null $currency_amount_minor the amount in the bill's currency, for a bill in another currency
  * @property-read Bill $bill
  */
 class BillPayment extends Model
@@ -25,7 +26,7 @@ class BillPayment extends Model
 
     protected function casts(): array
     {
-        return ['amount_minor' => 'integer'];
+        return ['amount_minor' => 'integer', 'currency_amount_minor' => 'integer'];
     }
 
     /**

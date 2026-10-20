@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\PaymentMethod;
+use App\Finance\Currencies;
 use App\Finance\Money;
 use App\Finance\Receivables;
 use App\Models\Account;
@@ -34,6 +35,10 @@ class CustomerPaymentController extends Controller
             'invoiceNumber' => $payment->invoice_number,
             'method' => $payment->method->label(),
             'amountMinor' => $payment->amount_minor,
+            'currency' => $payment->currency,
+            'currencyAmountMinor' => $payment->currency_amount_minor,
+            'exchangeRate' => $payment->exchange_rate === null ? null : Currencies::normalize((string) $payment->exchange_rate),
+            'fxMinor' => $payment->fx_minor,
             'receivedOn' => $payment->received_on->toDateString(),
             'account' => $payment->relationLoaded('account') ? $payment->account->label() : null,
             'journalId' => $payment->journal_id,
@@ -69,16 +74,18 @@ class CustomerPaymentController extends Controller
             'amount' => ['required', 'string', Money::rule()],
             'received_on' => ['required', 'date_format:Y-m-d'],
             'memo' => ['nullable', 'string', 'max:255'],
+            'rate' => ['nullable', 'string', Currencies::RATE_RULE],
         ]);
 
         $payment = $receivables->receive(
             $invoice,
             Account::query()->findOrFail((string) $data['account_id']),
             PaymentMethod::from($data['method']),
-            Money::toMinor($data['amount']),
+            $this->amountIn($data['amount'], $invoice->currency),
             CarbonImmutable::parse($data['received_on']),
             $data['memo'] ?? null,
             $this->user($request),
+            ($data['rate'] ?? '') === '' ? null : Currencies::normalize($data['rate']),
         );
 
         return back()->with('success', "Receipt {$payment->number} recorded.");

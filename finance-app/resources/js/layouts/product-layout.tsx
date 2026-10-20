@@ -22,9 +22,10 @@ import { logout } from '@/routes/platform';
  */
 export default function ProductLayout({ children }: PropsWithChildren) {
     const { url, props } = usePage();
-    const { flash, product, workspace, user } = props;
+    const { flash, product, workspace, user, multicurrency, fixedAssets } =
+        props;
     const can = useCan();
-    const groups = visibleNavigation(can);
+    const groups = visibleNavigation(can, { multicurrency, fixedAssets });
     const active = activeItem(groups, url, home());
 
     const searches = useCallback(

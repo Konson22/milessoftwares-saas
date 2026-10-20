@@ -61,7 +61,7 @@ class JournalController extends Controller
 
     public function show(Journal $journal): Response
     {
-        $journal->load(['lines.account', 'creator', 'reversalOf', 'reversedBy']);
+        $journal->load(['lines.account', 'lines.costCentre', 'lines.project', 'creator', 'reversalOf', 'reversedBy']);
 
         return Inertia::render('journals/show', [
             'journal' => [
@@ -84,6 +84,8 @@ class JournalController extends Controller
                     'description' => $line->description,
                     'debitMinor' => $line->debit_minor,
                     'creditMinor' => $line->credit_minor,
+                    'costCentre' => $line->costCentre?->label(),
+                    'project' => $line->project?->label(),
                 ]),
                 'totalMinor' => $journal->total(),
             ],
@@ -94,6 +96,7 @@ class JournalController extends Controller
     {
         return Inertia::render('journals/create', [
             'accounts' => $this->accountOptions(),
+            'dimensions' => $this->dimensionOptions(),
             'today' => CarbonImmutable::today()->toDateString(),
         ]);
     }
@@ -108,9 +111,11 @@ class JournalController extends Controller
             'lines.*.description' => ['nullable', 'string', 'max:255'],
             'lines.*.debit' => ['nullable', 'string', Money::rule()],
             'lines.*.credit' => ['nullable', 'string', Money::rule()],
+            ...$this->lineDimensionRules(),
         ]);
 
         $accounts = Account::query()->whereIn('id', array_column($data['lines'], 'account_id'))->get()->keyBy('id');
+        $dimensions = $this->chosenDimensions($data['lines']);
         $lines = [];
         foreach ($data['lines'] as $index => $line) {
             $debit = ($line['debit'] ?? '') === '' ? 0 : Money::toMinor($line['debit']);
@@ -121,10 +126,10 @@ class JournalController extends Controller
                 throw ValidationException::withMessages(["lines.{$index}.account_id" => 'Choose an account.']);
             }
 
-            $lines[] = ['account' => $account, 'debit' => $debit, 'credit' => $credit, 'description' => $line['description'] ?? null];
+            $lines[] = ['account' => $account, 'debit' => $debit, 'credit' => $credit, 'description' => $line['description'] ?? null] + $this->lineDimensions($line, $dimensions);
         }
 
-        $journal = $ledger->post(CarbonImmutable::parse($data['entry_date']), $data['memo'], $lines, [], $this->user($request));
+        $journal = $ledger->post(CarbonImmutable::parse($data['entry_date']), $data['memo'], $lines, ['require_dimensions' => true], $this->user($request));
 
         return redirect()->route('journals.show', $journal)->with('success', "Journal {$journal->number} posted.");
     }

@@ -5,16 +5,48 @@ import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
 import { useAmountStep, useMoney } from '@/lib/format';
 
-export type AccountOption = { id: string; label: string; type: string };
+export type AccountOption = {
+    id: string;
+    label: string;
+    type: string;
+    /** Dimensions lines on the account must name: cost_centre, project. */
+    requires?: string[];
+};
+
+export type TaxCodeOption = { id: string; label: string; rate_bp: number };
+
+type Option = { id: string; label: string };
+
+export type DimensionOptions = { costCentres: Option[]; projects: Option[] };
 
 type Row = {
     key: number;
     accountId: string;
     description: string;
     amount: string;
+    taxCodeId: string;
+    costCentreId: string;
+    projectId: string;
     debit: string;
     credit: string;
 };
+
+const DIMENSIONS = [
+    {
+        kind: 'cost_centre',
+        label: 'Cost centre',
+        field: 'cost_centre_id',
+        row: 'costCentreId',
+        options: 'costCentres',
+    },
+    {
+        kind: 'project',
+        label: 'Project',
+        field: 'project_id',
+        row: 'projectId',
+        options: 'projects',
+    },
+] as const;
 
 let nextKey = 1;
 
@@ -24,13 +56,16 @@ function emptyRow(accountId = ''): Row {
         accountId,
         description: '',
         amount: '',
+        taxCodeId: '',
+        costCentreId: '',
+        projectId: '',
         debit: '',
         credit: '',
     };
 }
 
 /** Typed major units → minor units (0 when blank or not a number). */
-function toMinor(value: string, step: string): number {
+export function toMinor(value: string, step: string): number {
     const number = Number(value);
 
     return Number.isFinite(number)
@@ -38,24 +73,44 @@ function toMinor(value: string, step: string): number {
         : 0;
 }
 
+/** Tax on a net amount, rounded half up like the server (TaxCode::taxOn). */
+export function taxOn(netMinor: number, rateBp: number): number {
+    const tax = Math.floor((Math.abs(netMinor) * rateBp + 5000) / 10000);
+
+    return netMinor < 0 ? -tax : tax;
+}
+
 /**
  * Editable lines posted as lines[i][account_id|description|amount] (bills,
- * invoices) or lines[i][account_id|description|debit|credit] (journals),
- * with running totals.
+ * invoices, with lines[i][tax_code_id] when tax codes are given) or
+ * lines[i][account_id|description|debit|credit] (journals), with running
+ * totals. With cost centres or projects, each line also posts
+ * lines[i][cost_centre_id] and lines[i][project_id], required where the
+ * account says so. Amounts are in the books' currency unless another is
+ * given.
  */
 export function LinesEditor({
     accounts,
     mode,
     errors,
     minRows = 1,
+    taxCodes = [],
+    dimensions = { costCentres: [], projects: [] },
+    currency = null,
 }: {
     accounts: AccountOption[];
     mode: 'amount' | 'journal';
     errors: Record<string, string>;
     minRows?: number;
+    taxCodes?: TaxCodeOption[];
+    dimensions?: DimensionOptions;
+    currency?: string | null;
 }) {
-    const money = useMoney();
-    const step = useAmountStep();
+    const taxed = mode === 'amount' && taxCodes.length > 0;
+    const dimensioned =
+        dimensions.costCentres.length > 0 || dimensions.projects.length > 0;
+    const money = useMoney(currency);
+    const step = useAmountStep(currency);
     const [rows, setRows] = useState<Row[]>(() =>
         Array.from(
             { length: Math.max(minRows, mode === 'journal' ? 2 : 1) },
@@ -83,14 +138,22 @@ export function LinesEditor({
         );
 
     const total = rows.reduce((sum, row) => sum + toMinor(row.amount, step), 0);
+    const tax = rows.reduce((sum, row) => {
+        const code = taxCodes.find((option) => option.id === row.taxCodeId);
+
+        return code
+            ? sum + taxOn(toMinor(row.amount, step), code.rate_bp)
+            : sum;
+    }, 0);
     const debits = rows.reduce((sum, row) => sum + toMinor(row.debit, step), 0);
     const credits = rows.reduce(
         (sum, row) => sum + toMinor(row.credit, step),
         0,
     );
     const lineError = (index: number) =>
-        Object.entries(errors).find(([key]) =>
-            key.startsWith(`lines.${index}.`),
+        Object.entries(errors).find(
+            ([key]) =>
+                key === `lines.${index}` || key.startsWith(`lines.${index}.`),
         )?.[1];
 
     return (
@@ -101,9 +164,14 @@ export function LinesEditor({
                         <th className="w-[34%] py-2 pr-2">Account</th>
                         <th className="py-2 pr-2">Description</th>
                         {mode === 'amount' ? (
-                            <th className="w-36 py-2 pr-2 text-right">
-                                Amount
-                            </th>
+                            <>
+                                <th className="w-36 py-2 pr-2 text-right">
+                                    {taxed ? 'Net amount' : 'Amount'}
+                                </th>
+                                {taxed && (
+                                    <th className="w-40 py-2 pr-2">Tax</th>
+                                )}
+                            </>
                         ) : (
                             <>
                                 <th className="w-32 py-2 pr-2 text-right">
@@ -144,6 +212,68 @@ export function LinesEditor({
                                         </option>
                                     ))}
                                 </Select>
+                                {dimensioned && (
+                                    <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                                        {DIMENSIONS.map((dimension) => {
+                                            const options =
+                                                dimensions[dimension.options];
+                                            const required = accounts
+                                                .find(
+                                                    (account) =>
+                                                        account.id ===
+                                                        row.accountId,
+                                                )
+                                                ?.requires?.includes(
+                                                    dimension.kind,
+                                                );
+
+                                            return (
+                                                options.length > 0 && (
+                                                    <Select
+                                                        key={dimension.kind}
+                                                        name={`lines[${index}][${dimension.field}]`}
+                                                        value={
+                                                            row[dimension.row]
+                                                        }
+                                                        onChange={(event) =>
+                                                            change(
+                                                                row.key,
+                                                                dimension.row,
+                                                                event.target
+                                                                    .value,
+                                                            )
+                                                        }
+                                                        aria-label={`Line ${index + 1} ${dimension.label.toLowerCase()}`}
+                                                        required={required}
+                                                        className="h-8 text-xs"
+                                                    >
+                                                        <option value="">
+                                                            {required
+                                                                ? `${dimension.label} (required)…`
+                                                                : `No ${dimension.label.toLowerCase()}`}
+                                                        </option>
+                                                        {options.map(
+                                                            (option) => (
+                                                                <option
+                                                                    key={
+                                                                        option.id
+                                                                    }
+                                                                    value={
+                                                                        option.id
+                                                                    }
+                                                                >
+                                                                    {
+                                                                        option.label
+                                                                    }
+                                                                </option>
+                                                            ),
+                                                        )}
+                                                    </Select>
+                                                )
+                                            );
+                                        })}
+                                    </div>
+                                )}
                                 {lineError(index) && (
                                     <p className="mt-1 text-xs text-destructive">
                                         {lineError(index)}
@@ -166,23 +296,51 @@ export function LinesEditor({
                                 />
                             </td>
                             {mode === 'amount' ? (
-                                <td className="py-1.5 pr-2">
-                                    <Input
-                                        name={`lines[${index}][amount]`}
-                                        value={row.amount}
-                                        onChange={(event) =>
-                                            change(
-                                                row.key,
-                                                'amount',
-                                                event.target.value,
-                                            )
-                                        }
-                                        inputMode="decimal"
-                                        className="text-right tabular-nums"
-                                        aria-label={`Line ${index + 1} amount`}
-                                        required
-                                    />
-                                </td>
+                                <>
+                                    <td className="py-1.5 pr-2">
+                                        <Input
+                                            name={`lines[${index}][amount]`}
+                                            value={row.amount}
+                                            onChange={(event) =>
+                                                change(
+                                                    row.key,
+                                                    'amount',
+                                                    event.target.value,
+                                                )
+                                            }
+                                            inputMode="decimal"
+                                            className="text-right tabular-nums"
+                                            aria-label={`Line ${index + 1} amount`}
+                                            required
+                                        />
+                                    </td>
+                                    {taxed && (
+                                        <td className="py-1.5 pr-2">
+                                            <Select
+                                                name={`lines[${index}][tax_code_id]`}
+                                                value={row.taxCodeId}
+                                                onChange={(event) =>
+                                                    change(
+                                                        row.key,
+                                                        'taxCodeId',
+                                                        event.target.value,
+                                                    )
+                                                }
+                                                aria-label={`Line ${index + 1} tax code`}
+                                            >
+                                                <option value="">No tax</option>
+                                                {taxCodes.map((code) => (
+                                                    <option
+                                                        key={code.id}
+                                                        value={code.id}
+                                                    >
+                                                        {code.label}
+                                                    </option>
+                                                ))}
+                                            </Select>
+                                        </td>
+                                    )}
+                                </>
                             ) : (
                                 <>
                                     <td className="py-1.5 pr-2">
@@ -260,9 +418,19 @@ export function LinesEditor({
                             </Button>
                         </td>
                         {mode === 'amount' ? (
-                            <td className="pt-2 pr-2 text-right font-semibold tabular-nums">
-                                {money(total)}
-                            </td>
+                            <>
+                                <td className="pt-2 pr-2 text-right font-semibold tabular-nums">
+                                    {money(total)}
+                                </td>
+                                {taxed && (
+                                    <td className="pt-2 pr-2 text-sm tabular-nums">
+                                        + {money(tax)} tax ={' '}
+                                        <span className="font-semibold">
+                                            {money(total + tax)}
+                                        </span>
+                                    </td>
+                                )}
+                            </>
                         ) : (
                             <>
                                 <td className="pt-2 pr-2 text-right font-semibold tabular-nums">

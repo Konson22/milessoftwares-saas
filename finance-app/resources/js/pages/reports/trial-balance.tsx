@@ -2,7 +2,13 @@ import { Head, Link } from '@inertiajs/react';
 import { Amount } from '@/components/amount';
 import { PageHeader } from '@miles/ui/components/page-header';
 import { Panel, PanelToolbar } from '@miles/ui/components/panel';
+import {
+    DimensionFilter,
+    dimensionFilterLabel,
+} from '@/components/dimension-filter';
+import type { DimensionFilterProps } from '@/components/dimension-filter';
 import { PeriodFilter } from '@/components/period-filter';
+import { ReportActions } from '@/components/report-actions';
 import { StatusBadge } from '@miles/ui/components/status-badge';
 import {
     Table,
@@ -17,7 +23,7 @@ import {
 import { show as showAccount } from '@/routes/accounts';
 import { trialBalance } from '@/routes/reports';
 
-type Props = {
+type Props = DimensionFilterProps & {
     asOf: string;
     rows: {
         id: string;
@@ -39,15 +45,25 @@ export default function TrialBalance({
     rows,
     debitMinor,
     creditMinor,
+    costCentre,
+    project,
+    dimensionOptions,
 }: Props) {
+    const filter = { costCentre, project, dimensionOptions };
+    const filtered = dimensionFilterLabel(filter);
+
     return (
         <>
             <Head title="Trial balance" />
             <PageHeader
                 title="Trial balance"
-                description={`As of ${asOf}`}
+                description={`As of ${asOf}${filtered ? ` · ${filtered}` : ''}`}
                 badges={
-                    debitMinor === creditMinor ? (
+                    filtered ? (
+                        <StatusBadge tone="neutral">
+                            Only lines with this filter
+                        </StatusBadge>
+                    ) : debitMinor === creditMinor ? (
                         <StatusBadge tone="success">Balanced</StatusBadge>
                     ) : (
                         <StatusBadge tone="danger">Out of balance</StatusBadge>
@@ -56,7 +72,18 @@ export default function TrialBalance({
             />
             <Panel className="max-w-4xl">
                 <PanelToolbar>
-                    <PeriodFilter form={trialBalance.form()} asOf={asOf} />
+                    <PeriodFilter form={trialBalance.form()} asOf={asOf}>
+                        <DimensionFilter {...filter} />
+                    </PeriodFilter>
+                    <ReportActions
+                        route={trialBalance}
+                        query={{
+                            as_of: asOf,
+                            cost_centre: costCentre,
+                            project,
+                        }}
+                        exports={[{ key: 'accounts', title: 'Accounts' }]}
+                    />
                 </PanelToolbar>
                 <Table>
                     <TableHeader>

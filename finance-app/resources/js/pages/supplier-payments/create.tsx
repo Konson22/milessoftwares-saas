@@ -1,4 +1,4 @@
-import { Form, Head, router } from '@inertiajs/react';
+import { Form, Head, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { Amount } from '@/components/amount';
 import { Field, Select } from '@/components/field';
@@ -24,18 +24,29 @@ type Bill = {
     billDate: string;
     dueOn: string | null;
     outstandingMinor: number;
+    currency: string | null;
+    currencyOutstandingMinor: number | null;
 };
 
 type Props = {
     suppliers: { id: string; name: string }[];
     supplierId: string | null;
-    banks: { id: string; label: string }[];
+    banks: { id: string; label: string; currency: string | null }[];
     bills: Bill[];
     today: string;
 };
 
+/** What is left on a bill, in its own currency. */
+function owed(bill: Bill): number {
+    return bill.currency === null
+        ? bill.outstandingMinor
+        : (bill.currencyOutstandingMinor ?? 0);
+}
+
 /**
  * Paying a supplier: from which account, how much, against which bills.
+ * A payment is in one currency: bills in another currency are paid from
+ * an account in it, or from the books' currency at the day's rate.
  */
 export default function PaySupplier({
     suppliers,
@@ -44,7 +55,15 @@ export default function PaySupplier({
     bills,
     today,
 }: Props) {
-    const step = useAmountStep();
+    const { currency: books } = usePage().props;
+    const groups = [...new Set(bills.map((bill) => bill.currency ?? ''))];
+    const [group, setGroup] = useState(groups[0] ?? '');
+    const shown = bills.filter((bill) => (bill.currency ?? '') === group);
+    const payable = banks.filter(
+        (bank) =>
+            bank.currency === null || (group !== '' && bank.currency === group),
+    );
+    const step = useAmountStep(group || null);
     const scale = step === '1' ? 1 : 100;
     const major = (minor: number) =>
         (minor / scale).toFixed(step === '1' ? 0 : 2);
@@ -57,12 +76,10 @@ export default function PaySupplier({
 
     const payAll = () => {
         const all = Object.fromEntries(
-            bills.map((bill) => [bill.id, major(bill.outstandingMinor)]),
+            shown.map((bill) => [bill.id, major(owed(bill))]),
         );
         setAllocations(all);
-        setAmount(
-            major(bills.reduce((sum, bill) => sum + bill.outstandingMinor, 0)),
-        );
+        setAmount(major(shown.reduce((sum, bill) => sum + owed(bill), 0)));
     };
 
     return (
@@ -115,6 +132,34 @@ export default function PaySupplier({
                                         value={supplierId}
                                     />
                                     <div className="grid gap-3 sm:grid-cols-4">
+                                        {groups.length > 1 && (
+                                            <Field
+                                                id="group"
+                                                label="Pay bills in"
+                                                className="sm:col-span-4 sm:max-w-48"
+                                            >
+                                                <Select
+                                                    id="group"
+                                                    value={group}
+                                                    onChange={(event) => {
+                                                        setGroup(
+                                                            event.target.value,
+                                                        );
+                                                        setAllocations({});
+                                                        setAmount('');
+                                                    }}
+                                                >
+                                                    {groups.map((code) => (
+                                                        <option
+                                                            key={code}
+                                                            value={code}
+                                                        >
+                                                            {code || books}
+                                                        </option>
+                                                    ))}
+                                                </Select>
+                                            </Field>
+                                        )}
                                         <Field
                                             id="account_id"
                                             label="Paid from"
@@ -129,7 +174,7 @@ export default function PaySupplier({
                                                 <option value="">
                                                     Choose an account…
                                                 </option>
-                                                {banks.map((bank) => (
+                                                {payable.map((bank) => (
                                                     <option
                                                         key={bank.id}
                                                         value={bank.id}
@@ -141,7 +186,11 @@ export default function PaySupplier({
                                         </Field>
                                         <Field
                                             id="amount"
-                                            label="Amount"
+                                            label={
+                                                group
+                                                    ? `Amount (${group})`
+                                                    : 'Amount'
+                                            }
                                             error={errors.amount}
                                         >
                                             <Input
@@ -183,6 +232,20 @@ export default function PaySupplier({
                                                 maxLength={64}
                                             />
                                         </Field>
+                                        {group && (
+                                            <Field
+                                                id="rate"
+                                                label="Rate"
+                                                error={errors.rate}
+                                                hint={`Blank for the ${group} rate on the date.`}
+                                            >
+                                                <Input
+                                                    id="rate"
+                                                    name="rate"
+                                                    inputMode="decimal"
+                                                />
+                                            </Field>
+                                        )}
                                         <Field
                                             id="memo"
                                             label="Memo"
@@ -202,7 +265,7 @@ export default function PaySupplier({
                                             title="Set against bills"
                                             description="Anything not set against a bill stays on the supplier's account."
                                             actions={
-                                                bills.length > 0 && (
+                                                shown.length > 0 && (
                                                     <Button
                                                         type="button"
                                                         variant="outline"
@@ -229,12 +292,12 @@ export default function PaySupplier({
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {bills.length === 0 && (
+                                                {shown.length === 0 && (
                                                     <TableEmpty colSpan={5}>
                                                         No unpaid bills.
                                                     </TableEmpty>
                                                 )}
-                                                {bills.map((bill) => (
+                                                {shown.map((bill) => (
                                                     <TableRow key={bill.id}>
                                                         <TableCell className="font-mono text-xs">
                                                             {bill.number}
@@ -247,8 +310,11 @@ export default function PaySupplier({
                                                         </TableCell>
                                                         <TableCell className="text-right">
                                                             <Amount
-                                                                minor={
-                                                                    bill.outstandingMinor
+                                                                minor={owed(
+                                                                    bill,
+                                                                )}
+                                                                currency={
+                                                                    bill.currency
                                                                 }
                                                             />
                                                         </TableCell>
@@ -288,6 +354,7 @@ export default function PaySupplier({
                                             Set against bills:{' '}
                                             <Amount
                                                 minor={allocated}
+                                                currency={group || null}
                                                 className="font-semibold"
                                             />
                                         </p>

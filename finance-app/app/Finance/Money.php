@@ -52,6 +52,24 @@ final class Money
     }
 
     /**
+     * "-12.5" → -1250: an amount that may be negative (bank statement lines).
+     */
+    public static function toSignedMinor(string $amount, ?string $currency = null): int
+    {
+        $amount = trim($amount);
+
+        return str_starts_with($amount, '-') ? -self::toMinor(substr($amount, 1), $currency) : self::toMinor($amount, $currency);
+    }
+
+    /**
+     * Validation rule for an amount that may be negative.
+     */
+    public static function signedRule(?string $currency = null): string
+    {
+        return self::decimals($currency) === 0 ? 'regex:/^-?\d{1,12}$/' : 'regex:/^-?\d{1,12}(\.\d{1,2})?$/';
+    }
+
+    /**
      * Validation rule for an amount typed in major units.
      */
     public static function rule(?string $currency = null): string

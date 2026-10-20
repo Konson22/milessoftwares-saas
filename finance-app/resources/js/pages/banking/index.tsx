@@ -1,4 +1,4 @@
-import { Form, Head, Link } from '@inertiajs/react';
+import { Form, Head, Link, usePage } from '@inertiajs/react';
 import {
     ArrowDownToLine,
     ArrowLeftRight,
@@ -30,7 +30,12 @@ import { show as showAccount, store as storeAccount } from '@/routes/accounts';
 import { moneyIn, moneyOut, transfer } from '@/routes/banking';
 import { show as showJournal } from '@/routes/journals';
 
-type Option = { id: string; label: string; type?: string };
+type Option = {
+    id: string;
+    label: string;
+    type?: string;
+    currency?: string | null;
+};
 
 type Props = {
     banks: {
@@ -43,6 +48,8 @@ type Props = {
         accountNumber: string | null;
         active: boolean;
         balanceMinor: number;
+        currency: string | null;
+        currencyBalanceMinor: number | null;
     }[];
     movements: {
         id: string;
@@ -54,6 +61,8 @@ type Props = {
         account: string | null;
         inMinor: number;
         outMinor: number;
+        currency: string | null;
+        currencyMinor: number | null;
     }[];
     accounts: Option[];
     bankOptions: Option[];
@@ -82,16 +91,28 @@ function Options({
     );
 }
 
+/**
+ * The amount (in the account's currency), date and description; with a
+ * rate when the account is held in another currency.
+ */
 function AmountDateDescription({
     errors,
     today,
+    currency = null,
+    rate = false,
 }: {
     errors: Record<string, string>;
     today: string;
+    currency?: string | null;
+    rate?: boolean;
 }) {
     return (
         <>
-            <Field id="amount" label="Amount" error={errors.amount}>
+            <Field
+                id="amount"
+                label={currency ? `Amount (${currency})` : 'Amount'}
+                error={errors.amount}
+            >
                 <Input
                     id="amount"
                     name="amount"
@@ -122,6 +143,16 @@ function AmountDateDescription({
                     maxLength={255}
                 />
             </Field>
+            {rate && currency && (
+                <Field
+                    id="rate"
+                    label="Rate"
+                    error={errors.rate}
+                    hint={`Blank for the ${currency} rate on the date.`}
+                >
+                    <Input id="rate" name="rate" inputMode="decimal" />
+                </Field>
+            )}
         </>
     );
 }
@@ -138,6 +169,13 @@ export default function Banking({
     today,
 }: Props) {
     const can = useCan();
+    const { currency: books, multicurrency } = usePage().props;
+    const [fromId, setFromId] = useState('');
+    const [toId, setToId] = useState('');
+    const currencyOf = (id: string) =>
+        bankOptions.find((option) => option.id === id)?.currency ?? null;
+    const fromCurrency = currencyOf(fromId);
+    const toCurrency = currencyOf(toId);
     const money = useMoney();
     const [action, setAction] = useState<Action>(null);
     const total = banks.reduce((sum, bank) => sum + bank.balanceMinor, 0);
@@ -231,7 +269,10 @@ export default function Banking({
                                             id="account_id"
                                             name="account_id"
                                             required
-                                            defaultValue=""
+                                            value={fromId}
+                                            onChange={(event) =>
+                                                setFromId(event.target.value)
+                                            }
                                         >
                                             <Options
                                                 options={bankOptions}
@@ -267,6 +308,8 @@ export default function Banking({
                                     <AmountDateDescription
                                         errors={errors}
                                         today={today}
+                                        currency={fromCurrency}
+                                        rate
                                     />
                                     <div className="sm:col-span-4">
                                         <Button
@@ -306,7 +349,10 @@ export default function Banking({
                                             id="account_id"
                                             name="account_id"
                                             required
-                                            defaultValue=""
+                                            value={fromId}
+                                            onChange={(event) =>
+                                                setFromId(event.target.value)
+                                            }
                                         >
                                             <Options
                                                 options={bankOptions}
@@ -323,7 +369,10 @@ export default function Banking({
                                             id="to_account_id"
                                             name="to_account_id"
                                             required
-                                            defaultValue=""
+                                            value={toId}
+                                            onChange={(event) =>
+                                                setToId(event.target.value)
+                                            }
                                         >
                                             <Options
                                                 options={bankOptions}
@@ -334,7 +383,26 @@ export default function Banking({
                                     <AmountDateDescription
                                         errors={errors}
                                         today={today}
+                                        currency={fromCurrency}
                                     />
+                                    {fromId !== '' &&
+                                        toId !== '' &&
+                                        fromCurrency !== toCurrency && (
+                                            <Field
+                                                id="received"
+                                                label={`Arrived (${toCurrency ?? books})`}
+                                                error={errors.received}
+                                                hint="The difference at the day's rate is an exchange gain or loss."
+                                            >
+                                                <Input
+                                                    id="received"
+                                                    name="received"
+                                                    inputMode="decimal"
+                                                    className="text-right tabular-nums"
+                                                    required
+                                                />
+                                            </Field>
+                                        )}
                                     <div className="sm:col-span-4">
                                         <Button
                                             type="submit"
@@ -426,6 +494,22 @@ export default function Banking({
                                             name="bank_account_number"
                                         />
                                     </Field>
+                                    {multicurrency && (
+                                        <Field
+                                            id="currency"
+                                            label="Currency"
+                                            error={errors.currency}
+                                            hint={`Blank for ${books}.`}
+                                        >
+                                            <Input
+                                                id="currency"
+                                                name="currency"
+                                                maxLength={3}
+                                                placeholder={books ?? ''}
+                                                className="uppercase"
+                                            />
+                                        </Field>
+                                    )}
                                     <div className="sm:col-span-4">
                                         <Button
                                             type="submit"
@@ -470,8 +554,20 @@ export default function Banking({
                                 </StatusBadge>
                             </div>
                             <p className="mt-3 text-xl font-semibold">
-                                <Amount minor={bank.balanceMinor} />
+                                <Amount
+                                    minor={
+                                        bank.currencyBalanceMinor ??
+                                        bank.balanceMinor
+                                    }
+                                    currency={bank.currency}
+                                />
                             </p>
+                            {bank.currency && (
+                                <p className="text-xs text-muted-foreground">
+                                    In the books{' '}
+                                    <Amount minor={bank.balanceMinor} />
+                                </p>
+                            )}
                         </Link>
                     ))}
                 </div>
@@ -522,12 +618,35 @@ export default function Banking({
                                         minor={movement.inMinor}
                                         blankZero
                                     />
+                                    {movement.currency &&
+                                        (movement.currencyMinor ?? 0) > 0 && (
+                                            <Amount
+                                                minor={
+                                                    movement.currencyMinor ?? 0
+                                                }
+                                                currency={movement.currency}
+                                                className="block text-xs text-muted-foreground"
+                                            />
+                                        )}
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <Amount
                                         minor={movement.outMinor}
                                         blankZero
                                     />
+                                    {movement.currency &&
+                                        (movement.currencyMinor ?? 0) < 0 && (
+                                            <Amount
+                                                minor={
+                                                    -(
+                                                        movement.currencyMinor ??
+                                                        0
+                                                    )
+                                                }
+                                                currency={movement.currency}
+                                                className="block text-xs text-muted-foreground"
+                                            />
+                                        )}
                                 </TableCell>
                             </TableRow>
                         ))}

@@ -26,6 +26,10 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property list<array{description: string, quantity: int|float|null, amount_minor: int, account: string|null, cost_minor: int|null}> $lines
  * @property string|null $memo
  * @property string|null $journal_id
+ * @property string|null $currency set when billed in another currency than the books'
+ * @property string|null $exchange_rate books-currency units per unit of the currency, at the bill date
+ * @property int|null $currency_total_minor the total in the currency
+ * @property int $currency_paid_minor paid so far, in the currency
  * @property-read Supplier $supplier
  */
 class Bill extends Model
@@ -44,12 +48,24 @@ class Bill extends Model
             'tax_minor' => 'integer',
             'paid_minor' => 'integer',
             'lines' => 'array',
+            'currency_total_minor' => 'integer',
+            'currency_paid_minor' => 'integer',
+            'exchange_rate' => 'decimal:10',
         ];
     }
 
     public function outstanding(): int
     {
         return $this->total_minor - $this->paid_minor;
+    }
+
+    /**
+     * What is left to pay in the bill's own currency (the books' for a bill
+     * in the books' currency).
+     */
+    public function currencyOutstanding(): int
+    {
+        return $this->currency === null ? $this->outstanding() : (int) $this->currency_total_minor - $this->currency_paid_minor;
     }
 
     public function status(): string

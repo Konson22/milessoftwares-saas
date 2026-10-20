@@ -2,18 +2,21 @@ import { useMoney } from '@/lib/format';
 import { cn } from '@miles/ui/lib/utils';
 
 /**
- * A money amount, right-aligned in tables; blank for zero when asked.
+ * A money amount, right-aligned in tables; blank for zero when asked. In
+ * the books' currency unless another is given.
  */
 export function Amount({
     minor,
     blankZero = false,
+    currency = null,
     className,
 }: {
     minor: number;
     blankZero?: boolean;
+    currency?: string | null;
     className?: string;
 }) {
-    const money = useMoney();
+    const money = useMoney(currency);
 
     return (
         <span

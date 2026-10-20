@@ -24,11 +24,13 @@ class ChartOfAccounts
         ['code' => '1200', 'name' => 'Accounts receivable', 'type' => AccountType::Asset, 'key' => Account::RECEIVABLE],
         ['code' => '1400', 'name' => 'Inventory', 'type' => AccountType::Asset, 'key' => Account::INVENTORY],
         ['code' => '1500', 'name' => 'Equipment', 'type' => AccountType::Asset],
+        ['code' => '1590', 'name' => 'Accumulated depreciation', 'type' => AccountType::Asset],
         ['code' => '2000', 'name' => 'Accounts payable', 'type' => AccountType::Liability, 'key' => Account::PAYABLE],
         ['code' => '2200', 'name' => 'Tax payable', 'type' => AccountType::Liability, 'key' => Account::TAX],
         ['code' => '2500', 'name' => 'Loans', 'type' => AccountType::Liability],
         ['code' => '3000', 'name' => "Owner's equity", 'type' => AccountType::Equity, 'key' => Account::EQUITY],
         ['code' => '3100', 'name' => 'Retained earnings', 'type' => AccountType::Equity, 'key' => Account::RETAINED_EARNINGS],
+        ['code' => '3900', 'name' => 'Opening balance equity', 'type' => AccountType::Equity, 'key' => Account::OPENING_BALANCE],
         ['code' => '4000', 'name' => 'Sales revenue', 'type' => AccountType::Revenue, 'key' => Account::SALES],
         ['code' => '4900', 'name' => 'Other income', 'type' => AccountType::Revenue],
         ['code' => '5000', 'name' => 'Cost of goods sold', 'type' => AccountType::Expense, 'key' => Account::PURCHASES],
@@ -37,8 +39,11 @@ class ChartOfAccounts
         ['code' => '6100', 'name' => 'Salaries and wages', 'type' => AccountType::Expense],
         ['code' => '6200', 'name' => 'Utilities', 'type' => AccountType::Expense],
         ['code' => '6300', 'name' => 'Bank and mobile money charges', 'type' => AccountType::Expense],
+        ['code' => '6400', 'name' => 'Depreciation', 'type' => AccountType::Expense],
         ['code' => '6800', 'name' => 'Cash over and short', 'type' => AccountType::Expense, 'key' => Account::CASH_OVER_SHORT],
         ['code' => '6900', 'name' => 'Other expenses', 'type' => AccountType::Expense],
+        ['code' => '6950', 'name' => 'Exchange gains and losses', 'type' => AccountType::Expense, 'key' => Account::FX],
+        ['code' => '6960', 'name' => 'Gain or loss on disposal of assets', 'type' => AccountType::Expense, 'key' => Account::DISPOSAL],
     ];
 
     /**

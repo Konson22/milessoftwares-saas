@@ -6,6 +6,7 @@ use App\Enums\AccountType;
 use App\Enums\BankKind;
 use App\Finance\Balances;
 use App\Finance\Banking;
+use App\Finance\Currencies;
 use App\Finance\Money;
 use App\Models\Account;
 use App\Models\JournalLine;
@@ -46,6 +47,8 @@ class BankingController extends Controller
                 'accountNumber' => $bank->bank_account_number,
                 'active' => $bank->active,
                 'balanceMinor' => AccountType::Asset->balance($totals[$bank->id]['debits'] ?? 0, $totals[$bank->id]['credits'] ?? 0),
+                'currency' => $bank->currency,
+                'currencyBalanceMinor' => $bank->currency === null ? null : (int) $bank->lines()->sum('currency_minor'),
             ]),
             'movements' => $movements->map(fn (JournalLine $line) => [
                 'id' => $line->id,
@@ -57,6 +60,8 @@ class BankingController extends Controller
                 'account' => $banks->firstWhere('id', $line->account_id)?->name,
                 'inMinor' => $line->debit_minor,
                 'outMinor' => $line->credit_minor,
+                'currency' => $line->currency,
+                'currencyMinor' => $line->currency_minor,
             ]),
             'accounts' => $this->accountOptions(bank: false),
             'bankOptions' => $this->accountOptions(bank: true),
@@ -68,7 +73,7 @@ class BankingController extends Controller
     public function moneyOut(Request $request, Banking $banking): RedirectResponse
     {
         $data = $this->validated($request);
-        $journal = $banking->moneyOut($data['bank'], $data['other'], $data['amount'], $data['date'], $data['description'], $this->user($request));
+        $journal = $banking->moneyOut($data['bank'], $data['other'], $data['amount'], $data['date'], $data['description'], $this->user($request), $data['rate']);
 
         return back()->with('success', "Money out recorded ({$journal->number}).");
     }
@@ -76,7 +81,7 @@ class BankingController extends Controller
     public function moneyIn(Request $request, Banking $banking): RedirectResponse
     {
         $data = $this->validated($request);
-        $journal = $banking->moneyIn($data['bank'], $data['other'], $data['amount'], $data['date'], $data['description'], $this->user($request));
+        $journal = $banking->moneyIn($data['bank'], $data['other'], $data['amount'], $data['date'], $data['description'], $this->user($request), $data['rate']);
 
         return back()->with('success', "Money in recorded ({$journal->number}).");
     }
@@ -89,22 +94,26 @@ class BankingController extends Controller
             'amount' => ['required', 'string', Money::rule()],
             'entry_date' => ['required', 'date_format:Y-m-d'],
             'description' => ['required', 'string', 'max:255'],
+            'received' => ['nullable', 'string', Money::rule()],
         ]);
 
+        $from = Account::query()->findOrFail((string) $data['account_id']);
+        $to = Account::query()->findOrFail((string) $data['to_account_id']);
         $journal = $banking->transfer(
-            Account::query()->findOrFail((string) $data['account_id']),
-            Account::query()->findOrFail((string) $data['to_account_id']),
-            Money::toMinor($data['amount']),
+            $from,
+            $to,
+            $this->amountIn((string) $data['amount'], $from->currency),
             CarbonImmutable::parse($data['entry_date']),
             $data['description'],
             $this->user($request),
+            ($data['received'] ?? null) === null ? null : $this->amountIn((string) $data['received'], $to->currency, 'received'),
         );
 
         return back()->with('success', "Transfer recorded ({$journal->number}).");
     }
 
     /**
-     * @return array{bank: Account, other: Account, amount: int, date: CarbonImmutable, description: string}
+     * @return array{bank: Account, other: Account, amount: int, date: CarbonImmutable, description: string, rate: string|null}
      */
     private function validated(Request $request): array
     {
@@ -114,14 +123,17 @@ class BankingController extends Controller
             'amount' => ['required', 'string', Money::rule()],
             'entry_date' => ['required', 'date_format:Y-m-d'],
             'description' => ['required', 'string', 'max:255'],
+            'rate' => ['nullable', 'string', Currencies::RATE_RULE],
         ]);
+        $bank = Account::query()->findOrFail((string) $data['account_id']);
 
         return [
-            'bank' => Account::query()->findOrFail((string) $data['account_id']),
+            'bank' => $bank,
             'other' => Account::query()->findOrFail((string) $data['other_account_id']),
-            'amount' => Money::toMinor($data['amount']),
+            'amount' => $this->amountIn((string) $data['amount'], $bank->currency),
             'date' => CarbonImmutable::parse($data['entry_date']),
             'description' => $data['description'],
+            'rate' => $bank->currency === null || ($data['rate'] ?? null) === null ? null : Currencies::normalize((string) $data['rate']),
         ];
     }
 }

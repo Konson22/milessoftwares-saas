@@ -1,4 +1,5 @@
 import { Form } from '@inertiajs/react';
+import { Select } from '@/components/field';
 import type { RouteFormDefinition } from '@/wayfinder';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
@@ -11,19 +12,25 @@ export function PeriodFilter({
     from,
     to,
     asOf,
+    compare,
     children,
 }: {
     form: RouteFormDefinition<'get'>;
     from?: string;
     to?: string;
     asOf?: string;
+    /** A "compare with" choice for statements. */
+    compare?: {
+        value: string | null;
+        options: { value: string; label: string }[];
+    };
     children?: React.ReactNode;
 }) {
     return (
         <Form
             {...form}
             options={{ preserveState: true }}
-            className="flex flex-wrap items-end gap-2"
+            className="flex flex-wrap items-end gap-2 print:hidden"
         >
             {({ errors }) => (
                 <>
@@ -58,6 +65,26 @@ export function PeriodFilter({
                                 />
                             </label>
                         </>
+                    )}
+                    {compare && (
+                        <label className="grid gap-1 text-xs font-medium text-muted-foreground">
+                            Compare with
+                            <Select
+                                name="compare"
+                                defaultValue={compare.value ?? ''}
+                                className="w-44"
+                            >
+                                <option value="">Nothing</option>
+                                {compare.options.map((option) => (
+                                    <option
+                                        key={option.value}
+                                        value={option.value}
+                                    >
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </Select>
+                        </label>
                     )}
                     {children}
                     <Button type="submit" variant="outline">

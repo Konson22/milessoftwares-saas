@@ -24,6 +24,14 @@
 | HR H0 Foundation (structure API, `hr-app`) | Done 2026-10-19 |
 | HR H1 Staff records | Done 2026-10-19 |
 | HR H2 Documents | Done 2026-10-19 |
+| Finance F1 Periods and close | Done 2026-10-20 |
+| Finance F2 Reports | Done 2026-10-20 |
+| Finance F3 Bank reconciliation | Done 2026-10-20 |
+| Finance F4 Tax | Done 2026-10-20 |
+| Finance F5 Dimensions | Done 2026-10-20 |
+| Finance F6 Multicurrency | Done 2026-10-20 |
+| Finance F7 Budgets | Done 2026-10-20 |
+| Finance F8 Fixed assets | Done 2026-10-20 |
 
 Decisions accepted 2026-10-16: D1 → `docs/adr/0003-erp-workspace-application.md`,
 D2 → `docs/adr/0004-companies-as-organizations.md`. Accepted 2026-10-19: D3 →
@@ -826,3 +834,486 @@ reference are not protected against being entered twice.
 - Fixed on the way: the purchases report missed deliveries on the last day of the period on
   SQLite (dates stored with a time); it compares dates now.
 
+
+## Finance F1 — 2026-10-20 (local, Windows)
+
+Periods and year-end close, the first phase of the standalone Finance & Accounting product
+([ADR-0006](../adr/0006-finance-accounting-standalone.md), [roadmap](finance-roadmap.md)).
+
+**Implemented** (`finance-app`):
+- Migration `2026_10_20_100000_create_fiscal_years` (additive):
+  - `fiscal_years`: name, dates, closed by and when, closing journal;
+  - `fiscal_periods`: one row per month, locked by and when.
+- `App\Finance\Periods`:
+  - adds the first year (from the first of a month) or the next one (always right after the
+    last), 1–24 months, split into months;
+  - locks months from the earliest and unlocks them from the latest, so the books are always
+    "locked up to" one date;
+  - `postingDate()`, asked by `Ledger` for every journal:
+    - `ENFORCE` (anything entered in Finance) refuses a locked day or a day before the books
+      start;
+    - `MOVE` (every product event, through `PostEvent::source`) posts on the first open day
+      with "(dated …, books locked)" in the memo;
+    - `CLOSING` is used only by the year-end close.
+  - Before any year exists nothing is locked, exactly as before.
+- `App\Finance\YearEnd`:
+  - close: years in order; locks every month and posts one `year_close` journal on the last day,
+    each revenue and expense account against retained earnings (no journal when there was no
+    result); the journal may clear accounts closed during the year;
+  - reopen: latest closed year only; reverses the closing journal (`year_reopen`), and the months
+    stay locked until unlocked.
+- Profit and loss leaves closing journals out (`Balances::totals(withClosing: false)`); the
+  trial balance and balance sheet include them.
+- `App\Finance\OpeningBalances`: one `opening_balances` journal on the first day of the books,
+  for asset, liability and equity accounts; the difference goes to the new system account 3900
+  "Opening balance equity" (created by `ChartOfAccounts::ensure`); saving again reverses the
+  previous journal, refused once the first month is locked.
+- Pages `periods` (years, months, lock and unlock, close and reopen with a confirmation) and
+  `opening-balances` (debit and credit per account, running difference). Menu: Accounting →
+  Periods & close.
+- Catalog 1.1.0: `finance.periods.manage` (sensitivity 3), on the Accountant role. Viewing
+  periods needs `finance.journals.view`. Imported locally with `platform:local-product`.
+
+**Tests executed:**
+- finance-app: Pest 57 passed, 1 skipped (`PeriodsTest` 8 new):
+  - years and months;
+  - locking and unlocking in order, manual entries refused on locked days and before the books
+    start;
+  - nothing limited before a year exists;
+  - a product event in a locked month moved to the first open day;
+  - close and reopen, with P&L unchanged, retained earnings, the balance sheet balancing and the
+    post-closing trial balance;
+  - a close without a result;
+  - opening balances posted, replaced and refused (revenue account, locked month);
+  - permissions.
+- PHPStan 0; Pint; `vp check`; `tsc`; build.
+- Local PostgreSQL: `migrate`, `migrate:rollback --step=1`, `migrate`.
+
+**Known limitations:**
+- Opening balances post receivable and payable as totals, with no open invoices or bills behind
+  them, so F2's aged reports will not show them.
+- Months are calendar months only.
+- A closed year's documents (bills, invoices) can still be paid or voided in an open month. That
+  is correct; it just means no document is ever "frozen".
+- Not yet checked in a browser.
+
+## Finance F2 — 2026-10-20 (local, Windows)
+
+Reports for the standalone Finance & Accounting product ([roadmap](finance-roadmap.md)).
+
+**Implemented** (`finance-app`):
+- Migration `2026_10_20_120000_add_cash_flow_to_accounts` (additive): `accounts.cash_flow`
+  (operating, investing, financing; null = automatic).
+- `Account::cashFlowActivity()`:
+  - banks and cash, revenue and expenses: none;
+  - otherwise the accountant's choice;
+  - otherwise receivable, inventory, payable and tax are operating, other assets investing, other
+    liabilities and equity financing.
+  - Chosen on the chart of accounts ("In the cash flow under").
+- `App\Finance\Reports`:
+  - `generalLedger`: per account, the opening balance, each line with its running balance and the
+    closing balance; one account or all; at most 5,000 lines listed (totals always complete,
+    with a notice when cut);
+  - `agedReceivables` / `agedPayables`: open invoices and bills today, in buckets (not yet due,
+    1–30, 31–60, 61–90, over 90 days past due; the document date when there is no due date), by
+    customer or supplier and per document, against the receivable or payable account; the
+    difference (opening balances, journals, unapplied payments or credits) is shown;
+  - `cashFlow` (indirect): profit, then every non-bank balance sheet account's movement as cash
+    in or out by activity, without year-end closing journals; ends at the change in bank and
+    cash, shown against the opening and closing balances.
+- `Statements::compared`: P&L with the previous period (same number of whole months, else days)
+  or the same period last year; balance sheet with the end of the previous month or the same day
+  last year. Accounts in either period are listed.
+- CSV (`?export=`) on every report: trial balance `accounts`, P&L, balance sheet and cash flow
+  `statement`, general ledger `lines`, aged `parties` and `documents`. `App\Support\CsvExport`
+  (same as Pharmacy's, amounts in the books' currency).
+- Pages `reports/{cash-flow,general-ledger,aged}`; statements gain a "Compare with" choice and a
+  second column; Print and CSV on every report (filters hidden when printing). Menu: Reports →
+  Cash flow, General ledger, Aged receivables, Aged payables.
+
+**Tests executed:**
+- finance-app: Pest 65 passed, 1 skipped (`ReportsTest` 8 new):
+  - general ledger balances, the account filter and CSV;
+  - receivables ageing (buckets, by customer, matching the account, the difference) and CSV;
+  - payables ageing from a bill event;
+  - cash flow by activity ending at the bank change, a reclassified account, and a year-end close
+    left out;
+  - P&L compared with the previous period and last year, and its CSV;
+  - balance sheet compared with the previous month end;
+  - trial balance CSV and permissions.
+- PHPStan 0; Pint; `vp check`; `tsc`; build.
+- Local PostgreSQL: `migrate`, `migrate:rollback --step=1`, `migrate`.
+
+**Known limitations:**
+- Ageing is as of today only. Past dates would need payments and returns dated per document;
+  credits on invoices (`credited_minor`) carry no date.
+- The general ledger CSV holds the same 5,000 lines as the page.
+- Not yet checked in a browser.
+
+## Finance F3 — 2026-10-20 (local, Windows)
+
+Bank reconciliation for the standalone Finance & Accounting product ([roadmap](finance-roadmap.md)).
+
+**Implemented** (`finance-app`):
+- Migration `2026_10_21_100000_create_bank_reconciliation` (additive):
+  - `accounts.bank_import` (the bank's CSV layout, remembered per account);
+  - `bank_statements` (account, period, opening and closing balance, reconciled by and when);
+  - `bank_statement_lines` (date, description, reference, signed amount, the one
+    `journal_line_id` it clears, unique);
+  - `bank_rules` (description contains, direction, bank account or all, account, memo, order).
+- `App\Finance\Reconciliation`:
+  - import: a statement opens with the previous one's closing balance (the first one's is
+    typed); it must end after the previous one; lines on or before the previous end are skipped
+    as already imported, and lines after its own date refused;
+  - candidates: ledger lines on the bank account for the same signed amount, not cleared, within
+    30 days, closest first;
+  - match and unmatch, while the statement is open;
+  - enter: a line recorded as money in or out (`Banking`) against another account, then matched;
+  - auto-match: exactly one candidate within 3 days is matched; a line with no candidate within
+    30 days is entered by the first rule that covers it;
+  - reconcile (every line matched, opening + lines = closing, earlier statements reconciled),
+    undo (latest first), remove (latest, unreconciled);
+  - report on the statement's last day: balance per bank + deposits not yet on a statement −
+    payments not yet on one − lines cleared against later entries = expected books balance,
+    against the books, with any unexplained difference.
+- `Ledger::reverse` refuses a journal with a line matched to a statement line ("unmatch it there
+  first").
+- Pages:
+  - `reconciliation`: statements, and the import (the CSV is read in the browser; choose the
+    columns, date format, decimal mark, one signed amount column or money in/out columns;
+    preview and unreadable lines; statement date, number, balances);
+  - `reconciliation/{statement}`: lines with suggestions, Match, record a line (rule
+    pre-filled), Match automatically, Reconcile, Undo, Remove, and the reconciliation report
+    with the items not yet on a statement;
+  - `bank-rules`.
+  - Menu: Banking → Reconciliation.
+- Catalog 1.2.0: `finance.banking.reconcile` (sensitivity 3) on Accountant and Bookkeeper;
+  imported locally.
+
+**Tests executed:**
+- finance-app: Pest 72 passed, 1 skipped (`ReconciliationTest` 7 new):
+  - import order, carried balance, skipped lines and saved layout;
+  - suggestions, matching once, a wrong-way amount refused, reversal blocked while matched;
+  - recording a line;
+  - auto-match and rules;
+  - reconcile conditions, removal order, locking and undo;
+  - the bank-to-books report;
+  - permissions.
+- Vitest: `csv.test.ts` (4: quoted CSV, separators, date orders, amount forms).
+- PHPStan 0; Pint; `vp check`; `tsc`; build.
+- Local PostgreSQL: `migrate`, `migrate:rollback --step=1`, `migrate`.
+- Mutation: removing the reversal guard fails the matching test.
+
+**Known limitations:**
+- One statement line clears one ledger line. A deposit of several receipts, or one receipt paid
+  in two bank lines, needs a journal to combine them first.
+- No direct bank feeds (roadmap "Later"); statements in OFX or PDF are not read.
+- Suggestions are shown for the first 200 unmatched lines of a statement.
+- Not yet checked in a browser.
+
+## Finance F4 — 2026-10-20 (local, Windows)
+
+Tax codes and tax returns for the standalone Finance & Accounting product ([roadmap](finance-roadmap.md)).
+
+**Implemented** (`finance-app`):
+- Migration `2026_10_21_120000_create_tax` (additive):
+  - `tax_codes` (code, name, rate in basis points, on sales, on purchases, recoverable, active;
+    unique per organization);
+  - `journal_lines.tax_kind` (output or input), `tax_code_id`, `tax_base_minor` (the net amount
+    taxed), set when the line is posted;
+  - `tax_returns` (period, reference, output, input, adjustments, net as filed, filer, settlement
+    journal; unique start per organization).
+- The tax account stays the one system account 2200. `Ledger` writes the tax fields; a reversal
+  copies them with the base negated, so a void lowers output tax.
+- Product events tag their tax lines: output on invoices, voids and sales returns; input on
+  bills and supplier credits (no code: products send one tax amount).
+- Invoices and bills raised in Finance take a tax code per line:
+  - tax per line, rounded half up; one tax line per code, with its base;
+  - purchase tax that is not recoverable is added to the line's cost;
+  - the free "tax" amount is still accepted (and shown only while there are no codes) as tax
+    without a code.
+- `App\Finance\Tax`:
+  - report for a period: tax account lines grouped by kind and code, settlements and opening
+    balances left out; net = output − input + adjustments = the tax account's movement;
+  - file: returns follow one another with no gap, end before today, and store the totals;
+  - settle: Dr tax / Cr bank for what is owed, the reverse for a refund (`tax_settlement`);
+  - unfile: latest only; its settlement is reversed today.
+- `Periods::postingDate` locks journals that touch the tax account up to the latest filed return
+  ("Tax is filed up to …"); product events are moved past it like a locked month.
+- Pages: `tax-codes` (add, edit; the rate is fixed once added), `tax-returns` (next period as it
+  stands, file), `tax-returns/{return}` (figures, CSV, settle, unfile, a warning if the ledger
+  no longer matches the filed figures). Tax column in the invoice and bill line editor. Menu:
+  Tax → Tax returns, Tax codes.
+- Catalog 1.3.0: `finance.tax.manage` (sensitivity 3) on Accountant; imported locally.
+
+**Known limitations:**
+- Zero-rated sales have no tax line, so their net amount is not on the return.
+- Tax from products has no code; it is reported per kind under "Without a code".
+- One tax account: no separate input and output tax accounts.
+
+**Tests executed:**
+- finance-app: Pest 79 passed, 1 skipped (`TaxTest` 7 new):
+  - codes unique (case-insensitive), rate fixed;
+  - invoice tax per line and code, rounding, tagged tax line;
+  - recoverable and non-recoverable purchase tax;
+  - the report from events, a void, a bill and a manual adjustment equals the tax account;
+  - the filed-period lock for manual entries and events, sequential returns;
+  - settlement, later returns without it, unfiling in order;
+  - CSV and permissions.
+- `TaxTest`, `PeriodsTest` and `ReconciliationTest` also run on a throwaway PostgreSQL database
+  (22 passed), then dropped.
+- PHPStan 0; Pint; `vp check`; `tsc`; Vitest 4; build.
+- Local PostgreSQL: `migrate`, `migrate:rollback --step=1`, `migrate`.
+- Mutation: turning off the filed-return lock fails 2 tests.
+
+## Finance F5 — 2026-10-20 (local, Windows)
+
+Cost centres and projects for the standalone Finance & Accounting product ([roadmap](finance-roadmap.md)).
+
+**Implemented** (`finance-app`):
+- Migration `2026_10_22_100000_create_dimensions` (additive):
+  - `dimension_values` (kind `cost_centre` or `project`, code, name, active; code unique per
+    organization and kind);
+  - `journal_lines.cost_centre_id`, `project_id`, set when the line is posted;
+  - `accounts.requires_cost_centre`, `requires_project`.
+- `Ledger`: lines may name a cost centre and a project (of the right kind); a reversal keeps
+  them. Entries made by hand (`require_dimensions`: manual journals, invoices, bills) must name
+  what their accounts require ("6000 Rent needs a cost centre."); products' events and
+  automatic entries are never refused for it.
+- `Balances::totals` filters by cost centre and/or project (a value, or `none`);
+  `Balances::totalsBy` splits by one of them.
+- `Statements::profitAndLossBy`: a column per value with income or spending in the period, one
+  for lines without any, and the total (the plain P&L).
+- Pages:
+  - `dimensions` (Accounting → Cost centres & projects): add, rename, close; codes upper case;
+  - cost centre and project selects under each line's account on journals, invoices and bills,
+    marked required where the account says so;
+  - account form: "Lines entered by hand need a cost centre / a project";
+  - journal detail shows each line's cost centre and project;
+  - P&L and trial balance: cost centre and project filters (a filtered trial balance is marked
+    as such instead of balanced/out of balance), kept in CSV and print;
+  - `reports/profit-and-loss-by-dimension` (Reports → P&L by dimension), each column header
+    opening the P&L filtered to it; CSV.
+- Permissions: viewing needs `finance.accounts.view`, managing `finance.accounts.manage`; no
+  catalog change.
+
+**Known limitations:**
+- Branch is not yet a filter (products send branch ids; Finance has no branch names).
+- Money in/out, reconciliation entries and bank rules do not ask for a cost centre or project.
+- One cost centre and one project per line; no splitting a line across several.
+
+**Tests executed:**
+- finance-app: Pest 84 passed, 1 skipped (`DimensionsTest` 5 new):
+  - unique codes per kind, closing, closed values refused and not offered;
+  - required dimensions on journals and bills, wrong kind refused, reversal keeps them, product
+    events never refused;
+  - P&L by cost centre: columns, "none", totals equal the P&L; filtered P&L and trial balance;
+    unknown and malformed filters refused; CSV;
+  - permissions.
+- `DimensionsTest`, `ReportsTest`, `TaxTest`, `BookkeepingTest` and `PeriodsTest` also on a
+  throwaway PostgreSQL database (53 passed), then dropped. It caught "none" and non-UUID filter
+  values reaching uuid columns (SQLite accepts them); fixed.
+- PHPStan 0; Pint; `vp check`; `tsc`; Vitest 4; build.
+- Local PostgreSQL: `migrate`, `migrate:rollback --step=1`, `migrate`.
+- Mutation: turning off the required-dimension check fails 2 tests.
+
+## Finance F6 — 2026-10-20 (local, Windows)
+
+Other currencies for the standalone Finance & Accounting product ([roadmap](finance-roadmap.md)).
+Plan feature `finance.multicurrency`: without it the pages are not found and documents stay in
+the books' currency; what was entered in other currencies stays.
+
+**Implemented** (`finance-app`, catalog 1.4.0):
+- Migration `2026_10_23_100000_create_multicurrency` (additive):
+  - `exchange_rates` (currency, day, rate to 10 decimals; one per organization, currency and day);
+  - `accounts.currency` (bank and cash accounts only);
+  - `journal_lines.currency`, `currency_minor` (signed, + on the debit side);
+  - invoices and bills: `currency`, `exchange_rate`, `currency_total_minor`, `currency_paid_minor`;
+  - customer and supplier payments: `currency`, `exchange_rate`, `currency_amount_minor`,
+    `fx_minor`; `bill_payments.currency_amount_minor`;
+  - `revaluations` (day, journal, its reversal).
+- New system account 6950 "Exchange gains and losses" (added to existing charts on first use).
+- `Currencies`: the latest rate on or before a day; conversion with bcmath, half away from zero.
+- `Ledger`: lines may carry an amount in another currency. An account held in another currency
+  takes only lines in that currency, so it is posted to from Banking and documents, not by hand.
+- `Banking`: money in/out of a foreign account at the day's (or a typed) rate; transfers between
+  currencies take the amount that arrived, the difference against the day's rate going to 6950.
+- `Receivables` / `Payables`: invoices and bills in another currency, each line converted at the
+  document's rate. Payments are in the document's currency, into or from an account in that
+  currency or the books', at the day's rate. The receivable or payable cleared is the document's
+  rate (the full remainder on the last payment). The realised difference posts to 6950.
+- `Revaluations`: at a day's rates, foreign bank balances and open foreign invoices and bills are
+  brought to their value that day against 6950. The journal is dated that day and reversed the
+  next. Each day can be revalued once. Days that have no rate are refused with the missing
+  currency named.
+- Pages:
+  - `currencies` (Accounting → Currencies, shown with the feature): rates (add, replace, remove),
+    accounts in other currencies, a revaluation preview for any day, revalue, and past
+    revaluations;
+  - a currency field on bank accounts (chart of accounts and Banking);
+  - a currency and rate on new invoices and bills, with the lines entered in that currency;
+  - invoice and bill pages show the foreign total, outstanding and payments. Receiving and paying
+    take a rate; supplier payments go per currency;
+  - Banking shows foreign balances and movements, with a rate field and an "arrived" amount on
+    cross-currency transfers.
+- Permission `finance.currencies.manage` (Accountant) for rates and revaluation. Viewing needs
+  `finance.reports.view`.
+- `platform-client`: `PlatformFake::grant` and `actingAsMember` take plan features.
+
+**Known limitations:**
+- Bank reconciliation and opening balances are for accounts in the books' currency only.
+- Products' events stay in the books' currency.
+- A payment in another currency is set in full against bills; nothing is left on account.
+- Aged reports are in the books' currency. On a revaluation day they differ from the receivable
+  and payable accounts by the revaluation.
+- A revaluation cannot be undone. Its reversal follows the next day.
+- Central must grant the feature (`finance.multicurrency` entitlement).
+
+**Tests executed:**
+- finance-app: Pest 90 passed, 1 skipped (`MulticurrencyTest` 6 new):
+  - the feature gate: pages are not found and documents and accounts stay in the books' currency;
+  - rates: one per day (replaced), the books' currency and zero refused, the latest offered;
+  - a dollar invoice paid in two parts, at a gain into a shilling account and at a loss into a
+    dollar account, cleared exactly; an account in a third currency refused;
+  - a dollar bill paid from a dollar account bought by transfer, with the loss; a transfer out
+    at a gain; manual journals to the dollar account refused; the books balance throughout;
+  - revaluation of a bank, an invoice and a bill: the preview, the posting, the reversal the
+    next day, one per day, no future days;
+  - permissions.
+- `MulticurrencyTest`, `BookkeepingTest` and `TaxTest` also run on a throwaway PostgreSQL
+  database (38 passed); the database was then dropped.
+- PHPStan 0; Pint; `vp check`; `tsc`; Vitest 4; build.
+- Local PostgreSQL: `migrate`, `migrate:rollback --step=1`, `migrate`.
+- Mutation: flipping the side of a receipt's exchange difference fails a test. Counting a bill's
+  revaluation as a gain also fails a test (it survived until an open bill was added to the test).
+
+## Finance F7 — 2026-10-20 (local, Windows)
+
+Budgets for the standalone Finance & Accounting product ([roadmap](finance-roadmap.md)).
+
+**Implemented** (`finance-app`, catalog 1.5.0):
+- Migration `2026_10_24_100000_create_budgets` (additive):
+  - `budgets`: financial year, name (unique per year), optional cost centre;
+  - `budget_lines`: account, month of the year (period number) and amount, in the account's
+    normal direction.
+- `Budgets`:
+  - create a budget empty, or from the previous year's profit and loss month by month,
+    changed by a percentage (half away from zero);
+  - save replaces the grid and drops zero amounts;
+  - `report` compares the budget with actuals for a range of months. The actual column is
+    `Statements::profitAndLoss` for those months, filtered to the budget's cost centre if it
+    has one. The variance is actual minus budget. Over budget counts as favourable for revenue
+    and unfavourable for expenses.
+- Pages:
+  - `budgets` (Accounting → Budgets): the list with revenue and expense totals, and a new
+    budget form (year, name, organization or cost centre, start from nothing or from last year
+    changed by a %);
+  - `budgets/{id}`: a grid of revenue and expense accounts by month, with row, column and
+    planned-profit totals and "spread a year" per account; rename, save, delete;
+  - `reports/budget-vs-actual` (Reports → Budget vs actual): pick a budget and a range of
+    months; budget, actual (linked to the matching P&L), and variance with a % coloured by
+    whether it helps the result; CSV and print.
+- Permission `finance.budgets.manage` (Accountant). Viewing needs `finance.reports.view`.
+
+**Known limitations:**
+- Budgets cover revenue and expense accounts only, not balance sheet or cash budgets.
+- A budget is for the whole organization or one cost centre. There are no project budgets and
+  no split by cost centre inside one budget.
+- Copying matches months by number, so a previous year of a different length copies only the
+  months both years have.
+- There are no versions or approval of a budget; saving overwrites it.
+
+**Tests executed:**
+- finance-app: Pest 94 passed, 1 skipped (`BudgetsTest` 4 new):
+  - copy from last year with +10% and rounding; duplicate names refused; no earlier year
+    refused;
+  - the grid: blanks and zeros dropped, negatives kept, replaced on save, accounts other than
+    revenue or expense refused, too many decimals refused;
+  - budget vs actual over January–February: budget, actual, variance and favourability; the
+    actual totals equal `Statements::profitAndLoss`; a cost centre budget sees only its
+    lines; months in the wrong order refused; CSV;
+  - permissions, and deleting a budget removes its lines.
+- `BudgetsTest`, `PeriodsTest` and `ReportsTest` also run on a throwaway PostgreSQL database
+  (20 passed); the database was then dropped.
+- PHPStan 0; Pint; `vp check`; `tsc`; Vitest 4; build.
+- Local PostgreSQL: `migrate`, `migrate:rollback --step=1`, `migrate`.
+- Mutation: dropping the cost centre filter from the actuals fails a test. Treating overspending
+  as favourable also fails a test.
+
+## Finance F8 — 2026-10-20 (local, Windows)
+
+Fixed assets for the standalone Finance & Accounting product ([roadmap](finance-roadmap.md)).
+Plan feature `finance.fixed_assets`: without it the pages are not found.
+
+**Implemented** (`finance-app`, catalog 1.6.0):
+- Migration `2026_10_25_100000_create_fixed_assets` (additive):
+  - `asset_categories`: asset, accumulated depreciation and expense accounts; method; life;
+    yearly rate for declining balance;
+  - `fixed_assets`: number FA-0001…, cost, residual value, depreciation brought in, method, life
+    and rate (copied from the category, adjustable), the acquiring journal and bill, and the
+    disposal;
+  - `depreciation_runs`: one per organization and month; `depreciation_lines`: one per asset
+    and run.
+- Default accounts 1590 Accumulated depreciation, 6400 Depreciation, and 6960 Gain or loss on
+  disposal of assets (a system account, added to existing charts on first use).
+- `FixedAssets`:
+  - `register` posts nothing, because the cost is already in the asset account. Against a bill
+    or journal, the asset accounts must have been debited at least the cost, less what other
+    assets already took from that entry. An asset already in the books can bring depreciation
+    so far with it.
+  - Schedule: straight line, with rounding spread so the months add up exactly; or declining
+    balance at the yearly rate ÷ 12, with the last month of life taking the asset to its
+    residual value. Depreciation starts in the month of acquisition. Never below the residual
+    value.
+  - `run`: months that have started, in order, each once (refused, plus a unique index). Each
+    run charges what brings every held asset to its schedule, so an asset registered late
+    catches up. One journal at the month end, expense against accumulated depreciation, per
+    category.
+  - `undo`: the latest run only, reversed at the same date. Refused when an asset it charged
+    has since been disposed of.
+  - `dispose`: removes the cost and depreciation from the books, puts the proceeds in a bank or
+    cash account, and posts the gain or loss to 6960. Refused when months after the disposal
+    are already depreciated.
+- Pages:
+  - Fixed assets → Asset register: assets with cost, depreciation and value, held totals, and
+    for each asset and accumulated depreciation account the ledger against the register
+    ("Matches" / "Differs"); register from a bill, a journal, or assets already in the books;
+  - the asset page: summary, the schedule month by month (run, or still to come), and
+    disposal;
+  - Fixed assets → Depreciation: the next month's charges per asset, run, past runs, and undo
+    the latest;
+  - Fixed assets → Asset categories: add and edit.
+- Permission `finance.assets.manage` (Accountant). Viewing needs `finance.accounts.view`.
+- `RequireFeature:<key>` middleware replaces `RequireMulticurrency`; navigation items name
+  their plan feature.
+
+**Known limitations:**
+- No depreciation is charged in the month of disposal unless that month was run before.
+- Changing a category does not change assets already registered. An asset's terms are fixed
+  once it is registered.
+- No revaluation or impairment of assets, and no partial disposals.
+- The register reconciles only if the asset and accumulated depreciation accounts are posted
+  through the register (or its sources).
+
+**Tests executed:**
+- finance-app: Pest 100 passed, 1 skipped (`FixedAssetsTest` 6 new):
+  - the plan feature gate;
+  - registering from a bill and from a journal; more than the entry put in refused; residual
+    value refused;
+  - runs in order and once; future months refused; straight line and declining balance
+    (40%: 3,333 then 3,222, both charged in March after late registration); an asset stops at
+    its residual value; the accumulated and expense accounts equal the runs;
+  - undo only the latest run, and a rerun gives the same;
+  - disposal at a gain into the bank and a write-off at a loss; disposal before a run month
+    refused; a disposed asset is not depreciated afterwards and its run cannot be undone;
+  - permissions.
+  - Each scenario checks that the register matches the ledger for the asset and accumulated
+    depreciation accounts.
+- `FixedAssetsTest`, `MulticurrencyTest`, `BookkeepingTest` and `BudgetsTest` also run on a
+  throwaway PostgreSQL database (41 passed); the database was then dropped. This run caught
+  `FOR UPDATE` with `SUM` when registering against a journal (SQLite accepts it). Fixed by
+  locking the journal row.
+- PHPStan 0; Pint; `vp check`; `tsc`; Vitest 4; build.
+- Local PostgreSQL: `migrate`, `migrate:rollback --step=1`, `migrate`.
+- Mutation: dropping the end-of-life cap (depreciating below the residual value) fails a test.
+  Allowing disposal before a depreciated month also fails a test.

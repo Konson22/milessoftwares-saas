@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Finance\Currencies;
 use App\Finance\Money;
 use App\Finance\Payables;
 use App\Models\Account;
@@ -33,6 +34,10 @@ class SupplierPaymentController extends Controller
             'supplierId' => $payment->supplier_id,
             'paidOn' => $payment->paid_on->toDateString(),
             'amountMinor' => $payment->amount_minor,
+            'currency' => $payment->currency,
+            'currencyAmountMinor' => $payment->currency_amount_minor,
+            'exchangeRate' => $payment->exchange_rate === null ? null : Currencies::normalize((string) $payment->exchange_rate),
+            'fxMinor' => $payment->fx_minor,
             'account' => $payment->relationLoaded('account') ? $payment->account->label() : null,
             'reference' => $payment->reference,
             'journalId' => $payment->journal_id,
@@ -87,28 +92,38 @@ class SupplierPaymentController extends Controller
             'memo' => ['nullable', 'string', 'max:255'],
             'allocations' => ['nullable', 'array', 'max:200'],
             'allocations.*' => ['nullable', 'string', Money::rule()],
+            'rate' => ['nullable', 'string', Currencies::RATE_RULE],
         ]);
 
-        $allocations = [];
+        $typed = [];
         foreach ($data['allocations'] ?? [] as $billId => $amount) {
             if (! Str::isUuid((string) $billId)) {
                 throw ValidationException::withMessages(['allocations' => 'Unknown bill.']);
             }
             if (is_string($amount) && $amount !== '') {
-                $allocations[(string) $billId] = Money::toMinor($amount);
+                $typed[(string) $billId] = $amount;
             }
+        }
+
+        // Amounts are in the payment's currency: the bank's, or else the bills'.
+        $from = Account::query()->findOrFail((string) $data['account_id']);
+        $currency = $from->currency ?? Bill::query()->whereIn('id', array_keys($typed))->whereNotNull('currency')->value('currency');
+        $allocations = [];
+        foreach ($typed as $billId => $amount) {
+            $allocations[$billId] = $this->amountIn($amount, $currency, "allocations.{$billId}");
         }
 
         $supplier = Supplier::query()->findOrFail((string) $data['supplier_id']);
         $payment = $payables->pay(
             $supplier,
-            Account::query()->findOrFail((string) $data['account_id']),
-            Money::toMinor($data['amount']),
+            $from,
+            $this->amountIn($data['amount'], $currency),
             CarbonImmutable::parse($data['paid_on']),
             $allocations,
             $data['reference'] ?? null,
             $data['memo'] ?? null,
             $this->user($request),
+            ($data['rate'] ?? '') === '' ? null : Currencies::normalize($data['rate']),
         );
 
         return redirect()->route('suppliers.show', $supplier)->with('success', "Payment {$payment->number} recorded.");

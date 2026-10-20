@@ -9,5 +9,9 @@ export type SharedProps = {
     access: { isOwner: boolean; permissions: string[] } | null;
     /** The books' currency (ISO code); amounts arrive in minor units. */
     currency: string | null;
+    /** The plan includes other currencies (plan feature "finance.multicurrency"). */
+    multicurrency: boolean;
+    /** The plan includes fixed assets (plan feature "finance.fixed_assets"). */
+    fixedAssets: boolean;
     flash: { success: string | null };
 };

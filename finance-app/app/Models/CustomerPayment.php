@@ -27,6 +27,10 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property string|null $memo
  * @property string $journal_id
  * @property string|null $created_by
+ * @property string|null $currency set when paid in another currency than the books'
+ * @property string|null $exchange_rate books-currency units per unit of the currency, on the day
+ * @property int|null $currency_amount_minor the amount in the currency
+ * @property int $fx_minor realised exchange gain (negative: loss), in the books' currency
  * @property-read Invoice|null $invoice
  * @property-read Account $account
  */
@@ -46,6 +50,9 @@ class CustomerPayment extends Model
         return [
             'method' => PaymentMethod::class,
             'amount_minor' => 'integer',
+            'currency_amount_minor' => 'integer',
+            'fx_minor' => 'integer',
+            'exchange_rate' => 'decimal:10',
             'received_on' => 'immutable_date',
         ];
     }

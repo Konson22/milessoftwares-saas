@@ -18,13 +18,27 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property int $debit_minor
  * @property int $credit_minor
  * @property string|null $description
+ * @property string|null $tax_kind output (on sales) or input (on purchases), on tax account lines
+ * @property string|null $tax_code_id
+ * @property int|null $tax_base_minor the net amount the tax was charged on
+ * @property string|null $cost_centre_id
+ * @property string|null $project_id
+ * @property string|null $currency set on lines in another currency than the books'
+ * @property int|null $currency_minor the amount in that currency, positive on the debit side
  * @property-read Journal $journal
  * @property-read Account $account
+ * @property-read TaxCode|null $taxCode
+ * @property-read DimensionValue|null $costCentre
+ * @property-read DimensionValue|null $project
  */
 class JournalLine extends Model
 {
     use BelongsToTenant;
     use HasUuids;
+
+    public const OUTPUT = 'output';
+
+    public const INPUT = 'input';
 
     public $timestamps = false;
 
@@ -36,6 +50,8 @@ class JournalLine extends Model
             'position' => 'integer',
             'debit_minor' => 'integer',
             'credit_minor' => 'integer',
+            'tax_base_minor' => 'integer',
+            'currency_minor' => 'integer',
         ];
     }
 
@@ -53,5 +69,29 @@ class JournalLine extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    /**
+     * @return BelongsTo<TaxCode, $this>
+     */
+    public function taxCode(): BelongsTo
+    {
+        return $this->belongsTo(TaxCode::class);
+    }
+
+    /**
+     * @return BelongsTo<DimensionValue, $this>
+     */
+    public function costCentre(): BelongsTo
+    {
+        return $this->belongsTo(DimensionValue::class, 'cost_centre_id');
+    }
+
+    /**
+     * @return BelongsTo<DimensionValue, $this>
+     */
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(DimensionValue::class, 'project_id');
     }
 }

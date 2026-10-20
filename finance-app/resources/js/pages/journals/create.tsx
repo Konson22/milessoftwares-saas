@@ -1,19 +1,26 @@
 import { Form, Head } from '@inertiajs/react';
 import { Field } from '@/components/field';
 import { LinesEditor } from '@/components/lines-editor';
-import type { AccountOption } from '@/components/lines-editor';
+import type {
+    AccountOption,
+    DimensionOptions,
+} from '@/components/lines-editor';
 import { PageHeader } from '@miles/ui/components/page-header';
 import { Panel, PanelBody } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
 import { store } from '@/routes/journals';
 
-type Props = { accounts: AccountOption[]; today: string };
+type Props = {
+    accounts: AccountOption[];
+    dimensions: DimensionOptions;
+    today: string;
+};
 
 /**
  * A manual journal: debits must equal credits.
  */
-export default function CreateJournal({ accounts, today }: Props) {
+export default function CreateJournal({ accounts, dimensions, today }: Props) {
     return (
         <>
             <Head title="New journal" />
@@ -57,6 +64,7 @@ export default function CreateJournal({ accounts, today }: Props) {
                                 </div>
                                 <LinesEditor
                                     accounts={accounts}
+                                    dimensions={dimensions}
                                     mode="journal"
                                     errors={errors}
                                     minRows={2}
