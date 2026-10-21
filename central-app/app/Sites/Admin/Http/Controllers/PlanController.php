@@ -141,6 +141,9 @@ class PlanController extends Controller
             'features' => ['sometimes', 'array', 'list'],
             'features.*.key' => ['required', 'string', 'max:100', 'distinct'],
             'features.*.limit' => ['nullable', 'integer', 'min:0'],
+        ], [
+            'code.regex' => __('The code must start with a lowercase letter and use only lowercase letters, digits, - and _ (for example finance-standard).'),
+            'code.unique' => __('Another plan already uses this code.'),
         ]);
 
         if (isset($validated['erp_product_id'])) {

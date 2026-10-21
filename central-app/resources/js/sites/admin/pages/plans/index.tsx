@@ -231,7 +231,19 @@ function PlanForm({
                                 name="code"
                                 defaultValue={plan?.code}
                                 required
+                                maxLength={64}
+                                pattern="[a-z][a-z0-9_\-]*"
+                                title="Lowercase letters, digits, - and _, starting with a letter"
+                                placeholder="finance-standard"
+                                aria-describedby={id('code-hint')}
                             />
+                            <p
+                                id={id('code-hint')}
+                                className="text-xs text-muted-foreground"
+                            >
+                                Lowercase letters, digits, - and _; starts with
+                                a letter.
+                            </p>
                             <InputError message={errors.code} />
                         </div>
                         <div className="grid gap-1.5">

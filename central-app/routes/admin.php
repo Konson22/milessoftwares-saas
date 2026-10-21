@@ -23,8 +23,9 @@ Route::domain(PlatformHosts::admin())->name('admin.')->group(function () {
     Route::get('two-factor', [Admin\AdminLoginController::class, 'challenge'])->name('two-factor');
     Route::post('two-factor', [Admin\AdminLoginController::class, 'verify'])->middleware('throttle:5,1')->name('two-factor.store');
     Route::post('logout', [Admin\AdminLoginController::class, 'destroy'])->middleware('auth')->name('logout');
-    // Old links to the auth-host sign-in.
-    Route::redirect('auth/login', '/login');
+    // Old links to the auth-host sign-in. GET-only (Route::redirect() also
+    // registers QUERY, which Wayfinder's generated TypeScript cannot type).
+    Route::get('auth/login', fn () => redirect('/login'));
 });
 
 // Signed-in hosts are never indexed.

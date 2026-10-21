@@ -199,3 +199,10 @@ it('reports catalog conflicts on upload', function () {
         ->post($this->adminUrl('/applications/catalogs'), ['catalog' => UploadedFile::fake()->createWithContent('retail.json', json_encode($definition))])
         ->assertSessionHasErrors('catalog');
 });
+
+it('explains the plan code format', function () {
+    $this->actingAs($this->billing->user)->post($this->adminUrl('/plans'), [
+        'code' => 'Finance Standard', 'name' => 'Finance Standard', 'billing_interval' => 'monthly', 'price_minor' => 0,
+        'currency' => 'USD', 'trial_days' => 0, 'status' => 'draft', 'application_ids' => [$this->retail->id],
+    ])->assertSessionHasErrors(['code' => 'The code must start with a lowercase letter and use only lowercase letters, digits, - and _ (for example finance-standard).']);
+});
