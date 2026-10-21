@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Sales\Actions\Tills;
 use App\Modules\Sales\Enums\PaymentMethod;
+use App\Modules\Sales\Models\BranchCounterSettings;
 use App\Modules\Sales\Models\TillSession;
 use App\Support\CurrentBranch;
 use App\Support\Industry;
@@ -18,9 +19,11 @@ use Inertia\Response;
 use Miles\PlatformClient\Access\CurrentAccess;
 
 /**
- * Tills of the branch being worked in. Cashiers open, see and close their
- * own; with <industry>.tills.manage a manager sees and closes everyone's
- * (the cashier reconciliation).
+ * Cash shifts (tills) of the branch being worked in. Cashiers start, see
+ * and close their own; with <industry>.tills.manage a manager sees and
+ * closes everyone's (the cashier reconciliation). The branch's settings
+ * say whether shifts are needed, the usual starting cash, whether cashiers
+ * count blind, and whether only managers close shifts.
  */
 class TillController extends Controller
 {
@@ -47,12 +50,14 @@ class TillController extends Controller
             ->get();
 
         $mine = $this->tills->openFor($user, $this->branch->id());
+        $settings = $this->tills->settings($this->branch->id());
 
         return Inertia::render($this->industry->page('tills/index'), [
             'day' => $day->toDateString(),
             'managing' => $managing,
-            'mine' => $mine === null ? null : $this->present($mine),
-            'tills' => $tills->map(fn (TillSession $till) => $this->present($till)),
+            'mine' => $mine === null ? null : $this->present($mine, $managing),
+            'tills' => $tills->map(fn (TillSession $till) => $this->present($till, $managing)),
+            'shifts' => $this->shiftRules($settings, $managing),
         ]);
     }
 
@@ -62,18 +67,31 @@ class TillController extends Controller
 
         $till = $this->tills->open($this->user($request), $this->branch->id(), Money::toMinor($validated['opening_float']));
 
-        return back()->with('success', "Till {$till->number} is open.");
+        return back()->with('success', "Shift {$till->number} started.");
     }
 
     public function show(Request $request, TillSession $till): Response
     {
         $this->ensureVisible($request, $till);
         $till->load(['opener:id,name', 'closer:id,name']);
+        $managing = $this->manages();
+        $rules = $this->shiftRules($this->tills->settings($this->branch->id()), $managing);
+        $summary = $this->tills->summary($till);
+        if ($rules['blind']) {
+            // Counted blind: the cashier does not see what the drawer should
+            // hold, nor the totals that add up to it.
+            $summary['expectedCashMinor'] = null;
+            $summary['takenMinor'] = [];
+            $summary['collectedMinor'] = [];
+            $summary['cashRefundsMinor'] = null;
+        }
 
         return Inertia::render($this->industry->page('tills/show'), [
-            'till' => $this->present($till),
-            'summary' => $this->tills->summary($till),
+            'till' => $this->present($till, $managing),
+            'summary' => $summary,
             'methods' => array_map(fn (PaymentMethod $method) => ['value' => $method->value, 'label' => $method->label()], PaymentMethod::cases()),
+            'shifts' => $rules,
+            'canClose' => $till->status === TillSession::OPEN && ($managing || ! $rules['managerCloses']),
         ]);
     }
 
@@ -85,16 +103,39 @@ class TillController extends Controller
             'closing_note' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $this->tills->close($till, $this->user($request), Money::toMinor($validated['counted_cash']), $validated['closing_note'] ?? null);
+        $managing = $this->manages();
+        $rules = $this->shiftRules($this->tills->settings($this->branch->id()), $managing);
+        abort_if($rules['managerCloses'] && ! $managing, 403, 'A manager closes shifts at this branch.');
 
-        return back()->with('success', "Till {$till->number} is closed.");
+        $this->tills->close($till, $this->user($request), Money::toMinor($validated['counted_cash']), $validated['closing_note'] ?? null, blind: $rules['blind']);
+
+        return back()->with('success', "Shift {$till->number} closed.");
+    }
+
+    /**
+     * How shifts work here, for this member.
+     *
+     * @return array{required: bool, defaultFloat: string, blind: bool, managerCloses: bool}
+     */
+    private function shiftRules(BranchCounterSettings $settings, bool $managing): array
+    {
+        return [
+            'required' => $settings->shifts_required,
+            'defaultFloat' => Money::toMajor($settings->default_float_minor ?? 0),
+            // Managers always see the figures.
+            'blind' => $settings->blind_close && ! $managing,
+            'managerCloses' => $settings->manager_closes_shifts,
+        ];
     }
 
     /**
      * @return array{id: string, number: string, status: string, openedBy: string, openedAt: string, openingFloatMinor: int, closedBy: string|null, closedAt: string|null, expectedCashMinor: int|null, countedCashMinor: int|null, differenceMinor: int|null, closingNote: string|null}
      */
-    private function present(TillSession $till): array
+    private function present(TillSession $till, bool $managing): array
     {
+        // Counted blind: a cashier sees what they counted, not what was expected.
+        $blind = ! $managing && $this->tills->settings($this->branch->id())->blind_close;
+
         return [
             'id' => $till->id,
             'number' => $till->number,
@@ -104,9 +145,9 @@ class TillController extends Controller
             'openingFloatMinor' => $till->opening_float_minor,
             'closedBy' => $till->closer?->name,
             'closedAt' => $till->closed_at?->toIso8601String(),
-            'expectedCashMinor' => $till->expected_cash_minor,
+            'expectedCashMinor' => $blind ? null : $till->expected_cash_minor,
             'countedCashMinor' => $till->counted_cash_minor,
-            'differenceMinor' => $till->difference(),
+            'differenceMinor' => $blind ? null : $till->difference(),
             'closingNote' => $till->closing_note,
         ];
     }

@@ -9,12 +9,15 @@ use App\Modules\Inventory\Enums\StorageCondition;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Item;
 use App\Modules\Inventory\Models\ItemPack;
+use App\Modules\Sales\Actions\CounterPrinting;
 use App\Modules\Sales\Actions\CustomerAccounts;
 use App\Modules\Sales\Actions\ReturnSale;
 use App\Modules\Sales\Actions\Sell;
 use App\Modules\Sales\Actions\Tills;
 use App\Modules\Sales\Actions\VoidSale;
 use App\Modules\Sales\Enums\PaymentMethod;
+use App\Modules\Sales\Models\BranchCounterSettings;
+use App\Modules\Sales\Models\CounterOrder;
 use App\Modules\Sales\Models\Customer;
 use App\Modules\Sales\Models\DeliveryNote;
 use App\Modules\Sales\Models\Sale;
@@ -127,10 +130,29 @@ class SaleController extends Controller
             'paymentMethods' => array_map(fn (PaymentMethod $method) => ['value' => $method->value, 'label' => $method->label()], PaymentMethod::payments()),
             // Account customers, for members who may sell on account here.
             'customers' => $this->mayCredit() ? $this->accountCustomers() : [],
+            // How this branch's counter works: a sale now, or an order first.
+            'counter' => (function () {
+                $settings = BranchCounterSettings::forBranch($this->branch->id(), $this->industry->code());
+
+                return [
+                    'workflow' => $settings->workflow->value,
+                    'workflowLabel' => $settings->workflow->label(),
+                    'takesOrders' => $settings->workflow->takesOrders(),
+                    // A direct sale: paid now, handed over unpaid, or the seller chooses.
+                    'directPayment' => $settings->direct_payment,
+                    // Whether money is taken only in an open shift, and its usual starting cash.
+                    'shiftsRequired' => $settings->shifts_required,
+                    'defaultFloat' => Money::toMajor($settings->default_float_minor ?? 0),
+                    'requireCustomerAlways' => $settings->require_customer_always,
+                    'requireCustomerAboveMinor' => $settings->require_customer_above_minor,
+                    // Registered customers can be looked up by those who may see them.
+                    'findCustomers' => app(CurrentAccess::class)->get()?->allowsIn($this->industry->permission('customers.view'), branchId: $this->branch->id()) ?? false,
+                ];
+            })(),
         ]);
     }
 
-    public function store(Request $request, Sell $sell): RedirectResponse
+    public function store(Request $request, Sell $sell, CounterPrinting $printing): RedirectResponse
     {
         $validated = $request->validate([
             'items' => ['required', 'array', 'min:1', 'max:100'],
@@ -143,8 +165,17 @@ class SaleController extends Controller
             'payment_reference' => ['nullable', 'string', 'max:64'],
             'amount_tendered' => ['nullable', 'string', Money::rule()],
             'customer_name' => ['nullable', 'string', 'max:255'],
+            'customer_phone' => ['nullable', 'string', 'max:32'],
             'customer_id' => ['nullable', 'uuid'],
         ]);
+
+        $settings = BranchCounterSettings::forBranch($this->branch->id(), $this->industry->code());
+        if ($settings->workflow->takesOrders()) {
+            throw ValidationException::withMessages(['items' => 'This branch takes an order first: the sale is made when the order is paid.']);
+        }
+        if (! $settings->sellsPaid()) {
+            throw ValidationException::withMessages(['items' => 'This branch hands over unpaid: payment is taken at the cashier.']);
+        }
 
         $method = PaymentMethod::from($validated['payment_method']);
         if ($method === PaymentMethod::Account && ! $this->mayCredit()) {
@@ -164,10 +195,11 @@ class SaleController extends Controller
                 method: $method,
                 paymentReference: $validated['payment_reference'] ?? null,
                 tenderedMinor: isset($validated['amount_tendered']) ? Money::toMinor($validated['amount_tendered']) : null,
-                customerName: $validated['customer_name'] ?? null,
+                customerName: isset($validated['customer_name']) ? trim($validated['customer_name']) : null,
                 maxDiscountPercent: $this->maxDiscountPercent(),
                 submissionId: $validated['submission_id'] ?? null,
                 customerId: isset($validated['customer_id']) ? (string) $validated['customer_id'] : null,
+                customerPhone: isset($validated['customer_phone']) ? trim($validated['customer_phone']) : null,
             );
         } catch (InsufficientStock $e) {
             $index = array_search($e->item->id, array_column($validated['items'], 'item_id'), true);
@@ -175,7 +207,15 @@ class SaleController extends Controller
             throw ValidationException::withMessages(['items.'.($index === false ? 0 : $index).'.quantity' => $e->getMessage()]);
         }
 
-        return to_route($this->industry->route('sales.show'), $sale)->with('success', "Sale {$sale->number} completed.");
+        // The receipt prints by itself when the branch wants it, once.
+        $prints = array_map(
+            fn (array $print) => route($this->industry->route('sales.receipt'), ['sale' => $sale->id, 'auto' => 1]),
+            $printing->after(CounterPrinting::SOLD, $settings, $sale),
+        );
+
+        return to_route($this->industry->route('sales.show'), $sale)
+            ->with('success', "Sale {$sale->number} completed.")
+            ->with('print', $prints);
     }
 
     public function show(Sale $sale, CustomerAccounts $accounts): Response
@@ -195,6 +235,8 @@ class SaleController extends Controller
                 'soldAt' => $sale->sold_at->toIso8601String(),
                 'soldBy' => $sale->seller->name,
                 'customerName' => $sale->customer_name,
+                'customerPhone' => $sale->customer_phone,
+                'orderNumber' => CounterOrder::query()->where('sale_id', $sale->id)->value('number'),
                 'customer' => $sale->customer === null ? null : ['id' => $sale->customer->id, 'number' => $sale->customer->number, 'name' => $sale->customer->name],
                 'onAccount' => $sale->onAccount(),
                 'delivery' => $delivery === null ? null : ['id' => $delivery->id, 'number' => $delivery->number],

@@ -41,12 +41,12 @@ export default function Login({
             <Form
                 {...store.form()}
                 resetOnSuccess={['password']}
-                className="flex flex-col gap-6"
+                className="flex flex-col gap-4"
             >
                 {({ processing, errors }) => (
                     <>
-                        <div className="grid gap-5">
-                            <div className="grid gap-2">
+                        <div className="grid gap-4">
+                            <div className="grid gap-1.5">
                                 <Label htmlFor="email">Email address</Label>
                                 <Input
                                     id="email"
@@ -57,12 +57,12 @@ export default function Login({
                                     tabIndex={1}
                                     autoComplete="email"
                                     placeholder="email@example.com"
-                                    className="h-11 bg-white"
+                                    className="h-10 bg-white"
                                 />
                                 <InputError message={errors.email} />
                             </div>
 
-                            <div className="grid gap-2">
+                            <div className="grid gap-1.5">
                                 <div className="flex items-center">
                                     <Label htmlFor="password">Password</Label>
                                     {canResetPassword && (
@@ -82,7 +82,7 @@ export default function Login({
                                     tabIndex={2}
                                     autoComplete="current-password"
                                     placeholder="Password"
-                                    className="h-11 bg-white"
+                                    className="h-10 bg-white"
                                 />
                                 <InputError message={errors.password} />
                             </div>
@@ -99,7 +99,7 @@ export default function Login({
                             <Button
                                 type="submit"
                                 size="lg"
-                                className="mt-1 h-11 w-full bg-linear-to-r from-brand-blue to-brand-blue-dark text-base font-semibold text-white shadow-lg shadow-site-accent/25 hover:from-brand-blue-dark hover:to-brand-navy-light hover:shadow-xl hover:shadow-site-accent/30"
+                                className="h-10 w-full bg-linear-to-r from-brand-blue to-brand-blue-dark text-base font-semibold text-white shadow-lg shadow-site-accent/25 hover:from-brand-blue-dark hover:to-brand-navy-light hover:shadow-xl hover:shadow-site-accent/30"
                                 tabIndex={4}
                                 disabled={processing}
                                 data-test="login-button"

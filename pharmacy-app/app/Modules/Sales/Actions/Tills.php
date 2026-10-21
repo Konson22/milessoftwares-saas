@@ -4,11 +4,13 @@ namespace App\Modules\Sales\Actions;
 
 use App\Models\User;
 use App\Modules\Sales\Enums\PaymentMethod;
+use App\Modules\Sales\Models\BranchCounterSettings;
 use App\Modules\Sales\Models\CustomerPayment;
 use App\Modules\Sales\Models\Sale;
 use App\Modules\Sales\Models\SaleReturn;
 use App\Modules\Sales\Models\TillSession;
 use App\Support\DocumentNumbers;
+use App\Support\Industry;
 use App\Support\Money;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -16,17 +18,28 @@ use Illuminate\Validation\ValidationException;
 use Miles\PlatformClient\Events\Outbox;
 
 /**
- * Cashier tills: opened with a float, every counter sale taken into the
- * seller's open till, and closed with a count of the cash. What the till
- * should hold is the float plus cash taken minus cash given back (voids
- * and returns).
+ * Cash shifts (till sessions): opened with starting cash, every counter
+ * sale taken into the seller's open shift, and closed with a count of the
+ * cash. What the drawer should hold is the starting cash plus cash taken
+ * minus cash given back (voids and returns).
+ *
+ * The branch decides (BranchCounterSettings): whether money is taken only
+ * in an open shift, the usual starting cash, and whether cashiers count
+ * blind (without seeing what the drawer should hold; a difference then
+ * needs no reason from them).
  */
 class Tills
 {
     public function __construct(
         private readonly DocumentNumbers $numbers,
         private readonly Outbox $outbox,
+        private readonly Industry $industry,
     ) {}
+
+    public function settings(string $branchId): BranchCounterSettings
+    {
+        return BranchCounterSettings::forBranch($branchId, $this->industry->code());
+    }
 
     public function openFor(User $user, string $branchId): ?TillSession
     {
@@ -38,14 +51,19 @@ class Tills
     }
 
     /**
-     * The open till a sale or refund goes into.
+     * The open shift a sale or refund goes into; none where the branch
+     * does not use shifts and nobody opened one.
      *
-     * @throws ValidationException when there is none
+     * @throws ValidationException when the branch needs one and there is none
      */
-    public function requireOpen(User $user, string $branchId, string $field = 'till'): TillSession
+    public function requireOpen(User $user, string $branchId, string $field = 'till'): ?TillSession
     {
-        return $this->openFor($user, $branchId)
-            ?? throw ValidationException::withMessages([$field => 'Open your till before taking or giving back money.']);
+        $open = $this->openFor($user, $branchId);
+        if ($open === null && $this->settings($branchId)->shifts_required) {
+            throw ValidationException::withMessages([$field => 'Start your shift before taking or giving back money.']);
+        }
+
+        return $open;
     }
 
     /**
@@ -54,13 +72,13 @@ class Tills
     public function open(User $user, string $branchId, int $floatMinor): TillSession
     {
         if ($floatMinor < 0) {
-            throw ValidationException::withMessages(['opening_float' => 'The float cannot be negative.']);
+            throw ValidationException::withMessages(['opening_float' => 'The starting cash cannot be negative.']);
         }
 
         try {
             return DB::transaction(function () use ($user, $branchId, $floatMinor) {
                 if ($this->openFor($user, $branchId) !== null) {
-                    throw ValidationException::withMessages(['opening_float' => 'Your till is already open.']);
+                    throw ValidationException::withMessages(['opening_float' => 'Your shift is already open.']);
                 }
 
                 return TillSession::query()->create([
@@ -73,31 +91,31 @@ class Tills
                 ]);
             });
         } catch (UniqueConstraintViolationException) {
-            throw ValidationException::withMessages(['opening_float' => 'Your till is already open.']);
+            throw ValidationException::withMessages(['opening_float' => 'Your shift is already open.']);
         }
     }
 
     /**
-     * Counts the till and closes it. A count that differs from what the till
-     * should hold needs a note.
+     * Counts the cash and closes the shift. A count that differs from what
+     * the drawer should hold needs a note, unless counted blind.
      *
      * @throws ValidationException
      */
-    public function close(TillSession $till, User $by, int $countedMinor, ?string $note): TillSession
+    public function close(TillSession $till, User $by, int $countedMinor, ?string $note, bool $blind = false): TillSession
     {
-        return DB::transaction(function () use ($till, $by, $countedMinor, $note) {
+        return DB::transaction(function () use ($till, $by, $countedMinor, $note, $blind) {
             $locked = TillSession::query()->whereKey($till->id)->lockForUpdate()->firstOrFail();
 
             if ($locked->status !== TillSession::OPEN) {
-                throw ValidationException::withMessages(['counted_cash' => "Till {$locked->number} is already closed."]);
+                throw ValidationException::withMessages(['counted_cash' => "Shift {$locked->number} is already closed."]);
             }
             if ($countedMinor < 0) {
                 throw ValidationException::withMessages(['counted_cash' => 'The count cannot be negative.']);
             }
 
             $expected = $this->summary($locked)['expectedCashMinor'];
-            if ($countedMinor !== $expected && blank($note)) {
-                throw ValidationException::withMessages(['closing_note' => 'Say why the count differs from what the till should hold.']);
+            if ($countedMinor !== $expected && blank($note) && ! $blind) {
+                throw ValidationException::withMessages(['closing_note' => 'Say why the count differs from what the drawer should hold.']);
             }
 
             $locked->forceFill([

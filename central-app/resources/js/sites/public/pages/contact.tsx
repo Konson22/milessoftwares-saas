@@ -6,7 +6,7 @@ import PageHero, {
     HeroBadge,
 } from '@/sites/public/components/page-hero';
 import Seo from '@/sites/public/components/seo';
-import { button, card, iconChip } from '@/sites/public/components/styles';
+import { button, panel, iconChip } from '@/sites/public/components/styles';
 
 type Props = {
     formToken: string;
@@ -23,7 +23,6 @@ export default function Contact({ formToken, canonical }: Props) {
             />
 
             <PageHero
-                padding="pt-16 pb-36 sm:pt-24 sm:pb-40"
                 eyebrow={<HeroBadge>Contact</HeroBadge>}
                 title={
                     <>
@@ -35,14 +34,14 @@ export default function Contact({ formToken, canonical }: Props) {
 
             <section
                 aria-label="Message"
-                className="relative mx-auto -mt-24 grid max-w-7xl gap-5 px-4 pb-24 sm:px-6 lg:grid-cols-[20rem_1fr]"
+                className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[20rem_1fr]"
             >
-                <aside className="space-y-5">
-                    <div className={`${card} p-7`}>
+                <aside className="space-y-6">
+                    <div>
                         <span className={`${iconChip} size-12`}>
                             <Clock className="size-5" aria-hidden />
                         </span>
-                        <p className="mt-5 text-lg font-semibold">
+                        <p className="mt-4 text-lg font-semibold">
                             One working day
                         </p>
                         <p className="mt-1 text-sm text-slate-600">
@@ -50,11 +49,11 @@ export default function Contact({ formToken, canonical }: Props) {
                             one working day.
                         </p>
                     </div>
-                    <div className={`${card} p-7`}>
+                    <div className="border-t border-site-line pt-6">
                         <span className={`${iconChip} size-12`}>
                             <Rocket className="size-5" aria-hidden />
                         </span>
-                        <p className="mt-5 text-lg font-semibold">
+                        <p className="mt-4 text-lg font-semibold">
                             Rather try it yourself?
                         </p>
                         <p className="mt-1 text-sm text-slate-600">
@@ -70,7 +69,7 @@ export default function Contact({ formToken, canonical }: Props) {
                     </div>
                 </aside>
 
-                <div className={`${card} p-6 sm:p-10`}>
+                <div className={`${panel} p-6 sm:p-10`}>
                     <LeadForm
                         action="/contact"
                         formToken={formToken}

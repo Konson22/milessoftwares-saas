@@ -34,23 +34,25 @@
     --color-brand-gold-light: #f7cd5c;
     --color-brand-gold-dark: #c98a10;
 
-    /* Public site: deep navy bands (hero, figures, footer) between white
-       and cool-grey sections, accented in the logo's colours. The accent
-       is the logo blue in three strengths so text always passes WCAG AA:
-       accent for shapes and lines, accent-ink for blue text and buttons
-       on light (6.0:1), accent-glow (the logo cyan) for text on navy
-       (11:1). Cyan, teal, green and gold (brand-*) appear as highlights.
-       site-black is the app sidebar in the home page's drawing. */
-    --color-site-ink: #0b1220;
-    --color-site-wash: #edf1ff;
-    --color-site-soft: #f5f7fa;
-    --color-site-line: #e4e8ee;
+    /* Public site: light-first (white / soft lavender), a bright blue →
+       violet gradient for actions and highlights, deep indigo for the
+       footer and closing bands. accent for shapes and lines; accent-ink
+       for blue text on light (5.3:1). violet and coral only ever appear
+       in gradients and decoration. site-black is the app sidebar in
+       product art. */
+    --color-site-ink: #161837;
+    --color-site-wash: #eef0fb;
+    --color-site-soft: #f6f7ff;
+    --color-site-line: #e5e7f4;
     --color-site-black: #070707;
-    --color-site-navy: #0a1f4e;
-    --color-site-night: #050f2b;
-    --color-site-accent: #0b7cf0;
-    --color-site-accent-ink: #0b5bd6;
-    --color-site-accent-glow: #4fd8f5;
+    --color-site-navy: #1c1d4e;
+    --color-site-night: #0e0f2c;
+    --color-site-accent: #2575fc;
+    --color-site-accent-ink: #1559d6;
+    --color-site-accent-glow: #8fb8ff;
+    --color-site-violet: #6c41ff;
+    --color-site-purple: #a44cee;
+    --color-site-coral: #ff847f;
     --font-public:
         'Nunito Variable', 'Nunito', ui-sans-serif, system-ui, sans-serif;
     --font-public-display:
@@ -83,6 +85,12 @@
     --radius-2xl: 1rem;
     --radius-3xl: 1.5rem;
     --radius-4xl: 2rem;
+
+    /* Tailwind's own small text sizes; the shared theme enlarges them. */
+    --text-xs: 0.75rem;
+    --text-xs--line-height: 1rem;
+    --text-sm: 0.875rem;
+    --text-sm--line-height: 1.25rem;
 }
 
 /* Headings in the display face; everything else in the text face. */
@@ -90,39 +98,60 @@
     font-family: var(--font-public-display);
 }
 
-/* Decorative dot grid (hero and call-to-action shapes), in currentColor. */
+/* The blue → violet gradient: buttons, bands, icon chips and highlights. */
+.site-public .site-gradient {
+    background-image: linear-gradient(
+        120deg,
+        #2575fc 0%,
+        #4f5bff 50%,
+        #6c41ff 100%
+    );
+}
+
+.site-public .site-gradient-text {
+    background-image: linear-gradient(
+        100deg,
+        #1559d6 0%,
+        #5b3df5 60%,
+        #8a35e0 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+/* On a dark band the highlight lightens so it keeps its contrast. */
+.site-public .site-dark .site-gradient-text {
+    background-image: linear-gradient(
+        100deg,
+        #8fb8ff 0%,
+        #c4b0ff 60%,
+        #ffb3ae 100%
+    );
+}
+
+/* A faint dotted grid behind heroes and bands. Decorative. */
 .site-public .site-dots {
-    background-image: radial-gradient(currentColor 1.5px, transparent 1.6px);
-    background-size: 18px 18px;
+    background-image: radial-gradient(currentColor 1px, transparent 1px);
+    background-size: 22px 22px;
 }
 
 /*
- * Gentle motion for the public marketing site: floating app pills in the
- * hero, a soft fade-up when the hero photos enter view, and the photo
- * slideshow's slow zoom, caption entrance and progress bar.
+ * Gentle motion for the public marketing site: floating shapes and hero
+ * cards, the photo slideshow's slow zoom, caption entrance and progress
+ * bar. Nothing moves for visitors who prefer reduced motion.
  */
 @media (prefers-reduced-motion: no-preference) {
-    .site-public .float-pill {
-        animation: site-float 6s ease-in-out infinite;
+    .site-public .site-float {
+        animation: site-float 7s ease-in-out infinite;
     }
 
-    .site-public .float-pill:nth-child(2) {
-        animation-delay: -1.5s;
-        animation-duration: 7s;
+    .site-public .site-float-slow {
+        animation: site-float 11s ease-in-out infinite reverse;
     }
 
-    .site-public .float-pill:nth-child(3) {
-        animation-delay: -3s;
-        animation-duration: 5.5s;
-    }
-
-    .site-public .float-pill:nth-child(4) {
-        animation-delay: -4.5s;
-        animation-duration: 6.5s;
-    }
-
-    .site-public .reveal-up {
-        animation: site-reveal-up 0.7s ease-out both;
+    .site-public .site-rise {
+        animation: site-caption-in 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
     }
 
     .site-public .hero-slide.is-active {
@@ -139,6 +168,17 @@
 
     .site-public .hero-progress.is-paused {
         animation-play-state: paused;
+    }
+}
+
+@keyframes site-float {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-14px);
     }
 }
 
@@ -171,28 +211,5 @@
 
     to {
         transform: scaleX(1);
-    }
-}
-
-@keyframes site-float {
-    0%,
-    100% {
-        transform: translateY(0);
-    }
-
-    50% {
-        transform: translateY(-6px);
-    }
-}
-
-@keyframes site-reveal-up {
-    from {
-        opacity: 0;
-        transform: translateY(12px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
     }
 }

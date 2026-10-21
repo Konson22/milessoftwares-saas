@@ -10,6 +10,7 @@ use App\Modules\Billing\Models\Invoice;
 use App\Modules\Billing\Models\Payment;
 use App\Modules\Billing\Support\AccountStanding;
 use App\Modules\Entitlements\Models\Entitlement;
+use App\Modules\Identity\Http\Controllers\FirstPartySignInController;
 use App\Modules\Marketing\Support\MarketingCatalog;
 use App\Modules\Memberships\Models\Invitation;
 use App\Modules\Memberships\Models\OrganizationMembership;
@@ -21,14 +22,29 @@ use App\Modules\Subscriptions\Models\Plan;
 use App\Modules\Subscriptions\Models\PlanRequest;
 use App\Modules\Subscriptions\Models\Subscription;
 use App\Modules\Subscriptions\Models\SubscriptionItem;
+use App\Support\Tenancy\TenantContext;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * The customer dashboard. Right after signing in, a member of one
+ * organization who works in only one of its applications (and does not
+ * administer the workspace) goes straight into that application, as the
+ * workspace home does; coming back later shows the dashboard.
+ */
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request, MembershipLookup $memberships, Launcher $launcher, AccessResolver $access, AccountStanding $standing, MarketingCatalog $catalog): Response
+    public function __invoke(Request $request, MembershipLookup $memberships, Launcher $launcher, AccessResolver $access, AccountStanding $standing, MarketingCatalog $catalog, TenantContext $tenant): Response|RedirectResponse
     {
+        if ($request->session()->get(FirstPartySignInController::JUST_SIGNED_IN) === true) {
+            $only = $this->onlyApplication($memberships->activeFor($request->user()), $launcher, $access, $tenant);
+            if ($only !== null) {
+                return redirect()->away($only);
+            }
+        }
+
         $current = $request->attributes->get('membership');
         $current = $current instanceof OrganizationMembership ? $current : null;
         $isOwner = $current !== null && $access->isOwner($current);
@@ -97,6 +113,31 @@ class DashboardController extends Controller
                 ] : null,
             ],
         ]);
+    }
+
+    /**
+     * Where a member works when it is in exactly one place: one organization
+     * with a workspace, not administered by them, and one application.
+     *
+     * @param  iterable<OrganizationMembership>  $memberships
+     */
+    private function onlyApplication(iterable $memberships, Launcher $launcher, AccessResolver $access, TenantContext $tenant): ?string
+    {
+        $memberships = collect($memberships);
+        $membership = $memberships->first();
+
+        if ($memberships->count() !== 1
+            || ! $membership instanceof OrganizationMembership
+            || ! $membership->organization->status->resolvesWorkspace()) {
+            return null;
+        }
+
+        /** @var list<array{href: string}>|null $applications */
+        $applications = $tenant->run($membership->organization, fn () => (new WorkspaceAbilities($access))->administers($membership)
+            ? null
+            : $launcher->for($membership));
+
+        return $applications !== null && count($applications) === 1 ? $applications[0]['href'] : null;
     }
 
     /**

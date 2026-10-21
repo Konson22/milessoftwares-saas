@@ -378,3 +378,15 @@ it('keeps billing, payments and modules from members who do not own the organiza
     $this->get(billingAppUrl('dashboard'))->assertInertia(fn (AssertableInertia $page) => $page
         ->where('current.billing', null));
 });
+
+it('lists every ERP application on the explore page to start a business on, owner or not', function () {
+    Application::query()->create(['code' => 'hr', 'name' => 'HR', 'category' => 'products', 'kind' => 'standalone', 'status' => 'planned']);
+    $member = OrganizationMembership::factory()->create(['organization_id' => $this->organization->id]);
+    billingWorkAs($member);
+
+    $this->get(billingAppUrl('explore'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+        ->component('central/explore')
+        ->where('trialDays', (int) config('platform.marketing.trial_days'))
+        ->where('applications', fn ($applications) => collect($applications)->pluck('comingSoon', 'code')->only(['hr', 'retail'])->sortKeys()->all()
+            === ['hr' => true, 'retail' => false]));
+});

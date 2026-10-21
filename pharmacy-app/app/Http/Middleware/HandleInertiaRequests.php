@@ -83,6 +83,8 @@ class HandleInertiaRequests extends Middleware
             'canSwitchBranch' => fn () => app(CurrentAccess::class)->get() !== null && count(app(Branches::class)->available()) > 1,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
+                // Documents to print by themselves after a counter step (CounterPrinting).
+                'print' => fn () => $request->session()->get('print', []),
             ],
         ];
     }

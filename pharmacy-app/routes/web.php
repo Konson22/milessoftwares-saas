@@ -17,6 +17,10 @@ use App\Modules\Pharmacy\Http\Controllers\PrescriptionController;
 use App\Modules\Procurement\Http\Controllers\GoodsReceiptController;
 use App\Modules\Procurement\Http\Controllers\PurchaseOrderController;
 use App\Modules\Procurement\Http\Controllers\SupplierReturnController;
+use App\Modules\Sales\Http\Controllers\CounterCustomerController;
+use App\Modules\Sales\Http\Controllers\CounterOrderController;
+use App\Modules\Sales\Http\Controllers\CounterPrintController;
+use App\Modules\Sales\Http\Controllers\CounterSettingsController;
 use App\Modules\Sales\Http\Controllers\SaleController;
 use App\Modules\Sales\Http\Controllers\TillController;
 use Illuminate\Support\Facades\Route;
@@ -72,7 +76,47 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::middleware('branch.can:pharmacy.sales.view')->group(function () {
                 Route::get('sales', [SaleController::class, 'index'])->name('sales.index');
                 Route::get('sales/{sale}', [SaleController::class, 'show'])->whereUuid('sale')->name('sales.show');
-                Route::get('sales/{sale}/receipt', [SaleController::class, 'receipt'])->whereUuid('sale')->name('sales.receipt');
+            });
+
+            // Counter orders: taken, paid and handed over, at one counter or several.
+            Route::middleware('branch.can:pharmacy.sales.view,pharmacy.sales.create,pharmacy.sales.handover')->group(function () {
+                Route::get('orders', [CounterOrderController::class, 'index'])->name('orders.index');
+                Route::get('orders/{order}', [CounterOrderController::class, 'show'])->whereUuid('order')->name('orders.show');
+                // What the counter prints; every print is logged, reprints numbered.
+                Route::get('sales/{sale}/receipt', [CounterPrintController::class, 'sale'])->whereUuid('sale')->name('sales.receipt');
+                Route::get('orders/{order}/print/{document}', [CounterPrintController::class, 'order'])->whereUuid('order')->whereIn('document', ['order_slip', 'collection_slip'])->name('orders.print');
+                Route::post('printed-documents', [CounterPrintController::class, 'store'])->name('printed-documents.store');
+            });
+            Route::middleware('branch.can:pharmacy.sales.create')->group(function () {
+                Route::post('orders', [CounterOrderController::class, 'store'])->name('orders.store');
+                Route::post('orders/{order}/pay', [CounterOrderController::class, 'pay'])->whereUuid('order')->name('orders.pay');
+            });
+            Route::post('orders/{order}/hand-over', [CounterOrderController::class, 'handOver'])
+                ->whereUuid('order')
+                ->middleware('branch.can:pharmacy.sales.handover')
+                ->name('orders.hand-over');
+            Route::post('orders/{order}/cancel', [CounterOrderController::class, 'cancel'])
+                ->whereUuid('order')
+                ->middleware('branch.can:pharmacy.sales.create,pharmacy.sales.handover')
+                ->name('orders.cancel');
+            // The branch's counter: workflow, customer rules, printing.
+            Route::middleware('branch.can:pharmacy.sales.settings')->group(function () {
+                Route::get('counter-settings', [CounterSettingsController::class, 'edit'])->name('counter-settings.edit');
+                // POST, not PUT: the form uploads a logo.
+                Route::post('counter-settings', [CounterSettingsController::class, 'update'])->name('counter-settings.update');
+            });
+
+            // Registered customers: one record across branches, with what they bought.
+            Route::middleware('branch.can:pharmacy.customers.view')->group(function () {
+                Route::get('customers', [CounterCustomerController::class, 'index'])->name('customers.index');
+                Route::get('customers/lookup', [CounterCustomerController::class, 'lookup'])->name('customers.lookup');
+                Route::get('customers/{customer}', [CounterCustomerController::class, 'show'])->whereUuid('customer')->name('customers.show');
+            });
+            Route::middleware('can:pharmacy.customers.manage')->group(function () {
+                Route::get('customers/create', [CounterCustomerController::class, 'create'])->name('customers.create');
+                Route::post('customers', [CounterCustomerController::class, 'store'])->name('customers.store');
+                Route::get('customers/{customer}/edit', [CounterCustomerController::class, 'edit'])->whereUuid('customer')->name('customers.edit');
+                Route::put('customers/{customer}', [CounterCustomerController::class, 'update'])->whereUuid('customer')->name('customers.update');
             });
             // Tills: cashiers their own, managers everyone's.
             Route::post('tills', [TillController::class, 'store'])->middleware('branch.can:pharmacy.sales.create')->name('tills.store');

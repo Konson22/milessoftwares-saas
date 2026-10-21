@@ -8,12 +8,12 @@ use App\Modules\Authorization\Support\AccessResolver;
 use App\Modules\Memberships\Actions\MembershipActionDenied;
 use App\Modules\Memberships\Actions\TemporaryAccounts;
 use App\Modules\Memberships\Models\OrganizationMembership;
+use App\Modules\Memberships\Support\ProposedAccess;
 use App\Sites\Central\Http\Controllers\Workspace\Concerns\AuthorizesWorkspaceAdministration;
 use App\Support\Hosts\PlatformHosts;
 use Carbon\CarbonInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
@@ -39,21 +39,10 @@ class MemberAccountController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
-            'role_id' => ['nullable', 'uuid'],
-            'scope_type' => ['required_with:role_id', 'nullable', Rule::in(['organization', 'branch', 'department'])],
-            'branch_id' => ['required_if:scope_type,branch', 'nullable', 'uuid'],
-            'department_id' => ['required_if:scope_type,department', 'nullable', 'uuid'],
-            'acknowledge_sod' => ['sometimes', 'boolean'],
+            ...ProposedAccess::rules(),
         ]);
 
-        $proposed = empty($validated['role_id']) ? null : [
-            'role_id' => (string) $validated['role_id'],
-            'scope' => [
-                'scope_type' => (string) $validated['scope_type'],
-                'branch_id' => $validated['branch_id'] ?? null,
-                'department_id' => $validated['department_id'] ?? null,
-            ],
-        ];
+        $proposed = ProposedAccess::fromInput($validated);
 
         try {
             $result = $this->accounts->add($actor, $validated['name'], $validated['email'], $proposed, (bool) ($validated['acknowledge_sod'] ?? false));

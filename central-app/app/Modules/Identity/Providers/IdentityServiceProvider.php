@@ -5,6 +5,7 @@ namespace App\Modules\Identity\Providers;
 use App\Modules\Identity\Console\SetUserStatus;
 use App\Modules\Identity\Console\SyncFirstPartyClients;
 use App\Modules\Identity\Http\Responses\LogoutResponse;
+use App\Modules\Identity\Http\Responses\VerifyEmailResponse;
 use App\Modules\Identity\Listeners\AuthenticationEventSubscriber;
 use App\Modules\Identity\Models\OAuthClient;
 use App\Modules\Identity\OpenId\SigningKey;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Inertia\Inertia;
 use Laravel\Fortify\Contracts\LogoutResponse as LogoutResponseContract;
+use Laravel\Fortify\Contracts\VerifyEmailResponse as VerifyEmailResponseContract;
 use Laravel\Passport\Client;
 use Laravel\Passport\Passport;
 use Laravel\Passport\Scope;
@@ -29,6 +31,7 @@ class IdentityServiceProvider extends ServiceProvider
         Passport::ignoreRoutes();
 
         $this->app->singleton(LogoutResponseContract::class, LogoutResponse::class);
+        $this->app->singleton(VerifyEmailResponseContract::class, VerifyEmailResponse::class);
     }
 
     public function boot(): void

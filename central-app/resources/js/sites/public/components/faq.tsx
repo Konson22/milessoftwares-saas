@@ -32,7 +32,7 @@ export default function FaqList({ trialDays }: { trialDays: number }) {
                 <details
                     key={question}
                     name="faq"
-                    className="group rounded-2xl border border-site-line bg-white px-5 transition-[border-color,box-shadow] duration-200 open:border-site-accent/40 open:shadow-lg open:shadow-site-ink/5 sm:px-6"
+                    className="group rounded-2xl border border-site-line bg-white px-5 shadow-[0_8px_30px_-18px_rgba(22,24,55,0.2)] transition-colors duration-200 open:border-site-accent/40 sm:px-6"
                 >
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 font-semibold sm:gap-6 sm:py-5 [&::-webkit-details-marker]:hidden">
                         {question}

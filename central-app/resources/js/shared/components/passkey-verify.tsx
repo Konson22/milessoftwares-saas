@@ -58,7 +58,7 @@ export default function PasskeyVerify({
                 <Button
                     type="button"
                     variant="outline"
-                    className="w-full in-[.site-public]:h-11 in-[.site-public]:border-site-line in-[.site-public]:bg-white in-[.site-public]:shadow-sm in-[.site-public]:shadow-site-navy/5 in-[.site-public]:hover:border-site-accent/50 in-[.site-public]:hover:bg-white in-[.site-public]:hover:text-site-accent-ink"
+                    className="w-full in-[.site-public]:h-10 in-[.site-public]:border-site-line in-[.site-public]:bg-white in-[.site-public]:shadow-sm in-[.site-public]:shadow-site-navy/5 in-[.site-public]:hover:border-site-accent/50 in-[.site-public]:hover:bg-white in-[.site-public]:hover:text-site-accent-ink"
                     onClick={verify}
                     disabled={isLoading}
                 >
@@ -72,7 +72,7 @@ export default function PasskeyVerify({
                 )}
             </div>
 
-            <div className="relative my-6">
+            <div className="relative my-4">
                 <div className="absolute inset-0 flex items-center">
                     <Separator className="w-full" />
                 </div>

@@ -6,8 +6,11 @@ use App\Models\User;
 use App\Modules\Inventory\Actions\InsufficientStock;
 use App\Modules\Inventory\Actions\ItemPacks;
 use App\Modules\Inventory\Actions\Stock;
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Item;
+use App\Modules\Inventory\Models\ItemPack;
 use App\Modules\Sales\Enums\PaymentMethod;
+use App\Modules\Sales\Models\BranchCounterSettings;
 use App\Modules\Sales\Models\Sale;
 use App\Support\DocumentNumbers;
 use App\Support\Industry;
@@ -38,6 +41,11 @@ use Miles\PlatformClient\Events\Outbox;
  * customer locked), is due after their payment terms, and Finance gets the
  * invoice with its due date but no payment (CustomerAccounts).
  *
+ * The branch may require the customer to be named (CustomerRequirement).
+ *
+ * Stock already taken for a line ($taken, by line: a counter order
+ * dispensed before it was paid) is sold as it is, not taken again.
+ *
  * A sale submitted with a $submissionId that was already used is that
  * sale again, not a second one (a double click, a retried request).
  */
@@ -51,6 +59,7 @@ class Sell
         private readonly ItemPacks $packs,
         private readonly Industry $industry,
         private readonly CustomerAccounts $accounts,
+        private readonly CustomerRequirement $customers,
     ) {}
 
     /**
@@ -58,6 +67,7 @@ class Sell
      * @param  list<string>  $authorized  restricted item ids allowed in this sale (a verified prescription's)
      * @param  int  $maxDiscountPercent  the most this seller may take off a line (0: no discounts)
      * @param  string|null  $customerId  an account customer of this industry (required on account)
+     * @param  array<int, list<array{batch: Batch, quantity: int}>>  $taken  by line index: the batches its stock already came from
      *
      * @throws ValidationException
      * @throws InsufficientStock
@@ -74,13 +84,15 @@ class Sell
         int $maxDiscountPercent = 0,
         ?string $submissionId = null,
         ?string $customerId = null,
+        ?string $customerPhone = null,
+        array $taken = [],
     ): Sale {
         if ($submissionId !== null && ($earlier = $this->submitted($submissionId)) !== null) {
             return $earlier;
         }
 
         try {
-            return $this->sell($by, $branchId, $items, $method, $paymentReference, $tenderedMinor, $customerName, $authorized, $maxDiscountPercent, $submissionId, $customerId);
+            return $this->sell($by, $branchId, $items, $method, $paymentReference, $tenderedMinor, $customerName, $authorized, $maxDiscountPercent, $submissionId, $customerId, $customerPhone, $taken);
         } catch (UniqueConstraintViolationException $e) {
             // The same submission, committed by a request running alongside.
             if ($submissionId !== null && ($earlier = $this->submitted($submissionId)) !== null) {
@@ -94,6 +106,7 @@ class Sell
     /**
      * @param  list<array{item_id: string, quantity: int, discount_percent?: int, pack_id?: string|null}>  $items
      * @param  list<string>  $authorized
+     * @param  array<int, list<array{batch: Batch, quantity: int}>>  $taken
      */
     private function sell(
         User $by,
@@ -107,8 +120,10 @@ class Sell
         int $maxDiscountPercent,
         ?string $submissionId,
         ?string $customerId,
+        ?string $customerPhone,
+        array $taken,
     ): Sale {
-        return DB::transaction(function () use ($by, $branchId, $items, $method, $paymentReference, $tenderedMinor, $customerName, $authorized, $maxDiscountPercent, $submissionId, $customerId) {
+        return DB::transaction(function () use ($by, $branchId, $items, $method, $paymentReference, $tenderedMinor, $customerName, $authorized, $maxDiscountPercent, $submissionId, $customerId, $customerPhone, $taken) {
             $till = $this->tills->requireOpen($by, $branchId);
 
             // Locked until the sale commits: its balance cannot move meanwhile.
@@ -118,39 +133,14 @@ class Sell
             }
 
             // Price and check everything before touching stock.
-            $priced = [];
-            $total = 0;
-            $discountTotal = 0;
+            ['lines' => $priced, 'total' => $total, 'discount' => $discountTotal] = $this->price($items, $authorized, $maxDiscountPercent);
 
-            foreach ($items as $index => $line) {
-                $item = Item::query()->find($line['item_id']);
-
-                if ($item === null || ! $item->active || ! $this->industry->handles($item->kind)) {
-                    throw ValidationException::withMessages(["items.{$index}.item_id" => 'This item cannot be sold.']);
-                }
-                if ($item->restricted && ! in_array($item->id, $authorized, true)) {
-                    throw ValidationException::withMessages(["items.{$index}.item_id" => "{$item->name} needs a verified prescription."]);
-                }
-
-                $percent = $line['discount_percent'] ?? 0;
-                if ($percent < 0 || $percent > 100) {
-                    throw ValidationException::withMessages(["items.{$index}.discount_percent" => 'A discount is between 0 and 100%.']);
-                }
-                if ($percent > $maxDiscountPercent) {
-                    throw ValidationException::withMessages(["items.{$index}.discount_percent" => $maxDiscountPercent === 0
-                        ? 'You may not give discounts.'
-                        : "You may give at most {$maxDiscountPercent}% off."]);
-                }
-
-                $pack = $this->packs->find($item->id, $line['pack_id'] ?? null, "items.{$index}.pack_id");
-                $units = $pack === null ? $line['quantity'] : $line['quantity'] * $pack->units;
-                $gross = $line['quantity'] * ($pack === null ? $item->sell_price_minor : $pack->sellPrice($item));
-                $discount = intdiv($gross * $percent + 50, 100);
-
-                $priced[] = [$item, $units, $gross, $discount, $pack, $line['quantity']];
-                $total += $gross - $discount;
-                $discountTotal += $discount;
-            }
+            $this->customers->ensure(
+                BranchCounterSettings::forBranch($branchId, $this->industry->code()),
+                $customer !== null || trim((string) $customerName) !== '',
+                array_any($priced, fn (array $line) => $line[0]->restricted),
+                $total,
+            );
 
             if ($method === PaymentMethod::Account) {
                 $this->accounts->ensureCredit($customer, $total);
@@ -158,7 +148,9 @@ class Sell
 
             $change = null;
             if ($method === PaymentMethod::Cash) {
-                if ($tenderedMinor === null || $tenderedMinor < $total) {
+                // No amount given: the exact total was paid.
+                $tenderedMinor ??= $total;
+                if ($tenderedMinor < $total) {
                     throw ValidationException::withMessages(['amount_tendered' => 'The cash given is less than the total.']);
                 }
                 $change = $tenderedMinor - $total;
@@ -171,6 +163,7 @@ class Sell
                 'status' => Sale::COMPLETED,
                 'customer_name' => $customer->name ?? $customerName,
                 'customer_id' => $customer?->id,
+                'customer_phone' => $customerPhone ?? $customer?->phone,
                 'due_on' => $method === PaymentMethod::Account ? today()->addDays($customer->payment_terms_days) : null,
                 'currency' => Money::currency(),
                 'total_minor' => $total,
@@ -182,18 +175,18 @@ class Sell
                 'sold_by' => $by->id,
                 'sold_at' => now(),
                 'submission_id' => $submissionId,
-                'till_session_id' => $till->id,
+                'till_session_id' => $till?->id,
             ]);
 
             $invoiceLines = [];
 
-            foreach ($priced as [$item, $quantity, $gross, $discount, $pack, $packs]) {
+            foreach ($priced as [$item, $quantity, $gross, $discount, $pack, $packs, $index]) {
                 // What the stock sold cost, batch by batch: Finance's cost of
                 // goods sold. The price and the discount are shared across the
                 // batches in proportion, the last one taking what rounding
                 // leaves (by the unit, exactly each batch's units at the price).
                 $cost = 0;
-                $parts = $this->stock->take($item, $branchId, $quantity, $by, 'sale', $sale->id);
+                $parts = $taken[$index] ?? $this->stock->take($item, $branchId, $quantity, $by, 'sale', $sale->id);
                 $grossLeft = $gross;
                 $discountLeft = $discount;
 
@@ -252,6 +245,57 @@ class Sell
 
             return $sale;
         });
+    }
+
+    /**
+     * Prices and checks a basket without touching stock: only active items
+     * of this industry, restricted ones only when authorized, discounts
+     * within what the seller may give.
+     *
+     * @param  list<array{item_id: string, quantity: int, discount_percent?: int, pack_id?: string|null}>  $items
+     * @param  list<string>  $authorized
+     *                                    Each line is [item, units, gross, discount, pack, quantity (in packs when a pack is named), line index].
+     * @return array{lines: list<array{0: Item, 1: int, 2: int, 3: int, 4: ItemPack|null, 5: int, 6: int}>, total: int, discount: int}
+     *
+     * @throws ValidationException
+     */
+    public function price(array $items, array $authorized, int $maxDiscountPercent): array
+    {
+        $priced = [];
+        $total = 0;
+        $discountTotal = 0;
+
+        foreach ($items as $index => $line) {
+            $item = Item::query()->find($line['item_id']);
+
+            if ($item === null || ! $item->active || ! $this->industry->handles($item->kind)) {
+                throw ValidationException::withMessages(["items.{$index}.item_id" => 'This item cannot be sold.']);
+            }
+            if ($item->restricted && ! in_array($item->id, $authorized, true)) {
+                throw ValidationException::withMessages(["items.{$index}.item_id" => "{$item->name} needs a verified prescription."]);
+            }
+
+            $percent = $line['discount_percent'] ?? 0;
+            if ($percent < 0 || $percent > 100) {
+                throw ValidationException::withMessages(["items.{$index}.discount_percent" => 'A discount is between 0 and 100%.']);
+            }
+            if ($percent > $maxDiscountPercent) {
+                throw ValidationException::withMessages(["items.{$index}.discount_percent" => $maxDiscountPercent === 0
+                    ? 'You may not give discounts.'
+                    : "You may give at most {$maxDiscountPercent}% off."]);
+            }
+
+            $pack = $this->packs->find($item->id, $line['pack_id'] ?? null, "items.{$index}.pack_id");
+            $units = $pack === null ? $line['quantity'] : $line['quantity'] * $pack->units;
+            $gross = $line['quantity'] * ($pack === null ? $item->sell_price_minor : $pack->sellPrice($item));
+            $discount = intdiv($gross * $percent + 50, 100);
+
+            $priced[] = [$item, $units, $gross, $discount, $pack, $line['quantity'], $index];
+            $total += $gross - $discount;
+            $discountTotal += $discount;
+        }
+
+        return ['lines' => $priced, 'total' => $total, 'discount' => $discountTotal];
     }
 
     private function submitted(string $submissionId): ?Sale

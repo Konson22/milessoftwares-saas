@@ -46,7 +46,7 @@ export default function ErpProductPage({ product, plans, canonical }: Props) {
                     <>
                         <Link
                             href="/#erp"
-                            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-300 transition-colors hover:text-site-accent-glow"
+                            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 transition-colors hover:text-site-accent-ink"
                         >
                             <ArrowLeft className="size-4" aria-hidden />
                             All ERP products
@@ -67,7 +67,7 @@ export default function ErpProductPage({ product, plans, canonical }: Props) {
                 intro={product.tagline}
             >
                 {product.description && (
-                    <p className="mt-3 max-w-2xl text-slate-400">
+                    <p className="mt-3 max-w-2xl text-slate-600">
                         {product.description}
                     </p>
                 )}
@@ -77,7 +77,7 @@ export default function ErpProductPage({ product, plans, canonical }: Props) {
                         <ArrowRight className="size-4" aria-hidden />
                     </Link>
                     {plans.length > 0 && (
-                        <a href="#plans" className={button.outlineDark}>
+                        <a href="#plans" className={button.outline}>
                             See plans
                         </a>
                     )}

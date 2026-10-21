@@ -14,12 +14,12 @@ use App\Modules\Memberships\Actions\MembershipActionDenied;
 use App\Modules\Memberships\Enums\MembershipStatus;
 use App\Modules\Memberships\Models\Invitation;
 use App\Modules\Memberships\Models\OrganizationMembership;
+use App\Modules\Memberships\Support\ProposedAccess;
 use App\Modules\Structure\Models\Branch;
 use App\Modules\Structure\Models\Department;
 use App\Sites\Central\Http\Controllers\Workspace\Concerns\AuthorizesWorkspaceAdministration;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -51,7 +51,7 @@ class InvitationController extends Controller
                     'status' => $invitation->effectiveStatus(),
                     'invitedBy' => $invitation->inviter->user->name,
                     'expiresAt' => $invitation->expires_at->toDateString(),
-                    'hasProposedRole' => $invitation->proposed_access !== null,
+                    'proposedRoles' => count($invitation->proposedRoles()),
                 ])
                 ->all(),
             'roles' => Application::query()
@@ -66,6 +66,7 @@ class InvitationController extends Controller
                     ->map(fn (ApplicationRole $role) => [
                         'id' => $role->id,
                         'name' => $role->name,
+                        'applicationId' => $application->id,
                         'application' => $application->name,
                         'scopes' => array_map(fn ($type) => $type->value, $role->allowedScopeTypes()),
                     ]))
@@ -98,21 +99,10 @@ class InvitationController extends Controller
 
         $validated = $request->validate([
             'email' => ['required', 'email', 'max:255'],
-            'role_id' => ['nullable', 'uuid'],
-            'scope_type' => ['required_with:role_id', 'nullable', Rule::in(['organization', 'branch', 'department'])],
-            'branch_id' => ['required_if:scope_type,branch', 'nullable', 'uuid'],
-            'department_id' => ['required_if:scope_type,department', 'nullable', 'uuid'],
-            'acknowledge_sod' => ['sometimes', 'boolean'],
+            ...ProposedAccess::rules(),
         ]);
 
-        $proposed = empty($validated['role_id']) ? null : [
-            'role_id' => (string) $validated['role_id'],
-            'scope' => [
-                'scope_type' => (string) $validated['scope_type'],
-                'branch_id' => $validated['branch_id'] ?? null,
-                'department_id' => $validated['department_id'] ?? null,
-            ],
-        ];
+        $proposed = ProposedAccess::fromInput($validated);
 
         try {
             $this->attempt(fn () => $this->invitations->invite($inviter, $validated['email'], $proposed, (bool) ($validated['acknowledge_sod'] ?? false)), 'email');

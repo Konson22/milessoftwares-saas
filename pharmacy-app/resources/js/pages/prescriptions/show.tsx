@@ -131,7 +131,7 @@ export default function ShowPrescription({
                 <p className="mb-4 text-sm text-destructive">
                     {errors.till}{' '}
                     <Link href={tills()} className="underline">
-                        Open a till
+                        Start a shift
                     </Link>
                 </p>
             )}

@@ -10,6 +10,7 @@ import Seo from '@/sites/public/components/seo';
 import {
     button,
     card,
+    darkBand,
     trialDuration,
     trialLength,
     trialUrl,
@@ -55,7 +56,7 @@ export default function ProductPage({
                     <>
                         <Link
                             href="/#products"
-                            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-300 transition-colors hover:text-site-accent-glow"
+                            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 transition-colors hover:text-site-accent-ink"
                         >
                             <ArrowLeft className="size-4" aria-hidden />
                             All applications
@@ -63,7 +64,9 @@ export default function ProductPage({
                         <div className="mt-8 mb-6 flex items-center gap-3">
                             <ProductTile code={product.code} size="lg" />
                             {statusLabel[product.status] && (
-                                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                                <span
+                                    className={`rounded-full px-3 py-1 text-xs font-semibold ${product.status === 'beta' ? 'site-gradient text-white' : 'bg-white text-slate-700 ring-1 ring-site-line'}`}
+                                >
                                     {statusLabel[product.status]}
                                 </span>
                             )}
@@ -74,7 +77,7 @@ export default function ProductPage({
                 intro={product.tagline}
             >
                 {product.description && (
-                    <p className="mt-3 max-w-2xl text-slate-400">
+                    <p className="mt-3 max-w-2xl text-slate-600">
                         {product.description}
                     </p>
                 )}
@@ -93,7 +96,7 @@ export default function ProductPage({
                         </Link>
                     )}
                     {trialable && plans.length > 0 && (
-                        <a href="#plans" className={button.outlineDark}>
+                        <a href="#plans" className={button.outline}>
                             See plans
                         </a>
                     )}
@@ -156,21 +159,19 @@ export default function ProductPage({
             {trialable && (
                 <section
                     aria-labelledby="try-heading"
-                    className="px-4 py-24 sm:px-6"
+                    className="px-4 py-16 sm:px-6 sm:py-24"
                 >
-                    <div className="relative isolate mx-auto flex max-w-7xl flex-col items-center gap-6 overflow-hidden rounded-3xl bg-linear-to-br from-brand-blue-dark via-brand-blue to-[#0b6e63] px-6 py-16 text-center text-white sm:px-12">
-                        <div
-                            aria-hidden
-                            className="absolute -top-24 -right-24 -z-10 size-72 rounded-full border-[40px] border-white/10"
-                        />
+                    <div
+                        className={`${darkBand} mx-auto flex max-w-7xl flex-col items-center gap-6 rounded-[2rem] px-6 py-14 text-center sm:px-12`}
+                    >
                         <h2
                             id="try-heading"
-                            className="text-3xl font-semibold tracking-tight text-balance sm:text-5xl"
+                            className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl"
                         >
                             Try {product.name} free for{' '}
                             {trialDuration(trialDays)}
                         </h2>
-                        <p className="max-w-xl text-white/90">
+                        <p className="max-w-xl text-slate-300">
                             Create your workspace and start today. No payment
                             details are needed.
                         </p>

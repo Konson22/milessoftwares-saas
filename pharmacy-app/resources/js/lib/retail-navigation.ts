@@ -74,7 +74,7 @@ export const retailNavigation: NavGroup[] = [
                 scope: 'branch',
             },
             {
-                title: 'Tills',
+                title: 'Shifts',
                 href: tills(),
                 icon: Wallet,
                 permission: 'retail.sales.create',

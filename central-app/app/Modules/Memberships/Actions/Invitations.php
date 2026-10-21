@@ -15,6 +15,7 @@ use App\Modules\Memberships\Enums\MembershipStatus;
 use App\Modules\Memberships\Models\Invitation;
 use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Memberships\Notifications\OrganizationInvitation;
+use App\Modules\Memberships\Support\ProposedAccess;
 use App\Modules\Memberships\Support\ProposedRoleCheck;
 use App\Modules\Organizations\Enums\OrganizationStatus;
 use App\Modules\Organizations\Models\Organization;
@@ -31,6 +32,8 @@ use InvalidArgumentException;
  * locked, the email must match the signed-in, verified account, and the
  * inviter must still hold the authority to invite. A proposed role goes
  * through AssignRole as the inviter, so delegation rules apply as usual.
+ *
+ * @phpstan-import-type ProposedRole from ProposedAccess
  */
 final class Invitations
 {
@@ -45,15 +48,15 @@ final class Invitations
     /**
      * Runs inside the inviting organization's tenant context.
      *
-     * A proposed role that raises separation-of-duties warnings needs them
+     * Proposed roles that raise separation-of-duties warnings need them
      * acknowledged now; the acknowledgement is kept and applied at acceptance.
      *
-     * @param  array{role_id: string, scope: array{scope_type: string, branch_id?: string|null, department_id?: string|null}}|null  $proposed
+     * @param  list<ProposedRole>  $proposed
      * @return array{0: Invitation, 1: string} the invitation and its plain token
      *
      * @throws SeparationOfDutiesWarning
      */
-    public function invite(OrganizationMembership $inviter, string $email, ?array $proposed = null, bool $acknowledgeSeparationOfDuties = false): array
+    public function invite(OrganizationMembership $inviter, string $email, array $proposed = [], bool $acknowledgeSeparationOfDuties = false): array
     {
         $this->assertMayInvite($inviter);
 
@@ -69,9 +72,17 @@ final class Invitations
             throw new MembershipActionDenied('That person is already a member.');
         }
 
-        if ($proposed !== null) {
-            $this->assertProposalPlausible($inviter, $proposed);
-            $proposed['acknowledge_sod'] = app(ProposedRoleCheck::class)->separationOfDuties($proposed, $acknowledgeSeparationOfDuties);
+        $access = null;
+
+        if ($proposed !== []) {
+            foreach ($proposed as $proposal) {
+                $this->assertProposalPlausible($inviter, $proposal);
+            }
+
+            $access = [
+                'roles' => $proposed,
+                'acknowledge_sod' => app(ProposedRoleCheck::class)->separationOfDuties($proposed, $acknowledgeSeparationOfDuties),
+            ];
         }
 
         $token = Str::random(48);
@@ -82,7 +93,7 @@ final class Invitations
                 'email' => $email,
                 'token_hash' => Invitation::hashToken($token),
                 'invited_by_membership_id' => $inviter->getKey(),
-                'proposed_access' => $proposed,
+                'proposed_access' => $access,
                 'status' => 'pending',
                 'expires_at' => now()->addDays(self::VALID_DAYS),
             ])->save();
@@ -95,7 +106,7 @@ final class Invitations
         }
 
         $this->send($invitation, $organization, $inviter, $token);
-        $this->record('invitation.created', $invitation, $inviter->user, ['email' => $email, 'proposed_access' => $proposed]);
+        $this->record('invitation.created', $invitation, $inviter->user, ['email' => $email, 'proposed_access' => $access]);
 
         return [$invitation, $token];
     }
@@ -238,36 +249,37 @@ final class Invitations
     }
 
     /**
-     * Applies the proposed role as the inviter. A refusal does not undo the
-     * membership; it is reported and audited instead.
+     * Applies the proposed roles as the inviter. A refusal does not undo the
+     * membership or the other roles; it is reported and audited instead.
      */
     private function applyProposedAccess(Invitation $invitation, OrganizationMembership $inviter, OrganizationMembership $membership): ?string
     {
-        $proposed = $invitation->proposed_access;
+        $acknowledged = (bool) ($invitation->proposed_access['acknowledge_sod'] ?? false);
+        $notes = [];
 
-        if ($proposed === null) {
-            return null;
+        foreach ($invitation->proposedRoles() as $proposal) {
+            $role = ApplicationRole::query()->with('application')->find($proposal['role_id']);
+
+            if ($role === null) {
+                $notes[] = 'A proposed role no longer exists.';
+
+                continue;
+            }
+
+            try {
+                app(AssignRole::class)->handle(
+                    $inviter,
+                    $membership,
+                    $role,
+                    Scope::fromInput($proposal['scope']),
+                    acknowledgeSeparationOfDuties: $acknowledged,
+                );
+            } catch (AssignmentDenied|SeparationOfDutiesWarning|InvalidArgumentException $e) {
+                $notes[] = "The proposed role {$role->name} was not given: {$e->getMessage()}";
+            }
         }
 
-        $role = ApplicationRole::query()->with('application')->find($proposed['role_id']);
-
-        if ($role === null) {
-            return 'The proposed role no longer exists.';
-        }
-
-        try {
-            app(AssignRole::class)->handle(
-                $inviter,
-                $membership,
-                $role,
-                Scope::fromInput($proposed['scope']),
-                acknowledgeSeparationOfDuties: (bool) ($proposed['acknowledge_sod'] ?? false),
-            );
-        } catch (AssignmentDenied|SeparationOfDutiesWarning|InvalidArgumentException $e) {
-            return 'The proposed role was not given: '.$e->getMessage();
-        }
-
-        return null;
+        return $notes === [] ? null : implode(' ', $notes);
     }
 
     private function assertMayInvite(OrganizationMembership $membership): void
@@ -281,7 +293,7 @@ final class Invitations
      * Early feedback for the inviter. The authoritative check is AssignRole at
      * acceptance time.
      *
-     * @param  array{role_id: string, scope: array{scope_type: string, branch_id?: string|null, department_id?: string|null}}  $proposed
+     * @param  ProposedRole  $proposed
      */
     private function assertProposalPlausible(OrganizationMembership $inviter, array $proposed): void
     {

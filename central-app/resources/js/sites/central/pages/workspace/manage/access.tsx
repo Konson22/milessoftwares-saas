@@ -5,6 +5,8 @@ import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
+import RolePicker from '@/sites/central/components/role-picker';
+import type { PickerRole } from '@/sites/central/components/role-picker';
 
 type Assignment = {
     id: string;
@@ -22,11 +24,7 @@ type Member = {
     assignments: Assignment[];
 };
 
-type Role = {
-    id: string;
-    name: string;
-    application: string;
-    scopes: ('organization' | 'branch' | 'department' | 'resource')[];
+type Role = PickerRole & {
     sensitivity: number;
     delegable: boolean;
 };
@@ -43,32 +41,14 @@ type Props = {
 const selectClass =
     'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm';
 
-const scopeLabels = {
-    organization: 'Whole organization',
-    branch: 'One branch',
-    department: 'One department',
-} as const;
-
 export default function Access({
     members,
     roles,
     branches,
     departments,
 }: Props) {
-    const [roleId, setRoleId] = useState('');
-    const [scopeType, setScopeType] =
-        useState<keyof typeof scopeLabels>('organization');
-    const role = roles.find((candidate) => candidate.id === roleId);
-    const scopeOptions = (role?.scopes ?? ['organization']).filter(
-        (scope): scope is keyof typeof scopeLabels => scope !== 'resource',
-    );
-    const effectiveScope = scopeOptions.includes(scopeType)
-        ? scopeType
-        : scopeOptions[0];
-
-    const applications = [
-        ...new Set(roles.map((candidate) => candidate.application)),
-    ];
+    // Remounts the role picker after each assignment, clearing its choices.
+    const [round, setRound] = useState(0);
 
     return (
         <>
@@ -77,8 +57,9 @@ export default function Access({
             <h1 className="text-2xl font-semibold">Access</h1>
             <p className="mt-1 text-sm text-muted-foreground">
                 Roles decide what each member can do in each application, and
-                where. You can only hand out roles at scopes you manage, up to
-                your own level in that application.
+                where. A member can hold several roles. You can only hand out
+                roles at scopes you manage, up to your own level in that
+                application.
             </p>
 
             <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_22rem]">
@@ -138,10 +119,12 @@ export default function Access({
                 </ul>
 
                 <section className="space-y-4">
-                    <h2 className="text-lg font-medium">Assign a role</h2>
+                    <h2 className="text-lg font-medium">Assign roles</h2>
                     <Form
                         action="/manage/access"
                         method="post"
+                        resetOnSuccess
+                        onSuccess={() => setRound((current) => current + 1)}
                         options={{ preserveScroll: true }}
                         className="space-y-4"
                     >
@@ -175,129 +158,13 @@ export default function Access({
                                     />
                                 </div>
 
-                                <div className="grid gap-1.5">
-                                    <Label htmlFor="role_id">Role</Label>
-                                    <select
-                                        id="role_id"
-                                        name="role_id"
-                                        className={selectClass}
-                                        value={roleId}
-                                        onChange={(event) =>
-                                            setRoleId(event.target.value)
-                                        }
-                                        required
-                                    >
-                                        <option value="" disabled>
-                                            Choose a role
-                                        </option>
-                                        {applications.map((application) => (
-                                            <optgroup
-                                                key={application}
-                                                label={application}
-                                            >
-                                                {roles
-                                                    .filter(
-                                                        (candidate) =>
-                                                            candidate.application ===
-                                                            application,
-                                                    )
-                                                    .map((candidate) => (
-                                                        <option
-                                                            key={candidate.id}
-                                                            value={candidate.id}
-                                                        >
-                                                            {candidate.name}
-                                                            {!candidate.delegable &&
-                                                                ' (owner only)'}
-                                                        </option>
-                                                    ))}
-                                            </optgroup>
-                                        ))}
-                                    </select>
-                                    <InputError message={errors.role_id} />
-                                </div>
-
-                                <div className="grid gap-1.5">
-                                    <Label htmlFor="scope_type">Where</Label>
-                                    <select
-                                        id="scope_type"
-                                        name="scope_type"
-                                        className={selectClass}
-                                        value={effectiveScope}
-                                        onChange={(event) =>
-                                            setScopeType(
-                                                event.target
-                                                    .value as keyof typeof scopeLabels,
-                                            )
-                                        }
-                                    >
-                                        {scopeOptions.map((scope) => (
-                                            <option key={scope} value={scope}>
-                                                {scopeLabels[scope]}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {effectiveScope === 'branch' && (
-                                    <div className="grid gap-1.5">
-                                        <Label htmlFor="branch_id">
-                                            Branch
-                                        </Label>
-                                        <select
-                                            id="branch_id"
-                                            name="branch_id"
-                                            className={selectClass}
-                                            defaultValue=""
-                                            required
-                                        >
-                                            <option value="" disabled>
-                                                Choose a branch
-                                            </option>
-                                            {branches.map((branch) => (
-                                                <option
-                                                    key={branch.id}
-                                                    value={branch.id}
-                                                >
-                                                    {branch.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <InputError
-                                            message={errors.branch_id}
-                                        />
-                                    </div>
-                                )}
-
-                                {effectiveScope === 'department' && (
-                                    <div className="grid gap-1.5">
-                                        <Label htmlFor="department_id">
-                                            Department
-                                        </Label>
-                                        <select
-                                            id="department_id"
-                                            name="department_id"
-                                            className={selectClass}
-                                            defaultValue=""
-                                            required
-                                        >
-                                            <option value="" disabled>
-                                                Choose a department
-                                            </option>
-                                            {departments.map((department) => (
-                                                <option
-                                                    key={department.id}
-                                                    value={department.id}
-                                                >
-                                                    {department.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <InputError
-                                            message={errors.department_id}
-                                        />
-                                    </div>
-                                )}
+                                <RolePicker
+                                    key={round}
+                                    roles={roles}
+                                    branches={branches}
+                                    departments={departments}
+                                    errors={errors}
+                                />
 
                                 <div className="grid gap-1.5">
                                     <Label htmlFor="expires_at">
@@ -329,7 +196,7 @@ export default function Access({
                                 )}
 
                                 <Button type="submit" disabled={processing}>
-                                    Assign role
+                                    Assign roles
                                 </Button>
                             </>
                         )}

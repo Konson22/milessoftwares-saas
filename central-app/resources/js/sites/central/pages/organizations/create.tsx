@@ -99,12 +99,12 @@ export default function CreateOrganization({
 
     return (
         <>
-            <Head title="New organization" />
+            <Head title="New business" />
 
             <div className="max-w-xl space-y-3">
                 <Heading
-                    title="New organization"
-                    description="Your organization gets its own workspace address. You become its owner."
+                    title="New business"
+                    description="Your business gets its own workspace address. You become its owner."
                 />
 
                 <Form
@@ -245,7 +245,7 @@ export default function CreateOrganization({
                                 }
                             >
                                 {processing && <Spinner />}
-                                Create organization
+                                Create business
                             </Button>
                         </>
                     )}
@@ -338,6 +338,6 @@ function SlugStatus({
 CreateOrganization.layout = {
     breadcrumbs: [
         { title: 'Dashboard', href: dashboard() },
-        { title: 'New organization', href: createOrganization() },
+        { title: 'New business', href: createOrganization() },
     ],
 };

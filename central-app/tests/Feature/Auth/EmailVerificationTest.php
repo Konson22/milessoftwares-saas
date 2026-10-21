@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use App\Support\Hosts\PlatformHosts;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -56,7 +57,7 @@ class EmailVerificationTest extends TestCase
         Event::assertDispatched(Verified::class);
 
         $this->assertTrue($user->fresh()->hasVerifiedEmail());
-        $response->assertRedirect($this->authUrl(config('fortify.home').'?verified=1'));
+        $response->assertRedirect(PlatformHosts::url(PlatformHosts::app(), '/dashboard'));
     }
 
     public function test_email_is_not_verified_with_invalid_hash()
@@ -120,7 +121,7 @@ class EmailVerificationTest extends TestCase
         );
 
         $this->actingAs($user)->get($verificationUrl)
-            ->assertRedirect($this->authUrl(config('fortify.home').'?verified=1'));
+            ->assertRedirect(PlatformHosts::url(PlatformHosts::app(), '/dashboard'));
 
         Event::assertNotDispatched(Verified::class);
         $this->assertTrue($user->fresh()->hasVerifiedEmail());

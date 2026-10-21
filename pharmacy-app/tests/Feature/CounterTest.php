@@ -121,12 +121,12 @@ describe('receipts', function () {
         $this->get($this->workspaceUrl('acme', "sales/{$sale->id}/receipt"))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('sales/receipt')
-                ->has('sale.lines', 1)
-                ->where('sale.lines.0.quantity', 5)
-                ->where('sale.lines.0.discountMinor', 125)
-                ->where('sale.lines.0.lineTotalMinor', 1125)
-                ->where('sale.changeMinor', 8875));
+                ->component('print/document')
+                ->has('document.lines', 1)
+                ->where('document.lines.0.quantity', 5)
+                ->where('document.lines.0.discountMinor', 125)
+                ->where('document.lines.0.lineTotalMinor', 1125)
+                ->where('document.payment.changeMinor', 8875));
     });
 
     it('never prints another branch\'s receipt', function () {

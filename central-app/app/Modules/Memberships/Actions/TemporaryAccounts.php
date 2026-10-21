@@ -13,6 +13,7 @@ use App\Modules\Authorization\Support\Scope;
 use App\Modules\Authorization\Support\WorkspaceAbilities;
 use App\Modules\Memberships\Enums\MembershipStatus;
 use App\Modules\Memberships\Models\OrganizationMembership;
+use App\Modules\Memberships\Support\ProposedAccess;
 use App\Modules\Memberships\Support\ProposedRoleCheck;
 use App\Modules\Organizations\Enums\OrganizationStatus;
 use App\Support\Tenancy\TenantContext;
@@ -34,6 +35,8 @@ use InvalidArgumentException;
  *
  * Runs inside the organization's tenant context; the same people who may
  * invite may add members.
+ *
+ * @phpstan-import-type ProposedRole from ProposedAccess
  */
 final class TemporaryAccounts
 {
@@ -49,13 +52,13 @@ final class TemporaryAccounts
     ) {}
 
     /**
-     * @param  array{role_id: string, scope: array{scope_type: string, branch_id?: string|null, department_id?: string|null}}|null  $proposed
+     * @param  list<ProposedRole>  $proposed
      * @return array{membership: OrganizationMembership, password: string, expiresAt: CarbonInterface, roleNote: string|null}
      *
      * @throws MembershipActionDenied
-     * @throws SeparationOfDutiesWarning before anything is created, when the role warns and it was not acknowledged
+     * @throws SeparationOfDutiesWarning before anything is created, when the roles warn and it was not acknowledged
      */
-    public function add(OrganizationMembership $actor, string $name, string $email, ?array $proposed = null, bool $acknowledgeSeparationOfDuties = false): array
+    public function add(OrganizationMembership $actor, string $name, string $email, array $proposed = [], bool $acknowledgeSeparationOfDuties = false): array
     {
         $this->assertMayAdd($actor);
 
@@ -69,7 +72,7 @@ final class TemporaryAccounts
             throw new MembershipActionDenied('An account with that email already exists. Invite them instead: they sign in with their own password.');
         }
 
-        $acknowledged = $proposed !== null && app(ProposedRoleCheck::class)->separationOfDuties($proposed, $acknowledgeSeparationOfDuties);
+        $acknowledged = $proposed !== [] && app(ProposedRoleCheck::class)->separationOfDuties($proposed, $acknowledgeSeparationOfDuties);
 
         $password = $this->generate();
         $expiresAt = now()->addDays(self::VALID_DAYS);
@@ -104,13 +107,14 @@ final class TemporaryAccounts
             throw $e;
         }
 
-        $roleNote = $proposed === null ? null : $this->assign($actor, $membership, $proposed, $acknowledged);
+        $notes = array_filter(array_map(fn (array $proposal) => $this->assign($actor, $membership, $proposal, $acknowledged), $proposed));
+        $roleNote = $notes === [] ? null : implode(' ', $notes);
 
         // The password itself is never logged.
         $this->audit->record('member.added_with_temporary_password', $membership, [
             'email' => $email,
             'expires_at' => $expiresAt->toIso8601String(),
-            'proposed_access' => $proposed,
+            'proposed_access' => $proposed === [] ? null : $proposed,
             'role_note' => $roleNote,
         ], actor: $actor->user, organizationId: $organization->getKey());
 
@@ -163,20 +167,20 @@ final class TemporaryAccounts
      * As the administrator who added them, so delegation rules apply. A
      * refusal keeps the membership and is reported instead.
      *
-     * @param  array{role_id: string, scope: array{scope_type: string, branch_id?: string|null, department_id?: string|null}}  $proposed
+     * @param  ProposedRole  $proposed
      */
     private function assign(OrganizationMembership $actor, OrganizationMembership $membership, array $proposed, bool $acknowledged): ?string
     {
         $role = ApplicationRole::query()->with('application')->find($proposed['role_id']);
 
         if ($role === null) {
-            return 'The role no longer exists, so none was given.';
+            return 'A role no longer exists, so it was not given.';
         }
 
         try {
             app(AssignRole::class)->handle($actor, $membership, $role, Scope::fromInput($proposed['scope']), acknowledgeSeparationOfDuties: $acknowledged);
         } catch (AssignmentDenied|SeparationOfDutiesWarning|InvalidArgumentException $e) {
-            return 'The role was not given: '.$e->getMessage();
+            return "{$role->name} was not given: {$e->getMessage()}";
         }
 
         return null;

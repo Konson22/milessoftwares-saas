@@ -10,7 +10,7 @@ export default function GoogleSignInButton() {
         <Button
             asChild
             variant="outline"
-            className="mb-3 w-full in-[.site-public]:h-11 in-[.site-public]:border-site-line in-[.site-public]:bg-white in-[.site-public]:shadow-sm in-[.site-public]:shadow-site-navy/5 in-[.site-public]:hover:border-site-accent/50 in-[.site-public]:hover:bg-white in-[.site-public]:hover:text-site-accent-ink"
+            className="mb-2 w-full in-[.site-public]:h-10 in-[.site-public]:border-site-line in-[.site-public]:bg-white in-[.site-public]:shadow-sm in-[.site-public]:shadow-site-navy/5 in-[.site-public]:hover:border-site-accent/50 in-[.site-public]:hover:bg-white in-[.site-public]:hover:text-site-accent-ink"
         >
             <a href={redirect().url}>
                 <GoogleLogo />

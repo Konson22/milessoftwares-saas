@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { ArrowRight } from 'lucide-react';
+import { useState } from 'react';
 import FaqList from '@/sites/public/components/faq';
 import PageHero, {
     Accent,
@@ -23,6 +24,17 @@ type Props = {
 
 export default function Pricing({ plans, trialDays, canonical }: Props) {
     const trial = trialLength(trialDays);
+    // Monthly and yearly plans side by side get a switch; plans billed by
+    // agreement always show.
+    const hasBoth =
+        plans.some((plan) => plan.interval === 'monthly') &&
+        plans.some((plan) => plan.interval === 'yearly');
+    const [period, setPeriod] = useState<'monthly' | 'yearly'>('monthly');
+    const shown = hasBoth
+        ? plans.filter(
+              (plan) => plan.interval === 'custom' || plan.interval === period,
+          )
+        : plans;
 
     return (
         <>
@@ -33,11 +45,6 @@ export default function Pricing({ plans, trialDays, canonical }: Props) {
             />
 
             <PageHero
-                padding={
-                    plans.length > 0
-                        ? 'pt-16 pb-36 sm:pt-24 sm:pb-40'
-                        : 'pt-16 pb-20 sm:pt-24 sm:pb-24'
-                }
                 eyebrow={
                     <HeroBadge>
                         Every application starts with a {trial} free trial
@@ -53,10 +60,10 @@ export default function Pricing({ plans, trialDays, canonical }: Props) {
 
             <section
                 aria-label="Plans"
-                className="mx-auto max-w-7xl px-4 sm:px-6"
+                className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16"
             >
                 {plans.length === 0 ? (
-                    <div className="py-16 text-center">
+                    <div className="py-8 text-center">
                         <p>
                             Pricing is being finalised.{' '}
                             <Link href="/contact" className={textLink}>
@@ -74,16 +81,44 @@ export default function Pricing({ plans, trialDays, canonical }: Props) {
                         </Link>
                     </div>
                 ) : (
-                    // Pulled up over the hero.
-                    <ul className="relative -mt-24 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                        {plans.map((plan) => (
-                            <PlanCard
-                                key={plan.code}
-                                plan={plan}
-                                headingLevel="h2"
-                            />
-                        ))}
-                    </ul>
+                    <>
+                        {hasBoth && (
+                            <div className="mb-10 flex justify-center">
+                                <div
+                                    role="group"
+                                    aria-label="Billing period"
+                                    className="inline-flex rounded-full bg-site-soft p-1.5 ring-1 ring-site-line"
+                                >
+                                    {(['monthly', 'yearly'] as const).map(
+                                        (option) => (
+                                            <button
+                                                key={option}
+                                                type="button"
+                                                aria-pressed={period === option}
+                                                onClick={() =>
+                                                    setPeriod(option)
+                                                }
+                                                className={`rounded-full px-6 py-2.5 text-sm font-bold transition-colors ${period === option ? 'site-gradient text-white shadow-md' : 'text-slate-600 hover:text-site-ink'}`}
+                                            >
+                                                {option === 'monthly'
+                                                    ? 'Monthly'
+                                                    : 'Yearly'}
+                                            </button>
+                                        ),
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                        <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                            {shown.map((plan) => (
+                                <PlanCard
+                                    key={plan.code}
+                                    plan={plan}
+                                    headingLevel="h2"
+                                />
+                            ))}
+                        </ul>
+                    </>
                 )}
             </section>
 

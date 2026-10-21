@@ -4,6 +4,7 @@ import {
     ArrowUpRight,
     Building2,
     Check,
+    CirclePlay,
     KeyRound,
     Receipt,
     ShieldCheck,
@@ -12,8 +13,12 @@ import type { LucideIcon } from 'lucide-react';
 import { ErpStatusBadge } from '@/sites/public/components/erp-product';
 import type { ErpProduct } from '@/sites/public/components/erp-product';
 import FaqList from '@/sites/public/components/faq';
-import HeroShowcase from '@/sites/public/components/hero-showcase';
-import { Accent, HeroBackdrop } from '@/sites/public/components/page-hero';
+import HeroMockup from '@/sites/public/components/hero-mockup';
+import {
+    Accent,
+    HeroBackdrop,
+    LightBackdrop,
+} from '@/sites/public/components/page-hero';
 import {
     ProductTile,
     productIcon,
@@ -28,7 +33,9 @@ import {
     card,
     darkBand,
     display,
+    eyebrow,
     iconChip,
+    panel,
     textLink,
     trialDuration,
     trialLength,
@@ -109,92 +116,139 @@ export default function MarketingHome({
                 }}
             />
 
-            {/* Hero: navy, text on the left, application photos on the right. */}
-            <section className={darkBand}>
-                <HeroBackdrop />
-                <div className="mx-auto grid max-w-7xl items-center gap-14 px-4 pt-16 pb-32 sm:px-6 sm:pt-24 sm:pb-40 lg:grid-cols-[1.05fr_1fr] lg:gap-10">
-                    <div className="text-center lg:text-left">
+            {/* Hero: lavender wash, copy beside a drawn dashboard. */}
+            <section className="relative isolate overflow-hidden bg-linear-to-b from-site-wash via-site-soft to-white">
+                <LightBackdrop />
+                <div className="mx-auto grid max-w-7xl items-center gap-16 px-4 pt-14 pb-20 sm:px-6 sm:pt-20 sm:pb-28 lg:grid-cols-[1.05fr_1fr] lg:gap-10">
+                    <div className="site-rise text-center lg:text-left">
+                        <p className={eyebrow}>
+                            One platform for your whole business
+                        </p>
                         <h1
-                            className={`text-[2.25rem] leading-[1.08] sm:text-6xl xl:text-[4.25rem] ${display}`}
+                            className={`mt-6 text-[2.4rem] leading-[1.06] sm:text-6xl xl:text-[4.1rem] ${display}`}
                         >
                             Business software for{' '}
                             <Accent>growing organizations</Accent>
                         </h1>
-                        <p className="mx-auto mt-6 max-w-xl text-base text-pretty text-slate-300 sm:text-lg lg:mx-0">
+                        <p className="mx-auto mt-6 max-w-xl text-base text-pretty text-slate-600 sm:text-lg lg:mx-0">
                             Retail, pharmacy, school, finance, HR and payroll
                             applications that fit how your organization works.
                             Start with what you need and add more as you grow.
                         </p>
-                        <div className="mt-9 flex flex-wrap justify-center gap-3 lg:justify-start">
+                        <div className="mt-9 flex flex-wrap items-center justify-center gap-4 lg:justify-start">
                             <Link href="/start" className={button.primary}>
                                 Start your free trial
                                 <ArrowRight className="size-4" aria-hidden />
                             </Link>
-                            <a href="#products" className={button.outlineDark}>
-                                Explore applications
+                            <a
+                                href="#how-it-works"
+                                className="group inline-flex items-center gap-3 text-sm font-bold text-site-ink"
+                            >
+                                <span className="inline-flex size-12 items-center justify-center rounded-full bg-white text-site-accent-ink shadow-lg ring-1 shadow-site-accent/20 ring-site-line transition-transform group-hover:scale-105">
+                                    <CirclePlay
+                                        className="size-6"
+                                        aria-hidden
+                                    />
+                                </span>
+                                See how it works
                             </a>
                         </div>
-                        <ul className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-slate-300 lg:justify-start">
+                        <ul className="mt-9 flex flex-wrap justify-center gap-2.5 text-sm font-semibold text-slate-700 lg:justify-start">
                             {[
-                                `Free for ${trialDuration(trialDays)}`,
+                                `${trial} free trial`,
                                 'No payment details',
-                                'Invite your whole team',
+                                'One sign-in for every app',
                             ].map((point) => (
                                 <li
                                     key={point}
-                                    className="flex items-center gap-2"
+                                    className="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 ring-1 ring-site-line"
                                 >
-                                    <span className="inline-flex size-5 items-center justify-center rounded-full bg-site-accent/20 text-site-accent-glow">
-                                        <Check className="size-3" aria-hidden />
-                                    </span>
+                                    <Check
+                                        className="size-4 text-site-accent"
+                                        aria-hidden
+                                    />
                                     {point}
                                 </li>
                             ))}
                         </ul>
                     </div>
-
-                    {products.length > 0 && (
-                        <div className="reveal-up relative mx-auto w-full max-w-2xl lg:max-w-none">
-                            <div
-                                aria-hidden
-                                className="absolute -inset-4 -z-10 rounded-[2rem] bg-linear-to-br from-brand-cyan/30 via-transparent to-brand-green/25 blur-2xl"
-                            />
-                            <FloatingApps products={products} />
-                            <HeroShowcase products={products} />
-                        </div>
-                    )}
+                    <HeroMockup
+                        codes={
+                            products.length > 0
+                                ? products.map((product) => product.code)
+                                : ['retail', 'pharmacy', 'finance']
+                        }
+                    />
                 </div>
             </section>
 
-            {/* Platform features: a strip that overlaps the hero's lower edge. */}
+            {/* Who it is for: a muted strip of the applications. */}
+            {products.length > 0 && (
+                <section
+                    aria-labelledby="industries-heading"
+                    className="border-y border-site-line bg-white"
+                >
+                    <div className="mx-auto flex max-w-7xl flex-col items-center gap-6 px-4 py-10 sm:px-6 lg:flex-row lg:gap-10">
+                        <h2
+                            id="industries-heading"
+                            className="shrink-0 text-sm font-semibold text-slate-500"
+                        >
+                            Built for businesses like yours
+                        </h2>
+                        <ul className="flex flex-1 flex-wrap items-center justify-center gap-x-10 gap-y-4 lg:justify-between">
+                            {products.slice(0, 6).map((product) => {
+                                const Icon = productIcon(product.code);
+
+                                return (
+                                    <li
+                                        key={product.code}
+                                        className="inline-flex items-center gap-2 font-public-display text-lg font-semibold text-slate-400 transition-colors hover:text-site-ink"
+                                    >
+                                        <Icon className="size-5" aria-hidden />
+                                        {product.name}
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </div>
+                </section>
+            )}
+
+            {/* Platform features */}
             <section
                 aria-labelledby="platform-heading"
-                className="relative z-10 mx-auto -mt-20 max-w-7xl px-4 sm:-mt-24 sm:px-6"
+                className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28"
             >
-                <h2 id="platform-heading" className="sr-only">
-                    What every application shares
-                </h2>
-                <ul className="grid overflow-hidden rounded-2xl border border-site-line bg-white shadow-2xl shadow-site-navy/10 sm:grid-cols-2 lg:grid-cols-4">
+                <SectionHeading
+                    id="platform-heading"
+                    label="What every application shares"
+                    title={
+                        <>
+                            Everything your team needs,{' '}
+                            <Accent>set up once</Accent>
+                        </>
+                    }
+                    lead="The platform does the groundwork, so each application can focus on the job it was built for."
+                />
+                <ul className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                     {features.map(({ icon: Icon, title, body }, i) => (
                         <li
                             key={title}
-                            className="group relative border-site-line p-7 transition-colors not-last:border-b hover:bg-site-soft sm:p-8 lg:border-b-0 lg:not-last:border-r sm:[&:nth-child(odd)]:border-r"
+                            className={`${card} group relative overflow-hidden p-8`}
                         >
                             <span
                                 aria-hidden
-                                className="absolute top-6 right-7 font-public-display text-4xl font-bold text-site-line transition-colors group-hover:text-site-accent/25"
+                                className="absolute top-5 right-6 font-public-display text-5xl font-bold text-site-soft transition-colors group-hover:text-site-accent/10"
                             >
                                 {ordinal(i)}
                             </span>
-                            <span
-                                className={`${iconChip} size-14 rounded-2xl transition-colors group-hover:bg-site-accent group-hover:text-white`}
-                            >
+                            <span className={`${iconChip} relative size-14`}>
                                 <Icon className="size-6" aria-hidden />
                             </span>
-                            <h3 className="mt-6 text-lg font-semibold">
+                            <h3 className="relative mt-6 text-lg font-semibold">
                                 {title}
                             </h3>
-                            <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                            <p className="relative mt-2 text-sm leading-relaxed text-slate-600">
                                 {body}
                             </p>
                         </li>
@@ -202,50 +256,60 @@ export default function MarketingHome({
                 </ul>
             </section>
 
-            {/* About the platform: a collage on the left, the story on the right. */}
+            {/* About the platform */}
             <section
                 aria-labelledby="about-heading"
-                className="mx-auto grid max-w-7xl items-center gap-14 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-2 lg:gap-20"
+                className="relative isolate overflow-hidden bg-site-soft"
             >
-                <AboutCollage products={products} trialDays={trialDays} />
-                <div>
-                    <SectionHeading
-                        id="about-heading"
-                        label="One platform"
-                        title={
-                            <>
-                                Applications that <Accent>work together</Accent>
-                            </>
-                        }
-                        lead="Each application is built for a job of its own. Together they share your people, your structure and your subscription, so your organization is set up once."
-                        align="left"
-                    />
-                    <ul className="mt-8 grid gap-4 sm:grid-cols-2">
-                        {[
-                            'One account for your whole team',
-                            'Roles per application and branch',
-                            'Every sale and purchase in the books',
-                            'Add applications whenever you need',
-                        ].map((point) => (
-                            <li
-                                key={point}
-                                className="flex items-start gap-3 font-semibold"
-                            >
-                                <span className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-site-accent text-white">
-                                    <Check className="size-3.5" aria-hidden />
-                                </span>
-                                {point}
-                            </li>
-                        ))}
-                    </ul>
-                    <div className="mt-10 flex flex-wrap items-center gap-6">
-                        <Link href="/start" className={button.primary}>
-                            Get started
-                            <ArrowRight className="size-4" aria-hidden />
-                        </Link>
-                        <Link href="/contact" className={textLink}>
-                            Talk to us first
-                        </Link>
+                <div
+                    aria-hidden
+                    className="absolute -top-24 -left-24 -z-10 size-96 rounded-full bg-site-accent/10 blur-3xl"
+                />
+                <div className="mx-auto grid max-w-7xl items-center gap-14 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-2 lg:gap-20">
+                    <AboutImage products={products} trialDays={trialDays} />
+                    <div>
+                        <SectionHeading
+                            id="about-heading"
+                            label="One platform"
+                            title={
+                                <>
+                                    Applications that{' '}
+                                    <Accent>work together</Accent>
+                                </>
+                            }
+                            lead="Each application is built for a job of its own. Together they share your people, your structure and your subscription, so your organization is set up once."
+                            align="left"
+                        />
+                        <ul className="mt-8 grid gap-4 sm:grid-cols-2">
+                            {[
+                                'One account for your whole team',
+                                'Roles per application and branch',
+                                'Every sale and purchase in the books',
+                                'Add applications whenever you need',
+                            ].map((point) => (
+                                <li
+                                    key={point}
+                                    className="flex items-start gap-3 rounded-2xl bg-white p-4 font-semibold ring-1 ring-site-line"
+                                >
+                                    <span className="site-gradient mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-full text-white">
+                                        <Check
+                                            className="size-3.5"
+                                            aria-hidden
+                                        />
+                                    </span>
+                                    {point}
+                                </li>
+                            ))}
+                        </ul>
+                        <div className="mt-10 flex flex-wrap items-center gap-6">
+                            <Link href="/start" className={button.primary}>
+                                Get started
+                                <ArrowRight className="size-4" aria-hidden />
+                            </Link>
+                            <Link href="/contact" className={textLink}>
+                                Talk to us first
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -254,7 +318,7 @@ export default function MarketingHome({
                 <section
                     id="erp"
                     aria-labelledby="erp-heading"
-                    className="scroll-mt-24 bg-site-soft"
+                    className="scroll-mt-24"
                 >
                     <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28">
                         <div className="flex flex-wrap items-end justify-between gap-6">
@@ -274,10 +338,10 @@ export default function MarketingHome({
                                 Ask about your industry
                             </Link>
                         </div>
-                        <ul className="mt-12 grid gap-5 sm:mt-14 sm:grid-cols-2 lg:grid-cols-3">
-                            {erpProducts.map((product, i) => (
+                        <ul className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                            {erpProducts.map((product) => (
                                 <li key={product.code}>
-                                    <ErpCard product={product} index={i} />
+                                    <ErpCard product={product} />
                                 </li>
                             ))}
                         </ul>
@@ -285,32 +349,34 @@ export default function MarketingHome({
                 </section>
             )}
 
-            {/* Figures: a navy band of plain facts. */}
-            <section aria-label="At a glance" className={darkBand}>
-                <div
-                    aria-hidden
-                    className="site-dots pointer-events-none absolute top-6 right-6 -z-10 h-24 w-40 text-white/10"
-                />
-                <div
-                    aria-hidden
-                    className="pointer-events-none absolute -bottom-24 left-1/3 -z-10 size-80 rounded-full bg-brand-green/15 blur-3xl"
-                />
-                <dl className="mx-auto grid max-w-7xl grid-cols-2 gap-y-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-4">
-                    {stats.map((stat) => (
-                        <div
-                            key={stat.label}
-                            className="flex flex-col-reverse items-center px-3 text-center lg:border-r lg:border-white/10 lg:last:border-r-0"
-                        >
-                            <dt className="mt-2 max-w-[12rem] text-sm leading-snug text-slate-300">
-                                {stat.label}
-                            </dt>
-                            <dd className="font-public-display text-4xl font-bold text-white tabular-nums sm:text-5xl">
-                                {stat.value}
-                                <span className="text-site-accent-glow">+</span>
-                            </dd>
-                        </div>
-                    ))}
-                </dl>
+            {/* Figures on a gradient band. */}
+            <section aria-label="At a glance" className="px-4 sm:px-6">
+                <div className="site-dark site-gradient relative isolate mx-auto max-w-7xl overflow-hidden rounded-[2rem] text-white shadow-2xl shadow-site-accent/25">
+                    <div
+                        aria-hidden
+                        className="absolute -top-20 -right-10 -z-10 size-72 rounded-full border-[28px] border-white/10"
+                    />
+                    <div
+                        aria-hidden
+                        className="site-dots absolute bottom-4 left-6 -z-10 h-20 w-36 text-white/25"
+                    />
+                    <dl className="grid grid-cols-2 gap-y-10 px-6 py-12 sm:py-14 lg:grid-cols-4">
+                        {stats.map((stat) => (
+                            <div
+                                key={stat.label}
+                                className="flex flex-col-reverse items-center px-3 text-center lg:border-r lg:border-white/20 lg:last:border-r-0"
+                            >
+                                <dt className="mt-2 max-w-[12rem] text-sm leading-snug text-white/85">
+                                    {stat.label}
+                                </dt>
+                                <dd className="font-public-display text-4xl font-bold tabular-nums sm:text-5xl">
+                                    {stat.value}
+                                    <span className="text-white/70">+</span>
+                                </dd>
+                            </div>
+                        ))}
+                    </dl>
+                </div>
             </section>
 
             <section
@@ -338,7 +404,7 @@ export default function MarketingHome({
                         to hear first.
                     </p>
                 ) : (
-                    <ul className="mt-12 grid gap-5 sm:mt-14 sm:grid-cols-2 lg:grid-cols-3">
+                    <ul className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                         {products.map((product) => (
                             <ProductCard key={product.code} product={product} />
                         ))}
@@ -349,8 +415,9 @@ export default function MarketingHome({
             <section
                 id="how-it-works"
                 aria-labelledby="how-heading"
-                className="scroll-mt-24 border-t border-site-line bg-site-soft"
+                className="relative isolate scroll-mt-24 overflow-hidden bg-site-soft"
             >
+                <LightBackdrop />
                 <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28">
                     <SectionHeading
                         id="how-heading"
@@ -363,44 +430,43 @@ export default function MarketingHome({
                         }
                         lead="Three steps from here to working in your own workspace."
                     />
-                    <div className="relative mt-14 sm:mt-16">
-                        <div
+                    <ol className="relative mt-16 grid gap-8 md:grid-cols-3">
+                        {/* The dashed line joining the steps. Decorative. */}
+                        <span
                             aria-hidden
-                            className="absolute top-10 right-[17%] left-[17%] hidden border-t-2 border-dashed border-site-accent/30 md:block"
+                            className="absolute top-10 right-[16%] left-[16%] hidden border-t-2 border-dashed border-site-accent/30 md:block"
                         />
-                        <ol className="grid gap-10 md:grid-cols-3 md:gap-6">
-                            {[
-                                {
-                                    title: 'Choose an application',
-                                    body: 'Pick the one your business needs first. You can add the others later.',
-                                },
-                                {
-                                    title: 'Create your workspace',
-                                    body: 'Sign in or create an account, then name your organization and choose its address.',
-                                },
-                                {
-                                    title: `Use it free for ${trialDuration(trialDays)}`,
-                                    body: 'Invite your team and start working. No payment details are needed to start.',
-                                },
-                            ].map((step, i) => (
-                                <li
-                                    key={step.title}
-                                    className="group relative flex flex-col items-center px-4 text-center"
-                                >
-                                    <span className="relative inline-flex size-20 items-center justify-center rounded-full bg-white font-public-display text-2xl font-bold text-site-accent-ink shadow-lg ring-8 shadow-site-navy/10 ring-site-soft transition-colors group-hover:bg-site-accent group-hover:text-white">
-                                        {ordinal(i)}
-                                    </span>
-                                    <h3 className="mt-6 text-xl font-semibold">
-                                        {step.title}
-                                    </h3>
-                                    <p className="mt-2 max-w-xs text-sm leading-relaxed text-slate-600">
-                                        {step.body}
-                                    </p>
-                                </li>
-                            ))}
-                        </ol>
-                    </div>
-                    <div className="mt-12 flex justify-center sm:mt-14">
+                        {[
+                            {
+                                title: 'Choose an application',
+                                body: 'Pick the one your business needs first. You can add the others later.',
+                            },
+                            {
+                                title: 'Create your workspace',
+                                body: 'Sign in or create an account, then name your organization and choose its address.',
+                            },
+                            {
+                                title: `Use it free for ${trialDuration(trialDays)}`,
+                                body: 'Invite your team and start working. No payment details are needed to start.',
+                            },
+                        ].map((step, i) => (
+                            <li
+                                key={step.title}
+                                className={`${panel} relative flex flex-col items-center px-6 pt-0 pb-8 text-center`}
+                            >
+                                <span className="site-gradient -mt-10 inline-flex size-20 items-center justify-center rounded-full font-public-display text-2xl font-bold text-white shadow-xl ring-8 shadow-site-accent/30 ring-site-soft">
+                                    {ordinal(i)}
+                                </span>
+                                <h3 className="mt-5 text-xl font-semibold">
+                                    {step.title}
+                                </h3>
+                                <p className="mt-2 max-w-xs text-sm leading-relaxed text-slate-600">
+                                    {step.body}
+                                </p>
+                            </li>
+                        ))}
+                    </ol>
+                    <div className="mt-14 flex justify-center">
                         <Link href="/start" className={button.primary}>
                             Choose your application
                             <ArrowRight className="size-4" aria-hidden />
@@ -415,7 +481,11 @@ export default function MarketingHome({
                         <SectionHeading
                             id="faq-heading"
                             label="FAQs"
-                            title="Common questions"
+                            title={
+                                <>
+                                    Common <Accent>questions</Accent>
+                                </>
+                            }
                             align="left"
                         />
                         <p className="mt-6 max-w-sm text-slate-600">
@@ -434,33 +504,24 @@ export default function MarketingHome({
                 aria-labelledby="cta-heading"
                 className="px-4 pb-20 sm:px-6 sm:pb-28"
             >
-                <div className="relative isolate mx-auto grid max-w-7xl items-center gap-8 overflow-hidden rounded-3xl bg-linear-to-r from-brand-blue-dark via-brand-blue to-[#0b6e63] px-6 py-14 text-white sm:px-14 sm:py-16 lg:grid-cols-[1fr_auto]">
-                    <div
-                        aria-hidden
-                        className="absolute -top-24 -right-16 -z-10 size-72 rounded-full border-[36px] border-white/10"
-                    />
-                    <div
-                        aria-hidden
-                        className="absolute -bottom-28 left-1/3 -z-10 size-64 rounded-full border-[28px] border-white/5"
-                    />
-                    <div
-                        aria-hidden
-                        className="site-dots absolute top-6 left-6 -z-10 h-20 w-32 text-white/20"
-                    />
+                <div
+                    className={`${darkBand} mx-auto grid max-w-7xl items-center gap-8 rounded-[2rem] px-6 py-14 sm:px-14 sm:py-16 lg:grid-cols-[1fr_auto]`}
+                >
+                    <HeroBackdrop />
                     <div className="text-center lg:text-left">
                         <h2
                             id="cta-heading"
-                            className="text-3xl font-semibold tracking-tight text-balance sm:text-[2.75rem] sm:leading-tight"
+                            className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-[2.6rem] sm:leading-tight"
                         >
-                            Ready to try it for yourself?
+                            Ready to try it <Accent>for yourself?</Accent>
                         </h2>
-                        <p className="mt-4 max-w-xl text-white/90 lg:max-w-2xl">
+                        <p className="mt-4 max-w-xl text-slate-300 lg:max-w-2xl">
                             Start a {trial} free trial today, or talk to us and
                             we will walk you through it.
                         </p>
                     </div>
                     <div className="flex flex-wrap justify-center gap-3">
-                        <Link href="/start" className={button.light}>
+                        <Link href="/start" className={button.primary}>
                             Start your free trial
                             <ArrowRight className="size-4" aria-hidden />
                         </Link>
@@ -475,81 +536,76 @@ export default function MarketingHome({
 }
 
 /**
- * Two application drawings stacked at an angle, with a gold badge for
- * the free trial, beside the platform story. Decorative: the same
- * applications are listed below.
+ * A product photo beside the platform story, with a floating card for the
+ * trial. Decorative extras are hidden from assistive technology.
  */
-function AboutCollage({
+function AboutImage({
     products,
     trialDays,
 }: {
     products: Product[];
     trialDays: number;
 }) {
-    const [first, second] = products;
+    const first = products[0];
 
     return (
-        <div
-            aria-hidden
-            className="relative mx-auto w-full max-w-lg pb-10 lg:pb-0"
-        >
-            <div className="site-dots absolute -top-6 -left-6 h-32 w-32 text-site-accent/40" />
-            <div className="absolute -right-4 -bottom-4 size-40 rounded-3xl border-2 border-site-accent/30" />
-            <div className="relative overflow-hidden rounded-3xl border border-site-line bg-white shadow-2xl shadow-site-navy/15">
+        <div className="relative mx-auto w-full max-w-lg lg:mx-0">
+            <div
+                aria-hidden
+                className="site-gradient absolute -right-4 -bottom-4 -z-10 h-full w-full rounded-3xl opacity-90"
+            />
+            <div className="overflow-hidden rounded-3xl border border-site-line bg-white shadow-xl shadow-site-ink/10">
                 {first ? (
-                    <ProductArt code={first.code} />
+                    <div className="[&>div]:h-64 sm:[&>div]:h-72">
+                        <ProductArt code={first.code} />
+                    </div>
                 ) : (
                     <div className="aspect-[16/9] bg-site-soft" />
                 )}
-                <div className="flex items-center gap-3 p-5">
-                    {first && <ProductTile code={first.code} size="sm" />}
-                    <span className="h-2.5 w-32 rounded-full bg-slate-200" />
-                    <span className="ml-auto h-2.5 w-12 rounded-full bg-site-accent/40" />
-                </div>
+                {first && (
+                    <div className="flex items-center gap-3 p-5">
+                        <ProductTile code={first.code} size="sm" />
+                        <span className="font-semibold">{first.name}</span>
+                    </div>
+                )}
             </div>
-            {second && (
-                <div className="absolute right-0 -bottom-6 w-3/5 rotate-3 overflow-hidden rounded-2xl border border-site-line bg-white shadow-2xl shadow-site-navy/20 sm:-right-8">
-                    <ProductArt code={second.code} />
-                </div>
-            )}
-            <div className="absolute -top-6 right-6 flex flex-col items-center rounded-2xl bg-linear-to-br from-brand-gold-light to-brand-gold px-6 py-5 text-site-ink shadow-xl shadow-brand-gold/30 sm:-right-6">
-                <span className="font-public-display text-4xl leading-none font-bold">
+            <div
+                aria-hidden
+                className="site-float absolute -top-6 -left-4 rounded-2xl bg-white px-5 py-4 shadow-xl ring-1 shadow-site-ink/15 ring-site-line sm:-left-8"
+            >
+                <span className="block font-public-display text-3xl font-bold text-site-ink">
                     {trialDays}
+                    <span className="site-gradient-text"> days</span>
                 </span>
-                <span className="mt-1 text-xs font-bold tracking-widest uppercase">
-                    days free
+                <span className="block text-xs text-slate-500">
+                    free on every application
                 </span>
             </div>
         </div>
     );
 }
 
-function ErpCard({ product, index }: { product: ErpProduct; index: number }) {
+function ErpCard({ product }: { product: ErpProduct }) {
     return (
         <Link
             href={`/erp/${product.code}`}
-            className={`${card} group relative flex h-full flex-col overflow-hidden p-7`}
+            className={`${card} group relative flex h-full flex-col overflow-hidden p-8`}
         >
             <span
                 aria-hidden
-                className="absolute -top-3 right-4 font-public-display text-7xl font-bold text-site-soft transition-colors group-hover:text-site-accent/10"
-            >
-                {ordinal(index)}
-            </span>
-            <span
-                aria-hidden
-                className="absolute inset-x-0 bottom-0 h-1 origin-left scale-x-0 bg-linear-to-r from-brand-cyan via-brand-blue to-brand-green transition-transform duration-300 group-hover:scale-x-100"
+                className="site-gradient absolute inset-x-0 top-0 h-1 origin-left scale-x-0 transition-transform duration-300 group-hover:scale-x-100"
             />
             <div className="relative flex items-start gap-3">
-                <h3
-                    className={`text-xl transition-colors group-hover:text-site-accent-ink ${display}`}
-                >
-                    {product.name}
-                </h3>
+                <ProductTile code={product.code} />
                 <span className="ml-auto">
                     <ErpStatusBadge status={product.status} />
                 </span>
             </div>
+            <h3
+                className={`relative mt-5 text-xl transition-colors group-hover:text-site-accent-ink ${display}`}
+            >
+                {product.name}
+            </h3>
             {product.tagline && (
                 <p className="relative mt-3 flex-1 text-sm leading-relaxed text-slate-600">
                     {product.tagline}
@@ -558,47 +614,11 @@ function ErpCard({ product, index }: { product: ErpProduct; index: number }) {
             <span className="relative mt-6 inline-flex items-center gap-2 text-sm font-bold text-site-accent-ink">
                 Learn more
                 <span className="sr-only"> about {product.name}</span>
-                <span className="inline-flex size-7 items-center justify-center rounded-full bg-site-accent/10 transition-colors group-hover:bg-site-accent group-hover:text-white">
-                    <ArrowUpRight className="size-3.5" aria-hidden />
+                <span className="inline-flex size-8 items-center justify-center rounded-full bg-site-accent/10 transition-colors group-hover:bg-site-accent group-hover:text-white">
+                    <ArrowUpRight className="size-4" aria-hidden />
                 </span>
             </span>
         </Link>
-    );
-}
-
-/**
- * Application names in small white pills, floating at the edges of the
- * workspace drawing on wide screens. Decorative: the same list is in the
- * applications section.
- */
-function FloatingApps({ products }: { products: Product[] }) {
-    const spots = [
-        '-top-6 -left-8 -rotate-6',
-        'top-1/3 -right-6 rotate-3',
-        '-bottom-6 left-1/4 rotate-2',
-        'top-2/3 -left-12 -rotate-3',
-    ];
-
-    return (
-        <div aria-hidden className="hidden lg:block">
-            {products.slice(0, spots.length).map((product, i) => {
-                const Icon = productIcon(product.code);
-
-                return (
-                    <span
-                        key={product.code}
-                        className={`absolute z-10 ${spots[i]}`}
-                    >
-                        <span className="float-pill inline-flex items-center gap-2 rounded-full bg-white py-1.5 pr-4 pl-1.5 text-sm font-bold text-site-ink shadow-xl shadow-site-night/30">
-                            <span className={`${iconChip} size-7 rounded-full`}>
-                                <Icon className="size-3.5" />
-                            </span>
-                            {product.name}
-                        </span>
-                    </span>
-                );
-            })}
-        </div>
     );
 }
 
@@ -608,33 +628,31 @@ function ProductCard({ product }: { product: Product }) {
 
     return (
         <li className={`${card} group flex flex-col overflow-hidden`}>
-            <div className="relative overflow-hidden">
-                <div className="transition-transform duration-500 group-hover:scale-105">
-                    <ProductArt code={product.code} />
-                </div>
+            <div className="relative overflow-hidden [&_img]:transition-transform [&_img]:duration-500 group-hover:[&_img]:scale-105">
+                <ProductArt code={product.code} />
                 {statusLabel[product.status] && (
                     <span
-                        className={`absolute top-4 left-4 rounded-full px-3 py-1 text-xs font-bold shadow-sm ${product.status === 'beta' ? 'bg-site-navy text-white' : 'bg-amber-100 text-amber-900'}`}
+                        className={`absolute top-4 left-4 rounded-full px-3 py-1 text-xs font-bold ${product.status === 'beta' ? 'site-gradient text-white' : 'bg-white/95 text-slate-700'}`}
                     >
                         {statusLabel[product.status]}
                     </span>
                 )}
             </div>
-            <div className="flex flex-1 flex-col p-7">
-                <div className="flex items-center gap-3">
-                    <ProductTile code={product.code} size="sm" />
-                    <h3 className={`min-w-0 text-xl ${display}`}>
-                        <Link
-                            href={href}
-                            className="transition-colors hover:text-site-accent-ink"
-                        >
-                            {product.name}
-                        </Link>
-                    </h3>
-                </div>
+            <div className="relative flex flex-1 flex-col p-7 pt-0">
+                <span className="-mt-7 mb-4 inline-flex w-fit rounded-2xl bg-white p-1.5 shadow-lg shadow-site-ink/10">
+                    <ProductTile code={product.code} />
+                </span>
+                <h3 className={`min-w-0 text-xl ${display}`}>
+                    <Link
+                        href={href}
+                        className="transition-colors hover:text-site-accent-ink"
+                    >
+                        {product.name}
+                    </Link>
+                </h3>
                 <div className="flex-1">
                     {product.tagline && (
-                        <p className="mt-4 leading-snug font-semibold">
+                        <p className="mt-3 leading-snug font-semibold">
                             {product.tagline}
                         </p>
                     )}
@@ -665,15 +683,12 @@ function ProductCard({ product }: { product: Product }) {
                         >
                             Start free trial
                             <span className="sr-only"> of {product.name}</span>
-                            <ArrowRight
-                                className="size-3.5 transition-transform group-hover:translate-x-0.5"
-                                aria-hidden
-                            />
+                            <ArrowRight className="size-3.5" aria-hidden />
                         </a>
                     ) : (
                         <Link
                             href="/contact"
-                            className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-4 py-2 text-amber-900 transition-colors hover:bg-amber-200"
+                            className="inline-flex items-center gap-1.5 rounded-full bg-site-soft px-4 py-2 text-slate-700 ring-1 ring-site-line transition-colors hover:bg-white"
                         >
                             Notify me
                             <span className="sr-only">

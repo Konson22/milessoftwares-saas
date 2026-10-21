@@ -47,14 +47,20 @@ export default function PlanCard({
 
     return (
         <li
-            className={`${card} relative flex flex-col p-8 ${featured ? 'border-site-accent ring-1 ring-site-accent' : ''}`}
+            className={`${card} relative flex flex-col overflow-hidden p-8 ${featured ? 'border-site-accent/40 ring-1 ring-site-accent/40' : ''}`}
         >
+            {featured && (
+                <span
+                    aria-hidden
+                    className="site-gradient absolute inset-x-0 top-0 h-1.5"
+                />
+            )}
             <div className="flex items-start justify-between gap-4">
                 <Heading className="text-xl font-semibold tracking-tight">
                     {plan.name}
                 </Heading>
                 {featured && (
-                    <span className="rounded-full bg-site-accent-ink px-3 py-1 text-xs font-bold tracking-wide text-white uppercase">
+                    <span className="site-gradient rounded-full px-3 py-1 text-xs font-bold tracking-wide text-white uppercase">
                         Bundle
                     </span>
                 )}
@@ -109,7 +115,7 @@ export default function PlanCard({
                 <ul className="mt-4 space-y-3 text-sm">
                     {plan.applications.map((application) => (
                         <li key={application} className="flex gap-2.5">
-                            <span className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-site-accent text-white">
+                            <span className="site-gradient mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full text-white">
                                 <Check className="size-3" aria-hidden />
                             </span>
                             {application}

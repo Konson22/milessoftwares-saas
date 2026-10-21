@@ -18,6 +18,9 @@ type Props = {
         soldAt: string;
         soldBy: string;
         customerName: string | null;
+        customerPhone: string | null;
+        /** The counter order it was paid for. */
+        orderNumber: string | null;
         currency: string;
         totalMinor: number;
         discountMinor: number;
@@ -113,8 +116,14 @@ export default function ShowSale({ sale, canVoid, canReturn }: Props) {
                             {new Date(sale.soldAt).toLocaleString()} ·{' '}
                             {sale.soldBy}
                         </p>
-                        {sale.customerName && (
-                            <p className="text-sm">{sale.customerName}</p>
+                        <p className="text-sm">
+                            {sale.customerName ?? 'Walk-in Customer'}
+                            {sale.customerPhone && ` · ${sale.customerPhone}`}
+                        </p>
+                        {sale.orderNumber && (
+                            <p className="text-sm text-muted-foreground">
+                                Order {sale.orderNumber}
+                            </p>
                         )}
                     </header>
 

@@ -194,13 +194,15 @@ final class AssignRole
     /**
      * The catalog's warnings this assignment would raise, for asking before
      * it is made: when inviting or adding someone, $grantee is null (they
-     * hold nothing yet) and a role can still conflict with itself.
+     * hold nothing yet) and a role can still conflict with itself, or with
+     * the other roles proposed with it ($alongside, at the same scope).
      *
+     * @param  array<ApplicationRole>  $alongside
      * @return list<string>
      *
      * @throws AssignmentDenied when a pair blocks
      */
-    public function separationOfDutiesWarnings(ApplicationRole $role, Scope $scope, ?OrganizationMembership $grantee = null): array
+    public function separationOfDutiesWarnings(ApplicationRole $role, Scope $scope, ?OrganizationMembership $grantee = null, array $alongside = []): array
     {
         $constraints = SodConstraint::query()
             ->where('catalog_version_id', $role->application->current_catalog_version_id)
@@ -218,6 +220,12 @@ final class AssignRole
             ->filter(fn (RoleAssignment $assignment) => $this->access->tree()->overlaps(Scope::of($assignment), $scope))
             ->flatMap(fn (RoleAssignment $assignment) => $assignment->role->permissions->pluck('key'))
             ->all();
+
+        foreach ($alongside as $other) {
+            if ($other->application_id === $role->application_id && ! $other->is($role)) {
+                $held = [...$held, ...$other->permissions()->pluck('key')->all()];
+            }
+        }
 
         $combined = array_unique([...$new, ...$held]);
         $warnings = [];

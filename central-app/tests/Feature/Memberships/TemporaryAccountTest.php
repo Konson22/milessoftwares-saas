@@ -217,3 +217,16 @@ it('treats the administrator\'s word as enough here but not as a proven email', 
     expect(fn () => app(Invitations::class)->accept($user, $token))
         ->toThrow(MembershipActionDenied::class, 'Verify your email address');
 });
+
+it('adds someone with several roles at once', function () {
+    $credentials = addMember(extra: [
+        'role_ids' => [$this->role('retail', 'cashier')->id, $this->role('retail', 'auditor')->id],
+        'scope_type' => 'branch',
+        'branch_id' => $this->juba->id,
+    ]);
+
+    $membership = OrganizationMembership::query()->withoutGlobalScopes()->where('user_id', addedUser()->id)->sole();
+    expect($credentials['roleNote'])->toBeNull()
+        ->and(RoleAssignment::acrossTenants()->where('membership_id', $membership->id)->with('role')->get()->pluck('role.key')->sort()->values()->all())
+        ->toBe(['auditor', 'cashier']);
+});

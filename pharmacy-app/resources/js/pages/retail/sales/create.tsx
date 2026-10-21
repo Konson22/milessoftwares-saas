@@ -29,7 +29,7 @@ type Props = {
     paymentMethods: { value: string; label: string }[];
     /** 0 when this member may not give discounts. */
     maxDiscountPercent: number;
-    /** The seller's open till here; nothing is sold without one. */
+    /** The seller's open shift here. */
     till: { id: string; number: string } | null;
     /** Account customers, when this member may sell on account here. */
     customers: {
@@ -259,7 +259,10 @@ export default function RetailCounter({
                 <Head title="Counter" />
                 <PageHeader title="Counter" description={branch?.name} />
                 <Panel className="max-w-md">
-                    <PanelHeader title="Open your till first" />
+                    <PanelHeader
+                        title="Start your shift"
+                        description="Count the cash in the drawer before taking money."
+                    />
                     <PanelBody>
                         <Form
                             {...openTill.form()}
@@ -269,7 +272,7 @@ export default function RetailCounter({
                                 <>
                                     <div className="grid gap-1.5">
                                         <Label htmlFor="opening_float">
-                                            Cash in the drawer to start
+                                            Starting cash in the drawer
                                         </Label>
                                         <Input
                                             id="opening_float"
@@ -285,7 +288,7 @@ export default function RetailCounter({
                                         )}
                                     </div>
                                     <Button type="submit" disabled={processing}>
-                                        Open till
+                                        Start shift
                                     </Button>
                                 </>
                             )}
@@ -304,7 +307,7 @@ export default function RetailCounter({
                 description={branch?.name}
                 actions={
                     <Button variant="outline" size="sm" asChild>
-                        <Link href={showTill(till.id)}>Till {till.number}</Link>
+                        <Link href={showTill(till.id)}>Shift {till.number}</Link>
                     </Button>
                 }
             />

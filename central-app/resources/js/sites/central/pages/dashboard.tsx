@@ -538,7 +538,7 @@ function BillingPanel({ billing }: { billing: Billing }) {
                     href={organizationSettings()}
                     className="text-sm text-muted-foreground hover:text-foreground"
                 >
-                    Organization settings →
+                    Business settings →
                 </Link>
             </div>
         </Panel>
@@ -810,12 +810,12 @@ function Organizations({ organizations }: { organizations: Organization[] }) {
     return (
         <Panel aria-labelledby="organizations">
             <PanelHeader
-                title={<span id="organizations">Your organizations</span>}
-                description="Workspaces you belong to. The current one is shown above."
+                title={<span id="organizations">Your businesses</span>}
+                description="Businesses you belong to. The current one is shown above."
                 actions={
                     <Button asChild size="sm" variant="outline">
                         <Link href={createOrganization()}>
-                            <Plus /> New organization
+                            <Plus /> New business
                         </Link>
                     </Button>
                 }
@@ -823,11 +823,11 @@ function Organizations({ organizations }: { organizations: Organization[] }) {
             {organizations.length === 0 ? (
                 <EmptyState
                     icon={Building2}
-                    title="You are not part of an organization yet"
+                    title="You are not part of a business yet"
                     action={
                         <Button asChild size="sm">
                             <Link href={createOrganization()}>
-                                Create an organization
+                                Create a business
                             </Link>
                         </Button>
                     }

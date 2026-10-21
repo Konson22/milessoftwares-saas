@@ -22,7 +22,8 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property string $number
  * @property string $status
  * @property string|null $customer_name
- * @property string|null $customer_id an account customer's (Customer)
+ * @property string|null $customer_phone
+ * @property string|null $customer_id a registered customer's (Customer)
  * @property CarbonImmutable|null $due_on sales on account: when it is to be paid
  * @property string $currency
  * @property int $total_minor

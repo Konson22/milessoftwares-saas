@@ -237,6 +237,51 @@ it('asks the inviter to confirm a role that conflicts with itself, and gives it 
         ->and(AuditLog::query()->where('action', 'role.assigned')->latest('sequence')->value('context')['sod_acknowledged'])->toBeTrue();
 });
 
+it('gives several proposed roles on acceptance', function () {
+    $token = invite($this->owner, extra: [
+        'role_ids' => [$this->role('retail', 'cashier')->id, $this->role('retail', 'auditor')->id],
+        'scope_type' => 'branch',
+        'branch_id' => $this->juba->id,
+    ]);
+    expect(Invitation::acrossTenants()->sole()->proposedRoles())->toHaveCount(2);
+
+    acceptAs($this->invitee, $token)->assertRedirect(route('dashboard'));
+
+    expect(RoleAssignment::acrossTenants()->where('membership_id', membershipOf($this->invitee)->id)->with('role')->get()->pluck('role.key')->sort()->values()->all())
+        ->toBe(['auditor', 'cashier']);
+});
+
+it('asks the inviter to confirm roles that conflict with each other', function () {
+    $proposal = [
+        'email' => 'amina@example.test',
+        'role_ids' => [$this->role('retail', 'cashier')->id, $this->role('retail', 'payments_approver')->id],
+        'scope_type' => 'branch',
+        'branch_id' => $this->juba->id,
+    ];
+
+    $this->actingAs($this->owner->user)
+        ->post(workspaceAt('/manage/invitations'), $proposal)
+        ->assertSessionHasErrors(['acknowledge_sod' => 'Cashiers approving payments needs a second look.']);
+    expect(Invitation::acrossTenants()->count())->toBe(0);
+
+    $token = invite($this->owner, extra: [...$proposal, 'acknowledge_sod' => '1']);
+    acceptAs($this->invitee, $token)->assertRedirect(route('dashboard'));
+
+    expect(RoleAssignment::acrossTenants()->where('membership_id', membershipOf($this->invitee)->id)->count())->toBe(2);
+});
+
+it('still honours an invitation that proposed one role in the old format', function () {
+    $token = invite($this->owner);
+    Invitation::acrossTenants()->sole()->forceFill(['proposed_access' => [
+        'role_id' => $this->role('retail', 'cashier')->id,
+        'scope' => ['scope_type' => 'branch', 'branch_id' => $this->juba->id],
+    ]])->save();
+
+    acceptAs($this->invitee, $token)->assertRedirect(route('dashboard'));
+
+    expect(RoleAssignment::acrossTenants()->where('membership_id', membershipOf($this->invitee)->id)->sole()->role->key)->toBe('cashier');
+});
+
 it('still adds the member but skips a proposed role the inviter can no longer give', function () {
     $branchAdmin = $this->member();
     app(TenantContext::class)->run($this->organization, function () use ($branchAdmin) {
@@ -260,7 +305,7 @@ it('still adds the member but skips a proposed role the inviter can no longer gi
 
     expect(membershipOf($this->invitee)?->isActive())->toBeTrue()
         ->and(RoleAssignment::acrossTenants()->where('membership_id', membershipOf($this->invitee)->id)->count())->toBe(0)
-        ->and(AuditLog::query()->where('action', 'invitation.accepted')->value('context')['role_note'])->toContain('The proposed role was not given');
+        ->and(AuditLog::query()->where('action', 'invitation.accepted')->value('context')['role_note'])->toContain('The proposed role Cashier was not given');
 });
 
 it('returns 404 for another organization\'s invitation id', function () {

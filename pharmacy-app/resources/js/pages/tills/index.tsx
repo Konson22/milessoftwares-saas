@@ -34,10 +34,23 @@ export type Till = {
     openingFloatMinor: number;
     closedBy: string | null;
     closedAt: string | null;
+    /** Null when the cashier counts blind. */
     expectedCashMinor: number | null;
     countedCashMinor: number | null;
     differenceMinor: number | null;
     closingNote: string | null;
+};
+
+/** How the branch runs shifts (its counter settings), for this member. */
+export type ShiftRules = {
+    /** Money is taken only in an open shift. */
+    required: boolean;
+    /** The usual starting cash, prefilled. */
+    defaultFloat: string;
+    /** This member counts without seeing what the drawer should hold. */
+    blind: boolean;
+    /** Only managers close shifts. */
+    managerCloses: boolean;
 };
 
 type Props = {
@@ -45,48 +58,66 @@ type Props = {
     managing: boolean;
     mine: Till | null;
     tills: Till[];
+    shifts: ShiftRules;
+};
+
+const STATUS_LABELS: Record<string, string> = {
+    open: 'Open',
+    closed: 'Closed',
 };
 
 /**
- * Tills of the branch: open yours with a float, and (for managers) every
- * cashier's count against what their till should hold.
+ * Cash shifts of the branch: start yours with the cash in the drawer, and
+ * (for managers) every cashier's count against what their drawer should
+ * hold.
  */
-export default function Tills({ day, managing, mine, tills }: Props) {
+export default function Shifts({ day, managing, mine, tills, shifts }: Props) {
     const { branch, currency } = usePage().props;
     const canHere = useCanHere();
     const money = (minor: number) => formatMoney(minor, currency ?? 'USD');
+    const figure = (minor: number | null) =>
+        minor === null ? '—' : money(minor);
 
     return (
         <>
-            <Head title="Tills" />
+            <Head title="Shifts" />
             <PageHeader
-                title="Tills"
+                title="Shifts"
                 description={
                     managing
-                        ? `${branch?.name}: every cashier's till`
+                        ? `${branch?.name}: every cashier's shift`
                         : branch?.name
                 }
             />
 
             {canHere('pharmacy.sales.create') && (
                 <Panel className="mb-3">
-                    <PanelHeader title="Your till" />
+                    <PanelHeader
+                        title="Your shift"
+                        description={
+                            shifts.required
+                                ? 'Start a shift before taking money; count the cash to close it.'
+                                : 'Shifts are optional at this branch: start one to count your cash at the end.'
+                        }
+                    />
                     <PanelBody>
                         {mine ? (
                             <p className="flex flex-wrap items-center gap-3 text-sm">
                                 <span>
-                                    Till{' '}
+                                    Shift{' '}
                                     <span className="font-medium">
                                         {mine.number}
                                     </span>{' '}
-                                    is open since{' '}
+                                    started{' '}
                                     {new Date(mine.openedAt).toLocaleString()},
-                                    with a float of{' '}
-                                    {money(mine.openingFloatMinor)}.
+                                    with {money(mine.openingFloatMinor)} in the
+                                    drawer.
                                 </span>
                                 <Button asChild size="sm">
                                     <Link href={show(mine.id)}>
-                                        Count and close
+                                        {shifts.managerCloses && !managing
+                                            ? 'See your shift'
+                                            : 'Count and close'}
                                     </Link>
                                 </Button>
                             </p>
@@ -99,13 +130,15 @@ export default function Tills({ day, managing, mine, tills }: Props) {
                                     <>
                                         <div className="grid gap-1.5">
                                             <Label htmlFor="opening_float">
-                                                Cash in the drawer to start
+                                                Starting cash in the drawer
                                             </Label>
                                             <Input
                                                 id="opening_float"
                                                 name="opening_float"
                                                 inputMode="decimal"
-                                                defaultValue="0"
+                                                defaultValue={
+                                                    shifts.defaultFloat
+                                                }
                                                 className="w-44"
                                             />
                                             {errors.opening_float && (
@@ -118,7 +151,7 @@ export default function Tills({ day, managing, mine, tills }: Props) {
                                             type="submit"
                                             disabled={processing}
                                         >
-                                            Open till
+                                            Start shift
                                         </Button>
                                     </>
                                 )}
@@ -135,7 +168,7 @@ export default function Tills({ day, managing, mine, tills }: Props) {
                         className="flex flex-wrap items-end gap-2"
                     >
                         <div className="grid gap-1.5">
-                            <Label htmlFor="day">Opened on</Label>
+                            <Label htmlFor="day">Started on</Label>
                             <Input
                                 id="day"
                                 name="day"
@@ -151,24 +184,28 @@ export default function Tills({ day, managing, mine, tills }: Props) {
                 </PanelToolbar>
 
                 {tills.length === 0 ? (
-                    <EmptyState icon={Wallet} title="No tills this day" />
+                    <EmptyState icon={Wallet} title="No shifts this day" />
                 ) : (
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Till</TableHead>
+                                <TableHead>Shift</TableHead>
                                 <TableHead>Cashier</TableHead>
-                                <TableHead>Opened</TableHead>
+                                <TableHead>Started</TableHead>
                                 <TableHead>Status</TableHead>
-                                <TableHead className="text-right">
-                                    Expected
-                                </TableHead>
+                                {!shifts.blind && (
+                                    <TableHead className="text-right">
+                                        Expected
+                                    </TableHead>
+                                )}
                                 <TableHead className="text-right">
                                     Counted
                                 </TableHead>
-                                <TableHead className="text-right">
-                                    Over / short
-                                </TableHead>
+                                {!shifts.blind && (
+                                    <TableHead className="text-right">
+                                        Over / short
+                                    </TableHead>
+                                )}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -192,26 +229,25 @@ export default function Tills({ day, managing, mine, tills }: Props) {
                                         <StatusBadge
                                             tone={statusTone(till.status)}
                                         >
-                                            {till.status}
+                                            {STATUS_LABELS[till.status] ??
+                                                till.status}
                                         </StatusBadge>
                                     </TableCell>
+                                    {!shifts.blind && (
+                                        <TableCell className="text-right tabular-nums">
+                                            {figure(till.expectedCashMinor)}
+                                        </TableCell>
+                                    )}
                                     <TableCell className="text-right tabular-nums">
-                                        {till.expectedCashMinor === null
-                                            ? '—'
-                                            : money(till.expectedCashMinor)}
+                                        {figure(till.countedCashMinor)}
                                     </TableCell>
-                                    <TableCell className="text-right tabular-nums">
-                                        {till.countedCashMinor === null
-                                            ? '—'
-                                            : money(till.countedCashMinor)}
-                                    </TableCell>
-                                    <TableCell
-                                        className={`text-right tabular-nums ${till.differenceMinor ? 'font-medium text-destructive' : ''}`}
-                                    >
-                                        {till.differenceMinor === null
-                                            ? '—'
-                                            : money(till.differenceMinor)}
-                                    </TableCell>
+                                    {!shifts.blind && (
+                                        <TableCell
+                                            className={`text-right tabular-nums ${till.differenceMinor ? 'font-medium text-destructive' : ''}`}
+                                        >
+                                            {figure(till.differenceMinor)}
+                                        </TableCell>
+                                    )}
                                 </TableRow>
                             ))}
                         </TableBody>

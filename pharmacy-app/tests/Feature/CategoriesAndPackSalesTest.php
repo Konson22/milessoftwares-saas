@@ -94,10 +94,10 @@ describe('selling packs', function () {
             ->cost_minor->toBe(15 * 100 + 5 * 120);
 
         $this->get($this->workspaceUrl('acme', "sales/{$sale->id}/receipt"))->assertInertia(fn (Assert $page) => $page
-            ->where('sale.lines.0.pack', 'box of 10')
-            ->where('sale.lines.0.quantity', 2)
-            ->where('sale.lines.0.unitPriceMinor', 2000)
-            ->where('sale.lines.0.lineTotalMinor', 3600));
+            ->where('document.lines.0.pack', 'box of 10')
+            ->where('document.lines.0.quantity', 2)
+            ->where('document.lines.0.unitPriceMinor', 2000)
+            ->where('document.lines.0.lineTotalMinor', 3600));
 
         // Returns stay in tablets, at what they were sold for.
         $this->post($this->workspaceUrl('acme', "sales/{$sale->id}/returns"), [

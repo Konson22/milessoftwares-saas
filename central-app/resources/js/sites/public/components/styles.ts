@@ -4,57 +4,55 @@ import { create as createOrganization } from '@/routes/organizations';
  * Pill buttons shared by links across the public site. Links, not
  * <Button>, because most of them navigate (some to another host).
  *
- * The site alternates deep navy bands (hero, figures, footer, inside a
- * `site-dark` element) with white and cool-grey sections; the accent is
- * the logo blue. See the site-* colours in resources/css/app.css for which
- * blue goes where.
+ * Light-first surfaces with a blue → violet gradient for the main action
+ * and highlights; deep indigo for the footer and closing bands (see the
+ * site-* colours and .site-gradient in resources/css/app.css).
  */
 const base =
     'inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-sm font-bold tracking-wide transition-[color,background-color,border-color,box-shadow,transform] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 active:scale-[0.98]';
 
 export const button = {
-    /** Main action: the logo-blue gradient, on light or dark. */
-    primary: `${base} bg-linear-to-r from-brand-blue to-brand-blue-dark text-white shadow-lg shadow-site-accent/25 hover:-translate-y-0.5 hover:from-brand-blue-dark hover:to-brand-navy-light hover:shadow-xl hover:shadow-site-accent/30 focus-visible:outline-site-accent`,
+    /** Main action: the gradient, lifted by a soft coloured shadow. */
+    primary: `${base} site-gradient text-white shadow-lg shadow-site-accent/25 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-site-violet/30 focus-visible:outline-site-accent`,
     /** Strong secondary action on light. */
     dark: `${base} bg-site-navy text-white hover:bg-site-night focus-visible:outline-site-navy`,
-    /** Main action on a blue band. */
-    light: `${base} bg-white text-site-ink shadow-sm hover:bg-white/90 focus-visible:outline-white`,
-    /** Secondary action on navy or blue. */
-    outlineDark: `${base} border border-white/35 text-white hover:border-white hover:bg-white/10 focus-visible:outline-white`,
-    /** Secondary action on white or grey. */
+    /** Main action on a dark or gradient band. */
+    light: `${base} bg-white text-site-ink shadow-lg shadow-site-night/20 hover:-translate-y-0.5 focus-visible:outline-white`,
+    /** Secondary action on a dark or gradient band. */
+    outlineDark: `${base} border border-white/40 text-white hover:border-white hover:bg-white/10 focus-visible:outline-white`,
+    /** Secondary action on white or lavender. */
     outline: `${base} border border-site-line bg-white text-site-ink hover:border-site-accent/50 hover:text-site-accent-ink focus-visible:outline-site-accent`,
 };
 
 export const textLink =
-    'font-semibold text-site-accent-ink underline-offset-4 hover:underline in-[.site-dark]:text-site-accent-glow';
+    'font-semibold text-site-accent-ink underline-offset-4 hover:underline in-[.site-dark]:text-white';
 
 /**
- * Section label above a heading: blue capitals after a short rule, as
- * industrial sites mark their sections.
+ * Section label above a heading: a soft pill with a gradient dot.
  */
 export const eyebrow =
-    'inline-flex items-center gap-3 text-xs font-bold tracking-[0.18em] text-site-accent-ink uppercase before:h-0.5 before:w-8 before:rounded-full before:bg-site-accent in-[.site-dark]:text-site-accent-glow';
+    'inline-flex items-center gap-2 rounded-full bg-site-accent/10 px-4 py-1.5 text-xs font-bold tracking-[0.14em] text-site-accent-ink uppercase before:size-1.5 before:rounded-full before:bg-site-accent in-[.site-dark]:bg-white/10 in-[.site-dark]:text-white in-[.site-dark]:before:bg-site-accent-glow';
 
 /** Heading type; size is set where it is used. */
 export const display =
     'font-semibold tracking-tight text-balance text-site-ink in-[.site-dark]:text-white';
 
 /**
- * Interactive surface (product/plan cards, FAQ rows that open): lifts on
- * hover, with a blue edge, so the affordance matches the content.
+ * Interactive surface (product/plan cards, FAQ rows that open): rounded,
+ * soft shadow, lifts a little on hover.
  */
 export const card =
-    'rounded-2xl border border-site-line bg-white shadow-sm shadow-site-navy/5 transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-1 hover:border-site-accent/40 hover:shadow-xl hover:shadow-site-navy/10';
+    'rounded-3xl border border-site-line bg-white shadow-[0_10px_40px_-18px_rgba(22,24,55,0.18)] transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-1 hover:border-site-accent/30 hover:shadow-[0_24px_60px_-20px_rgba(37,117,252,0.35)]';
 
-/** Static surface (feature tiles, steps): same chrome, no lift. */
+/** Static surface (feature tiles, steps): same chrome, no hover. */
 export const panel =
-    'rounded-2xl border border-site-line bg-white shadow-sm shadow-site-navy/5';
+    'rounded-3xl border border-site-line bg-white shadow-[0_10px_40px_-18px_rgba(22,24,55,0.18)]';
 
-/** Soft blue square behind an icon. */
+/** Gradient square behind a white icon. */
 export const iconChip =
-    'inline-flex shrink-0 items-center justify-center rounded-xl bg-site-accent/10 text-site-accent-ink';
+    'site-gradient inline-flex shrink-0 items-center justify-center rounded-2xl text-white shadow-md shadow-site-accent/25';
 
-/** A navy band: headings, labels and links inside switch to their light forms. */
+/** A deep indigo band: headings, labels and links inside switch to their light forms. */
 export const darkBand =
     'site-dark relative isolate overflow-hidden bg-site-night text-slate-300';
 

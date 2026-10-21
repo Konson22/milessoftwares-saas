@@ -77,7 +77,7 @@ export function ShellSidebar({
     return (
         <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
             {/* Same height as the top bar, so the two borders line up. */}
-            <div className="flex h-11 shrink-0 items-center border-b border-sidebar-border px-3.5">
+            <div className="flex h-13 shrink-0 items-center border-b border-sidebar-border px-3.5">
                 {brand.external ? (
                     <a href={hrefOf(brand.href)} className={brandClass}>
                         {brandContent}

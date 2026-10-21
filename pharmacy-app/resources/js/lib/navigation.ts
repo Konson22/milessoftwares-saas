@@ -2,6 +2,7 @@ import {
     Boxes,
     ChartColumn,
     ClipboardList,
+    ListOrdered,
     FileText,
     LayoutDashboard,
     MapPin,
@@ -9,20 +10,25 @@ import {
     Pill,
     ReceiptText,
     ShieldAlert,
+    Settings2,
     ShoppingCart,
     Trash2,
     Truck,
     ArrowLeftRight,
     Undo2,
+    Users,
     Wallet,
 } from 'lucide-react';
 import type { ShellNavItem } from '@miles/ui/shell/navigation';
 import { home } from '@/routes';
 import { index as controlled } from '@/routes/controlled';
+import { edit as counterSettings } from '@/routes/counter-settings';
+import { index as customers } from '@/routes/customers';
 import { index as disposals } from '@/routes/disposals';
 import { index as locations } from '@/routes/locations';
 import { index as transfers } from '@/routes/transfers';
 import { index as medicines } from '@/routes/medicines';
+import { index as orders } from '@/routes/orders';
 import { index as prescriptions } from '@/routes/prescriptions';
 import { index as purchaseOrders } from '@/routes/purchase-orders';
 import { index as receipts } from '@/routes/receipts';
@@ -72,6 +78,13 @@ export const navigation: NavGroup[] = [
                 scope: 'branch',
             },
             {
+                title: 'Order queue',
+                href: orders(),
+                icon: ListOrdered,
+                permission: 'pharmacy.sales.view',
+                scope: 'branch',
+            },
+            {
                 title: 'Sales',
                 href: sales(),
                 icon: ReceiptText,
@@ -79,7 +92,7 @@ export const navigation: NavGroup[] = [
                 scope: 'branch',
             },
             {
-                title: 'Tills',
+                title: 'Shifts',
                 href: tills(),
                 icon: Wallet,
                 permission: 'pharmacy.sales.create',
@@ -90,6 +103,20 @@ export const navigation: NavGroup[] = [
                 href: prescriptions(),
                 icon: FileText,
                 permission: 'pharmacy.prescriptions.view',
+                scope: 'branch',
+            },
+            {
+                title: 'Customers',
+                href: customers(),
+                icon: Users,
+                permission: 'pharmacy.customers.view',
+                scope: 'branch',
+            },
+            {
+                title: 'Counter settings',
+                href: counterSettings(),
+                icon: Settings2,
+                permission: 'pharmacy.sales.settings',
                 scope: 'branch',
             },
         ],

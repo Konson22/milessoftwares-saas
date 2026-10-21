@@ -4,6 +4,7 @@ use App\Models\User;
 use App\Models\Workspace;
 use App\Modules\Inventory\Actions\Stock;
 use App\Modules\Pharmacy\Models\Medicine;
+use App\Modules\Sales\Models\BranchCounterSettings;
 use App\Modules\Sales\Models\Sale;
 use App\Modules\Sales\Models\TillSession;
 use Carbon\CarbonImmutable;
@@ -142,4 +143,108 @@ it('shows cashiers their own tills and managers everyone\'s, in this branch only
 
     $this->actingAsMember('acme', ['pharmacy.tills.manage'], branch: $this->wau);
     $this->get($this->workspaceUrl('acme', 'tills/'.till('T-00002')->id))->assertNotFound();
+});
+
+/**
+ * The Juba counter's shift settings.
+ *
+ * @param  array<string, mixed>  $settings
+ */
+function shiftSettings(array $settings): void
+{
+    test()->asTenant('acme', fn () => BranchCounterSettings::query()->updateOrCreate(
+        ['branch_id' => test()->juba, 'application' => 'pharmacy'],
+        $settings,
+    ));
+}
+
+describe('branch shift settings', function () {
+    it('sells without a shift where the branch does not need one', function () {
+        shiftSettings(['shifts_required' => false]);
+        $this->actingAsMember('acme', ['pharmacy.sales.create'], branch: $this->juba);
+
+        $this->get($this->workspaceUrl('acme', 'sales/create'))->assertInertia(fn (Assert $page) => $page
+            ->where('till', null)
+            ->where('counter.shiftsRequired', false));
+        sellAtCounter(1);
+
+        expect($this->asTenant('acme', fn () => Sale::query()->sole()->till_session_id))->toBeNull();
+    });
+
+    it('prefills the usual starting cash', function () {
+        shiftSettings(['default_float_minor' => 5000]);
+        $this->actingAsMember('acme', ['pharmacy.sales.create'], branch: $this->juba);
+
+        $this->get($this->workspaceUrl('acme', 'sales/create'))->assertInertia(fn (Assert $page) => $page->where('counter.defaultFloat', '50.00'));
+        $this->get($this->workspaceUrl('acme', 'tills'))->assertInertia(fn (Assert $page) => $page
+            ->where('shifts.required', true)
+            ->where('shifts.defaultFloat', '50.00'));
+    });
+
+    it('lets cashiers count blind, and shows the manager the difference', function () {
+        shiftSettings(['blind_close' => true]);
+        $cashier = $this->actingAsMember('acme', ['pharmacy.sales.create'], branch: $this->juba);
+        $this->post($this->workspaceUrl('acme', 'tills'), ['opening_float' => '10.00']);
+        sellAtCounter(4);
+
+        $this->get($this->workspaceUrl('acme', 'tills/'.till()->id))->assertInertia(fn (Assert $page) => $page
+            ->where('shifts.blind', true)
+            ->where('summary.expectedCashMinor', null)
+            ->where('summary.cashRefundsMinor', null)
+            ->where('summary.takenMinor', [])
+            ->where('canClose', true));
+
+        // A short count needs no reason when counted blind.
+        $this->post($this->workspaceUrl('acme', 'tills/'.till()->id.'/close'), ['counted_cash' => '19.00'])->assertSessionHasNoErrors();
+        expect(till())->status->toBe(TillSession::CLOSED)
+            ->and(till()->difference())->toBe(-100);
+        $this->get($this->workspaceUrl('acme', 'tills'))->assertInertia(fn (Assert $page) => $page
+            ->where('tills.0.countedCashMinor', 1900)
+            ->where('tills.0.expectedCashMinor', null)
+            ->where('tills.0.differenceMinor', null));
+
+        $this->actingAsMember('acme', ['pharmacy.tills.manage'], branch: $this->juba);
+        $this->get($this->workspaceUrl('acme', 'tills/'.till()->id))->assertInertia(fn (Assert $page) => $page
+            ->where('shifts.blind', false)
+            ->where('till.expectedCashMinor', 2000)
+            ->where('till.differenceMinor', -100));
+    });
+
+    it('leaves closing to managers where the branch says so', function () {
+        shiftSettings(['manager_closes_shifts' => true]);
+        $this->actingAsMember('acme', ['pharmacy.sales.create'], branch: $this->juba);
+        $this->post($this->workspaceUrl('acme', 'tills'), ['opening_float' => '0']);
+
+        $this->get($this->workspaceUrl('acme', 'tills/'.till()->id))->assertInertia(fn (Assert $page) => $page->where('canClose', false));
+        $this->post($this->workspaceUrl('acme', 'tills/'.till()->id.'/close'), ['counted_cash' => '0'])->assertForbidden();
+        expect(till()->status)->toBe(TillSession::OPEN);
+
+        $this->actingAsMember('acme', ['pharmacy.tills.manage'], branch: $this->juba);
+        $this->get($this->workspaceUrl('acme', 'tills/'.till()->id))->assertInertia(fn (Assert $page) => $page->where('canClose', true));
+        $this->post($this->workspaceUrl('acme', 'tills/'.till()->id.'/close'), ['counted_cash' => '0'])->assertSessionHasNoErrors();
+        expect(till()->status)->toBe(TillSession::CLOSED);
+    });
+
+    it('is saved with the counter settings', function () {
+        $this->actingAsMember('acme', ['pharmacy.sales.settings'], branch: $this->juba);
+
+        $this->post($this->workspaceUrl('acme', 'counter-settings'), [
+            'workflow' => 'direct',
+            'paper_size' => '80mm',
+            'shifts_required' => '0',
+            'default_float' => '25.00',
+            'blind_close' => '1',
+            'manager_closes_shifts' => '1',
+        ])->assertSessionHasNoErrors();
+
+        $settings = $this->asTenant('acme', fn () => BranchCounterSettings::forBranch($this->juba, 'pharmacy'));
+        expect($settings->shifts_required)->toBeFalse()
+            ->and($settings->default_float_minor)->toBe(2500)
+            ->and($settings->blind_close)->toBeTrue()
+            ->and($settings->manager_closes_shifts)->toBeTrue();
+
+        $this->get($this->workspaceUrl('acme', 'counter-settings'))->assertInertia(fn (Assert $page) => $page
+            ->where('settings.shiftsRequired', false)
+            ->where('settings.defaultFloat', '25.00'));
+    });
 });

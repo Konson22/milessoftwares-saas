@@ -5,6 +5,7 @@ use App\Modules\Audit\Models\AuditLog;
 use App\Modules\Authorization\Support\Scope;
 use App\Modules\Entitlements\Models\Entitlement;
 use App\Modules\Memberships\Support\CurrentOrganization;
+use App\Modules\Organizations\Actions\CreateOrganization;
 use App\Support\Hosts\PlatformHosts;
 use App\Support\Tenancy\TenantContext;
 use Inertia\Testing\AssertableInertia;
@@ -93,6 +94,46 @@ it('takes a member with one application straight to it right after signing in', 
         ->withSession(['signed_in' => true])
         ->get(home())
         ->assertRedirect(rtrim(home(), '/').'/retail');
+});
+
+it('takes a member with one application from the dashboard straight to it right after signing in', function () {
+    $dashboard = PlatformHosts::url(PlatformHosts::app(), 'dashboard');
+
+    $this->actingAs($this->cashier->user)
+        ->withSession(['signed_in' => true])
+        ->get($dashboard)
+        ->assertRedirect(rtrim(home(), '/').'/retail');
+
+    // Coming back later shows the dashboard.
+    $this->flushSession()
+        ->actingAs($this->cashier->user)
+        ->get($dashboard)
+        ->assertOk();
+});
+
+it('keeps administrators and members without one application on the dashboard after signing in', function () {
+    $dashboard = PlatformHosts::url(PlatformHosts::app(), 'dashboard');
+
+    foreach ([$this->owner, $this->plainMember] as $membership) {
+        $this->actingAs($membership->user)
+            ->withSession(['signed_in' => true])
+            ->get($dashboard)
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('central/dashboard'));
+    }
+});
+
+it('keeps members of more than one organization on the dashboard after signing in', function () {
+    app(CreateOrganization::class)->handle($this->cashier->user, [
+        'display_name' => 'Second Shop', 'legal_name' => 'Second Shop Ltd', 'slug' => 'second-shop',
+        'country_code' => 'SS', 'default_currency' => 'SSP', 'timezone' => 'Africa/Juba',
+    ]);
+    app(TenantContext::class)->clear();
+
+    $this->actingAs($this->cashier->user)
+        ->withSession(['signed_in' => true])
+        ->get(PlatformHosts::url(PlatformHosts::app(), 'dashboard'))
+        ->assertOk();
 });
 
 it('shows the picker, not a redirect, to members without an application after signing in', function () {

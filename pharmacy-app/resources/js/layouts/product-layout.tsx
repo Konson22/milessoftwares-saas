@@ -9,6 +9,7 @@ import { QuickSearch } from '@miles/ui/shell/quick-search';
 import type { QuickSearchTarget } from '@miles/ui/shell/quick-search';
 import { ShellSidebar } from '@miles/ui/shell/sidebar';
 import { UserMenu } from '@miles/ui/shell/user-menu';
+import { AutoPrint } from '@/components/auto-print';
 import { BranchSwitcher } from '@/components/layout/branch-switcher';
 import { useCan, useCanHere } from '@/lib/access';
 import { visibleNavigation } from '@/lib/navigation';
@@ -132,6 +133,7 @@ export default function ProductLayout({ children }: PropsWithChildren) {
             )}
         >
             {children}
+            <AutoPrint urls={flash.print} />
         </AppShell>
     );
 }

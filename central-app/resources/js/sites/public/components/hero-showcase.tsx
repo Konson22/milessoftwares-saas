@@ -19,11 +19,11 @@ export default function HeroShowcase({ products }: { products: Product[] }) {
     const [paused, setPaused] = useState(false);
 
     useEffect(() => {
-        if (
-            paused ||
-            slides.length < 2 ||
-            window.matchMedia('(prefers-reduced-motion: reduce)').matches
-        ) {
+        const prefersReduced =
+            typeof window.matchMedia === 'function' &&
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        if (paused || slides.length < 2 || prefersReduced) {
             return;
         }
 
@@ -40,7 +40,7 @@ export default function HeroShowcase({ products }: { products: Product[] }) {
 
     return (
         <div
-            className="relative overflow-hidden rounded-2xl bg-site-night shadow-2xl ring-4 shadow-site-night/40 ring-white/10 sm:ring-8"
+            className="relative overflow-hidden rounded-2xl border border-site-line bg-site-night"
             onMouseEnter={() => setPaused(true)}
             onMouseLeave={() => setPaused(false)}
         >

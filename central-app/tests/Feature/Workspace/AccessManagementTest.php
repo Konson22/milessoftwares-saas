@@ -162,3 +162,45 @@ it('forbids revoking outside the administrator\'s scope', function () {
 
     expect($assignment->refresh()->revoked_at)->toBeNull();
 });
+
+it('assigns several roles to one member at once', function () {
+    $this->actingAs($this->owner->user);
+
+    assign([
+        'membership_id' => $this->grantee->id,
+        'role_ids' => [$this->cashierRole->id, $this->role('retail', 'auditor')->id],
+        'scope_type' => 'branch',
+        'branch_id' => $this->juba->id,
+    ])->assertSessionHasNoErrors();
+
+    expect(RoleAssignment::acrossTenants()->where('membership_id', $this->grantee->id)->with('role')->get()->pluck('role.key')->sort()->values()->all())
+        ->toBe(['auditor', 'cashier']);
+});
+
+it('checks separation of duties across the roles given together, all or none', function () {
+    $this->actingAs($this->owner->user);
+    $input = [
+        'membership_id' => $this->grantee->id,
+        'role_ids' => [$this->cashierRole->id, $this->role('retail', 'payments_approver')->id],
+        'scope_type' => 'branch',
+        'branch_id' => $this->juba->id,
+    ];
+
+    assign($input)->assertSessionHasErrors(['acknowledge_sod' => 'Cashiers approving payments needs a second look.']);
+    expect(RoleAssignment::acrossTenants()->where('membership_id', $this->grantee->id)->count())->toBe(0);
+
+    assign([...$input, 'acknowledge_sod' => '1'])->assertSessionHasNoErrors();
+    expect(RoleAssignment::acrossTenants()->where('membership_id', $this->grantee->id)->count())->toBe(2);
+});
+
+it('gives none of the roles when one pair is blocked', function () {
+    $this->actingAs($this->owner->user);
+
+    assign([
+        'membership_id' => $this->grantee->id,
+        'role_ids' => [$this->role('retail', 'payments_clerk')->id, $this->role('retail', 'payments_approver')->id],
+        'scope_type' => 'organization',
+    ])->assertSessionHasErrors(['role_id' => 'Payments approver: The person who creates a payment must not approve it.']);
+
+    expect(RoleAssignment::acrossTenants()->where('membership_id', $this->grantee->id)->count())->toBe(0);
+});

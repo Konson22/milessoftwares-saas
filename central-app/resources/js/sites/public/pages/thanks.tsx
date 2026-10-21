@@ -1,7 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { Check } from 'lucide-react';
-import { HeroBackdrop } from '@/sites/public/components/page-hero';
-import { button, darkBand, display } from '@/sites/public/components/styles';
+import { button, display } from '@/sites/public/components/styles';
 
 export default function Thanks() {
     return (
@@ -10,16 +9,15 @@ export default function Thanks() {
                 <meta head-key="robots" name="robots" content="noindex" />
             </Head>
 
-            <section className={darkBand}>
-                <HeroBackdrop />
+            <section className="border-b border-site-line bg-site-soft">
                 <div className="mx-auto flex min-h-[60vh] max-w-2xl flex-col items-center justify-center px-4 py-24 text-center">
-                    <span className="inline-flex size-16 items-center justify-center rounded-full bg-linear-to-br from-brand-teal to-[#0b6e63] text-white shadow-xl ring-8 shadow-brand-green/30 ring-white/10">
+                    <span className="site-gradient inline-flex size-16 items-center justify-center rounded-full text-white shadow-lg shadow-site-accent/30">
                         <Check className="size-8" aria-hidden />
                     </span>
                     <h1 className={`mt-8 text-4xl sm:text-5xl ${display}`}>
                         Thank you
                     </h1>
-                    <p className="mt-4 text-lg text-slate-300">
+                    <p className="mt-4 text-lg text-slate-600">
                         We have your message and will be in touch within one
                         working day.
                     </p>
@@ -27,7 +25,7 @@ export default function Thanks() {
                         <Link href="/start" className={button.primary}>
                             Start free trial
                         </Link>
-                        <Link href="/" className={button.outlineDark}>
+                        <Link href="/" className={button.outline}>
                             Back to the home page
                         </Link>
                     </div>

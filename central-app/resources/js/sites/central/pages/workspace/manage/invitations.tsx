@@ -5,6 +5,8 @@ import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
+import RolePicker from '@/sites/central/components/role-picker';
+import type { PickerRole } from '@/sites/central/components/role-picker';
 
 type Invitation = {
     id: string;
@@ -12,7 +14,7 @@ type Invitation = {
     status: 'pending' | 'accepted' | 'revoked' | 'expired';
     invitedBy: string;
     expiresAt: string;
-    hasProposedRole: boolean;
+    proposedRoles: number;
 };
 
 type Awaiting = {
@@ -22,8 +24,6 @@ type Awaiting = {
     expiresAt: string | null;
     expired: boolean;
 };
-
-type Role = { id: string; name: string; application: string; scopes: string[] };
 
 type Option = { id: string; name: string };
 
@@ -40,17 +40,9 @@ type Credentials = {
 type Props = {
     invitations: Invitation[];
     awaiting: Awaiting[];
-    roles: Role[];
+    roles: PickerRole[];
     branches: Option[];
     departments: Option[];
-};
-
-const selectClass =
-    'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm';
-const scopeLabels: Record<string, string> = {
-    organization: 'Whole organization',
-    branch: 'One branch',
-    department: 'One department',
 };
 
 export default function Invitations({
@@ -61,6 +53,8 @@ export default function Invitations({
     departments,
 }: Props) {
     const [mode, setMode] = useState<'invite' | 'add'>('invite');
+    // Remounts the role picker after each submit, clearing its choices.
+    const [round, setRound] = useState(0);
     const credentials = usePage().flash.credentials as Credentials | undefined;
 
     return (
@@ -95,8 +89,8 @@ export default function Invitations({
                                     <p className="text-xs text-muted-foreground">
                                         by {invitation.invitedBy} · expires{' '}
                                         {invitation.expiresAt}
-                                        {invitation.hasProposedRole &&
-                                            ' · with a role'}
+                                        {invitation.proposedRoles > 0 &&
+                                            ` · with ${invitation.proposedRoles === 1 ? 'a role' : `${invitation.proposedRoles} roles`}`}
                                     </p>
                                 </div>
                                 <Badge
@@ -227,16 +221,20 @@ export default function Invitations({
                             action="/manage/invitations"
                             method="post"
                             resetOnSuccess
+                            onSuccess={() => setRound((current) => current + 1)}
                             options={{ preserveScroll: true }}
                             className="space-y-4"
                         >
                             {({ errors, processing }) => (
                                 <>
                                     <EmailField error={errors.email} />
-                                    <RoleFields
+                                    <RolePicker
+                                        key={round}
                                         roles={roles}
                                         branches={branches}
                                         departments={departments}
+                                        optional
+                                        errors={errors}
                                     />
                                     <SeparationOfDuties
                                         error={errors.acknowledge_sod}
@@ -253,6 +251,7 @@ export default function Invitations({
                             action="/manage/members"
                             method="post"
                             resetOnSuccess
+                            onSuccess={() => setRound((current) => current + 1)}
                             options={{ preserveScroll: true }}
                             className="space-y-4"
                         >
@@ -270,10 +269,13 @@ export default function Invitations({
                                         <InputError message={errors.name} />
                                     </div>
                                     <EmailField error={errors.email} />
-                                    <RoleFields
+                                    <RolePicker
+                                        key={round}
                                         roles={roles}
                                         branches={branches}
                                         departments={departments}
+                                        optional
+                                        errors={errors}
                                     />
                                     <SeparationOfDuties
                                         error={errors.acknowledge_sod}
@@ -320,117 +322,6 @@ function EmailField({ error }: { error?: string }) {
             <Input id="email" name="email" type="email" required />
             <InputError message={error} />
         </div>
-    );
-}
-
-function RoleFields({
-    roles,
-    branches,
-    departments,
-}: {
-    roles: Role[];
-    branches: Option[];
-    departments: Option[];
-}) {
-    const [roleId, setRoleId] = useState('');
-    const [scopeType, setScopeType] = useState('organization');
-    const role = roles.find((candidate) => candidate.id === roleId);
-    const scopes = (role?.scopes ?? []).filter((scope) => scope in scopeLabels);
-    const effectiveScope = scopes.includes(scopeType) ? scopeType : scopes[0];
-
-    return (
-        <>
-            <div className="grid gap-1.5">
-                <Label htmlFor="role_id">Role (optional)</Label>
-                <select
-                    id="role_id"
-                    name="role_id"
-                    className={selectClass}
-                    value={roleId}
-                    onChange={(event) => setRoleId(event.target.value)}
-                >
-                    <option value="">No role yet</option>
-                    {[
-                        ...new Set(
-                            roles.map((candidate) => candidate.application),
-                        ),
-                    ].map((application) => (
-                        <optgroup key={application} label={application}>
-                            {roles
-                                .filter(
-                                    (candidate) =>
-                                        candidate.application === application,
-                                )
-                                .map((candidate) => (
-                                    <option
-                                        key={candidate.id}
-                                        value={candidate.id}
-                                    >
-                                        {candidate.name}
-                                    </option>
-                                ))}
-                        </optgroup>
-                    ))}
-                </select>
-            </div>
-
-            {role && effectiveScope && (
-                <div className="grid gap-1.5">
-                    <Label htmlFor="scope_type">Where</Label>
-                    <select
-                        id="scope_type"
-                        name="scope_type"
-                        className={selectClass}
-                        value={effectiveScope}
-                        onChange={(event) => setScopeType(event.target.value)}
-                    >
-                        {scopes.map((scope) => (
-                            <option key={scope} value={scope}>
-                                {scopeLabels[scope]}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-            )}
-
-            {role && effectiveScope === 'branch' && (
-                <select
-                    name="branch_id"
-                    aria-label="Branch"
-                    className={selectClass}
-                    required
-                    defaultValue=""
-                >
-                    <option value="" disabled>
-                        Choose a branch
-                    </option>
-                    {branches.map((branch) => (
-                        <option key={branch.id} value={branch.id}>
-                            {branch.name}
-                        </option>
-                    ))}
-                </select>
-            )}
-
-            {role && effectiveScope === 'department' && (
-                <select
-                    name="department_id"
-                    aria-label="Department"
-                    className={selectClass}
-                    required
-                    defaultValue=""
-                >
-                    <option value="" disabled>
-                        Choose a department
-                    </option>
-                    {departments.map((department) => (
-                        <option key={department.id} value={department.id}>
-                            {department.name}
-                        </option>
-                    ))}
-                </select>
-            )}
-        </>
     );
 }
 

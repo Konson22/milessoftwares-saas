@@ -1,5 +1,6 @@
 import { usePage } from '@inertiajs/react';
 import {
+    Compass,
     CreditCard,
     LayoutGrid,
     Package,
@@ -17,7 +18,7 @@ import type { Crumb, ShellNavGroup } from '@miles/ui/shell/navigation';
 import { ShellSidebar } from '@miles/ui/shell/sidebar';
 import { UserMenu } from '@miles/ui/shell/user-menu';
 import { toUrl } from '@/shared/lib/utils';
-import { dashboard } from '@/routes';
+import { dashboard, explore } from '@/routes';
 import {
     billing,
     plans,
@@ -57,6 +58,12 @@ export default function AppLayout({
                     icon: LayoutGrid,
                     external: !onApp,
                 },
+                {
+                    title: 'Explore the ERP',
+                    href: explore(),
+                    icon: Compass,
+                    external: !onApp,
+                },
             ],
         },
         ...(onApp && tenant?.isOwner
@@ -88,7 +95,7 @@ export default function AppLayout({
             title: 'Account',
             items: [
                 {
-                    title: 'New organization',
+                    title: 'New business',
                     href: createOrganization(),
                     icon: Plus,
                     external: !onApp,

@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Modules\Pharmacy\Listeners\ReturnVoidedSaleToPrescription;
 use App\Modules\Sales\Events\SaleVoided;
+use App\Modules\Sales\Listeners\CancelOrderOfVoidedSale;
 use App\Platform\SetUpWorkspace;
 use App\Support\CurrentBranch;
 use Carbon\CarbonImmutable;
@@ -31,6 +32,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Shared modules announce what happened; the industry module reacts.
         Event::listen(SaleVoided::class, ReturnVoidedSaleToPrescription::class);
+        Event::listen(SaleVoided::class, CancelOrderOfVoidedSale::class);
 
         // Built assets live under the product's path (vite.config.ts).
         $platform = $this->app->make(PlatformConfig::class);

@@ -11,36 +11,50 @@ use App\Modules\Memberships\Actions\MembershipActionDenied;
 use InvalidArgumentException;
 
 /**
- * Separation of duties for a role proposed while inviting or adding someone.
- * Asked of the administrator up front, like on the access page: a role can
- * conflict with itself (a pharmacy manager sells and voids), and nobody is
- * there to acknowledge it when the role is finally given.
+ * Separation of duties for the roles proposed while inviting or adding
+ * someone. Asked of the administrator up front, like on the access page: a
+ * role can conflict with itself (a pharmacy manager sells and voids) or with
+ * another role proposed with it, and nobody is there to acknowledge it when
+ * the roles are finally given.
+ *
+ * @phpstan-import-type ProposedRole from ProposedAccess
  */
 final class ProposedRoleCheck
 {
     public function __construct(private readonly AssignRole $assign) {}
 
     /**
-     * Whether the role raises warnings the administrator has acknowledged.
+     * Whether the roles raise warnings the administrator has acknowledged.
      *
-     * @param  array{role_id: string, scope: array{scope_type: string, branch_id?: string|null, department_id?: string|null}}  $proposed
+     * @param  list<ProposedRole>  $proposed
      *
-     * @throws SeparationOfDutiesWarning when it warns and they have not
-     * @throws MembershipActionDenied when the catalog blocks it
+     * @throws SeparationOfDutiesWarning when they warn and they have not
+     * @throws MembershipActionDenied when the catalog blocks one
      */
     public function separationOfDuties(array $proposed, bool $acknowledged): bool
     {
-        $role = ApplicationRole::query()->with('application')->find($proposed['role_id']);
+        $roles = ApplicationRole::query()
+            ->with('application')
+            ->whereIn('id', array_column($proposed, 'role_id'))
+            ->get()
+            ->keyBy('id');
+        $warnings = [];
 
-        if ($role === null) {
-            return false;
+        foreach ($proposed as $proposal) {
+            $role = $roles->get($proposal['role_id']);
+
+            if ($role === null) {
+                continue;
+            }
+
+            try {
+                $warnings = [...$warnings, ...$this->assign->separationOfDutiesWarnings($role, Scope::fromInput($proposal['scope']), alongside: $roles->all())];
+            } catch (AssignmentDenied|InvalidArgumentException $e) {
+                throw new MembershipActionDenied($e->getMessage());
+            }
         }
 
-        try {
-            $warnings = $this->assign->separationOfDutiesWarnings($role, Scope::fromInput($proposed['scope']));
-        } catch (AssignmentDenied|InvalidArgumentException $e) {
-            throw new MembershipActionDenied($e->getMessage());
-        }
+        $warnings = array_values(array_unique($warnings));
 
         if ($warnings !== [] && ! $acknowledged) {
             throw new SeparationOfDutiesWarning($warnings);

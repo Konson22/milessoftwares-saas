@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\FallbackController;
 use App\Modules\Identity\Http\Controllers\FirstPartySignInController;
 use App\Modules\Identity\Http\Controllers\GoogleSignInController;
 use App\Modules\Identity\Http\Controllers\SignOutController;
@@ -7,6 +8,7 @@ use App\Sites\Central\Http\Controllers\Account\JoinController;
 use App\Sites\Central\Http\Controllers\Account\PasswordSetupController;
 use App\Sites\Central\Http\Controllers\Dashboard\BillingController;
 use App\Sites\Central\Http\Controllers\Dashboard\DashboardController;
+use App\Sites\Central\Http\Controllers\Dashboard\ExploreController;
 use App\Sites\Central\Http\Controllers\Dashboard\InvitationAcceptanceController;
 use App\Sites\Central\Http\Controllers\Dashboard\OrganizationController;
 use App\Sites\Central\Http\Controllers\Dashboard\OrganizationSettingsController;
@@ -19,6 +21,7 @@ use App\Sites\Central\Http\Controllers\Workspace\StructureController;
 use App\Sites\Central\Http\Controllers\Workspace\WorkspaceHomeController;
 use App\Sites\Public\Http\Controllers\SeoController;
 use App\Support\Hosts\PlatformHosts;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -81,6 +84,7 @@ Route::domain(PlatformHosts::app())->name('app.')->group(function () {
 Route::domain(PlatformHosts::app())->middleware(['auth', 'verified', 'current.organization'])->group(function () {
     Route::get('/', fn () => redirect('/dashboard'));
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::get('explore', ExploreController::class)->name('explore');
 
     Route::get('organizations/create', [OrganizationController::class, 'create'])->name('organizations.create');
     Route::post('organizations', [OrganizationController::class, 'store'])
@@ -183,3 +187,12 @@ Route::domain('{tenant}.'.PlatformHosts::root())
             });
         });
     });
+
+// Unknown addresses on any host: answered inside the web middleware, so the
+// error page knows whether the visitor is signed in. Every method, and no
+// CSRF check: the answer is always a 404 (or 405, see FallbackController).
+// Not Route::any(): that adds QUERY, which Wayfinder's TypeScript cannot type.
+Route::match(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], '{fallbackPlaceholder}', FallbackController::class)
+    ->where('fallbackPlaceholder', '.*')
+    ->fallback()
+    ->withoutMiddleware(PreventRequestForgery::class);

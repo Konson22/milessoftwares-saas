@@ -66,13 +66,13 @@ export default function Cashiers({ from, to, byCashier, tills }: Props) {
             <Panel className="mb-3">
                 <PanelHeader
                     title="By cashier"
-                    description="Tills opened in the period. Over and short come from the count at closing."
+                    description="Shifts started in the period. Over and short come from the count at closing."
                 />
                 <Table>
                     <TableHeader>
                         <TableRow>
                             <TableHead>Cashier</TableHead>
-                            <TableHead className="text-right">Tills</TableHead>
+                            <TableHead className="text-right">Shifts</TableHead>
                             <TableHead className="text-right">Sales</TableHead>
                             <TableHead className="text-right">Taken</TableHead>
                             <TableHead className="text-right">
@@ -130,11 +130,11 @@ export default function Cashiers({ from, to, byCashier, tills }: Props) {
             </Panel>
 
             <Panel>
-                <PanelHeader title="Tills" />
+                <PanelHeader title="Shifts" />
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Till</TableHead>
+                            <TableHead>Shift</TableHead>
                             <TableHead>Cashier</TableHead>
                             <TableHead>Opened</TableHead>
                             <TableHead className="text-right">Taken</TableHead>

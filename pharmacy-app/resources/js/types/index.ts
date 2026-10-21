@@ -16,5 +16,6 @@ export type SharedProps = {
     /** The branches open to the member, for the branch switcher. */
     branches: { id: string; name: string }[];
     canSwitchBranch: boolean;
-    flash: { success: string | null };
+    /** print: documents to print by themselves after a counter step. */
+    flash: { success: string | null; print: string[] };
 };

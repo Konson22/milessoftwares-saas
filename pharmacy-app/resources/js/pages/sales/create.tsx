@@ -7,8 +7,10 @@ import { StatusBadge } from '@miles/ui/components/status-badge';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
 import { Label } from '@miles/ui/components/ui/label';
+import { CustomerFields } from '@/components/customer-fields';
 import { formatMoney } from '@/lib/money';
 import { uuid } from '@/lib/uuid';
+import { index as orders, store as takeOrder } from '@/routes/orders';
 import { store } from '@/routes/sales';
 import { show as showTill, store as openTill } from '@/routes/tills';
 
@@ -32,8 +34,25 @@ type Props = {
     paymentMethods: { value: string; label: string }[];
     /** 0 when this member may not give discounts. */
     maxDiscountPercent: number;
-    /** The seller's open till here; nothing is sold without one. */
+    /** The seller's open shift here. */
     till: { id: string; number: string } | null;
+    /** How this branch's counter works (its counter settings). */
+    counter: {
+        workflow: string;
+        workflowLabel: string;
+        /** An order is taken here; payment and hand-over follow. */
+        takesOrders: boolean;
+        /** A direct sale: paid now, handed over unpaid, or the seller chooses. */
+        directPayment: 'paid' | 'unpaid' | 'choose';
+        /** Money is taken only in an open shift. */
+        shiftsRequired: boolean;
+        /** The usual starting cash of a shift. */
+        defaultFloat: string;
+        requireCustomerAlways: boolean;
+        requireCustomerAboveMinor: number | null;
+        /** Registered customers can be looked up. */
+        findCustomers: boolean;
+    };
 };
 
 /** Quantity counts packs when a pack is chosen, units otherwise. */
@@ -89,24 +108,28 @@ const lineTotal = (line: BasketLine) => {
 };
 
 /**
- * The counter: find medicines, build the basket, take payment. Prices,
- * discounts and stock are checked again on the server. Each basket is sent
- * with its own key, so a double click or a retry records one sale.
+ * The counter: find medicines, build the basket, take payment, or take an
+ * order where the branch pays and hands over in steps. Prices, discounts,
+ * stock and the branch's customer rules are checked again on the server.
+ * Each basket is sent with its own key, so a double click or a retry
+ * records one sale or order.
  */
 export default function Counter({
     medicines,
     paymentMethods,
     maxDiscountPercent,
     till,
+    counter,
 }: Props) {
     const { currency, branch } = usePage().props;
     const money = (minor: number) => formatMoney(minor, currency ?? 'USD');
-    const decimals = money(0).includes('.') ? 2 : 0;
 
     const [search, setSearch] = useState('');
     const [basket, setBasket] = useState<BasketLine[]>([]);
     const [method, setMethod] = useState(paymentMethods[0]?.value ?? 'cash');
-    const [tendered, setTendered] = useState('');
+    // A direct counter can hand over unpaid (paid later at the cashier), as
+    // the branch's settings allow.
+    const [paid, setPaid] = useState(counter.directPayment !== 'unpaid');
     const [submissionId, setSubmissionId] = useState(() => uuid());
 
     const matches = useMemo(() => {
@@ -133,11 +156,7 @@ export default function Counter({
     };
 
     const total = basket.reduce((sum, line) => sum + lineTotal(line), 0);
-    const tenderedMinor = Math.round(
-        Number.parseFloat(tendered || '0') * 10 ** decimals,
-    );
-    const change =
-        method === 'cash' && tendered !== '' ? tenderedMinor - total : null;
+    const toOrder = counter.takesOrders || !paid;
 
     const add = (medicine: Medicine) => {
         setBasket((lines) => {
@@ -208,13 +227,32 @@ export default function Counter({
             ),
         );
 
-    if (till === null) {
+    // Rules the server applies too; prescription-only medicines are
+    // dispensed from a prescription, not sold here.
+    const customerRequired = counter.requireCustomerAlways
+        ? 'This branch records the customer on every sale.'
+        : counter.requireCustomerAboveMinor !== null &&
+            total > counter.requireCustomerAboveMinor
+          ? `This branch records the customer on sales over ${money(counter.requireCustomerAboveMinor)}.`
+          : null;
+
+    // Taking an order, or handing over unpaid, needs no shift: the money
+    // is taken at payment.
+    if (
+        till === null &&
+        counter.shiftsRequired &&
+        !counter.takesOrders &&
+        counter.directPayment !== 'unpaid'
+    ) {
         return (
             <>
                 <Head title="Counter" />
                 <PageHeader title="Counter" description={branch?.name} />
                 <Panel className="max-w-md">
-                    <PanelHeader title="Open your till first" />
+                    <PanelHeader
+                        title="Start your shift"
+                        description="Count the cash in the drawer before taking money."
+                    />
                     <PanelBody>
                         <Form
                             {...openTill.form()}
@@ -224,13 +262,13 @@ export default function Counter({
                                 <>
                                     <div className="grid gap-1.5">
                                         <Label htmlFor="opening_float">
-                                            Cash in the drawer to start
+                                            Starting cash in the drawer
                                         </Label>
                                         <Input
                                             id="opening_float"
                                             name="opening_float"
                                             inputMode="decimal"
-                                            defaultValue="0"
+                                            defaultValue={counter.defaultFloat}
                                             className="w-44"
                                         />
                                         {errors.opening_float && (
@@ -240,7 +278,7 @@ export default function Counter({
                                         )}
                                     </div>
                                     <Button type="submit" disabled={processing}>
-                                        Open till
+                                        Start shift
                                     </Button>
                                 </>
                             )}
@@ -258,11 +296,28 @@ export default function Counter({
                 title="Counter"
                 description={branch?.name}
                 actions={
-                    <Button variant="outline" size="sm" asChild>
-                        <Link href={showTill(till.id)}>Till {till.number}</Link>
-                    </Button>
+                    <>
+                        {counter.takesOrders && (
+                            <Button variant="outline" size="sm" asChild>
+                                <Link href={orders()}>Order queue</Link>
+                            </Button>
+                        )}
+                        {till && (
+                            <Button variant="outline" size="sm" asChild>
+                                <Link href={showTill(till.id)}>
+                                    Shift {till.number}
+                                </Link>
+                            </Button>
+                        )}
+                    </>
                 }
             />
+            {counter.takesOrders && (
+                <p className="mb-3 text-sm text-muted-foreground">
+                    {counter.workflowLabel}: take the order here; it is paid and
+                    handed over from the order queue.
+                </p>
+            )}
 
             <div className="grid gap-3 lg:grid-cols-[1fr_22rem]">
                 <Panel>
@@ -496,10 +551,10 @@ export default function Counter({
                 </Panel>
 
                 <Form
-                    {...store.form()}
+                    {...(toOrder ? takeOrder.form() : store.form())}
+                    key={toOrder ? 'order' : 'sale'}
                     onSuccess={() => {
                         setBasket([]);
-                        setTendered('');
                         setSubmissionId(uuid());
                     }}
                     className="grid content-start gap-4 rounded-lg border bg-card p-4"
@@ -548,90 +603,110 @@ export default function Counter({
                                 </span>
                             </p>
 
-                            <div className="grid gap-1.5">
-                                <Label htmlFor="payment_method">Payment</Label>
-                                <select
-                                    id="payment_method"
-                                    name="payment_method"
-                                    value={method}
-                                    onChange={(event) =>
-                                        setMethod(event.target.value)
-                                    }
-                                    className="h-9 rounded-md border bg-transparent px-3 text-sm"
-                                >
-                                    {paymentMethods.map((option) => (
-                                        <option
-                                            key={option.value}
-                                            value={option.value}
+                            {!counter.takesOrders && (
+                                <>
+                                    {counter.directPayment === 'choose' && (
+                                        <div
+                                            role="radiogroup"
+                                            aria-label="Payment"
+                                            className="flex rounded-md border p-0.5"
                                         >
-                                            {option.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
+                                            {[
+                                                { value: true, label: 'Paid' },
+                                                {
+                                                    value: false,
+                                                    label: 'Unpaid',
+                                                },
+                                            ].map((option) => (
+                                                <button
+                                                    key={option.label}
+                                                    type="button"
+                                                    role="radio"
+                                                    aria-checked={
+                                                        paid === option.value
+                                                    }
+                                                    onClick={() =>
+                                                        setPaid(option.value)
+                                                    }
+                                                    className="flex-1 rounded px-2 py-1 text-sm aria-checked:bg-muted aria-checked:font-medium"
+                                                >
+                                                    {option.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {paid ? (
+                                        <>
+                                            <div className="grid gap-1.5">
+                                                <Label htmlFor="payment_method">
+                                                    Payment
+                                                </Label>
+                                                <select
+                                                    id="payment_method"
+                                                    name="payment_method"
+                                                    value={method}
+                                                    onChange={(event) =>
+                                                        setMethod(
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                    className="h-9 rounded-md border bg-transparent px-3 text-sm"
+                                                >
+                                                    {paymentMethods.map(
+                                                        (option) => (
+                                                            <option
+                                                                key={
+                                                                    option.value
+                                                                }
+                                                                value={
+                                                                    option.value
+                                                                }
+                                                            >
+                                                                {option.label}
+                                                            </option>
+                                                        ),
+                                                    )}
+                                                </select>
+                                            </div>
 
-                            {method === 'cash' ? (
-                                <div className="grid gap-1.5">
-                                    <Label htmlFor="amount_tendered">
-                                        Cash given
-                                    </Label>
-                                    <Input
-                                        id="amount_tendered"
-                                        name="amount_tendered"
-                                        inputMode="decimal"
-                                        value={tendered}
-                                        onChange={(event) =>
-                                            setTendered(event.target.value)
-                                        }
-                                        aria-invalid={
-                                            errors.amount_tendered
-                                                ? true
-                                                : undefined
-                                        }
-                                    />
-                                    {change !== null && (
-                                        <p
-                                            className={
-                                                change < 0
-                                                    ? 'text-sm text-destructive'
-                                                    : 'text-sm'
-                                            }
-                                        >
-                                            {change < 0
-                                                ? `Short by ${money(-change)}`
-                                                : `Change: ${money(change)}`}
+                                            {method !== 'cash' && (
+                                                <div className="grid gap-1.5">
+                                                    <Label htmlFor="payment_reference">
+                                                        Payment reference
+                                                    </Label>
+                                                    <Input
+                                                        id="payment_reference"
+                                                        name="payment_reference"
+                                                    />
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground">
+                                            <input
+                                                type="hidden"
+                                                name="pay_later"
+                                                value="1"
+                                            />
+                                            Handed over now; the customer pays
+                                            at the cashier from the order queue.
                                         </p>
                                     )}
-                                    {errors.amount_tendered && (
-                                        <p className="text-sm text-destructive">
-                                            {errors.amount_tendered}
-                                        </p>
-                                    )}
-                                </div>
-                            ) : (
-                                <div className="grid gap-1.5">
-                                    <Label htmlFor="payment_reference">
-                                        Payment reference
-                                    </Label>
-                                    <Input
-                                        id="payment_reference"
-                                        name="payment_reference"
-                                    />
-                                </div>
+                                </>
                             )}
 
-                            <div className="grid gap-1.5">
-                                <Label htmlFor="customer_name">
-                                    Customer (optional)
-                                </Label>
-                                <Input
-                                    id="customer_name"
-                                    name="customer_name"
-                                />
-                            </div>
+                            <CustomerFields
+                                required={customerRequired}
+                                canFindRegistered={counter.findCustomers}
+                                errors={errors}
+                            />
 
                             {Object.entries(errors)
-                                .filter(([field]) => field.startsWith('items'))
+                                .filter(
+                                    ([field]) =>
+                                        field.startsWith('items') ||
+                                        field === 'payment_method',
+                                )
                                 .map(([field, message]) => (
                                     <p
                                         key={field}
@@ -646,7 +721,11 @@ export default function Counter({
                                 size="lg"
                                 disabled={processing || basket.length === 0}
                             >
-                                Complete sale
+                                {counter.takesOrders
+                                    ? 'Take order'
+                                    : paid
+                                      ? 'Complete sale'
+                                      : 'Hand over unpaid'}
                             </Button>
                         </>
                     )}

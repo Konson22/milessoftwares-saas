@@ -36,7 +36,7 @@ export function ProductTile({
 
     return (
         <span
-            className={`inline-flex shrink-0 items-center justify-center bg-site-accent/10 text-site-accent-ink in-[.site-dark]:bg-white/10 in-[.site-dark]:text-site-accent-glow ${box}`}
+            className={`inline-flex shrink-0 items-center justify-center bg-site-accent/10 text-site-accent-ink in-[.site-dark]:bg-white/10 in-[.site-dark]:text-white ${box}`}
         >
             <Icon className={glyph} aria-hidden />
         </span>

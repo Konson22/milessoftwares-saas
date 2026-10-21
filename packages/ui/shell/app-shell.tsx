@@ -98,7 +98,7 @@ export function AppShell({
             </div>
 
             <div className="flex min-w-0 flex-1 flex-col">
-                <header className="sticky top-0 z-20 flex h-11 shrink-0 items-center gap-3 border-b bg-card/95 px-3 backdrop-blur supports-backdrop-filter:bg-card/80">
+                <header className="sticky top-0 z-20 flex h-13 shrink-0 items-center gap-3 border-b bg-card/95 px-3 backdrop-blur supports-backdrop-filter:bg-card/80">
                     <button
                         type="button"
                         onClick={() => setSidebarOpen(true)}

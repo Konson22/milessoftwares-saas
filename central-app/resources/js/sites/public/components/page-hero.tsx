@@ -1,18 +1,16 @@
 import type { ReactNode } from 'react';
-import { darkBand, display, eyebrow } from '@/sites/public/components/styles';
+import { display, eyebrow } from '@/sites/public/components/styles';
 
 /**
- * The band public pages open with, carrying the page's h1: deep navy with
- * soft cyan and blue light, rings and dot grids, text centred. Content
- * that follows can overlap its lower edge (pages pull their first card up
- * with a negative margin).
+ * The band public pages open with: a soft lavender wash with floating
+ * shapes, centred title and intro. Content below sits flush.
  */
 export default function PageHero({
     eyebrow: badge,
     title,
     intro,
     children,
-    padding = 'pt-16 pb-20 sm:pt-24 sm:pb-24',
+    padding = 'pt-16 pb-16 sm:pt-24 sm:pb-24',
 }: {
     eyebrow?: ReactNode;
     title: ReactNode;
@@ -21,10 +19,10 @@ export default function PageHero({
     padding?: string;
 }) {
     return (
-        <section className={darkBand}>
-            <HeroBackdrop />
+        <section className="relative isolate overflow-hidden border-b border-site-line bg-linear-to-b from-site-wash via-site-soft to-white">
+            <LightBackdrop />
             <div
-                className={`mx-auto flex max-w-7xl flex-col items-center px-4 text-center sm:px-6 ${padding}`}
+                className={`site-rise mx-auto flex max-w-7xl flex-col items-center px-4 text-center sm:px-6 ${padding}`}
             >
                 {badge}
                 <h1
@@ -33,7 +31,7 @@ export default function PageHero({
                     {title}
                 </h1>
                 {intro && (
-                    <p className="mt-5 max-w-2xl text-base text-pretty text-slate-300 sm:mt-6 sm:text-lg">
+                    <p className="mt-5 max-w-2xl text-base text-pretty text-slate-600 sm:mt-6 sm:text-lg">
                         {intro}
                     </p>
                 )}
@@ -44,30 +42,39 @@ export default function PageHero({
 }
 
 /**
- * Light and shapes behind a navy band: a cyan glow on one side, a blue
- * one on the other, two thin rings and two dot grids. Decorative only.
+ * Soft gradient blobs, rings and a dotted patch behind a light hero.
+ * Decorative only.
  */
-export function HeroBackdrop() {
+export function LightBackdrop() {
     return (
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-            <div className="absolute -top-40 -left-32 size-[34rem] rounded-full bg-brand-cyan/20 blur-3xl" />
-            <div className="absolute -right-40 -bottom-48 size-[36rem] rounded-full bg-brand-blue/30 blur-3xl" />
-            <div className="absolute top-12 right-[8%] size-40 rounded-full border border-white/10" />
-            <div className="absolute top-24 right-[10%] size-24 rounded-full border-2 border-brand-gold/60" />
-            <div className="site-dots absolute bottom-10 left-[6%] h-28 w-40 text-white/15" />
-            <div className="site-dots absolute top-16 left-[42%] hidden h-16 w-28 text-site-accent/30 lg:block" />
-            <div className="absolute inset-x-0 bottom-0 h-px bg-linear-to-r from-transparent via-white/15 to-transparent" />
+            <div className="site-float-slow absolute -top-32 -left-24 size-[28rem] rounded-full bg-site-accent/15 blur-3xl" />
+            <div className="site-float absolute -right-24 -bottom-40 size-[30rem] rounded-full bg-site-violet/15 blur-3xl" />
+            <div className="absolute top-16 right-[7%] hidden size-28 rounded-full border-2 border-dashed border-site-accent/25 md:block" />
+            <div className="site-float absolute top-[22%] left-[6%] hidden size-4 rounded-full bg-site-coral/70 md:block" />
+            <div className="site-float-slow absolute right-[16%] bottom-[18%] hidden size-3 rounded-full bg-site-purple/70 md:block" />
+            <div className="site-dots absolute bottom-6 left-[12%] hidden h-24 w-40 text-site-accent/20 md:block" />
         </div>
     );
 }
 
-/** The highlighted phrase of a heading: blue, in the shade that reads on its background. */
-export function Accent({ children }: { children: ReactNode }) {
+/**
+ * Soft colour washes behind a dark band. Decorative only.
+ */
+export function HeroBackdrop() {
     return (
-        <span className="text-site-accent-ink in-[.site-dark]:text-site-accent-glow">
-            {children}
-        </span>
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+            <div className="absolute -top-40 -left-32 size-[34rem] rounded-full bg-site-accent/25 blur-3xl" />
+            <div className="absolute -right-40 -bottom-48 size-[36rem] rounded-full bg-site-violet/30 blur-3xl" />
+            <div className="absolute top-12 right-[8%] size-40 rounded-full border border-white/10" />
+            <div className="site-dots absolute bottom-8 left-[10%] h-24 w-40 text-white/15" />
+        </div>
     );
+}
+
+/** The highlighted phrase of a heading: the blue → violet gradient. */
+export function Accent({ children }: { children: ReactNode }) {
+    return <span className="site-gradient-text">{children}</span>;
 }
 
 /** Label above a hero title. */

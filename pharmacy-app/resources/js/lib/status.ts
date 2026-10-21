@@ -23,6 +23,9 @@ const STATUS_TONES: Record<string, Tone> = {
     confirmed: 'info',
     partly_delivered: 'warning',
     delivered: 'success',
+    // Counter orders.
+    paid: 'info',
+    handed_over: 'warning',
 };
 
 export function statusTone(status: string): Tone {

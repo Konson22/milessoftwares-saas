@@ -51,7 +51,6 @@ export default function Start({
             />
 
             <PageHero
-                padding="pt-14 pb-36 sm:pt-20 sm:pb-44"
                 eyebrow={<Stepper current={0} />}
                 title={
                     <>
@@ -63,7 +62,7 @@ export default function Start({
 
             <section
                 aria-label="Choose an application"
-                className="relative mx-auto -mt-24 max-w-6xl px-4 pb-24 sm:px-6"
+                className="mx-auto max-w-6xl px-4 py-12 pb-24 sm:px-6 sm:py-16"
             >
                 {products.length === 0 ? (
                     <div className={`${card} p-10 text-center`}>
@@ -98,12 +97,8 @@ export default function Start({
 
                         <aside
                             aria-label="Your trial"
-                            className="relative isolate flex flex-col overflow-hidden rounded-2xl bg-linear-to-br from-site-soft to-white p-6 text-slate-600 ring-1 ring-site-line"
+                            className="flex flex-col rounded-2xl border border-site-line bg-site-soft p-6 text-slate-600"
                         >
-                            <div
-                                aria-hidden
-                                className="absolute -top-20 -right-20 -z-10 size-56 rounded-full bg-site-accent/15 blur-3xl"
-                            />
                             <p className={eyebrow}>Your trial</p>
                             <div className="mt-3 flex items-center gap-3">
                                 {product && (
@@ -176,17 +171,17 @@ function Stepper({ current }: { current: number }) {
                     className="flex items-center gap-2"
                 >
                     <span
-                        className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 ${i === current ? 'bg-white font-semibold text-site-ink shadow-lg shadow-site-night/30' : 'text-slate-300'}`}
+                        className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 ${i === current ? 'bg-white font-semibold text-site-ink ring-1 ring-site-line' : 'text-slate-500'}`}
                     >
                         <span
-                            className={`inline-flex size-5 items-center justify-center rounded-full text-xs ${i === current ? 'bg-site-accent-ink text-white' : 'bg-white/10 text-slate-300'}`}
+                            className={`inline-flex size-5 items-center justify-center rounded-full text-xs ${i === current ? 'bg-site-accent-ink text-white' : 'bg-site-line text-slate-500'}`}
                         >
                             {i + 1}
                         </span>
                         {step}
                     </span>
                     {i < steps.length - 1 && (
-                        <span aria-hidden className="h-px w-6 bg-white/20" />
+                        <span aria-hidden className="h-px w-6 bg-site-line" />
                     )}
                 </li>
             ))}
@@ -204,7 +199,7 @@ function AppOption({
     onSelect: () => void;
 }) {
     return (
-        <label className="relative flex cursor-pointer gap-4 rounded-xl border border-site-line bg-white p-5 transition-all hover:border-site-accent/40 hover:shadow-md has-[:checked]:border-site-accent has-[:checked]:bg-site-accent/[0.04] has-[:checked]:shadow-md has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-site-accent">
+        <label className="relative flex cursor-pointer gap-4 rounded-xl border border-site-line bg-white p-5 transition-colors hover:border-site-accent/40 has-[:checked]:border-site-accent has-[:checked]:bg-site-accent/[0.04] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-site-accent">
             <input
                 type="radio"
                 name="application"
@@ -218,7 +213,7 @@ function AppOption({
                 <span className="flex items-center gap-2 font-semibold">
                     {product.name}
                     {statusLabel[product.status] && (
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                        <span className="rounded-full bg-site-soft px-2 py-0.5 text-xs font-semibold text-slate-700 ring-1 ring-site-line">
                             {statusLabel[product.status]}
                         </span>
                     )}

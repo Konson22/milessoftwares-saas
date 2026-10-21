@@ -22,6 +22,7 @@ use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -94,7 +95,10 @@ class AccessController extends Controller
 
         $validated = $request->validate([
             'membership_id' => ['required', 'uuid'],
-            'role_id' => ['required', 'uuid'],
+            // Several roles at once; a single role_id is still accepted.
+            'role_id' => ['required_without:role_ids', 'nullable', 'uuid'],
+            'role_ids' => ['required_without:role_id', 'array', 'list', 'max:20'],
+            'role_ids.*' => ['uuid', 'distinct'],
             'scope_type' => ['required', Rule::in(['organization', 'branch', 'department'])],
             'branch_id' => ['required_if:scope_type,branch', 'nullable', 'uuid'],
             'department_id' => ['required_if:scope_type,department', 'nullable', 'uuid'],
@@ -102,30 +106,36 @@ class AccessController extends Controller
             'acknowledge_sod' => ['sometimes', 'boolean'],
         ]);
 
+        $roleIds = array_values(array_unique(array_filter([...($validated['role_ids'] ?? []), $validated['role_id'] ?? null])));
+
         // Tenant-scoped lookups: a foreign membership id is simply not found.
         $grantee = OrganizationMembership::query()->find($request->string('membership_id')->toString());
-        $role = ApplicationRole::query()->with('application')->find($request->string('role_id')->toString());
+        $roles = ApplicationRole::query()->with('application')->whereIn('id', $roleIds)->get();
 
-        if ($grantee === null || $role === null || $grantee->organization_id !== $organizationId) {
+        if ($grantee === null || $roles->count() !== count($roleIds) || $grantee->organization_id !== $organizationId) {
             throw ValidationException::withMessages(['membership_id' => 'Choose a member and a role.']);
         }
 
+        $scope = Scope::fromInput($validated);
+        $expiresAt = isset($validated['expires_at']) ? CarbonImmutable::parse($validated['expires_at'])->endOfDay() : null;
+
+        // All or none: each role is checked against the ones given before it,
+        // so separation of duties sees the whole set.
         try {
-            $assign->handle(
-                $grantor,
-                $grantee,
-                $role,
-                Scope::fromInput($validated),
-                isset($validated['expires_at']) ? CarbonImmutable::parse($validated['expires_at'])->endOfDay() : null,
-                (bool) ($validated['acknowledge_sod'] ?? false),
-            );
-        } catch (AssignmentDenied $e) {
-            throw ValidationException::withMessages(['role_id' => $e->getMessage()]);
+            DB::transaction(function () use ($assign, $grantor, $grantee, $roles, $scope, $expiresAt, $validated): void {
+                foreach ($roles as $role) {
+                    try {
+                        $assign->handle($grantor, $grantee, $role, $scope, $expiresAt, (bool) ($validated['acknowledge_sod'] ?? false));
+                    } catch (AssignmentDenied $e) {
+                        throw ValidationException::withMessages(['role_id' => $roles->count() > 1 ? "{$role->name}: {$e->getMessage()}" : $e->getMessage()]);
+                    }
+                }
+            });
         } catch (SeparationOfDutiesWarning $warning) {
             throw ValidationException::withMessages(['acknowledge_sod' => $warning->conflicts]);
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Role assigned.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => $roles->count() > 1 ? __(':count roles assigned.', ['count' => $roles->count()]) : __('Role assigned.')]);
 
         return back();
     }
@@ -149,7 +159,7 @@ class AccessController extends Controller
      * Roles of the current catalog versions of the platform and every
      * application the organization is entitled to.
      *
-     * @return list<array{id: string, name: string, application: string, scopes: list<string>, sensitivity: int, delegable: bool}>
+     * @return list<array{id: string, name: string, applicationId: string, application: string, scopes: list<string>, sensitivity: int, delegable: bool}>
      */
     private function assignableRoles(): array
     {
@@ -168,6 +178,7 @@ class AccessController extends Controller
                 ->map(fn (ApplicationRole $role) => [
                     'id' => $role->id,
                     'name' => $role->name,
+                    'applicationId' => $application->id,
                     'application' => $application->name,
                     'scopes' => array_map(fn ($type) => $type->value, $role->allowedScopeTypes()),
                     'sensitivity' => $role->sensitivity,

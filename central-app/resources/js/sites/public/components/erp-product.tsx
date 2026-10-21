@@ -42,7 +42,7 @@ export function ErpStatusBadge({ status }: { status: ErpProduct['status'] }) {
 
     return (
         <span
-            className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${status === 'pilot' ? 'bg-site-accent/10 text-site-accent-ink in-[.site-dark]:bg-white/10 in-[.site-dark]:text-site-accent-glow' : 'bg-amber-100 text-amber-800'}`}
+            className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${status === 'pilot' ? 'bg-site-accent/10 text-site-accent-ink' : 'bg-site-soft text-slate-700 ring-1 ring-site-line'}`}
         >
             {label}
         </span>
