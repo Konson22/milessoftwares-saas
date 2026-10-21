@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { layout as adminLayout } from '@/sites/admin';
+import AdminAuthLayout from '@/sites/admin/layouts/admin-auth-layout';
 import AdminLayout from '@/sites/admin/layouts/admin-layout';
 import { layout as centralLayout } from '@/sites/central';
 import AppLayout from '@/sites/central/layouts/app-layout';
@@ -40,7 +41,13 @@ describe('page names', () => {
 describe('site layouts', () => {
     it('gives every public and admin page its site chrome', () => {
         expect(publicLayout()).toBe(MarketingLayout);
-        expect(adminLayout()).toBe(AdminLayout);
+        expect(adminLayout('overview')).toBe(AdminLayout);
+        expect(adminLayout('organizations/show')).toBe(AdminLayout);
+    });
+
+    it('gives the admin sign-in pages their own plain layout', () => {
+        expect(adminLayout('auth/login')).toBe(AdminAuthLayout);
+        expect(adminLayout('auth/two-factor')).toBe(AdminAuthLayout);
     });
 
     it.each([

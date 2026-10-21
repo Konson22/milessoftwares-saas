@@ -62,7 +62,7 @@ test('every workspace route resolves the tenant, and all but public pages requir
 
 test('every admin route requires active platform staff', function () {
     foreach (routesOnHost(PlatformHosts::admin()) as $route) {
-        if (in_array($route->uri(), ['robots.txt', 'auth/login', 'auth/callback', 'logout'], true)) {
+        if (in_array($route->uri(), ['robots.txt', 'login', 'two-factor', 'auth/login', 'logout'], true)) {
             continue;
         }
 

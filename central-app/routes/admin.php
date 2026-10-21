@@ -1,6 +1,5 @@
 <?php
 
-use App\Modules\Identity\Http\Controllers\FirstPartySignInController;
 use App\Sites\Admin\Http\Controllers as Admin;
 use App\Sites\Public\Http\Controllers\SeoController;
 use App\Support\Hosts\PlatformHosts;
@@ -16,12 +15,16 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Signs in through the auth host (OpenID Connect, fresh sign-in every time)
-// and keeps its own host-only session.
+// Its own sign-in on its own host (password, then the two-factor code) and a
+// host-only session: being signed in to the customer apps opens nothing here.
 Route::domain(PlatformHosts::admin())->name('admin.')->group(function () {
-    Route::get('auth/login', [FirstPartySignInController::class, 'login'])->defaults('client', 'admin')->name('auth.login');
-    Route::get('auth/callback', [FirstPartySignInController::class, 'callback'])->defaults('client', 'admin')->name('auth.callback');
-    Route::post('logout', [FirstPartySignInController::class, 'logout'])->middleware('auth')->name('logout');
+    Route::get('login', [Admin\AdminLoginController::class, 'create'])->name('login');
+    Route::post('login', [Admin\AdminLoginController::class, 'store'])->middleware('throttle:login')->name('login.store');
+    Route::get('two-factor', [Admin\AdminLoginController::class, 'challenge'])->name('two-factor');
+    Route::post('two-factor', [Admin\AdminLoginController::class, 'verify'])->middleware('throttle:5,1')->name('two-factor.store');
+    Route::post('logout', [Admin\AdminLoginController::class, 'destroy'])->middleware('auth')->name('logout');
+    // Old links to the auth-host sign-in.
+    Route::redirect('auth/login', '/login');
 });
 
 // Signed-in hosts are never indexed.

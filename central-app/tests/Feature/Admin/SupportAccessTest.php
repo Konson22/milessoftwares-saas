@@ -94,7 +94,7 @@ it('records every view of customer data against the organization', function () {
         ->and($view->actor_type)->toBe('staff')
         ->and($view->context['viewed'])->toBe('members');
 
-    expect(AuditLog::query()->where('organization_id', $this->organization->id)->pluck('action')->all())
+    expect(AuditLog::query()->where('organization_id', $this->organization->id)->orderBy('sequence')->pluck('action')->all())
         ->toBe(['support.requested', 'support.approved', 'support.data_viewed']);
 });
 

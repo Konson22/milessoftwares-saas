@@ -47,11 +47,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // Unknown tenants must 404 before auth can redirect to sign-in.
         $middleware->prependToPriorityList(before: AuthenticatesRequests::class, prepend: ResolveTenant::class);
 
-        // Guests on app./admin. start an OIDC sign-in on their own host; elsewhere
-        // they go straight to the auth host sign-in page.
+        // Guests on app. and workspaces start an OIDC sign-in on their own host,
+        // admin. has its own sign-in page; elsewhere they go straight to the
+        // auth host sign-in page.
         $middleware->redirectGuestsTo(fn (Request $request) => match (PlatformHosts::classify($request->getHost())['type']) {
             HostType::App => PlatformHosts::url(PlatformHosts::app(), 'auth/login'),
-            HostType::Admin => PlatformHosts::url(PlatformHosts::admin(), 'auth/login'),
+            HostType::Admin => PlatformHosts::url(PlatformHosts::admin(), 'login'),
             HostType::Workspace => PlatformHosts::url($request->getHost(), 'auth/login'),
             default => route('login'),
         });

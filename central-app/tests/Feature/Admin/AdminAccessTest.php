@@ -16,8 +16,8 @@ function makeStaff(User $user, string $status = 'active'): PlatformStaff
     return $staff;
 }
 
-it('sends guests into the admin host OIDC sign-in', function () {
-    $this->get(adminUrl())->assertRedirect('http://admin.'.config('platform.root_domain').'/auth/login');
+it('sends guests to the admin host sign-in page', function () {
+    $this->get(adminUrl())->assertRedirect('http://admin.'.config('platform.root_domain').'/login');
 });
 
 it('forbids ordinary customers', function () {

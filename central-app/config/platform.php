@@ -27,7 +27,7 @@ return [
     'hosts' => [
         'auth' => 'auth',
         'app' => 'app',
-        'admin' => 'admin',
+        'admin' => env('PLATFORM_ADMIN_HOST', 'admin'),
         'www' => 'www',
     ],
 

@@ -5,10 +5,7 @@ use App\Modules\Administration\Actions\StaffChangeDenied;
 use App\Modules\Administration\Actions\StaffDirectory;
 use App\Modules\Administration\Models\PlatformStaff;
 use App\Modules\Audit\Models\AuditLog;
-use App\Modules\Identity\Models\OAuthClient;
-use App\Support\Hosts\PlatformHosts;
 use Inertia\Testing\AssertableInertia;
-use Laravel\Passport\ClientRepository;
 use Tests\Support\AdminFixtures;
 
 uses(AdminFixtures::class);
@@ -94,7 +91,7 @@ it('signs staff out after the idle timeout', function () {
 
     $this->travel(31)->minutes();
 
-    $this->get($this->adminUrl())->assertRedirect($this->adminUrl('auth/login'));
+    $this->get($this->adminUrl())->assertRedirect($this->adminUrl('login'));
     $this->assertGuest();
 });
 
@@ -108,13 +105,6 @@ it('keeps active staff signed in', function () {
     $this->get($this->adminUrl())->assertOk();
 });
 
-it('asks staff to sign in afresh for every admin session', function () {
-    /** @var OAuthClient $client */
-    $client = app(ClientRepository::class)->createAuthorizationCodeGrantClient('Admin', [PlatformHosts::url(PlatformHosts::admin(), 'auth/callback')]);
-    config(['platform.oidc.clients.admin.id' => $client->getKey(), 'platform.oidc.clients.admin.secret' => $client->plainSecret]);
-
-    $location = (string) $this->get($this->adminUrl('auth/login'))->headers->get('Location');
-    parse_str((string) parse_url($location, PHP_URL_QUERY), $query);
-
-    expect($query['prompt'] ?? null)->toBe('login');
+it('sends old sign-in links to the admin host\'s own sign-in page', function () {
+    $this->get($this->adminUrl('auth/login'))->assertRedirect('/login');
 });

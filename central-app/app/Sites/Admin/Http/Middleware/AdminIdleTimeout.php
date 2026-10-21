@@ -30,7 +30,7 @@ class AdminIdleTimeout
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->away(PlatformHosts::url(PlatformHosts::admin(), 'auth/login'));
+            return redirect()->away(PlatformHosts::url(PlatformHosts::admin(), 'login'));
         }
 
         $request->session()->put(self::SESSION_KEY, now()->getTimestamp());
