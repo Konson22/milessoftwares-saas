@@ -9,16 +9,18 @@ use App\Modules\Administration\Actions\StaffChangeDenied;
 use App\Modules\Administration\Actions\StaffInvitations;
 use App\Modules\Administration\Models\StaffInvitation;
 use App\Support\Hosts\PlatformHosts;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Laravel\Fortify\Actions\ConfirmTwoFactorAuthentication;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
+use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
+use Laravel\Fortify\Events\TwoFactorAuthenticationFailed;
 use Laravel\Fortify\Fortify;
 
 /**
@@ -48,6 +50,14 @@ class StaffInvitationController extends Controller
 
         $user = $this->pendingUser($request, $invitation);
 
+        if ($user !== null && $user->two_factor_confirmed_at !== null) {
+            return Inertia::render('admin/auth/invitation', [
+                'step' => 'two-factor-existing',
+                'token' => $token,
+                'email' => $invitation->email,
+            ]);
+        }
+
         if ($user !== null) {
             return Inertia::render('admin/auth/invitation', [
                 'step' => 'two-factor',
@@ -75,11 +85,17 @@ class StaffInvitationController extends Controller
         $user = $this->userFor($invitation);
 
         if ($user !== null) {
-            $validated = $request->validate(['password' => ['required', 'string']]);
+            // The link proves the address, as a password-reset email would:
+            // they choose a new password (they may never have had one they
+            // know, e.g. signed up with Google), recorded as a reset.
+            $validated = $request->validate(['password' => $this->passwordRules()]);
 
-            if (! Hash::check($validated['password'], $user->password) || $user->status !== 'active') {
-                throw ValidationException::withMessages(['password' => __('That is not the password for this account.')]);
+            if ($user->status !== 'active') {
+                throw ValidationException::withMessages(['invitation' => __('This account is not active. Ask for help from whoever invited you.')]);
             }
+
+            $user->forceFill(['password' => $validated['password']])->save();
+            event(new PasswordReset($user));
         } else {
             $validated = $request->validate([
                 'name' => ['required', 'string', 'max:255'],
@@ -95,18 +111,18 @@ class StaffInvitationController extends Controller
             ])->save();
         }
 
-        // Already set up (an existing account with two-factor on): done.
-        if ($user->two_factor_confirmed_at !== null) {
-            return $this->finish($request, $invitation, $user);
+        // An account with two-factor on keeps its authenticator and proves
+        // it on the next step; everyone else sets one up there.
+        if ($user->two_factor_confirmed_at === null) {
+            $enable($user);
         }
 
-        $enable($user);
         $request->session()->put(self::PENDING, ['invitation' => $invitation->id, 'user' => $user->id]);
 
         return redirect()->to(PlatformHosts::url(PlatformHosts::admin(), 'invitation/'.$token));
     }
 
-    public function confirm(Request $request, string $token, ConfirmTwoFactorAuthentication $confirm): RedirectResponse
+    public function confirm(Request $request, string $token, ConfirmTwoFactorAuthentication $confirm, TwoFactorAuthenticationProvider $provider): RedirectResponse
     {
         $invitation = $this->valid($token);
         $user = $this->pendingUser($request, $invitation);
@@ -116,11 +132,21 @@ class StaffInvitationController extends Controller
         }
 
         $validated = $request->validate(['code' => ['required', 'string', 'max:16']]);
+        $invalid = ValidationException::withMessages(['code' => __('That code is not valid. Check the time on your phone and try the newest code.')]);
 
-        try {
-            $confirm($user, $validated['code']);
-        } catch (ValidationException) {
-            throw ValidationException::withMessages(['code' => __('That code is not valid. Check the time on your phone and try the newest code.')]);
+        if ($user->two_factor_confirmed_at !== null) {
+            // Their existing authenticator: proven, not set up again.
+            if (! $provider->verify(Fortify::currentEncrypter()->decrypt((string) $user->two_factor_secret), $validated['code'])) {
+                event(new TwoFactorAuthenticationFailed($user));
+
+                throw $invalid;
+            }
+        } else {
+            try {
+                $confirm($user, $validated['code']);
+            } catch (ValidationException) {
+                throw $invalid;
+            }
         }
 
         return $this->finish($request, $invitation, $user->refresh());

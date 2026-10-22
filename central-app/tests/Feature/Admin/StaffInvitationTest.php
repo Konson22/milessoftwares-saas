@@ -9,8 +9,10 @@ use App\Modules\Administration\Notifications\StaffInvitationSent;
 use App\Modules\Audit\Models\AuditLog;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia;
+use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 use Laravel\Fortify\Fortify;
 use PragmaRX\Google2FA\Google2FA;
 use Tests\Support\AdminFixtures;
@@ -103,26 +105,53 @@ it('takes someone new through a password and two-factor, then makes them staff',
     $this->get($this->adminUrl("invitation/{$token}"))->assertInertia(fn (AssertableInertia $page) => $page->where('step', 'invalid'));
 });
 
-it('asks someone with an account for their own password, never a new one', function () {
-    $user = User::factory()->create(['email' => 'deng@example.test', 'password' => 'their own password']);
+it('lets someone with an account choose a new password, as a reset would', function () {
+    $user = User::factory()->create(['email' => 'deng@example.test', 'password' => 'a password they forgot']);
     $token = inviteStaff('deng@example.test');
 
     $this->get($this->adminUrl("invitation/{$token}"))->assertInertia(fn (AssertableInertia $page) => $page->where('hasAccount', true));
 
-    $this->post($this->adminUrl("invitation/{$token}"), ['password' => 'a guess'])->assertSessionHasErrors('password');
-    $this->post($this->adminUrl("invitation/{$token}"), ['password' => 'their own password'])->assertSessionHasNoErrors();
+    $this->post($this->adminUrl("invitation/{$token}"), ['password' => 'short', 'password_confirmation' => 'short'])->assertSessionHasErrors('password');
+    $this->post($this->adminUrl("invitation/{$token}"), ['password' => 'a long Passw0rd!', 'password_confirmation' => 'a long Passw0rd!'])->assertSessionHasNoErrors();
+
+    expect(Hash::check('a long Passw0rd!', $user->refresh()->password))->toBeTrue();
 
     $this->post($this->adminUrl("invitation/{$token}/two-factor"), ['code' => currentCode($user)])->assertRedirect($this->adminUrl('/'));
 
     expect(PlatformStaff::query()->where('user_id', $user->id)->exists())->toBeTrue();
 });
 
+it('asks an account that already has two-factor for its code, without showing its secret', function () {
+    $user = User::factory()->withTwoFactor()->create(['email' => 'ayen@example.test']);
+    $secret = app(TwoFactorAuthenticationProvider::class)->generateSecretKey();
+    $user->forceFill(['two_factor_secret' => Fortify::currentEncrypter()->encrypt($secret)])->save();
+    $token = inviteStaff('ayen@example.test');
+
+    $this->post($this->adminUrl("invitation/{$token}"), ['password' => 'a long Passw0rd!', 'password_confirmation' => 'a long Passw0rd!'])
+        ->assertRedirect($this->adminUrl("invitation/{$token}"));
+
+    // Not signed in on the strength of the email alone.
+    expect(Auth::id())->not->toBe($user->id);
+
+    $this->get($this->adminUrl("invitation/{$token}"))->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('step', 'two-factor-existing')
+        ->missing('setupKey')
+        ->missing('recoveryCodes'));
+
+    $this->post($this->adminUrl("invitation/{$token}/two-factor"), ['code' => '000000'])->assertSessionHasErrors('code');
+    $this->post($this->adminUrl("invitation/{$token}/two-factor"), ['code' => app(Google2FA::class)->getCurrentOtp($secret)])
+        ->assertRedirect($this->adminUrl('/'));
+
+    expect(Fortify::currentEncrypter()->decrypt($user->refresh()->two_factor_secret))->toBe($secret)
+        ->and(PlatformStaff::query()->where('user_id', $user->id)->exists())->toBeTrue();
+});
+
 it('lets staff added before two-factor existed finish setting it up', function () {
-    $user = User::factory()->create(['email' => 'nyandeng@example.test', 'password' => 'their own password']);
+    $user = User::factory()->create(['email' => 'nyandeng@example.test']);
     app(StaffDirectory::class)->add($user, null);
 
     $token = inviteStaff('nyandeng@example.test', role: null);
-    $this->post($this->adminUrl("invitation/{$token}"), ['password' => 'their own password']);
+    $this->post($this->adminUrl("invitation/{$token}"), ['password' => 'a long Passw0rd!', 'password_confirmation' => 'a long Passw0rd!']);
     $this->post($this->adminUrl("invitation/{$token}/two-factor"), ['code' => currentCode($user)])->assertRedirect($this->adminUrl('/'));
 
     expect($user->refresh()->two_factor_confirmed_at)->not->toBeNull()
