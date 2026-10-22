@@ -15,7 +15,7 @@ import {
     whyMiles,
 } from '@/sites/public/components/content';
 import FaqList, { faq } from '@/sites/public/components/faq';
-import HeroMockup from '@/sites/public/components/hero-mockup';
+import HeroSlides from '@/sites/public/components/hero-slides';
 import {
     Accent,
     HeroBackdrop,
@@ -36,7 +36,7 @@ import {
 
 type Props = {
     catalog: CatalogEntry[];
-    /** Registry applications, for the dashboard drawing in the hero. */
+    /** Registry applications (sent by the server; the hero no longer draws them). */
     products: Product[];
     trialDays: number;
     canonical: string;
@@ -49,7 +49,6 @@ function ordinal(i: number): string {
 
 export default function MarketingHome({
     catalog,
-    products,
     trialDays,
     canonical,
 }: Props) {
@@ -100,14 +99,8 @@ export default function MarketingHome({
                             </Link>
                         </div>
                     </div>
-                    <div className="site-tilt hidden md:block">
-                        <HeroMockup
-                            codes={
-                                products.length > 0
-                                    ? products.map((product) => product.code)
-                                    : ['retail', 'pharmacy', 'finance']
-                            }
-                        />
+                    <div className="hidden md:block">
+                        <HeroSlides />
                     </div>
                 </div>
             </section>
