@@ -23,6 +23,10 @@ Route::domain(PlatformHosts::admin())->name('admin.')->group(function () {
     Route::get('two-factor', [Admin\AdminLoginController::class, 'challenge'])->name('two-factor');
     Route::post('two-factor', [Admin\AdminLoginController::class, 'verify'])->middleware('throttle:5,1')->name('two-factor.store');
     Route::post('logout', [Admin\AdminLoginController::class, 'destroy'])->middleware('auth')->name('logout');
+    // Staff invitations: password, then two-factor, then signed in.
+    Route::get('invitation/{token}', [Admin\StaffInvitationController::class, 'show'])->middleware('throttle:30,1')->name('invitation.show');
+    Route::post('invitation/{token}', [Admin\StaffInvitationController::class, 'store'])->middleware('throttle:10,1')->name('invitation.store');
+    Route::post('invitation/{token}/two-factor', [Admin\StaffInvitationController::class, 'confirm'])->middleware('throttle:5,1')->name('invitation.two-factor');
     // Old links to the auth-host sign-in. GET-only (Route::redirect() also
     // registers QUERY, which Wayfinder's generated TypeScript cannot type).
     Route::get('auth/login', fn () => redirect('/login'));
@@ -130,6 +134,8 @@ Route::domain(PlatformHosts::admin())
         Route::middleware('staff.can:staff.manage')->prefix('staff')->name('staff.')->group(function () {
             Route::get('/', [Admin\StaffController::class, 'index'])->name('index');
             Route::post('/', [Admin\StaffController::class, 'store'])->name('store');
+            Route::post('invitations/{invitation}/resend', [Admin\StaffController::class, 'resendInvitation'])->whereUuid('invitation')->middleware('throttle:10,1')->name('invitations.resend');
+            Route::delete('invitations/{invitation}', [Admin\StaffController::class, 'revokeInvitation'])->whereUuid('invitation')->name('invitations.destroy');
             Route::post('{staff}/roles', [Admin\StaffController::class, 'grantRole'])->whereUuid('staff')->name('roles.store');
             Route::delete('{staff}/roles/{role}', [Admin\StaffController::class, 'revokeRole'])->whereUuid('staff')->name('roles.destroy');
             Route::put('{staff}/status', [Admin\StaffController::class, 'updateStatus'])->whereUuid('staff')->name('status');

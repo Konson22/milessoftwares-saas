@@ -22,15 +22,28 @@ type Role = {
     permissions: string[];
 };
 
+type Invitation = {
+    id: string;
+    email: string;
+    name: string | null;
+    role: string | null;
+    status: 'pending' | 'expired';
+    expiresAt: string;
+};
+
 type Props = {
     staff: Staff[];
+    invitations: Invitation[];
     roles: Role[];
 };
 
 const selectClass =
     'h-8 rounded-md border border-input bg-transparent px-2 text-sm';
 
-export default function StaffIndex({ staff, roles }: Props) {
+export default function StaffIndex({ staff, invitations, roles }: Props) {
+    const roleName = (key: string | null) =>
+        roles.find((role) => role.key === key)?.name ?? 'No role yet';
+
     const { errors } = usePage().props as { errors: Record<string, string> };
 
     return (
@@ -60,13 +73,35 @@ export default function StaffIndex({ staff, roles }: Props) {
                                 )}
                                 {!member.mfa && (
                                     <Badge variant="outline">
-                                        No MFA — cannot sign in
+                                        Two-factor not set up
                                     </Badge>
                                 )}
                             </div>
                             <p className="text-xs text-muted-foreground">
                                 {member.email}
                             </p>
+                            {!member.mfa && !member.isYou && (
+                                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                    They cannot sign in until they set up
+                                    two-factor authentication.
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() =>
+                                            router.post(
+                                                '/staff',
+                                                {
+                                                    email: member.email,
+                                                    name: member.name,
+                                                },
+                                                { preserveScroll: true },
+                                            )
+                                        }
+                                    >
+                                        Email a setup link
+                                    </Button>
+                                </div>
+                            )}
 
                             <div className="mt-3 flex flex-wrap gap-2">
                                 {member.roles.map((role) => (
@@ -162,11 +197,79 @@ export default function StaffIndex({ staff, roles }: Props) {
                             )}
                         </li>
                     ))}
+                    {invitations.length > 0 && (
+                        <li className="space-y-3 pt-2">
+                            <h2 className="text-lg font-medium">Invitations</h2>
+                            <ul className="space-y-3">
+                                {invitations.map((invitation) => (
+                                    <li
+                                        key={invitation.id}
+                                        className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed p-4"
+                                    >
+                                        <div className="min-w-0 flex-1">
+                                            <p className="font-medium">
+                                                {invitation.name ??
+                                                    invitation.email}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {invitation.email} ·{' '}
+                                                {roleName(invitation.role)} ·{' '}
+                                                {invitation.status === 'expired'
+                                                    ? 'expired'
+                                                    : `expires ${invitation.expiresAt}`}
+                                            </p>
+                                        </div>
+                                        <Badge
+                                            variant={
+                                                invitation.status === 'expired'
+                                                    ? 'destructive'
+                                                    : 'secondary'
+                                            }
+                                        >
+                                            {invitation.status === 'expired'
+                                                ? 'Expired'
+                                                : 'Invited'}
+                                        </Badge>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() =>
+                                                router.post(
+                                                    `/staff/invitations/${invitation.id}/resend`,
+                                                    {},
+                                                    { preserveScroll: true },
+                                                )
+                                            }
+                                        >
+                                            Resend
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() =>
+                                                router.delete(
+                                                    `/staff/invitations/${invitation.id}`,
+                                                    { preserveScroll: true },
+                                                )
+                                            }
+                                        >
+                                            Cancel
+                                        </Button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </li>
+                    )}
                 </ul>
 
                 <aside className="space-y-5">
                     <section className="space-y-3">
-                        <h2 className="text-lg font-medium">Add staff</h2>
+                        <h2 className="text-lg font-medium">Invite staff</h2>
+                        <p className="text-sm text-muted-foreground">
+                            They get an email to choose a password and set up
+                            two-factor authentication, then join with the role
+                            you pick.
+                        </p>
                         <Form
                             action="/staff"
                             method="post"
@@ -176,9 +279,16 @@ export default function StaffIndex({ staff, roles }: Props) {
                             {({ errors: formErrors, processing }) => (
                                 <>
                                     <div className="grid gap-1.5">
-                                        <Label htmlFor="email">
-                                            Account email
-                                        </Label>
+                                        <Label htmlFor="name">Name</Label>
+                                        <Input
+                                            id="name"
+                                            name="name"
+                                            autoComplete="off"
+                                        />
+                                        <InputError message={formErrors.name} />
+                                    </div>
+                                    <div className="grid gap-1.5">
+                                        <Label htmlFor="email">Email</Label>
                                         <Input
                                             id="email"
                                             name="email"
@@ -189,12 +299,34 @@ export default function StaffIndex({ staff, roles }: Props) {
                                             message={formErrors.email}
                                         />
                                     </div>
+                                    <div className="grid gap-1.5">
+                                        <Label htmlFor="role">Role</Label>
+                                        <select
+                                            id="role"
+                                            name="role"
+                                            className={selectClass}
+                                            defaultValue=""
+                                        >
+                                            <option value="">
+                                                Choose later
+                                            </option>
+                                            {roles.map((role) => (
+                                                <option
+                                                    key={role.key}
+                                                    value={role.key}
+                                                >
+                                                    {role.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <InputError message={formErrors.role} />
+                                    </div>
                                     <Button
                                         type="submit"
                                         size="sm"
                                         disabled={processing}
                                     >
-                                        Add
+                                        Send invitation
                                     </Button>
                                 </>
                             )}

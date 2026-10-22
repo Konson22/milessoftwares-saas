@@ -3,11 +3,12 @@
 namespace App\Sites\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Modules\Administration\Actions\StaffChangeDenied;
 use App\Modules\Administration\Actions\StaffDirectory;
+use App\Modules\Administration\Actions\StaffInvitations;
 use App\Modules\Administration\Models\PlatformRole;
 use App\Modules\Administration\Models\PlatformStaff;
+use App\Modules\Administration\Models\StaffInvitation;
 use App\Modules\Administration\Support\PlatformRoleCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,10 @@ use Inertia\Response;
 
 class StaffController extends Controller
 {
-    public function __construct(private readonly StaffDirectory $directory) {}
+    public function __construct(
+        private readonly StaffDirectory $directory,
+        private readonly StaffInvitations $invitations,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -40,6 +44,7 @@ class StaffController extends Controller
                     'isYou' => $staff->is($current),
                 ])
                 ->all(),
+            'invitations' => $this->invitations->open(),
             'roles' => collect(PlatformRoleCatalog::roles())
                 ->map(fn (array $role, string $key) => [
                     'key' => $key,
@@ -52,18 +57,39 @@ class StaffController extends Controller
         ]);
     }
 
+    /**
+     * Invites someone by email: the link takes them through a password and
+     * two-factor authentication, and only then makes them staff with the
+     * chosen role. Staff added before who never set up two-factor are
+     * invited the same way.
+     */
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate(['email' => ['required', 'email']]);
-        $user = User::query()->where('email', $validated['email'])->first();
+        $validated = $request->validate([
+            'name' => ['nullable', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+            'role' => ['nullable', Rule::in(array_keys(PlatformRoleCatalog::roles()))],
+        ]);
 
-        if ($user === null) {
-            throw ValidationException::withMessages(['email' => 'They need an account first: ask them to register, then add them here.']);
+        try {
+            $this->invitations->invite($validated['email'], $validated['name'] ?? null, $validated['role'] ?? null, $this->actor($request));
+        } catch (StaffChangeDenied $e) {
+            throw ValidationException::withMessages(['email' => $e->getMessage()]);
         }
 
-        $this->directory->add($user, $this->actor($request));
+        return $this->done('Invitation sent to '.mb_strtolower($validated['email']).'.');
+    }
 
-        return $this->done('Staff member added. Give them a role next.');
+    public function resendInvitation(Request $request, StaffInvitation $invitation): RedirectResponse
+    {
+        return $this->attempt(fn () => $this->invitations->resend($invitation, $this->actor($request)), 'Invitation sent again.');
+    }
+
+    public function revokeInvitation(Request $request, StaffInvitation $invitation): RedirectResponse
+    {
+        $this->invitations->revoke($invitation, $this->actor($request));
+
+        return $this->done('Invitation cancelled.');
     }
 
     public function grantRole(Request $request, PlatformStaff $staff): RedirectResponse

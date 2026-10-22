@@ -30,25 +30,23 @@ it('shares only the signed-in staff member\'s permissions', function () {
             ->where('staff.permissions', ['organizations.view', 'support.request']));
 });
 
-it('adds an existing user as staff and grants a role', function () {
+it('grants a role to staff', function () {
     $admin = $this->staffWith(['super_admin']);
-    $user = User::factory()->create();
+    $staff = $this->staffWith([]);
 
-    $this->actingAs($admin->user)->post($this->adminUrl('/staff'), ['email' => $user->email])->assertSessionHasNoErrors();
-    $staff = PlatformStaff::query()->where('user_id', $user->id)->sole();
-
-    $this->post($this->adminUrl("/staff/{$staff->id}/roles"), ['role' => 'support_agent'])->assertSessionHasNoErrors();
+    $this->actingAs($admin->user)->post($this->adminUrl("/staff/{$staff->id}/roles"), ['role' => 'support_agent'])->assertSessionHasNoErrors();
 
     expect($staff->refresh()->hasRole('support_agent'))->toBeTrue()
         ->and(AuditLog::query()->where('action', 'staff.role_granted')->latest('sequence')->value('actor_type'))->toBe('staff');
 });
 
-it('refuses unknown accounts', function () {
+it('invites rather than adds: nobody becomes staff from the form alone', function () {
     $admin = $this->staffWith(['super_admin']);
+    $user = User::factory()->create();
 
-    $this->actingAs($admin->user)
-        ->post($this->adminUrl('/staff'), ['email' => 'nobody@example.test'])
-        ->assertSessionHasErrors('email');
+    $this->actingAs($admin->user)->post($this->adminUrl('/staff'), ['email' => $user->email])->assertSessionHasNoErrors();
+
+    expect(PlatformStaff::query()->where('user_id', $user->id)->exists())->toBeFalse();
 });
 
 it('stops staff from changing their own roles or status', function () {
