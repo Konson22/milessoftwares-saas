@@ -1,0 +1,733 @@
+{
+    "$comment": "Public-site wording for every Miles product. What is sold, its release status and whether it can be trialed come from the application registry and database/erp-products.json (registry.type + registry.code); an entry without a registry record is shown as coming soon. Features of a product that is not released describe what it is being built to do.",
+    "products": [
+        {
+            "slug": "pharmacy",
+            "category": "erp",
+            "name": "Pharmacy ERP",
+            "icon": "pill",
+            "registry": { "type": "erp", "code": "pharmacy" },
+            "summary": "Medicines, batches and expiry, the counter and prescriptions, with the books kept for you.",
+            "headline": "Every medicine accounted for, from delivery to dispensing.",
+            "subhead": "Batch and expiry tracking, a fast counter, prescriptions and a controlled-drugs register, with sales, stock and cash posted straight to Miles Finance.",
+            "audience": "Retail pharmacies, medical stores and pharmaceutical wholesalers, from one branch to many.",
+            "seoTitle": "Pharmacy ERP with batch and expiry tracking",
+            "seoDescription": "Pharmacy software with batch and expiry tracking, expiry-first selling, prescriptions, a controlled-drugs register and tills, with accounting built in.",
+            "features": [
+                {
+                    "icon": "pill",
+                    "title": "Medicines catalogue",
+                    "body": "Generic and brand names, strength, form, barcode and storage condition. Flag prescription-only and controlled items; sell packs or units at their own price."
+                },
+                {
+                    "icon": "package-search",
+                    "title": "Batches and expiry",
+                    "body": "Every batch carries its number, expiry date and cost. The counter sells the batch that expires first and blocks anything expired."
+                },
+                {
+                    "icon": "shield-alert",
+                    "title": "Quarantine and recalls",
+                    "body": "Put a batch on hold in one step. Quarantined stock can be released; recalled stock never sells."
+                },
+                {
+                    "icon": "scan-barcode",
+                    "title": "A fast counter",
+                    "body": "Search or scan, apply approved discounts, take cash, mobile money or card, and print an 80 mm receipt."
+                },
+                {
+                    "icon": "file-check",
+                    "title": "Prescriptions",
+                    "body": "Record prescriptions, have a pharmacist verify them, and dispense part of one when stock is short."
+                },
+                {
+                    "icon": "book-open-check",
+                    "title": "Controlled drugs register",
+                    "body": "Every movement of a controlled item, logged and ready for inspection."
+                },
+                {
+                    "icon": "wallet",
+                    "title": "Tills and cash-up",
+                    "body": "Each cashier opens a till and counts it at closing; any over or short is posted to Finance."
+                },
+                {
+                    "icon": "truck",
+                    "title": "Purchasing and stock",
+                    "body": "Purchase orders, goods received onto a shelf or fridge, supplier returns, branch transfers and second-person disposals."
+                },
+                {
+                    "icon": "bar-chart",
+                    "title": "Reports",
+                    "body": "Stock, near-expiry, sales, profitability, purchases and cashier reconciliation, all exportable to CSV."
+                }
+            ],
+            "workflow": [
+                {
+                    "title": "Receive",
+                    "body": "Goods arrive against a purchase order, by batch and expiry, and the supplier bill appears in Finance."
+                },
+                {
+                    "title": "Sell and dispense",
+                    "body": "The counter picks the batch that expires first and checks prescriptions before dispensing."
+                },
+                {
+                    "title": "Close the day",
+                    "body": "Tills are counted and revenue, cost of goods and cash are already in the ledger."
+                }
+            ],
+            "faqs": [
+                {
+                    "question": "Does it work for several branches?",
+                    "answer": "Yes. Each branch has its own stock, locations and tills, with transfers between branches and reports per branch."
+                },
+                {
+                    "question": "Is accounting included?",
+                    "answer": "Yes. Pharmacy ERP includes Miles Finance, and every sale, purchase, return and write-off posts to it automatically."
+                }
+            ]
+        },
+        {
+            "slug": "retail",
+            "category": "erp",
+            "name": "Retail ERP",
+            "icon": "shopping-cart",
+            "registry": { "type": "erp", "code": "retail_trading" },
+            "summary": "Shop counter, credit customers and wholesale invoices on one set of books.",
+            "headline": "From the shop counter to the wholesale invoice, on one set of books.",
+            "subhead": "A barcode till for walk-in customers, credit accounts and wholesale documents for trade customers, and stock and accounting that never disagree.",
+            "audience": "Shops, supermarkets, hardware and electronics stores, wholesalers and trading companies.",
+            "seoTitle": "Retail ERP: POS, wholesale and stock",
+            "seoDescription": "Retail and wholesale software with barcode checkout, credit customers, price lists, quotations to invoices, stock and reports on one set of books.",
+            "features": [
+                {
+                    "icon": "tags",
+                    "title": "Products and barcodes",
+                    "body": "Barcodes, categories, unit prices, packs and reorder levels, with optional expiry tracking."
+                },
+                {
+                    "icon": "scan-barcode",
+                    "title": "Fast checkout",
+                    "body": "Scan to add, take cash, mobile money or card, print receipts, and handle voids and returns."
+                },
+                {
+                    "icon": "credit-card",
+                    "title": "Customers on credit",
+                    "body": "Credit limits enforced at the sale, customer payments, and statements that match Finance."
+                },
+                {
+                    "icon": "file-text",
+                    "title": "Wholesale documents",
+                    "body": "Price lists, quotations, sales orders, delivery notes and invoices, with partial deliveries."
+                },
+                {
+                    "icon": "truck",
+                    "title": "Purchasing and stock",
+                    "body": "Purchase orders, receiving, supplier returns, branch transfers and approved write-offs."
+                },
+                {
+                    "icon": "bar-chart",
+                    "title": "Reports",
+                    "body": "Sales by product, category, cashier and branch, margins, slow movers and a reorder list."
+                }
+            ],
+            "workflow": [
+                {
+                    "title": "Stock up",
+                    "body": "Order from suppliers and receive deliveries into stock, with the bill in Finance."
+                },
+                {
+                    "title": "Sell",
+                    "body": "Walk-in sales at the barcode counter; trade customers buy on account from a price list."
+                },
+                {
+                    "title": "Collect",
+                    "body": "Customer payments clear their statements, and every amount is already in the books."
+                }
+            ],
+            "faqs": [
+                {
+                    "question": "Can I sell on credit?",
+                    "answer": "Yes. Give a customer a credit limit; a sale on account over the limit is refused."
+                },
+                {
+                    "question": "Can a pharmacy also run a shop?",
+                    "answer": "Yes. Pharmacy and Retail run side by side in one workspace and share one set of books, and each reports on its own."
+                }
+            ]
+        },
+        {
+            "slug": "school",
+            "category": "erp",
+            "name": "School ERP",
+            "icon": "graduation-cap",
+            "registry": { "type": "erp", "code": "education" },
+            "summary": "Admissions to results, fees to the general ledger.",
+            "headline": "Run the school, from admissions to the fee ledger.",
+            "subhead": "School ERP is being built for schools, colleges and universities, with fees posting straight to Miles Finance.",
+            "audience": "Primary and secondary schools, colleges and universities.",
+            "seoTitle": "School ERP (coming soon)",
+            "seoDescription": "School management software on the way: admissions, classes, attendance, examinations and student fees, with accounting in Miles Finance.",
+            "features": [
+                {
+                    "icon": "user-plus",
+                    "title": "Admissions",
+                    "body": "Applications, enrolment and student records."
+                },
+                {
+                    "icon": "calendar-check",
+                    "title": "Classes and attendance",
+                    "body": "Classes, timetables and daily attendance."
+                },
+                {
+                    "icon": "clipboard-check",
+                    "title": "Examinations",
+                    "body": "Assessments, results and report cards."
+                },
+                {
+                    "icon": "receipt",
+                    "title": "Student fees",
+                    "body": "Fee schedules, invoices and receipts posted to Finance."
+                }
+            ],
+            "workflow": [
+                {
+                    "title": "Enrol",
+                    "body": "Admit students and place them in classes."
+                },
+                {
+                    "title": "Teach and assess",
+                    "body": "Record attendance and examination results."
+                },
+                {
+                    "title": "Bill",
+                    "body": "Raise fees and collect them, straight into the books."
+                }
+            ],
+            "faqs": [
+                {
+                    "question": "When will School ERP be available?",
+                    "answer": "It is in development. Join the waitlist and we will tell you as soon as it opens."
+                }
+            ]
+        },
+        {
+            "slug": "logistics",
+            "category": "erp",
+            "name": "Logistics ERP",
+            "icon": "truck",
+            "registry": null,
+            "summary": "Shipments, fleet and deliveries, with the costs in the books.",
+            "headline": "Every shipment tracked, every trip costed.",
+            "subhead": "Logistics ERP is planned for transport and distribution businesses, with trip costs and billing in Miles Finance.",
+            "audience": "Transport, freight, courier and distribution companies.",
+            "seoTitle": "Logistics ERP (coming soon)",
+            "seoDescription": "Logistics software on the way: shipments, fleet, deliveries and trip costs, with billing and accounting in Miles Finance.",
+            "features": [
+                {
+                    "icon": "package",
+                    "title": "Shipments",
+                    "body": "Bookings, consignments and proof of delivery."
+                },
+                {
+                    "icon": "truck",
+                    "title": "Fleet",
+                    "body": "Vehicles, drivers, trips and maintenance."
+                },
+                {
+                    "icon": "map-pin",
+                    "title": "Delivery tracking",
+                    "body": "Where each delivery stands, from pickup to drop-off."
+                },
+                {
+                    "icon": "receipt",
+                    "title": "Billing and costs",
+                    "body": "Customer invoices and trip costs posted to Finance."
+                }
+            ],
+            "workflow": [
+                {
+                    "title": "Book",
+                    "body": "Take a shipment and plan the trip."
+                },
+                {
+                    "title": "Deliver",
+                    "body": "Dispatch, track and confirm delivery."
+                },
+                {
+                    "title": "Bill",
+                    "body": "Invoice the customer and cost the trip in the books."
+                }
+            ],
+            "faqs": [
+                {
+                    "question": "When will Logistics ERP be available?",
+                    "answer": "It is planned. Join the waitlist and tell us what you need most."
+                }
+            ]
+        },
+        {
+            "slug": "ngo",
+            "category": "erp",
+            "name": "NGO ERP",
+            "icon": "heart-handshake",
+            "registry": { "type": "erp", "code": "ngo" },
+            "summary": "Programs, grants and donor reporting on fund accounting.",
+            "headline": "Programs delivered, every grant accounted for.",
+            "subhead": "NGO ERP is being built for NGOs and development organizations, with fund accounting in Miles Finance.",
+            "audience": "NGOs, charities and development organizations.",
+            "seoTitle": "NGO ERP (coming soon)",
+            "seoDescription": "NGO software on the way: programs, donors and grants, budgets, procurement and donor reporting, on fund accounting in Miles Finance.",
+            "features": [
+                {
+                    "icon": "folder-kanban",
+                    "title": "Programs and projects",
+                    "body": "Activities, targets and progress by program."
+                },
+                {
+                    "icon": "hand-coins",
+                    "title": "Donors and grants",
+                    "body": "Grant agreements, tranches and conditions."
+                },
+                {
+                    "icon": "activity",
+                    "title": "Budgets and expenses",
+                    "body": "Spending against each grant's budget."
+                },
+                {
+                    "icon": "file-spreadsheet",
+                    "title": "Donor reporting",
+                    "body": "Reports per donor and grant from the same books."
+                }
+            ],
+            "workflow": [
+                { "title": "Fund", "body": "Record grants and their budgets." },
+                {
+                    "title": "Spend",
+                    "body": "Buy and pay against the right grant and project."
+                },
+                {
+                    "title": "Report",
+                    "body": "Give each donor a report that matches the ledger."
+                }
+            ],
+            "faqs": [
+                {
+                    "question": "When will NGO ERP be available?",
+                    "answer": "It is in development. Join the waitlist and we will tell you as soon as it opens."
+                }
+            ]
+        },
+        {
+            "slug": "finance",
+            "category": "application",
+            "name": "Miles Finance",
+            "icon": "landmark",
+            "registry": { "type": "application", "code": "finance" },
+            "summary": "Double-entry accounting with bank reconciliation, tax, budgets and fixed assets.",
+            "headline": "Accounting your accountant will trust.",
+            "subhead": "A double-entry ledger with periods, bank reconciliation, tax, budgets and fixed assets, fed automatically by every Miles ERP or used on its own.",
+            "audience": "Businesses that want proper books, the accountants who serve them, and every Miles ERP customer.",
+            "seoTitle": "Miles Finance: accounting with bank reconciliation",
+            "seoDescription": "Accounting software with a double-entry ledger, bank reconciliation, tax returns, budgets, fixed assets and multi-currency.",
+            "features": [
+                {
+                    "icon": "landmark",
+                    "title": "The ledger",
+                    "body": "Chart of accounts and journals that always balance; corrections are reversals, so the audit trail stays whole."
+                },
+                {
+                    "icon": "receipt",
+                    "title": "Sales and purchases",
+                    "body": "Invoices and receipts, bills and supplier payments, credits and returns."
+                },
+                {
+                    "icon": "banknote",
+                    "title": "Bank reconciliation",
+                    "body": "Import statements as CSV, accept suggested matches, save rules and reconcile to the statement balance."
+                },
+                {
+                    "icon": "lock",
+                    "title": "Month-end and year-end",
+                    "body": "Lock months in order, close the year into retained earnings and set opening balances."
+                },
+                {
+                    "icon": "calculator",
+                    "title": "Tax",
+                    "body": "Tax codes, a return for any period, filing that locks the period, and the settlement journal."
+                },
+                {
+                    "icon": "globe",
+                    "title": "Multi-currency",
+                    "body": "Foreign-currency accounts, invoices and payments, daily rates and month-end revaluation."
+                },
+                {
+                    "icon": "activity",
+                    "title": "Budgets and fixed assets",
+                    "body": "Budget against actuals, and an asset register with monthly depreciation."
+                },
+                {
+                    "icon": "file-spreadsheet",
+                    "title": "Reports",
+                    "body": "Trial balance, profit and loss, balance sheet, aged receivables and payables, and cash flow."
+                }
+            ],
+            "workflow": [
+                {
+                    "title": "Record",
+                    "body": "Sales and purchases arrive from your Miles ERP, or are entered in Finance."
+                },
+                {
+                    "title": "Reconcile",
+                    "body": "Match the bank statement and lock the month."
+                },
+                {
+                    "title": "Report",
+                    "body": "Run the statements and file the tax return from the same ledger."
+                }
+            ],
+            "faqs": [
+                {
+                    "question": "Can I use Finance without an ERP?",
+                    "answer": "Yes. Miles Finance works on its own, and connects automatically if you add an ERP later."
+                },
+                {
+                    "question": "Can I bring my opening balances?",
+                    "answer": "Yes. Opening balances are set when you start, so the books carry on from where you are."
+                }
+            ]
+        },
+        {
+            "slug": "projects",
+            "category": "application",
+            "name": "Miles Projects",
+            "icon": "folder-kanban",
+            "registry": null,
+            "summary": "Projects, tasks and budgets, with actual costs from Finance.",
+            "headline": "Deliver projects on time and on budget.",
+            "subhead": "Miles Projects is planned for teams that run projects, with actual costs coming straight from Miles Finance.",
+            "audience": "Consultancies, contractors, NGOs and any team that runs projects.",
+            "seoTitle": "Miles Projects (coming soon)",
+            "seoDescription": "Project management on the way: projects, tasks and milestones, team assignments, and budgets against actual costs from Miles Finance.",
+            "features": [
+                {
+                    "icon": "folder-kanban",
+                    "title": "Projects and tasks",
+                    "body": "Plans, tasks and milestones."
+                },
+                {
+                    "icon": "users",
+                    "title": "Team assignments",
+                    "body": "Who works on what, and when."
+                },
+                {
+                    "icon": "activity",
+                    "title": "Budget against actual",
+                    "body": "Costs from Finance against each project's budget."
+                }
+            ],
+            "workflow": [
+                {
+                    "title": "Plan",
+                    "body": "Set out tasks, milestones and the budget."
+                },
+                {
+                    "title": "Deliver",
+                    "body": "Assign the team and track progress."
+                },
+                {
+                    "title": "Cost",
+                    "body": "See actual costs against the budget."
+                }
+            ],
+            "faqs": [
+                {
+                    "question": "When will Miles Projects be available?",
+                    "answer": "It is planned. Join the waitlist and we will tell you first."
+                }
+            ]
+        },
+        {
+            "slug": "hr",
+            "category": "application",
+            "name": "Miles HR",
+            "icon": "users",
+            "registry": { "type": "application", "code": "hr" },
+            "summary": "Staff records, contracts and documents, with leave and payroll on the way.",
+            "headline": "Your people, on record and in order.",
+            "subhead": "Staff profiles, employment history, contracts and documents with expiry reminders. Leave, attendance and payroll are being built.",
+            "audience": "Any organization with staff to keep records for.",
+            "seoTitle": "Miles HR: staff records and documents",
+            "seoDescription": "HR software for staff profiles, employment history, contracts and documents with expiry reminders. Leave and payroll on the way.",
+            "features": [
+                {
+                    "icon": "users",
+                    "title": "Staff records",
+                    "body": "Profiles, employee numbers, managers and employment history."
+                },
+                {
+                    "icon": "file-text",
+                    "title": "Contracts",
+                    "body": "Contracts and leaving, recorded with the employment history."
+                },
+                {
+                    "icon": "folder-lock",
+                    "title": "Documents",
+                    "body": "A private document store with expiry reminders for contracts, permits and licences."
+                },
+                {
+                    "icon": "lock",
+                    "title": "Private details",
+                    "body": "Personal details encrypted and visible only to HR managers."
+                }
+            ],
+            "workflow": [
+                {
+                    "title": "Hire",
+                    "body": "Create the staff record and the contract."
+                },
+                {
+                    "title": "Keep on record",
+                    "body": "Transfers, promotions and documents in one history."
+                },
+                {
+                    "title": "Stay compliant",
+                    "body": "Be reminded before a permit or licence expires."
+                }
+            ],
+            "faqs": [
+                {
+                    "question": "Is payroll included?",
+                    "answer": "Not yet. Leave, attendance and payroll are being built on top of today's staff records."
+                }
+            ]
+        },
+        {
+            "slug": "procurement",
+            "category": "application",
+            "name": "Miles Procurement",
+            "icon": "clipboard-list",
+            "registry": null,
+            "summary": "Purchase requests, approvals and orders that flow into stock and the books.",
+            "headline": "Buy right, with approvals.",
+            "subhead": "Miles Procurement is planned for organizations that need requests, approvals and supplier quotes before they buy.",
+            "audience": "Organizations with purchasing approvals: NGOs, schools, companies with several departments.",
+            "seoTitle": "Miles Procurement (coming soon)",
+            "seoDescription": "Procurement software on the way: purchase requests, approvals, supplier quotes and purchase orders that flow into stock and Miles Finance.",
+            "features": [
+                {
+                    "icon": "clipboard-list",
+                    "title": "Purchase requests",
+                    "body": "Departments ask for what they need."
+                },
+                {
+                    "icon": "clipboard-check",
+                    "title": "Approvals",
+                    "body": "The right people approve before anything is ordered."
+                },
+                {
+                    "icon": "file-text",
+                    "title": "Quotes and orders",
+                    "body": "Compare supplier quotes and raise the purchase order."
+                }
+            ],
+            "workflow": [
+                {
+                    "title": "Request",
+                    "body": "A department raises a purchase request."
+                },
+                { "title": "Approve", "body": "Approvers sign off, in order." },
+                {
+                    "title": "Order",
+                    "body": "The order goes out and the bill lands in Finance."
+                }
+            ],
+            "faqs": [
+                {
+                    "question": "When will Miles Procurement be available?",
+                    "answer": "It is planned. Join the waitlist and we will tell you first."
+                }
+            ]
+        },
+        {
+            "slug": "inventory",
+            "category": "application",
+            "name": "Miles Inventory",
+            "icon": "warehouse",
+            "registry": { "type": "application", "code": "inventory" },
+            "summary": "Stock across shelves, stores and branches.",
+            "headline": "Know what you have and where it is.",
+            "subhead": "Miles Inventory is planned as a standalone stock application, on the same stock engine the ERPs use today.",
+            "audience": "Businesses that hold stock in several places.",
+            "seoTitle": "Miles Inventory (coming soon)",
+            "seoDescription": "Inventory software on the way: stock across shelves, stores and branches, counts, transfers and reorder alerts.",
+            "features": [
+                {
+                    "icon": "warehouse",
+                    "title": "Locations",
+                    "body": "Stock by shelf, store room and branch."
+                },
+                {
+                    "icon": "arrow-left-right",
+                    "title": "Transfers",
+                    "body": "Move stock between branches with a record of each move."
+                },
+                {
+                    "icon": "clipboard-check",
+                    "title": "Counts and reorders",
+                    "body": "Stock counts and reorder alerts."
+                }
+            ],
+            "workflow": [
+                {
+                    "title": "Receive",
+                    "body": "Stock arrives into a location."
+                },
+                { "title": "Move", "body": "Transfer it where it is needed." },
+                {
+                    "title": "Count",
+                    "body": "Count and correct, with every change on record."
+                }
+            ],
+            "faqs": [
+                {
+                    "question": "Is stock control available today?",
+                    "answer": "Yes, inside Pharmacy ERP and Retail ERP. A standalone Miles Inventory is planned."
+                }
+            ]
+        },
+        {
+            "slug": "crm",
+            "category": "application",
+            "name": "Miles CRM",
+            "icon": "handshake",
+            "registry": { "type": "application", "code": "crm" },
+            "summary": "Leads, quotations and customer history beside invoices and payments.",
+            "headline": "Win customers and keep them.",
+            "subhead": "Miles CRM is planned for sales teams, with every customer's invoices and payments from Miles Finance in view.",
+            "audience": "Sales teams and businesses that sell to other businesses.",
+            "seoTitle": "Miles CRM (coming soon)",
+            "seoDescription": "CRM on the way: leads, quotations, follow-ups and customer history beside invoices and payments in Miles Finance.",
+            "features": [
+                {
+                    "icon": "user-plus",
+                    "title": "Leads",
+                    "body": "Capture leads and follow them up."
+                },
+                {
+                    "icon": "file-text",
+                    "title": "Quotations",
+                    "body": "Quote, follow up and win."
+                },
+                {
+                    "icon": "history",
+                    "title": "Customer history",
+                    "body": "Every conversation, invoice and payment in one place."
+                }
+            ],
+            "workflow": [
+                { "title": "Capture", "body": "Record the lead." },
+                {
+                    "title": "Quote",
+                    "body": "Send the quotation and follow up."
+                },
+                {
+                    "title": "Win",
+                    "body": "Turn it into a customer, with invoices in Finance."
+                }
+            ],
+            "faqs": [
+                {
+                    "question": "When will Miles CRM be available?",
+                    "answer": "It is planned. Join the waitlist and we will tell you first."
+                }
+            ]
+        },
+        {
+            "slug": "assets",
+            "category": "application",
+            "name": "Miles Assets",
+            "icon": "package",
+            "registry": null,
+            "summary": "Equipment, vehicles and property: who has what, and what it is worth.",
+            "headline": "Every asset tracked, from purchase to disposal.",
+            "subhead": "Miles Assets is planned for tracking equipment and vehicles day to day. Asset accounting and depreciation are already in Miles Finance.",
+            "audience": "Organizations with equipment, vehicles or property to look after.",
+            "seoTitle": "Miles Assets (coming soon)",
+            "seoDescription": "Asset management on the way: equipment, vehicles and property, assignments and maintenance, with depreciation in Miles Finance.",
+            "features": [
+                {
+                    "icon": "package",
+                    "title": "Asset register",
+                    "body": "Everything you own, with its location and condition."
+                },
+                {
+                    "icon": "user-check",
+                    "title": "Assignments",
+                    "body": "Who has which asset."
+                },
+                {
+                    "icon": "wrench",
+                    "title": "Maintenance",
+                    "body": "Service schedules and history."
+                }
+            ],
+            "workflow": [
+                {
+                    "title": "Register",
+                    "body": "Record the asset when it arrives."
+                },
+                { "title": "Assign", "body": "Hand it to a person or place." },
+                {
+                    "title": "Maintain",
+                    "body": "Keep it serviced until disposal."
+                }
+            ],
+            "faqs": [
+                {
+                    "question": "Can I depreciate assets today?",
+                    "answer": "Yes. Miles Finance has an asset register with monthly depreciation and disposals. Miles Assets will add day-to-day tracking."
+                }
+            ]
+        },
+        {
+            "slug": "documents",
+            "category": "application",
+            "name": "Miles Documents",
+            "icon": "file-check",
+            "registry": null,
+            "summary": "Upload, route and approve documents with a full trail.",
+            "headline": "Paperwork that moves.",
+            "subhead": "Miles Documents is planned for routing documents for approval, with a record of who signed what.",
+            "audience": "Any organization that approves documents: contracts, requests, policies.",
+            "seoTitle": "Miles Documents (coming soon)",
+            "seoDescription": "Document management on the way: upload, route and approve documents with a full trail of who signed what.",
+            "features": [
+                {
+                    "icon": "folder-lock",
+                    "title": "Secure storage",
+                    "body": "Documents kept per organization, private by default."
+                },
+                {
+                    "icon": "clipboard-check",
+                    "title": "Approval routes",
+                    "body": "Send a document through the right approvers."
+                },
+                {
+                    "icon": "scroll-text",
+                    "title": "Full trail",
+                    "body": "Who viewed, signed and approved, and when."
+                }
+            ],
+            "workflow": [
+                { "title": "Upload", "body": "Add the document." },
+                { "title": "Route", "body": "Send it to the approvers." },
+                { "title": "Approve", "body": "Sign off, with the trail kept." }
+            ],
+            "faqs": [
+                {
+                    "question": "When will Miles Documents be available?",
+                    "answer": "It is planned. Join the waitlist and we will tell you first."
+                }
+            ]
+        }
+    ]
+}

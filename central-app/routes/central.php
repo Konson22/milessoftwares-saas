@@ -13,6 +13,7 @@ use App\Sites\Central\Http\Controllers\Dashboard\InvitationAcceptanceController;
 use App\Sites\Central\Http\Controllers\Dashboard\OrganizationController;
 use App\Sites\Central\Http\Controllers\Dashboard\OrganizationSettingsController;
 use App\Sites\Central\Http\Controllers\Dashboard\SubscriptionController;
+use App\Sites\Central\Http\Controllers\Dashboard\TrialController;
 use App\Sites\Central\Http\Controllers\Workspace\AccessController;
 use App\Sites\Central\Http\Controllers\Workspace\InvitationController;
 use App\Sites\Central\Http\Controllers\Workspace\MemberAccountController;
@@ -85,6 +86,10 @@ Route::domain(PlatformHosts::app())->middleware(['auth', 'verified', 'current.or
     Route::get('/', fn () => redirect('/dashboard'));
     Route::get('dashboard', DashboardController::class)->name('dashboard');
     Route::get('explore', ExploreController::class)->name('explore');
+
+    // Free trials for a business that already exists (owner only).
+    Route::get('trial', [TrialController::class, 'show'])->name('trial');
+    Route::post('trial', [TrialController::class, 'store'])->middleware('throttle:10,60')->name('trial.store');
 
     Route::get('organizations/create', [OrganizationController::class, 'create'])->name('organizations.create');
     Route::post('organizations', [OrganizationController::class, 'store'])

@@ -1,0 +1,261 @@
+import { Link } from '@inertiajs/react';
+import {
+    Activity,
+    ArrowLeftRight,
+    ArrowRight,
+    ArrowUpRight,
+    Banknote,
+    BarChart3,
+    BookOpenCheck,
+    Calculator,
+    CalendarCheck,
+    ClipboardCheck,
+    ClipboardList,
+    CreditCard,
+    FileCheck2,
+    FileSpreadsheet,
+    FileText,
+    FolderKanban,
+    FolderLock,
+    Globe,
+    GraduationCap,
+    HandCoins,
+    Handshake,
+    HeartHandshake,
+    History,
+    Landmark,
+    LayoutGrid,
+    Lock,
+    MapPin,
+    Package,
+    PackageSearch,
+    Pill,
+    Receipt,
+    ScanBarcode,
+    ScrollText,
+    ShieldAlert,
+    ShoppingCart,
+    Tags,
+    Truck,
+    UserCheck,
+    UserPlus,
+    Users,
+    Wallet,
+    Warehouse,
+    Wrench,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { waitlistUrl } from '@/sites/public/components/blocks';
+import { card, display, trialUrl } from '@/sites/public/components/styles';
+
+/** One product of the public catalog (MarketingCatalog::catalog()). */
+export type CatalogEntry = {
+    slug: string;
+    category: 'erp' | 'application';
+    name: string;
+    icon: string;
+    summary: string;
+    headline: string;
+    subhead: string;
+    audience: string;
+    seoTitle: string;
+    seoDescription: string;
+    features: { icon: string; title: string; body: string }[];
+    workflow: { title: string; body: string }[];
+    faqs: { question: string; answer: string }[];
+    /** Path on the apex host, without a leading slash: erp/pharmacy. */
+    url: string;
+    status: 'available' | 'early_access' | 'coming_soon';
+    /** What an ERP is made of, from the registry. */
+    includes: {
+        code: string;
+        name: string;
+        requirement: 'required' | 'optional';
+        listed: boolean;
+    }[];
+    /** Application code whose free trial this product starts; null: no trial today. */
+    trial: string | null;
+};
+
+export const categoryLabels: Record<CatalogEntry['category'], string> = {
+    erp: 'ERP Solutions',
+    application: 'Business Applications',
+};
+
+export const categoryPaths: Record<CatalogEntry['category'], string> = {
+    erp: '/erp',
+    application: '/apps',
+};
+
+const icons: Record<string, LucideIcon> = {
+    activity: Activity,
+    'arrow-left-right': ArrowLeftRight,
+    banknote: Banknote,
+    'bar-chart': BarChart3,
+    'book-open-check': BookOpenCheck,
+    calculator: Calculator,
+    'calendar-check': CalendarCheck,
+    'clipboard-check': ClipboardCheck,
+    'clipboard-list': ClipboardList,
+    'credit-card': CreditCard,
+    'file-check': FileCheck2,
+    'file-spreadsheet': FileSpreadsheet,
+    'file-text': FileText,
+    'folder-kanban': FolderKanban,
+    'folder-lock': FolderLock,
+    globe: Globe,
+    'graduation-cap': GraduationCap,
+    'hand-coins': HandCoins,
+    handshake: Handshake,
+    'heart-handshake': HeartHandshake,
+    history: History,
+    landmark: Landmark,
+    lock: Lock,
+    'map-pin': MapPin,
+    package: Package,
+    'package-search': PackageSearch,
+    pill: Pill,
+    receipt: Receipt,
+    'scan-barcode': ScanBarcode,
+    'scroll-text': ScrollText,
+    'shield-alert': ShieldAlert,
+    'shopping-cart': ShoppingCart,
+    tags: Tags,
+    truck: Truck,
+    'user-check': UserCheck,
+    'user-plus': UserPlus,
+    users: Users,
+    wallet: Wallet,
+    warehouse: Warehouse,
+    wrench: Wrench,
+};
+
+/** The icon a catalog entry names; a generic grid for unknown names. */
+export function catalogIcon(name: string): LucideIcon {
+    return icons[name] ?? LayoutGrid;
+}
+
+export const statusLabels: Record<CatalogEntry['status'], string | null> = {
+    available: 'Available',
+    early_access: 'Early access',
+    coming_soon: 'Coming soon',
+};
+
+export function CatalogStatus({ status }: { status: CatalogEntry['status'] }) {
+    const tone = {
+        available: 'bg-emerald-500/10 text-emerald-700',
+        early_access: 'bg-site-accent/10 text-site-accent-ink',
+        coming_soon: 'bg-site-soft text-slate-700 ring-1 ring-site-line',
+    }[status];
+
+    return (
+        <span
+            className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}
+        >
+            {statusLabels[status]}
+        </span>
+    );
+}
+
+/** The product's icon on a soft tinted square (white-tinted on a dark band). */
+export function CatalogTile({
+    icon,
+    size = 'md',
+}: {
+    icon: string;
+    size?: 'sm' | 'md' | 'lg';
+}) {
+    const Icon = catalogIcon(icon);
+    const box = {
+        sm: 'size-9 rounded-lg',
+        md: 'size-12 rounded-xl',
+        lg: 'size-16 rounded-2xl',
+    }[size];
+    const glyph = { sm: 'size-4', md: 'size-6', lg: 'size-8' }[size];
+
+    return (
+        <span
+            className={`inline-flex shrink-0 items-center justify-center bg-site-accent/10 text-site-accent-ink in-[.site-dark]:bg-white/10 in-[.site-dark]:text-white ${box}`}
+        >
+            <Icon className={glyph} aria-hidden />
+        </span>
+    );
+}
+
+/**
+ * A product card: what it is, where it stands, and the next step. Only a
+ * product open for trials offers one; the others lead to their page or the
+ * waitlist.
+ */
+export function ProductCard({
+    product,
+    trialDays,
+    headingLevel: Heading = 'h3',
+}: {
+    product: CatalogEntry;
+    trialDays: number;
+    headingLevel?: 'h2' | 'h3';
+}) {
+    return (
+        <article
+            className={`${card} group relative flex h-full flex-col overflow-hidden p-6 sm:p-7`}
+        >
+            <span
+                aria-hidden
+                className="site-gradient absolute inset-x-0 top-0 h-1 origin-left scale-x-0 transition-transform duration-300 group-hover:scale-x-100"
+            />
+            <div className="flex items-start justify-between gap-3">
+                <CatalogTile icon={product.icon} />
+                <CatalogStatus status={product.status} />
+            </div>
+            <Heading className={`mt-5 text-xl ${display}`}>
+                <Link
+                    href={`/${product.url}`}
+                    className="transition-colors hover:text-site-accent-ink"
+                >
+                    {product.name}
+                </Link>
+            </Heading>
+            <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">
+                {product.summary}
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
+                {product.trial ? (
+                    <a
+                        href={trialUrl(product.trial)}
+                        className="site-gradient inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold text-white transition-transform hover:-translate-y-0.5"
+                    >
+                        Start {trialDays}-day free trial
+                        <span className="sr-only"> of {product.name}</span>
+                    </a>
+                ) : product.status === 'coming_soon' ? (
+                    <Link
+                        href={waitlistUrl(product.name)}
+                        className="inline-flex items-center gap-1.5 text-sm font-bold text-site-accent-ink hover:underline"
+                    >
+                        Join the waitlist
+                        <span className="sr-only"> for {product.name}</span>
+                        <ArrowRight className="size-4" aria-hidden />
+                    </Link>
+                ) : (
+                    <Link
+                        href={`/contact?subject=${encodeURIComponent(`Demo: ${product.name}`)}`}
+                        className="inline-flex items-center gap-1.5 text-sm font-bold text-site-accent-ink hover:underline"
+                    >
+                        Request a demo
+                        <span className="sr-only"> of {product.name}</span>
+                        <ArrowRight className="size-4" aria-hidden />
+                    </Link>
+                )}
+                <Link
+                    href={`/${product.url}`}
+                    className="inline-flex items-center gap-1 text-sm font-semibold text-slate-600 hover:text-site-ink"
+                >
+                    Learn more
+                    <span className="sr-only"> about {product.name}</span>
+                    <ArrowUpRight className="size-4" aria-hidden />
+                </Link>
+            </div>
+        </article>
+    );
+}

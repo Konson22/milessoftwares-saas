@@ -65,7 +65,7 @@ export default function HeroShowcase({ products }: { products: Product[] }) {
                 <div
                     key={current.code}
                     aria-live="polite"
-                    className="hero-caption flex min-w-0 items-center gap-3 rounded-2xl bg-white/95 py-2.5 pr-5 pl-2.5 text-site-ink shadow-xl shadow-site-night/30"
+                    className="hero-caption flex min-w-0 items-center gap-3 rounded-2xl bg-white/95 py-2.5 pr-5 pl-2.5 text-site-ink"
                 >
                     <span className={`${iconChip} size-10 shrink-0 rounded-xl`}>
                         <Icon className="size-5" aria-hidden />

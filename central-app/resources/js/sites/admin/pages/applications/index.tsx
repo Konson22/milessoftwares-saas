@@ -16,6 +16,7 @@ type Application = {
     tagline: string | null;
     features: string;
     sortOrder: number;
+    trialEnabled: boolean;
     catalogVersions: {
         version: string;
         status: string;
@@ -221,6 +222,28 @@ export default function ApplicationsIndex({ applications }: Props) {
                                                     application.sortOrder
                                                 }
                                             />
+                                        </div>
+                                        <div className="flex items-end sm:col-span-3">
+                                            <label className="flex items-start gap-2 text-sm">
+                                                <input
+                                                    type="checkbox"
+                                                    name="trial_enabled"
+                                                    value="1"
+                                                    defaultChecked={
+                                                        application.trialEnabled
+                                                    }
+                                                    className="mt-0.5 size-4"
+                                                />
+                                                <span>
+                                                    Free trial allowed
+                                                    <span className="block text-muted-foreground">
+                                                        Workspaces may start a
+                                                        free trial while the
+                                                        status is beta or
+                                                        available.
+                                                    </span>
+                                                </span>
+                                            </label>
                                         </div>
                                         <div className="sm:col-span-4">
                                             <Button

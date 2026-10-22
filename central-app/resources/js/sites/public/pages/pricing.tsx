@@ -1,11 +1,8 @@
 import { Link } from '@inertiajs/react';
 import { ArrowRight } from 'lucide-react';
 import { useState } from 'react';
-import FaqList from '@/sites/public/components/faq';
-import PageHero, {
-    Accent,
-    HeroBadge,
-} from '@/sites/public/components/page-hero';
+import FaqList, { pricingFaq } from '@/sites/public/components/faq';
+import PageHero, { Accent } from '@/sites/public/components/page-hero';
 import PlanCard from '@/sites/public/components/plan-card';
 import type { Plan } from '@/sites/public/components/plan-card';
 import SectionHeading from '@/sites/public/components/section-heading';
@@ -40,22 +37,18 @@ export default function Pricing({ plans, trialDays, canonical }: Props) {
         <>
             <Seo
                 title="Pricing"
-                description={`Plans for every Miles Global Softwares application, alone or bundled. Every application starts with a ${trial} free trial.`}
+                description={`Every Miles ERP includes Finance & Accounting. Start a ${trial} free trial of one application, no payment details.`}
                 canonical={canonical}
             />
 
             <PageHero
-                eyebrow={
-                    <HeroBadge>
-                        Every application starts with a {trial} free trial
-                    </HeroBadge>
-                }
                 title={
                     <>
-                        Simple pricing for <Accent>every application</Accent>
+                        Pay for the ERP you use.{' '}
+                        <Accent>Add apps as you grow.</Accent>
                     </>
                 }
-                intro="Pick the applications you need. Pay for what you use, and add more as your organization grows."
+                intro={`Every ERP includes Finance & Accounting. Start with a ${trial} free trial of one application, no payment details needed.`}
             />
 
             <section
@@ -98,7 +91,7 @@ export default function Pricing({ plans, trialDays, canonical }: Props) {
                                                 onClick={() =>
                                                     setPeriod(option)
                                                 }
-                                                className={`rounded-full px-6 py-2.5 text-sm font-bold transition-colors ${period === option ? 'site-gradient text-white shadow-md' : 'text-slate-600 hover:text-site-ink'}`}
+                                                className={`rounded-full px-6 py-2.5 text-sm font-bold transition-colors ${period === option ? 'site-gradient text-white' : 'text-slate-600 hover:text-site-ink'}`}
                                             >
                                                 {option === 'monthly'
                                                     ? 'Monthly'
@@ -124,13 +117,9 @@ export default function Pricing({ plans, trialDays, canonical }: Props) {
 
             <section aria-labelledby="faq-heading">
                 <div className="mx-auto max-w-3xl px-4 py-24 sm:px-6">
-                    <SectionHeading
-                        id="faq-heading"
-                        label="FAQs"
-                        title="Common questions"
-                    />
+                    <SectionHeading id="faq-heading" title="Common questions" />
                     <div className="mt-12">
-                        <FaqList trialDays={trialDays} />
+                        <FaqList items={pricingFaq(trialDays)} />
                     </div>
                     <p className="mt-10 text-center text-sm text-slate-600">
                         Something else?{' '}

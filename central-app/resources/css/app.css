@@ -130,6 +130,43 @@
     );
 }
 
+/*
+ * The deep indigo → violet of heroes and closing bands, lit by two soft
+ * glows. White text keeps at least 4.5:1 across it.
+ */
+.site-public .site-hero-bg {
+    background-color: #0e0f2c;
+    background-image:
+        radial-gradient(
+            60rem 30rem at 85% 10%,
+            rgb(108 65 255 / 0.45),
+            transparent 60%
+        ),
+        radial-gradient(
+            40rem 24rem at 5% 90%,
+            rgb(37 117 252 / 0.35),
+            transparent 60%
+        ),
+        linear-gradient(135deg, #0b0d33 0%, #1a1c63 50%, #3a22a8 100%);
+}
+
+/* A slanted gradient slab behind images and bands. Decorative. */
+.site-public .site-skew {
+    transform: rotate(-12deg) skewX(-6deg);
+}
+
+/* The hero dashboard, turned slightly towards the copy on wide screens. */
+@media (min-width: 64rem) {
+    .site-public .site-tilt {
+        transform: perspective(1800px) rotateY(-14deg) rotateX(5deg);
+        transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .site-public .site-tilt:hover {
+        transform: perspective(1800px) rotateY(-6deg) rotateX(2deg);
+    }
+}
+
 /* A faint dotted grid behind heroes and bands. Decorative. */
 .site-public .site-dots {
     background-image: radial-gradient(currentColor 1px, transparent 1px);
@@ -152,6 +189,10 @@
 
     .site-public .site-rise {
         animation: site-caption-in 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    .site-public .site-twinkle {
+        animation: site-twinkle 4s ease-in-out infinite;
     }
 
     .site-public .hero-slide.is-active {
@@ -179,6 +220,17 @@
 
     50% {
         transform: translateY(-14px);
+    }
+}
+
+@keyframes site-twinkle {
+    0%,
+    100% {
+        opacity: 0.35;
+    }
+
+    50% {
+        opacity: 1;
     }
 }
 
@@ -211,5 +263,33 @@
 
     to {
         transform: scaleX(1);
+    }
+}
+
+/* Card rails: a slim scrollbar while they scroll sideways. */
+.site-public .site-rail {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(37 117 252 / 0.35) transparent;
+}
+
+/*
+ * Phones: a tighter type scale. Every text-* size on the public site steps
+ * down a notch below 640px; headings with fixed sizes set their own.
+ */
+@media (max-width: 39.99rem) {
+    .site-public {
+        font-size: 0.9375rem;
+        --text-sm: 0.8125rem;
+        --text-sm--line-height: 1.25rem;
+        --text-base: 0.9375rem;
+        --text-base--line-height: 1.5rem;
+        --text-lg: 1rem;
+        --text-lg--line-height: 1.5rem;
+        --text-xl: 1.125rem;
+        --text-xl--line-height: 1.625rem;
+        --text-2xl: 1.3125rem;
+        --text-3xl: 1.625rem;
+        --text-4xl: 1.875rem;
+        --text-5xl: 2.25rem;
     }
 }

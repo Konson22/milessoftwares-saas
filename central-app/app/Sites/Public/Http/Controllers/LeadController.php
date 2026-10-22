@@ -19,10 +19,14 @@ class LeadController extends Controller
 {
     public function __construct(private readonly SubmitLead $leads) {}
 
-    public function contactForm(): Response
+    /** ?subject= fills in the subject (waitlist buttons link here with one). */
+    public function contactForm(Request $request): Response
     {
+        $subject = mb_substr(trim($request->string('subject')->toString()), 0, 120);
+
         return Inertia::render('public/contact', [
             'formToken' => SpamGuard::issueToken(),
+            'subject' => $subject === '' ? null : $subject,
             'canonical' => PlatformHosts::url(PlatformHosts::root(), 'contact'),
         ]);
     }

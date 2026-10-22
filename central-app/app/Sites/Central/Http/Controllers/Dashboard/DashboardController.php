@@ -92,6 +92,7 @@ class DashboardController extends Controller
                         ])
                         ->all(),
                     'subscriptions' => $this->subscriptions(),
+                    'trials' => $this->trials(),
                     'recentPayments' => Payment::query()
                         ->with('invoice:id,number')
                         ->latest('paid_on')
@@ -171,6 +172,30 @@ class DashboardController extends Controller
     }
 
     /**
+     * Free trials running now, soonest end first, with the days left counted
+     * on the server.
+     *
+     * @return list<array{code: string, name: string, endsAt: string|null, daysLeft: int|null}>
+     */
+    private function trials(): array
+    {
+        return array_values(Entitlement::query()
+            ->current()
+            ->where('source', 'trial')
+            ->whereNull('feature_key')
+            ->join('applications', 'applications.id', '=', 'entitlements.application_id')
+            ->orderBy('entitlements.valid_until')
+            ->get(['applications.code', 'applications.name', 'entitlements.valid_until'])
+            ->map(fn (Entitlement $trial) => [
+                'code' => (string) $trial->getAttribute('code'),
+                'name' => (string) $trial->getAttribute('name'),
+                'endsAt' => $trial->valid_until?->toDateString(),
+                'daysLeft' => $trial->valid_until === null ? null : max(0, (int) ceil(now()->diffInDays($trial->valid_until))),
+            ])
+            ->all());
+    }
+
+    /**
      * Products that work best alongside each product, most useful first.
      * Drives the "Recommended for you" ranking on the dashboard.
      *
@@ -207,6 +232,20 @@ class DashboardController extends Controller
             ->join('applications', 'applications.id', '=', 'entitlements.application_id')
             ->pluck('applications.code')
             ->all();
+        $trialing = Entitlement::query()
+            ->current()
+            ->whereNull('feature_key')
+            ->where('source', 'trial')
+            ->join('applications', 'applications.id', '=', 'entitlements.application_id')
+            ->pluck('applications.code')
+            ->all();
+        // One trial per application, ever (ManageEntitlements::startTrial).
+        $tried = Entitlement::query()
+            ->where('source', 'trial')
+            ->join('applications', 'applications.id', '=', 'entitlements.application_id')
+            ->pluck('applications.code')
+            ->all();
+        $trialable = array_diff(array_column($catalog->trialable(), 'code'), $tried);
         $requested = PlanRequest::query()
             ->where('status', 'pending')
             ->where('type', 'subscribe')
@@ -225,7 +264,7 @@ class DashboardController extends Controller
         $products = $catalog->products();
         $names = array_column($products, 'name', 'code');
 
-        return array_map(function (array $product) use ($installed, $requested, $onPlans, $names) {
+        return array_map(function (array $product) use ($installed, $trialing, $trialable, $requested, $onPlans, $names) {
             [$pairsWith, $rank] = $this->pairing($product['code'], $installed);
 
             return [
@@ -234,9 +273,11 @@ class DashboardController extends Controller
                 'tagline' => $product['tagline'],
                 'description' => $product['description'],
                 'state' => match (true) {
+                    in_array($product['code'], $trialing, true) => 'trialing',
                     in_array($product['code'], $installed, true) => 'installed',
                     in_array($product['code'], $requested, true) => 'requested',
                     $product['status'] === 'planned' => 'coming_soon',
+                    in_array($product['code'], $trialable, true) => 'trialable',
                     in_array($product['code'], $onPlans, true) => 'available',
                     default => 'on_request',
                 },

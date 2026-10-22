@@ -1,19 +1,18 @@
 import { Link } from '@inertiajs/react';
 import { ArrowRight, Clock, Rocket } from 'lucide-react';
 import LeadForm, { Field } from '@/sites/public/components/lead-form';
-import PageHero, {
-    Accent,
-    HeroBadge,
-} from '@/sites/public/components/page-hero';
+import PageHero, { Accent } from '@/sites/public/components/page-hero';
 import Seo from '@/sites/public/components/seo';
 import { button, panel, iconChip } from '@/sites/public/components/styles';
 
 type Props = {
     formToken: string;
+    /** Filled in from ?subject=, e.g. by a waitlist button. */
+    subject?: string | null;
     canonical: string;
 };
 
-export default function Contact({ formToken, canonical }: Props) {
+export default function Contact({ formToken, subject, canonical }: Props) {
     return (
         <>
             <Seo
@@ -23,7 +22,6 @@ export default function Contact({ formToken, canonical }: Props) {
             />
 
             <PageHero
-                eyebrow={<HeroBadge>Contact</HeroBadge>}
                 title={
                     <>
                         Get in <Accent>touch</Accent>
@@ -79,6 +77,7 @@ export default function Contact({ formToken, canonical }: Props) {
                             <Field
                                 name="subject"
                                 label="Subject"
+                                defaultValue={subject ?? undefined}
                                 error={errors.subject}
                             />
                         )}

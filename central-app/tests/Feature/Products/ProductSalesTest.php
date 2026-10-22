@@ -1,7 +1,6 @@
 <?php
 
 use App\Modules\Applications\Models\Application;
-use App\Modules\Products\Models\ErpProduct;
 use App\Modules\Products\Support\ProductCatalog;
 use App\Modules\Subscriptions\Models\Plan;
 use App\Support\Hosts\PlatformHosts;
@@ -155,27 +154,48 @@ describe('public site', function () {
         $plan->applications()->attach([$this->pharmacyApp->id, $this->financeApp->id]);
     });
 
-    it('lists ERP products with their real status on the home page', function () {
-        ErpProduct::query()->forceCreate(['code' => 'old', 'name' => 'Old ERP', 'status' => 'retired']);
-
+    it('lists ERP solutions with their real status on the home page', function () {
         $this->get(apex())->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
-            ->has('erpProducts', 2)
-            ->where('erpProducts.0.code', 'pharmacy')
-            ->where('erpProducts.0.status', 'pilot')
-            ->where('erpProducts.1.status', 'planned'));
+            ->where('catalog', function ($catalog) {
+                $bySlug = collect($catalog)->keyBy('slug');
+
+                // Pilot reads as early access; the trial starts the pharmacy application.
+                return $bySlug['pharmacy']['status'] === 'early_access'
+                    && $bySlug['pharmacy']['trial'] === 'pharmacy'
+                    // Planned in the registry, or not in it at all: coming soon, no trial.
+                    && $bySlug['ngo']['status'] === 'coming_soon'
+                    && $bySlug['ngo']['trial'] === null
+                    && $bySlug['logistics']['status'] === 'coming_soon';
+            }));
     });
 
-    it('shows an ERP product with its applications and plans', function () {
+    it('shows an ERP solution with its applications and plans', function () {
         $this->get(apex('erp/pharmacy'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('public/erp-product')
-            ->where('product.name', 'Miles Pharmacy ERP')
-            ->where('product.applications.0.code', 'pharmacy')
-            ->where('product.applications.2.requirement', 'optional')
+            ->component('public/landing')
+            ->where('product.name', 'Pharmacy ERP')
+            ->where('product.includes.0.code', 'pharmacy')
+            ->where('product.includes.2.requirement', 'optional')
             // Pharmacy (beta) has a public page; HR (planned, unlisted here) only if listed.
-            ->where('product.applications.0.listed', true)
+            ->where('product.includes.0.listed', true)
             ->where('plans.0.code', 'pharmacy-std')
             ->where('plans.0.product.status', 'pilot')
             ->where('canonical', apex('erp/pharmacy')));
+    });
+
+    it('offers no plans on a solution that is coming soon', function () {
+        $this->get(apex('erp/ngo'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('public/landing')
+            ->where('product.status', 'coming_soon')
+            ->where('product.trial', null)
+            ->where('plans', []));
+    });
+
+    it('moves old links by registry code to the solution page', function () {
+        app(ProductCatalog::class)->sync(['code' => 'retail_trading', 'name' => 'Miles Retail & Trading ERP', 'status' => 'planned', 'sort_order' => 20, 'applications' => [
+            ['code' => 'finance', 'requirement' => 'required'],
+        ]]);
+
+        $this->get(apex('erp/retail_trading'))->assertMovedPermanently()->assertRedirect(apex('erp/retail'));
     });
 
     it('hides retired and unknown products', function () {

@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { Check } from 'lucide-react';
-import { button, display } from '@/sites/public/components/styles';
+import PageHero from '@/sites/public/components/page-hero';
+import { button } from '@/sites/public/components/styles';
 
 export default function Thanks() {
     return (
@@ -9,28 +10,25 @@ export default function Thanks() {
                 <meta head-key="robots" name="robots" content="noindex" />
             </Head>
 
-            <section className="border-b border-site-line bg-site-soft">
-                <div className="mx-auto flex min-h-[60vh] max-w-2xl flex-col items-center justify-center px-4 py-24 text-center">
-                    <span className="site-gradient inline-flex size-16 items-center justify-center rounded-full text-white shadow-lg shadow-site-accent/30">
+            <PageHero
+                above={
+                    <span className="mb-8 inline-flex size-16 items-center justify-center rounded-full bg-white text-site-accent-ink">
                         <Check className="size-8" aria-hidden />
                     </span>
-                    <h1 className={`mt-8 text-4xl sm:text-5xl ${display}`}>
-                        Thank you
-                    </h1>
-                    <p className="mt-4 text-lg text-slate-600">
-                        We have your message and will be in touch within one
-                        working day.
-                    </p>
-                    <div className="mt-10 flex flex-wrap justify-center gap-3">
-                        <Link href="/start" className={button.primary}>
-                            Start free trial
-                        </Link>
-                        <Link href="/" className={button.outline}>
-                            Back to the home page
-                        </Link>
-                    </div>
+                }
+                title="Thank you"
+                intro="We have your message and will be in touch within one working day."
+                padding="pt-40 pb-28 sm:pt-52 sm:pb-36"
+            >
+                <div className="mt-10 flex flex-wrap justify-center gap-3">
+                    <Link href="/start" className={button.light}>
+                        Start free trial
+                    </Link>
+                    <Link href="/" className={button.outlineDark}>
+                        Back to the home page
+                    </Link>
                 </div>
-            </section>
+            </PageHero>
         </>
     );
 }

@@ -1,22 +1,64 @@
 import { Plus } from 'lucide-react';
 
-/** Questions asked about trials and billing, on the home and pricing pages. */
-export function faq(trialDays: number) {
+export type Question = { question: string; answer: string };
+
+/** What people ask before choosing Miles, on the home page. */
+export function faq(trialDays: number): Question[] {
     return [
         {
-            question: 'Can I try an application before paying?',
+            question: 'Do I need to install anything?',
+            answer: 'No. Miles runs in the browser on any computer, tablet or phone.',
+        },
+        {
+            question: 'Can I try it before paying?',
             answer: `Yes. Choose an application and create your workspace, and you can use it free for ${trialDays} days. No payment details are needed to start.`,
         },
         {
-            question: 'Can I add more applications later?',
-            answer: 'Yes. Add another application whenever you need it. Your team, branches and roles are already set up, so you do not start from scratch.',
+            question: 'Can I use it across several branches?',
+            answer: 'Yes. Add branches, give staff roles per branch, move stock between them and report on each one.',
         },
         {
-            question:
-                'Do my people need a separate account for each application?',
-            answer: 'No. Everyone uses the same sign-in, and you decide which applications and which parts of them each person can use.',
+            question: 'Will my accountant be able to use it?',
+            answer: 'Yes. Finance is a full double-entry ledger with trial balance, profit and loss, balance sheet, aged reports, bank reconciliation and tax returns, all exportable to CSV.',
         },
+        {
+            question: 'Can I move from spreadsheets?',
+            answer: 'Yes. Opening stock and opening balances are loaded when you set up, so you start from where you are.',
+        },
+        {
+            question: 'Does it work offline?',
+            answer: 'Not yet. Miles needs an internet connection today; selling offline is on our roadmap.',
+        },
+        {
+            question: 'Who can see my data?',
+            answer: 'Only the people you invite, with the roles you give them. Our support team needs a time-limited grant to look, and you are told when one is approved.',
+        },
+    ];
+}
 
+/** Questions about trials and billing, on the pricing page. */
+export function pricingFaq(trialDays: number): Question[] {
+    return [
+        {
+            question: 'What happens after the free trial?',
+            answer: `Your trial runs for ${trialDays} days. Choose a plan to keep going; everything you set up stays in place.`,
+        },
+        {
+            question: 'Do I pay extra for Finance?',
+            answer: 'No. Every Miles ERP includes Finance & Accounting, because that is where your sales and purchases land.',
+        },
+        {
+            question: 'Can I run a pharmacy and a shop together?',
+            answer: 'Yes. Both run in one workspace and share one set of books, and each reports on its own.',
+        },
+        {
+            question: 'What does "Pilot" mean?',
+            answer: 'The product is live with selected customers while we finish it with them. Talk to us to join.',
+        },
+        {
+            question: 'Can I add applications later?',
+            answer: 'Yes. New applications join the same workspace and sign-in. Your team, branches and roles are already set up.',
+        },
         {
             question: 'We need something different. Can you help?',
             answer: 'Larger organizations and special arrangements are billed by agreement. Contact us and we will put together a quote.',
@@ -25,14 +67,14 @@ export function faq(trialDays: number) {
 }
 
 /** Open-one-at-a-time list of white cards. */
-export default function FaqList({ trialDays }: { trialDays: number }) {
+export default function FaqList({ items }: { items: Question[] }) {
     return (
         <div className="space-y-3">
-            {faq(trialDays).map(({ question, answer }) => (
+            {items.map(({ question, answer }) => (
                 <details
                     key={question}
                     name="faq"
-                    className="group rounded-2xl border border-site-line bg-white px-5 shadow-[0_8px_30px_-18px_rgba(22,24,55,0.2)] transition-colors duration-200 open:border-site-accent/40 sm:px-6"
+                    className="group rounded-2xl border border-site-line bg-white px-5 transition-colors duration-200 open:border-site-accent/40 sm:px-6"
                 >
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 font-semibold sm:gap-6 sm:py-5 [&::-webkit-details-marker]:hidden">
                         {question}

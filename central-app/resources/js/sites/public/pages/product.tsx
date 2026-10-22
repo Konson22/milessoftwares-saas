@@ -11,6 +11,7 @@ import {
     button,
     card,
     darkBand,
+    tints,
     trialDuration,
     trialLength,
     trialUrl,
@@ -52,11 +53,11 @@ export default function ProductPage({
             />
 
             <PageHero
-                eyebrow={
+                above={
                     <>
                         <Link
                             href="/#products"
-                            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 transition-colors hover:text-site-accent-ink"
+                            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-300 transition-colors hover:text-white"
                         >
                             <ArrowLeft className="size-4" aria-hidden />
                             All applications
@@ -77,7 +78,7 @@ export default function ProductPage({
                 intro={product.tagline}
             >
                 {product.description && (
-                    <p className="mt-3 max-w-2xl text-slate-600">
+                    <p className="mt-3 max-w-2xl text-slate-300">
                         {product.description}
                     </p>
                 )}
@@ -85,18 +86,18 @@ export default function ProductPage({
                     {trialable ? (
                         <a
                             href={trialUrl(product.code)}
-                            className={button.primary}
+                            className={button.light}
                         >
                             Start {trialLength(trialDays)} free trial
                             <ArrowRight className="size-4" aria-hidden />
                         </a>
                     ) : (
-                        <Link href="/contact" className={button.primary}>
+                        <Link href="/contact" className={button.light}>
                             Tell me when it launches
                         </Link>
                     )}
                     {trialable && plans.length > 0 && (
-                        <a href="#plans" className={button.outline}>
+                        <a href="#plans" className={button.outlineDark}>
                             See plans
                         </a>
                     )}
@@ -110,7 +111,6 @@ export default function ProductPage({
                 >
                     <SectionHeading
                         id="features-heading"
-                        label="Features"
                         title={
                             <>
                                 What <Accent>{product.name}</Accent> does
@@ -118,12 +118,14 @@ export default function ProductPage({
                         }
                     />
                     <ul className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                        {product.features.map((feature) => (
+                        {product.features.map((feature, i) => (
                             <li
                                 key={feature}
                                 className={`${card} flex items-start gap-4 p-6`}
                             >
-                                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-site-accent/10 text-site-accent-ink">
+                                <span
+                                    className={`inline-flex size-10 shrink-0 items-center justify-center rounded-xl ${tints[i % tints.length]}`}
+                                >
                                     <Check className="size-5" aria-hidden />
                                 </span>
                                 <span className="pt-2 font-semibold">
@@ -144,7 +146,6 @@ export default function ProductPage({
                     <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6">
                         <SectionHeading
                             id="plans-heading"
-                            label="Pricing"
                             title={`Plans that include ${product.name}`}
                         />
                         <ul className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

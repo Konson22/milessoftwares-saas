@@ -1,6 +1,13 @@
 import { Link, usePage } from '@inertiajs/react';
-import { ArrowRight, Clock, Menu, Sparkles, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import {
+    ArrowRight,
+    ChevronDown,
+    Layers,
+    LayoutGrid,
+    Menu,
+    X,
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import AppLogoIcon from '@/shared/components/app-logo-icon';
 import { HeroBackdrop } from '@/sites/public/components/page-hero';
@@ -9,12 +16,27 @@ import { login, register } from '@/routes';
 
 // Relative paths on the apex host; sign-in and registration live on the
 // auth host, so those are plain links.
+const products = [
+    {
+        title: 'ERP Solutions',
+        body: 'Complete systems for your industry',
+        href: '/erp',
+        icon: Layers,
+    },
+    {
+        title: 'Business Applications',
+        body: 'Standalone apps that work together',
+        href: '/apps',
+        icon: LayoutGrid,
+    },
+];
+
+// "Products" sits after Home and opens the menu above.
 const nav = [
     { title: 'Home', href: '/' },
-    { title: 'ERP products', href: '/#erp' },
-    { title: 'Applications', href: '/#products' },
-    { title: 'How it works', href: '/#how-it-works' },
+    { title: 'Industries', href: '/industries' },
     { title: 'Pricing', href: '/pricing' },
+    { title: 'About', href: '/about' },
     { title: 'Contact', href: '/contact' },
 ];
 
@@ -22,7 +44,7 @@ function Brand({ inverted = false }: { inverted?: boolean }) {
     return (
         <Link
             href="/"
-            className={`flex items-center gap-2.5 font-public-display text-lg font-semibold tracking-tight ${inverted ? 'text-white' : 'text-site-ink'}`}
+            className={`flex shrink-0 items-center gap-2.5 font-public-display text-lg font-semibold tracking-tight whitespace-nowrap transition-colors ${inverted ? 'text-white' : 'text-site-ink'}`}
         >
             {/* Decorative: the name beside it is the link text. */}
             <AppLogoIcon className="size-9" alt="" />
@@ -39,14 +61,102 @@ function useCurrentPath(): string {
 }
 
 /**
- * A thin gradient announcement bar, a frosted header that stays on top
- * (it gains a shadow once the page scrolls), the page, and a deep indigo
- * footer under a wave (see styles.ts for the palette).
+ * A header fixed over the page: solid deep indigo with white links over
+ * the dark hero every page opens with, white with a hairline once the page
+ * scrolls (or the mobile menu opens). Then the page, and a deep indigo
+ * footer (see styles.ts for the palette).
  */
+/**
+ * The Products menu: a disclosure button over the two catalog pages.
+ * Closes on Escape, on a click elsewhere and when a link is followed.
+ */
+function ProductsMenu({ solid, path }: { solid: boolean; path: string }) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLLIElement>(null);
+    const current = products.some((item) => path.startsWith(item.href));
+
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setOpen(false);
+            }
+        };
+        const onPointerDown = (event: PointerEvent) => {
+            if (!ref.current?.contains(event.target as Node)) {
+                setOpen(false);
+            }
+        };
+
+        window.addEventListener('keydown', onKeyDown);
+        window.addEventListener('pointerdown', onPointerDown);
+
+        return () => {
+            window.removeEventListener('keydown', onKeyDown);
+            window.removeEventListener('pointerdown', onPointerDown);
+        };
+    }, [open]);
+
+    return (
+        <li ref={ref} className="relative">
+            <button
+                type="button"
+                aria-expanded={open}
+                aria-controls="products-menu"
+                onClick={() => setOpen((value) => !value)}
+                className={`inline-flex items-center gap-1 px-4 py-2 font-semibold transition-colors ${current ? (solid ? 'text-site-accent-ink' : 'text-white') : ''} ${solid ? 'hover:text-site-accent-ink' : 'hover:text-white'}`}
+            >
+                Products
+                <ChevronDown
+                    className={`size-4 transition-transform ${open ? 'rotate-180' : ''}`}
+                    aria-hidden
+                />
+            </button>
+            <div
+                id="products-menu"
+                hidden={!open}
+                className="absolute top-full left-1/2 mt-3 w-80 -translate-x-1/2 rounded-2xl border border-site-line bg-white p-2 text-site-ink shadow-xl shadow-site-night/10"
+            >
+                <ul>
+                    {products.map(({ icon: Icon, ...item }) => (
+                        <li key={item.href}>
+                            <Link
+                                href={item.href}
+                                onClick={() => setOpen(false)}
+                                aria-current={
+                                    path === item.href ? 'page' : undefined
+                                }
+                                className="flex items-start gap-3 rounded-xl p-3 whitespace-normal transition-colors hover:bg-site-soft aria-[current=page]:bg-site-accent/10"
+                            >
+                                <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-site-accent/10 text-site-accent-ink">
+                                    <Icon className="size-4" aria-hidden />
+                                </span>
+                                <span>
+                                    <span className="block font-semibold">
+                                        {item.title}
+                                    </span>
+                                    <span className="block text-sm font-normal text-slate-600">
+                                        {item.body}
+                                    </span>
+                                </span>
+                            </Link>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        </li>
+    );
+}
+
 export default function MarketingLayout({ children }: PropsWithChildren) {
+    const { trialDays } = usePage<{ trialDays: number }>().props;
     const [menuOpen, setMenuOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const path = useCurrentPath();
+    const solid = scrolled || menuOpen;
 
     useEffect(() => {
         if (!menuOpen) {
@@ -65,7 +175,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
     }, [menuOpen]);
 
     useEffect(() => {
-        const onScroll = () => setScrolled(window.scrollY > 8);
+        const onScroll = () => setScrolled(window.scrollY > 24);
 
         onScroll();
         window.addEventListener('scroll', onScroll, { passive: true });
@@ -81,56 +191,42 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
             >
                 Skip to content
             </a>
-            <div className="site-dark site-gradient text-sm text-white">
-                <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-6 gap-y-1 px-4 py-2 sm:justify-between sm:px-6">
-                    <p className="flex flex-wrap items-center justify-center gap-2">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-bold tracking-wide uppercase">
-                            <Sparkles className="size-3" aria-hidden />
-                            Free trial
-                        </span>
-                        Every application starts free, no payment details
-                        needed.
-                        <Link
-                            href="/start"
-                            className="inline-flex items-center gap-1 font-bold underline-offset-2 hover:underline"
-                        >
-                            Start yours
-                            <ArrowRight className="size-3.5" aria-hidden />
-                        </Link>
-                    </p>
-                    <p className="hidden items-center gap-1.5 text-white/85 md:inline-flex">
-                        <Clock className="size-3.5" aria-hidden />
-                        We reply within one working day
-                    </p>
-                </div>
-            </div>
             <header
-                className={`sticky top-0 z-40 border-b bg-white/85 backdrop-blur-lg transition-shadow duration-300 ${scrolled ? 'border-site-line shadow-lg shadow-site-ink/5' : 'border-transparent'}`}
+                className={`fixed inset-x-0 top-0 z-40 transition-colors duration-300 ${solid ? 'border-b border-site-line bg-white' : 'site-dark bg-site-night'}`}
             >
                 <nav
                     aria-label="Main"
-                    className="mx-auto flex h-16 max-w-7xl items-center gap-8 px-4 sm:h-20 sm:px-6"
+                    className={`mx-auto flex max-w-7xl items-center gap-8 px-4 transition-[height] duration-300 sm:px-6 ${solid ? 'h-16 sm:h-[4.5rem]' : 'h-16 sm:h-24'}`}
                 >
-                    <Brand />
-                    <ul className="mx-auto hidden items-center gap-1 rounded-full border border-site-line bg-white/70 p-1 text-[15px] font-semibold text-slate-700 lg:flex">
-                        {nav.map((item) => (
+                    <Brand inverted={!solid} />
+                    <ul
+                        className={`mx-auto hidden items-center gap-1 text-[15px] font-semibold whitespace-nowrap xl:flex ${solid ? 'text-slate-700' : 'text-white/85'}`}
+                    >
+                        {nav.map((item, i) => [
+                            i === 1 && (
+                                <ProductsMenu
+                                    key="products"
+                                    solid={solid}
+                                    path={path}
+                                />
+                            ),
                             <li key={item.href}>
                                 <Link
                                     href={item.href}
                                     aria-current={
                                         item.href === path ? 'page' : undefined
                                     }
-                                    className="block rounded-full px-4 py-2 transition-colors hover:bg-site-soft hover:text-site-accent-ink aria-[current=page]:bg-site-accent/10 aria-[current=page]:text-site-accent-ink"
+                                    className={`relative block px-4 py-2 transition-colors after:absolute after:inset-x-4 after:bottom-0 after:h-0.5 after:origin-left after:scale-x-0 after:rounded-full after:transition-transform hover:after:scale-x-100 aria-[current=page]:after:scale-x-100 ${solid ? 'after:bg-site-accent hover:text-site-accent-ink aria-[current=page]:text-site-accent-ink' : 'after:bg-white hover:text-white aria-[current=page]:text-white'}`}
                                 >
                                     {item.title}
                                 </Link>
-                            </li>
-                        ))}
+                            </li>,
+                        ])}
                     </ul>
-                    <div className="hidden items-center gap-5 lg:flex">
+                    <div className="ml-auto hidden items-center gap-5 whitespace-nowrap lg:flex xl:ml-0">
                         <a
                             href={login.url()}
-                            className="text-[15px] font-semibold text-slate-700 hover:text-site-accent-ink"
+                            className={`text-[15px] font-semibold transition-colors ${solid ? 'text-slate-700 hover:text-site-accent-ink' : 'text-white/85 hover:text-white'}`}
                         >
                             Sign in
                         </a>
@@ -139,15 +235,15 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                             aria-current={
                                 path === '/start' ? 'page' : undefined
                             }
-                            className={`${button.primary} py-3`}
+                            className={`${solid ? button.primary : button.light} py-3`}
                         >
-                            Start free trial
+                            Start Free Trial
                             <ArrowRight className="size-4" aria-hidden />
                         </Link>
                     </div>
                     <button
                         type="button"
-                        className="ml-auto inline-flex size-10 items-center justify-center rounded-full border border-site-line text-site-ink hover:bg-site-soft lg:hidden"
+                        className={`ml-auto inline-flex size-10 shrink-0 items-center justify-center rounded-full border lg:ml-0 xl:hidden ${solid ? 'border-site-line text-site-ink hover:bg-site-soft' : 'border-white/30 text-white hover:bg-white/10'}`}
                         aria-expanded={menuOpen}
                         aria-controls="mobile-menu"
                         onClick={() => setMenuOpen((open) => !open)}
@@ -163,9 +259,32 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                 <div
                     id="mobile-menu"
                     hidden={!menuOpen}
-                    className="border-t border-site-line bg-white lg:hidden"
+                    className="max-h-[calc(100svh-4rem)] overflow-y-auto border-t border-site-line bg-white xl:hidden"
                 >
                     <ul className="mx-auto max-w-7xl space-y-1 px-4 py-3 sm:px-6">
+                        <li>
+                            <p className="px-3 pt-2 pb-1 text-xs font-bold tracking-wider text-slate-500 uppercase">
+                                Products
+                            </p>
+                            <ul className="space-y-1">
+                                {products.map((item) => (
+                                    <li key={item.href}>
+                                        <Link
+                                            href={item.href}
+                                            aria-current={
+                                                item.href === path
+                                                    ? 'page'
+                                                    : undefined
+                                            }
+                                            onClick={() => setMenuOpen(false)}
+                                            className="block rounded-xl px-3 py-2.5 font-semibold text-slate-700 hover:bg-site-soft aria-[current=page]:bg-site-accent/10 aria-[current=page]:text-site-accent-ink"
+                                        >
+                                            {item.title}
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        </li>
                         {nav.map((item) => (
                             <li key={item.href}>
                                 <Link
@@ -181,20 +300,20 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                             </li>
                         ))}
                     </ul>
-                    <div className="mx-auto flex max-w-7xl gap-2 px-4 pb-4 sm:px-6">
-                        <a
-                            href={login.url()}
-                            className={`flex-1 ${button.outline} py-2.5`}
-                        >
-                            Sign in
-                        </a>
+                    <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 pb-4 sm:px-6">
                         <Link
                             href="/start"
                             onClick={() => setMenuOpen(false)}
-                            className={`flex-1 ${button.primary} py-2.5`}
+                            className={`${button.primary} py-2.5`}
                         >
-                            Start free trial
+                            Start Your {trialDays}-Day Free Trial
                         </Link>
+                        <a
+                            href={login.url()}
+                            className={`${button.outline} py-2.5`}
+                        >
+                            Sign in
+                        </a>
                     </div>
                 </div>
             </header>
@@ -203,67 +322,64 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
             </main>
             <footer className={`${darkBand} text-sm`}>
                 <HeroBackdrop />
-                {/* A wave from the page into the footer. Decorative. */}
-                <svg
-                    aria-hidden
-                    viewBox="0 0 1440 60"
-                    preserveAspectRatio="none"
-                    className="block h-10 w-full text-white sm:h-14"
-                >
-                    <path
-                        fill="currentColor"
-                        d="M0 0h1440v22c-120 22-260 34-420 30C780 46 640 8 460 6 290 4 140 30 0 44Z"
-                    />
-                </svg>
-                <div className="mx-auto max-w-7xl px-4 sm:px-6">
-                    <div className="mt-8 flex flex-col items-center justify-between gap-6 rounded-3xl border border-white/10 bg-white/5 px-6 py-8 text-center backdrop-blur sm:px-10 lg:flex-row lg:text-left">
-                        <div>
-                            <p className="font-public-display text-2xl font-semibold text-white">
-                                Questions before you start?
-                            </p>
-                            <p className="mt-1 text-slate-300">
-                                Tell us about your business and we will show you
-                                around.
-                            </p>
-                        </div>
-                        <div className="flex flex-wrap justify-center gap-3">
-                            <Link href="/contact" className={button.light}>
-                                Talk to us
-                            </Link>
-                            <Link href="/start" className={button.outlineDark}>
-                                Start free trial
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-                <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:grid-cols-2 sm:px-6 sm:py-16 lg:grid-cols-[2fr_1fr_1fr_1fr]">
-                    <div>
+                <div className="mx-auto grid max-w-7xl grid-cols-2 gap-x-6 gap-y-10 px-4 py-14 sm:px-6 sm:py-20 md:grid-cols-3 lg:grid-cols-[1.6fr_1fr_1fr_1fr_1fr]">
+                    <div className="col-span-2 md:col-span-3 lg:col-span-1">
                         <Brand inverted />
                         <p className="mt-5 max-w-xs leading-relaxed">
-                            Business software for growing organizations: retail,
-                            pharmacy, school, finance, HR and more, on one
-                            platform.
+                            Run your business. All connected. Industry ERP
+                            solutions and business applications on one platform.
                         </p>
+                        <Link
+                            href="/contact"
+                            className="mt-6 inline-flex items-center gap-2 font-semibold text-white hover:underline"
+                        >
+                            Questions? Talk to us
+                            <ArrowRight className="size-4" aria-hidden />
+                        </Link>
                     </div>
+                    {/* Slugs from resources/content/marketing-catalog.json. */}
                     <FooterColumn
-                        title="Explore"
+                        title="Products"
                         links={[
-                            { title: 'ERP products', href: '/#erp' },
-                            { title: 'Applications', href: '/#products' },
-                            { title: 'How it works', href: '/#how-it-works' },
-                            { title: 'Pricing', href: '/pricing' },
+                            { title: 'ERP Solutions', href: '/erp' },
+                            {
+                                title: 'Business Applications',
+                                href: '/apps',
+                            },
+                            { title: 'Pharmacy ERP', href: '/erp/pharmacy' },
+                            { title: 'Miles Finance', href: '/apps/finance' },
+                            { title: 'Coming soon', href: '/coming-soon' },
                         ]}
                     />
                     <FooterColumn
-                        title="Get started"
+                        title="Industries"
                         links={[
-                            { title: 'Start free trial', href: '/start' },
+                            {
+                                title: 'Pharmacies',
+                                href: '/industries#pharmacies',
+                            },
+                            { title: 'Shops', href: '/industries#shops' },
+                            { title: 'Schools', href: '/industries#schools' },
+                            { title: 'NGOs', href: '/industries#ngos' },
+                            { title: 'All industries', href: '/industries' },
+                        ]}
+                    />
+                    <FooterColumn
+                        title="Company"
+                        links={[
+                            { title: 'About', href: '/about' },
+                            {
+                                title: 'Platform & security',
+                                href: '/platform',
+                            },
+                            { title: 'Pricing', href: '/pricing' },
                             { title: 'Contact', href: '/contact' },
                         ]}
                     />
                     <FooterColumn
                         title="Account"
                         links={[
+                            { title: 'Start free trial', href: '/start' },
                             {
                                 title: 'Sign in',
                                 href: login.url(),
@@ -295,7 +411,7 @@ function FooterColumn({
     links: { title: string; href: string; external?: boolean }[];
 }) {
     const linkClass =
-        'inline-flex items-center gap-2 transition-colors before:h-px before:w-0 before:bg-site-accent-glow before:transition-[width] hover:text-white hover:before:w-3';
+        'inline-flex items-center py-0.5 transition-colors before:h-px before:w-0 before:bg-site-accent-glow before:transition-[width,margin] hover:text-white hover:before:mr-2 hover:before:w-3';
 
     return (
         <div>

@@ -363,7 +363,8 @@ it('shows the owner subscriptions, payments and the modules they can add', funct
         ->where('current.billing.recentPayments.0.status', 'reported')
         ->where('current.billing.recentPayments.0.invoiceNumber', $invoice->number)
         ->where('current.billing.modules', fn ($modules) => collect($modules)->pluck('state', 'code')->only(['retail', 'crm', 'hr'])->sortKeys()->all()
-            === ['crm' => 'available', 'hr' => 'coming_soon', 'retail' => 'installed'])
+            // CRM is released and never tried: offered as a free trial.
+            === ['crm' => 'trialable', 'hr' => 'coming_soon', 'retail' => 'installed'])
         // Recommendations: CRM and HR both pair with the installed Retail,
         // CRM more closely.
         ->where('current.billing.modules', fn ($modules) => collect($modules)->keyBy('code')->only(['crm', 'hr', 'retail'])

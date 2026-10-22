@@ -32,7 +32,7 @@ export default function AuthSplitLayout({
 
     return (
         <div className="site-public grid min-h-svh font-public text-site-ink lg:grid-cols-[3fr_2fr]">
-            <aside className="site-dark relative isolate hidden min-h-svh flex-col justify-between overflow-hidden bg-site-night p-10 text-slate-300 lg:flex xl:p-14">
+            <aside className="site-dark site-hero-bg relative isolate hidden min-h-svh flex-col justify-between overflow-hidden p-10 text-slate-300 lg:flex xl:p-14">
                 <HeroBackdrop />
 
                 <BrandLink inverted className="relative z-10" />

@@ -26,10 +26,12 @@ use Illuminate\Database\Eloquent\Model;
  * @property array<string, mixed>|null $capabilities
  * @property string|null $current_catalog_version_id
  * @property int $sort_order
+ * @property bool $trial_enabled staff allow workspaces to start a free trial
  */
 #[Fillable([
     'code', 'name', 'description', 'category', 'kind', 'status', 'route_prefix',
     'gateway_upstream', 'integration_endpoint', 'provisioning_method', 'capabilities', 'sort_order',
+    'trial_enabled',
 ])]
 class Application extends Model
 {
@@ -44,6 +46,7 @@ class Application extends Model
             'kind' => ApplicationKind::class,
             'status' => ApplicationStatus::class,
             'capabilities' => 'array',
+            'trial_enabled' => 'boolean',
         ];
     }
 }

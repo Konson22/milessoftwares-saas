@@ -23,9 +23,19 @@ Route::domain(PlatformHosts::root())->group(function () {
     Route::get('/', [PageController::class, 'home'])->name('home');
 
     Route::name('marketing.')->group(function () {
+        // The product catalog: ERP solutions and business applications.
+        Route::get('erp', [PageController::class, 'erpSolutions'])->name('erp');
+        Route::get('erp/{slug}', [PageController::class, 'erpProduct'])->where('slug', '[a-z][a-z0-9_-]*')->name('erp-product');
+        Route::get('apps', [PageController::class, 'applications'])->name('apps');
+        Route::get('apps/{slug}', [PageController::class, 'application'])->where('slug', '[a-z][a-z0-9_-]*')->name('app');
+        // Registry applications by code; ones the catalog covers redirect to it.
         Route::get('products/{code}', [PageController::class, 'product'])->where('code', '[a-z][a-z0-9_]*')->name('product');
-        Route::get('erp/{code}', [PageController::class, 'erpProduct'])->where('code', '[a-z][a-z0-9_]*')->name('erp-product');
         Route::get('pricing', [PageController::class, 'pricing'])->name('pricing');
+        Route::get('industries', [PageController::class, 'industries'])->name('industries');
+        Route::get('solutions', fn () => redirect()->route('marketing.industries', status: 301));
+        Route::get('platform', [PageController::class, 'platform'])->name('platform');
+        Route::get('coming-soon', [PageController::class, 'comingSoon'])->name('coming-soon');
+        Route::get('about', [PageController::class, 'about'])->name('about');
 
         // Choose an application and start its free trial (a new workspace).
         Route::get('start', [PageController::class, 'start'])->name('start');

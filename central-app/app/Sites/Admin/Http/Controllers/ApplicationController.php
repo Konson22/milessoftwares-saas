@@ -40,6 +40,7 @@ class ApplicationController extends Controller
                     'status' => $application->status->value,
                     'routePrefix' => $application->route_prefix,
                     'sortOrder' => $application->sort_order,
+                    'trialEnabled' => $application->trial_enabled,
                     'tagline' => $application->capabilities['marketing']['tagline'] ?? null,
                     'features' => implode("\n", (array) ($application->capabilities['marketing']['features'] ?? [])),
                     'catalogVersions' => ApplicationCatalogVersion::query()
@@ -69,6 +70,7 @@ class ApplicationController extends Controller
             'sort_order' => ['required', 'integer', 'between:0,65535'],
             'tagline' => ['nullable', 'string', 'max:200'],
             'features' => ['nullable', 'string', 'max:4000'],
+            'trial_enabled' => ['boolean'],
         ]);
 
         // Marketing copy for the public site lives under capabilities.marketing.
@@ -77,7 +79,8 @@ class ApplicationController extends Controller
         $capabilities['marketing'] = ['tagline' => $validated['tagline'] ?? null, 'features' => $features];
         unset($validated['tagline'], $validated['features']);
 
-        $application->update([...$validated, 'capabilities' => $capabilities]);
+        // An unticked checkbox is not sent: absent means off.
+        $application->update([...$validated, 'trial_enabled' => $request->boolean('trial_enabled'), 'capabilities' => $capabilities]);
         $this->record('application.updated', $application, $request, ['changes' => $application->getChanges()]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Application updated.')]);

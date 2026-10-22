@@ -11,14 +11,17 @@ class SeoController extends Controller
 {
     public function sitemap(MarketingCatalog $catalog): Response
     {
-        $paths = ['', 'start', 'pricing', 'contact'];
+        $paths = ['', 'start', 'erp', 'apps', 'industries', 'pricing', 'platform', 'coming-soon', 'about', 'contact'];
 
-        foreach ($catalog->products() as $product) {
-            $paths[] = 'products/'.$product['code'];
+        foreach ($catalog->catalog() as $entry) {
+            $paths[] = $entry['url'];
         }
 
-        foreach ($catalog->erpProducts() as $product) {
-            $paths[] = 'erp/'.$product['code'];
+        // Registry applications without a catalog page keep their own.
+        foreach ($catalog->products() as $product) {
+            if ($catalog->catalogUrlFor('application', $product['code']) === null) {
+                $paths[] = 'products/'.$product['code'];
+            }
         }
 
         $urls = array_map(

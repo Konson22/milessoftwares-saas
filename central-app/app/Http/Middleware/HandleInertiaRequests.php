@@ -50,6 +50,8 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'platform' => $this->platformLinks($request),
+            // Length of the self-serve free trial, for "Start your N-day free trial".
+            'trialDays' => (int) config('platform.marketing.trial_days'),
             // Set on workspace hosts (and on app. once an organization is current).
             // Admin host only: the signed-in staff member and their permissions.
             'staff' => fn () => ($staff = $request->attributes->get('staff')) instanceof PlatformStaff

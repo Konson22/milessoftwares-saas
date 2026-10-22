@@ -26,10 +26,9 @@ export default function HeroMockup({ codes }: { codes: string[] }) {
             className="relative mx-auto w-full max-w-xl select-none"
         >
             {/* Glow and ring behind the window. */}
-            <div className="site-gradient absolute inset-6 -z-10 rounded-[2.5rem] opacity-30 blur-3xl" />
             <div className="absolute -top-8 -right-6 -z-10 size-40 rounded-full border-2 border-dashed border-site-violet/30" />
 
-            <div className="overflow-hidden rounded-3xl border border-white/70 bg-white shadow-[0_40px_90px_-30px_rgba(37,60,160,0.45)] ring-1 ring-site-line">
+            <div className="overflow-hidden rounded-3xl border border-white/70 bg-white ring-1 ring-site-line">
                 <div className="flex items-center gap-1.5 border-b border-site-line bg-site-soft px-4 py-3">
                     <span className="size-2.5 rounded-full bg-site-coral" />
                     <span className="size-2.5 rounded-full bg-amber-300" />
@@ -110,7 +109,7 @@ export default function HeroMockup({ codes }: { codes: string[] }) {
             </div>
 
             {/* Floating cards over the corners. */}
-            <div className="site-float absolute -bottom-6 -left-4 flex items-center gap-3 rounded-2xl bg-white p-3 pr-5 shadow-xl ring-1 shadow-site-ink/15 ring-site-line sm:-left-10">
+            <div className="site-float absolute -bottom-6 -left-4 hidden items-center gap-3 rounded-2xl bg-white p-3 pr-5 ring-1 ring-site-line sm:flex lg:-left-6 xl:-left-10">
                 <span className="site-gradient inline-flex size-10 items-center justify-center rounded-xl text-white">
                     <TrendingUp className="size-5" />
                 </span>
@@ -123,7 +122,7 @@ export default function HeroMockup({ codes }: { codes: string[] }) {
                     </span>
                 </span>
             </div>
-            <div className="site-float-slow absolute -top-5 -right-2 flex items-center gap-2.5 rounded-2xl bg-white p-3 pr-4 shadow-xl ring-1 shadow-site-ink/15 ring-site-line sm:-right-8">
+            <div className="site-float-slow absolute -top-5 -right-2 hidden items-center gap-2.5 rounded-2xl bg-white p-3 pr-4 ring-1 ring-site-line sm:flex xl:-right-8">
                 <span className="inline-flex size-9 items-center justify-center rounded-xl bg-site-coral/15 text-[#c4413b]">
                     <BellRing className="size-4" />
                 </span>

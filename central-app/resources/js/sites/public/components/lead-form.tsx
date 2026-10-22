@@ -87,7 +87,7 @@ export default function LeadForm({
                             name="message"
                             rows={5}
                             maxLength={5000}
-                            className="rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs"
+                            className="rounded-md border border-input bg-transparent px-3 py-2 text-sm"
                         />
                         <InputError message={errors.message} />
                     </div>
@@ -103,7 +103,7 @@ export default function LeadForm({
                     <Button
                         type="submit"
                         disabled={processing}
-                        className="site-gradient h-12 rounded-full px-7 font-bold text-white shadow-lg shadow-site-accent/25 hover:opacity-95"
+                        className="site-gradient h-12 rounded-full px-7 font-bold text-white hover:opacity-95"
                     >
                         {submitLabel}
                     </Button>
@@ -119,6 +119,7 @@ export function Field({
     type = 'text',
     autoComplete,
     required = false,
+    defaultValue,
     error,
 }: {
     name: string;
@@ -126,6 +127,7 @@ export function Field({
     type?: string;
     autoComplete?: string;
     required?: boolean;
+    defaultValue?: string;
     error?: string;
 }) {
     return (
@@ -140,6 +142,7 @@ export function Field({
                 type={type}
                 autoComplete={autoComplete}
                 required={required}
+                defaultValue={defaultValue}
                 aria-invalid={error ? true : undefined}
                 aria-describedby={error ? `${name}-error` : undefined}
             />

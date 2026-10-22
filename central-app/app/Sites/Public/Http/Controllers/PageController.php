@@ -5,6 +5,7 @@ namespace App\Sites\Public\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Marketing\Support\MarketingCatalog;
 use App\Support\Hosts\PlatformHosts;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,31 +21,49 @@ class PageController extends Controller
     public function home(): Response
     {
         return Inertia::render('public/home', [
+            'catalog' => $this->catalog->catalog(),
             'products' => $this->catalog->products(),
-            'erpProducts' => $this->catalog->erpProducts(),
             'trialDays' => $this->trialDays(),
             'canonical' => PlatformHosts::url(PlatformHosts::root()),
         ]);
     }
 
-    /**
-     * An ERP product (Miles Pharmacy ERP, ...): the applications it is made
-     * of and the plans that sell it.
-     */
-    public function erpProduct(string $code): Response
+    public function erpSolutions(): Response
     {
-        $product = $this->catalog->erpProduct($code);
-        abort_if($product === null, 404);
-
-        return Inertia::render('public/erp-product', [
-            'product' => $product,
-            'plans' => $this->catalog->plans(productCode: $code),
-            'canonical' => PlatformHosts::url(PlatformHosts::root(), "erp/{$code}"),
-        ]);
+        return $this->catalogIndex('erp');
     }
 
-    public function product(string $code): Response
+    public function applications(): Response
     {
+        return $this->catalogIndex('application');
+    }
+
+    /**
+     * An ERP solution's page. Old links by registry code (erp/retail_trading)
+     * move to the solution's own address.
+     */
+    public function erpProduct(string $slug): Response|RedirectResponse
+    {
+        return $this->landing('erp', $slug)
+            ?? $this->moved('erp', $slug)
+            ?? abort(404);
+    }
+
+    public function application(string $slug): Response|RedirectResponse
+    {
+        return $this->landing('application', $slug) ?? abort(404);
+    }
+
+    /**
+     * A registry application by code. When the catalog has a page for it
+     * (finance → apps/finance) that page is the one to use.
+     */
+    public function product(string $code): Response|RedirectResponse
+    {
+        if (($moved = $this->moved('application', $code)) !== null) {
+            return $moved;
+        }
+
         $product = $this->catalog->product($code);
         abort_if($product === null, 404);
 
@@ -82,7 +101,84 @@ class PageController extends Controller
         ]);
     }
 
-    /** Length of the free trial a new workspace can start. */
+    /** Industries, each pointing to the solution that serves it. */
+    public function industries(): Response
+    {
+        return Inertia::render('public/solutions', [
+            'catalog' => $this->catalog->catalog(),
+            'canonical' => PlatformHosts::url(PlatformHosts::root(), 'industries'),
+        ]);
+    }
+
+    public function platform(): Response
+    {
+        return Inertia::render('public/platform', [
+            'canonical' => PlatformHosts::url(PlatformHosts::root(), 'platform'),
+        ]);
+    }
+
+    /** Everything in the catalog that is not released yet. */
+    public function comingSoon(): Response
+    {
+        return Inertia::render('public/coming-soon', [
+            'catalog' => array_values(array_filter($this->catalog->catalog(), fn (array $entry) => $entry['status'] === 'coming_soon')),
+            'trialDays' => $this->trialDays(),
+            'canonical' => PlatformHosts::url(PlatformHosts::root(), 'coming-soon'),
+        ]);
+    }
+
+    public function about(): Response
+    {
+        return Inertia::render('public/about', [
+            'canonical' => PlatformHosts::url(PlatformHosts::root(), 'about'),
+        ]);
+    }
+
+    private function catalogIndex(string $category): Response
+    {
+        return Inertia::render('public/catalog', [
+            'category' => $category,
+            'catalog' => array_values(array_filter($this->catalog->catalog(), fn (array $entry) => $entry['category'] === $category)),
+            'trialDays' => $this->trialDays(),
+            'canonical' => PlatformHosts::url(PlatformHosts::root(), $category === 'erp' ? 'erp' : 'apps'),
+        ]);
+    }
+
+    /**
+     * One product's landing page, with the public plans that sell it.
+     */
+    private function landing(string $category, string $slug): ?Response
+    {
+        $entry = $this->catalog->catalogEntry($category, $slug);
+
+        if ($entry === null) {
+            return null;
+        }
+
+        $registry = $entry['registry'] ?? null;
+        $plans = match ($registry['type'] ?? null) {
+            'erp' => $this->catalog->plans(productCode: $registry['code']),
+            'application' => $this->catalog->plans($registry['code']),
+            default => [],
+        };
+
+        return Inertia::render('public/landing', [
+            'product' => $entry,
+            'plans' => $entry['status'] === 'coming_soon' ? [] : $plans,
+            'trialDays' => $this->trialDays(),
+            'canonical' => PlatformHosts::url(PlatformHosts::root(), $entry['url']),
+        ]);
+    }
+
+    private function moved(string $type, string $code): ?RedirectResponse
+    {
+        $url = $this->catalog->catalogUrlFor($type, $code);
+        $requested = ($type === 'erp' ? 'erp/' : 'products/').$code;
+
+        return $url === null || $url === $requested ? null : redirect(PlatformHosts::url(PlatformHosts::root(), $url), 301);
+    }
+
+    /** Length of the free trial a workspace can start. */
     private function trialDays(): int
     {
         return (int) config('platform.marketing.trial_days');

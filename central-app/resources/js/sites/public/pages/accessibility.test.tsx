@@ -4,11 +4,16 @@ import axe from 'axe-core';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import MarketingLayout from '@/sites/public/layouts/marketing-layout';
+import About from './about';
+import ComingSoon from './coming-soon';
 import Contact from './contact';
-import ErpProductPage from './erp-product';
+import CatalogIndex from './catalog';
 import MarketingHome from './home';
+import LandingPage from './landing';
+import Platform from './platform';
 import Pricing from './pricing';
 import ProductPage from './product';
+import Solutions from './solutions';
 import Start from './start';
 import Thanks from './thanks';
 
@@ -16,7 +21,7 @@ import Thanks from './thanks';
 // replaced with their plain HTML equivalents.
 vi.mock('@inertiajs/react', () => ({
     Head: () => null,
-    usePage: () => ({ url: '/pricing' }),
+    usePage: () => ({ url: '/pricing', props: { trialDays: 60 } }),
     Link: ({
         href,
         children,
@@ -92,6 +97,58 @@ const erpProduct = {
     ],
 };
 
+const entry = {
+    slug: 'pharmacy',
+    category: 'erp' as const,
+    name: 'Pharmacy ERP',
+    icon: 'pill',
+    summary: 'Medicines, batches and the books.',
+    headline: 'Run your pharmacy',
+    subhead: 'Expiry-first selling and books that keep themselves.',
+    audience: 'Pharmacies and wholesalers',
+    seoTitle: 'Pharmacy ERP',
+    seoDescription: 'Pharmacy ERP by Miles Softwares.',
+    features: [{ icon: 'pill', title: 'Expiry first', body: 'Sells oldest.' }],
+    workflow: [{ title: 'Receive', body: 'Batches in.' }],
+    faqs: [{ question: 'Is there a trial?', answer: 'Yes.' }],
+    url: 'erp/pharmacy',
+    status: 'early_access' as const,
+    includes: erpProduct.applications,
+    trial: 'pharmacy',
+};
+
+const catalog = [
+    entry,
+    {
+        ...entry,
+        slug: 'ngo',
+        name: 'NGO ERP',
+        url: 'erp/ngo',
+        status: 'coming_soon' as const,
+        trial: null,
+    },
+    {
+        ...entry,
+        slug: 'finance',
+        category: 'application' as const,
+        name: 'Miles Finance',
+        url: 'apps/finance',
+        status: 'available' as const,
+        includes: [],
+        trial: 'finance',
+    },
+    {
+        ...entry,
+        slug: 'hr',
+        category: 'application' as const,
+        name: 'Miles HR',
+        url: 'apps/hr',
+        status: 'available' as const,
+        includes: [],
+        trial: null,
+    },
+];
+
 const productPlan = {
     ...plan,
     code: 'pharmacy-std',
@@ -117,15 +174,7 @@ const pages: [string, ReactNode][] = [
                     status: 'planned',
                 },
             ]}
-            erpProducts={[
-                erpProduct,
-                {
-                    ...erpProduct,
-                    code: 'ngo',
-                    name: 'Miles NGO ERP',
-                    status: 'planned',
-                },
-            ]}
+            catalog={catalog}
             trialDays={60}
             canonical="https://example.test/"
         />,
@@ -141,12 +190,43 @@ const pages: [string, ReactNode][] = [
         />,
     ],
     [
-        'erp product',
-        <ErpProductPage
-            key="erp-product"
-            product={erpProduct}
+        'landing',
+        <LandingPage
+            key="landing"
+            product={entry}
             plans={[productPlan]}
+            trialDays={60}
             canonical="https://example.test/erp/pharmacy"
+        />,
+    ],
+    [
+        'coming-soon landing',
+        <LandingPage
+            key="landing-soon"
+            product={catalog[1]}
+            plans={[]}
+            trialDays={60}
+            canonical="https://example.test/erp/ngo"
+        />,
+    ],
+    [
+        'erp solutions',
+        <CatalogIndex
+            key="erp"
+            category="erp"
+            catalog={catalog.filter((item) => item.category === 'erp')}
+            trialDays={60}
+            canonical="https://example.test/erp"
+        />,
+    ],
+    [
+        'business applications',
+        <CatalogIndex
+            key="apps"
+            category="application"
+            catalog={catalog.filter((item) => item.category === 'application')}
+            trialDays={60}
+            canonical="https://example.test/apps"
         />,
     ],
     [
@@ -180,9 +260,32 @@ const pages: [string, ReactNode][] = [
         <Contact
             key="contact"
             formToken="t"
+            subject="Waitlist: School"
             canonical="https://example.test/contact"
         />,
     ],
+    [
+        'industries',
+        <Solutions
+            key="industries"
+            catalog={catalog}
+            canonical="https://example.test/industries"
+        />,
+    ],
+    [
+        'platform',
+        <Platform key="platform" canonical="https://example.test/platform" />,
+    ],
+    [
+        'coming soon',
+        <ComingSoon
+            key="coming-soon"
+            catalog={[catalog[1]]}
+            trialDays={60}
+            canonical="https://example.test/coming-soon"
+        />,
+    ],
+    ['about', <About key="about" canonical="https://example.test/about" />],
     ['thanks', <Thanks key="thanks" />],
 ];
 

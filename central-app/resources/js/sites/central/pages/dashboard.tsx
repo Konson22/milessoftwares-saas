@@ -99,6 +99,13 @@ type Billing = {
         currency: string;
         paidOn: string;
     }[];
+    /** Free trials running now, soonest end first. */
+    trials: {
+        code: string;
+        name: string;
+        endsAt: string | null;
+        daysLeft: number | null;
+    }[];
     modules: Module[];
 };
 
@@ -108,6 +115,8 @@ type Module = {
     tagline: string | null;
     description: string | null;
     state:
+        | 'trialing'
+        | 'trialable'
         | 'installed'
         | 'requested'
         | 'available'
@@ -223,6 +232,10 @@ export default function Dashboard({ organizations, current }: Props) {
                             <BillingPanel billing={current.billing} />
                         )}
                     </div>
+                )}
+
+                {current?.billing && current.billing.trials.length > 0 && (
+                    <TrialsPanel trials={current.billing.trials} />
                 )}
 
                 {current?.billing && (
@@ -695,10 +708,74 @@ function PaymentsPanel({ billing }: { billing: Billing }) {
     );
 }
 
+/**
+ * Each free trial with the days it has left. A trial ends on its own: when
+ * it runs out the application closes until a plan is chosen, and nothing is
+ * charged without the owner asking for a plan.
+ */
+function TrialsPanel({ trials }: { trials: Billing['trials'] }) {
+    return (
+        <Panel aria-labelledby="trials">
+            <PanelHeader
+                title={<span id="trials">Free trials</span>}
+                description="Choose a plan before a trial ends to keep using the application. Your data stays as it is."
+                actions={
+                    <Button asChild size="sm" variant="outline">
+                        <Link href={organizationPlans()}>Choose a plan</Link>
+                    </Button>
+                }
+            />
+            <ul className="divide-y">
+                {trials.map((trial) => {
+                    const Icon = appIcon(trial.code);
+
+                    return (
+                        <li
+                            key={trial.code}
+                            className="flex flex-wrap items-center gap-3 px-4 py-3"
+                        >
+                            <span className="grid size-9 shrink-0 place-items-center rounded-md bg-primary/10 text-primary">
+                                <Icon className="size-4" aria-hidden />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                                <span className="block font-medium">
+                                    {trial.name}
+                                </span>
+                                {trial.endsAt && (
+                                    <span className="block text-sm text-muted-foreground">
+                                        Ends {formatDate(trial.endsAt)}
+                                    </span>
+                                )}
+                            </span>
+                            {trial.daysLeft !== null && (
+                                <StatusBadge
+                                    tone={
+                                        trial.daysLeft <= 7 ? 'warning' : 'info'
+                                    }
+                                >
+                                    {trial.daysLeft === 0
+                                        ? 'Ends today'
+                                        : `${trial.daysLeft} day${trial.daysLeft === 1 ? '' : 's'} left`}
+                                </StatusBadge>
+                            )}
+                        </li>
+                    );
+                })}
+            </ul>
+        </Panel>
+    );
+}
+
 const moduleStates: Record<
     Module['state'],
     { label: string; tone: Tone; cta: string | null }
 > = {
+    trialing: { label: 'On free trial', tone: 'info', cta: null },
+    trialable: {
+        label: 'Free trial',
+        tone: 'success',
+        cta: 'Start free trial',
+    },
     installed: { label: 'Installed', tone: 'success', cta: null },
     requested: { label: 'Requested', tone: 'warning', cta: null },
     available: { label: 'Available', tone: 'info', cta: 'Add' },
@@ -719,13 +796,17 @@ function RecommendationsPanel({
     workspace: string;
 }) {
     const order: Module['state'][] = [
+        'trialable',
         'available',
         'on_request',
         'requested',
         'coming_soon',
     ];
     const sorted = modules
-        .filter((module) => module.state !== 'installed')
+        .filter(
+            (module) =>
+                module.state !== 'installed' && module.state !== 'trialing',
+        )
         .map((module, index) => ({ module, index }))
         .sort(
             (a, b) =>
@@ -786,7 +867,11 @@ function RecommendationsPanel({
                                     )}
                                     {state.cta && (
                                         <Link
-                                            href={organizationPlans()}
+                                            href={
+                                                module.state === 'trialable'
+                                                    ? `/trial?app=${module.code}`
+                                                    : organizationPlans()
+                                            }
                                             className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
                                         >
                                             {state.cta}{' '}

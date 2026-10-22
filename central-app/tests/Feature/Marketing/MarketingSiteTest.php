@@ -235,3 +235,72 @@ it('publishes marketing copy edited in the registry', function () {
         ->where('product.tagline', 'Every branch, one stock count.')
         ->where('product.features', ['Stock transfers', 'Daily cash-up', 'Loyalty points']));
 });
+
+it('serves the industries, catalog, platform, coming-soon and about pages', function (string $path, string $component) {
+    $this->get(site($path))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component($component)
+            ->where('canonical', site($path)));
+})->with([
+    ['industries', 'public/solutions'],
+    ['erp', 'public/catalog'],
+    ['apps', 'public/catalog'],
+    ['platform', 'public/platform'],
+    ['coming-soon', 'public/coming-soon'],
+    ['about', 'public/about'],
+]);
+
+it('moves the old solutions page to industries', function () {
+    $this->get(site('solutions'))->assertMovedPermanently()->assertRedirect(site('industries'));
+});
+
+it('lists one category per catalog page, with every product of the brief', function () {
+    $this->get(site('erp'))->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('category', 'erp')
+        ->where('catalog', fn ($catalog) => collect($catalog)->pluck('slug')->all() === ['pharmacy', 'retail', 'school', 'logistics', 'ngo']));
+
+    $this->get(site('apps'))->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('category', 'application')
+        ->where('catalog', fn ($catalog) => collect($catalog)->pluck('slug')->all() === ['finance', 'projects', 'hr', 'procurement', 'inventory', 'crm', 'assets', 'documents']));
+});
+
+it('shows only unreleased catalog products on the coming-soon page', function () {
+    $this->get(site('coming-soon'))->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('catalog', fn ($catalog) => collect($catalog)->every(fn ($entry) => $entry['status'] === 'coming_soon' && $entry['trial'] === null)
+            && collect($catalog)->pluck('slug')->contains('logistics')));
+});
+
+it('gives each catalog product its own page, and 404s anything else', function () {
+    $this->get(site('apps/projects'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+        ->component('public/landing')
+        ->where('product.name', 'Miles Projects')
+        ->where('product.status', 'coming_soon')
+        ->where('canonical', site('apps/projects')));
+
+    $this->get(site('apps/nothing'))->assertNotFound();
+    $this->get(site('erp/finance'))->assertNotFound();
+});
+
+it('lists the new pages in the sitemap', function () {
+    $this->get(site('sitemap.xml'))
+        ->assertSee(site('industries'), false)
+        ->assertSee(site('erp'), false)
+        ->assertSee(site('apps'), false)
+        ->assertSee(site('erp/pharmacy'), false)
+        ->assertSee(site('apps/documents'), false)
+        ->assertSee(site('platform'), false)
+        ->assertSee(site('coming-soon'), false)
+        ->assertSee(site('about'), false)
+        ->assertDontSee(site('solutions'), false);
+});
+
+it('fills in the contact subject from the link, trimmed and capped', function () {
+    $this->get(site('contact?subject=Waitlist:%20School'))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('subject', 'Waitlist: School'));
+
+    $this->get(site('contact?subject='.str_repeat('a', 300)))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('subject', str_repeat('a', 120)));
+
+    $this->get(site('contact'))->assertInertia(fn (AssertableInertia $page) => $page->where('subject', null));
+});

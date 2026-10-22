@@ -8,7 +8,6 @@ import Seo from '@/sites/public/components/seo';
 import {
     button,
     card,
-    eyebrow,
     textLink,
     trialDuration,
     trialLength,
@@ -51,7 +50,7 @@ export default function Start({
             />
 
             <PageHero
-                eyebrow={<Stepper current={0} />}
+                above={<Stepper current={0} />}
                 title={
                     <>
                         Start your <Accent>free trial</Accent>
@@ -99,8 +98,7 @@ export default function Start({
                             aria-label="Your trial"
                             className="flex flex-col rounded-2xl border border-site-line bg-site-soft p-6 text-slate-600"
                         >
-                            <p className={eyebrow}>Your trial</p>
-                            <div className="mt-3 flex items-center gap-3">
+                            <div className="flex items-center gap-3">
                                 {product && (
                                     <ProductTile
                                         code={product.code}
@@ -171,17 +169,17 @@ function Stepper({ current }: { current: number }) {
                     className="flex items-center gap-2"
                 >
                     <span
-                        className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 ${i === current ? 'bg-white font-semibold text-site-ink ring-1 ring-site-line' : 'text-slate-500'}`}
+                        className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 ${i === current ? 'bg-white font-semibold text-site-ink' : 'text-slate-300'}`}
                     >
                         <span
-                            className={`inline-flex size-5 items-center justify-center rounded-full text-xs ${i === current ? 'bg-site-accent-ink text-white' : 'bg-site-line text-slate-500'}`}
+                            className={`inline-flex size-5 items-center justify-center rounded-full text-xs ${i === current ? 'bg-site-accent-ink text-white' : 'bg-white/15 text-white'}`}
                         >
                             {i + 1}
                         </span>
                         {step}
                     </span>
                     {i < steps.length - 1 && (
-                        <span aria-hidden className="h-px w-6 bg-site-line" />
+                        <span aria-hidden className="h-px w-6 bg-white/25" />
                     )}
                 </li>
             ))}

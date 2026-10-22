@@ -47,7 +47,7 @@ export default function PlanCard({
 
     return (
         <li
-            className={`${card} relative flex flex-col overflow-hidden p-8 ${featured ? 'border-site-accent/40 ring-1 ring-site-accent/40' : ''}`}
+            className={`${card} relative flex flex-col overflow-hidden p-8 ${featured ? 'site-dark site-hero-bg isolate border-transparent text-slate-300 lg:-my-4 lg:py-12' : ''}`}
         >
             {featured && (
                 <span
@@ -56,11 +56,11 @@ export default function PlanCard({
                 />
             )}
             <div className="flex items-start justify-between gap-4">
-                <Heading className="text-xl font-semibold tracking-tight">
+                <Heading className="text-xl font-semibold tracking-tight in-[.site-dark]:text-white">
                     {plan.name}
                 </Heading>
                 {featured && (
-                    <span className="site-gradient rounded-full px-3 py-1 text-xs font-bold tracking-wide text-white uppercase">
+                    <span className="rounded-full bg-white px-3 py-1 text-xs font-bold tracking-wide text-site-accent-ink uppercase">
                         Bundle
                     </span>
                 )}
@@ -69,7 +69,7 @@ export default function PlanCard({
                 <p className="mt-2 text-sm font-semibold">
                     <Link
                         href={`/erp/${plan.product.code}`}
-                        className="text-site-accent-ink hover:underline"
+                        className="text-site-accent-ink hover:underline in-[.site-dark]:text-site-accent-glow"
                     >
                         {plan.product.name}
                     </Link>
@@ -77,16 +77,16 @@ export default function PlanCard({
                 </p>
             )}
             {plan.description && (
-                <p className="mt-2 text-sm text-slate-600">
+                <p className="mt-2 text-sm text-slate-600 in-[.site-dark]:text-slate-300">
                     {plan.description}
                 </p>
             )}
             <p className="mt-8 flex flex-wrap items-baseline gap-x-2">
-                <span className="font-public-display text-4xl font-bold tracking-tight tabular-nums">
+                <span className="font-public-display text-4xl font-bold tracking-tight tabular-nums in-[.site-dark]:text-white">
                     {plan.price}
                 </span>
                 {plan.price !== 'Free' && (
-                    <span className="text-sm text-slate-600">
+                    <span className="text-sm text-slate-600 in-[.site-dark]:text-slate-300">
                         {per[plan.interval]}
                     </span>
                 )}
@@ -94,7 +94,7 @@ export default function PlanCard({
             {plan.product ? (
                 <Link
                     href="/contact"
-                    className={`mt-7 ${featured ? button.primary : button.outline}`}
+                    className={`mt-7 ${featured ? button.light : button.outline}`}
                 >
                     {erpCallToAction[plan.product.status]}
                     <span className="sr-only"> about {plan.name}</span>
@@ -103,15 +103,17 @@ export default function PlanCard({
             ) : (
                 <Link
                     href="/start"
-                    className={`mt-7 ${featured ? button.primary : button.outline}`}
+                    className={`mt-7 ${featured ? button.light : button.outline}`}
                 >
                     Start free trial
                     <span className="sr-only"> of {plan.name}</span>
                     <ArrowRight className="size-4" aria-hidden />
                 </Link>
             )}
-            <div className="mt-8 border-t border-site-line pt-7">
-                <p className="text-sm font-semibold">Includes</p>
+            <div className="mt-8 border-t border-site-line pt-7 in-[.site-dark]:border-white/15">
+                <p className="text-sm font-semibold in-[.site-dark]:text-white">
+                    Includes
+                </p>
                 <ul className="mt-4 space-y-3 text-sm">
                     {plan.applications.map((application) => (
                         <li key={application} className="flex gap-2.5">

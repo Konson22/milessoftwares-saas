@@ -10,6 +10,7 @@ use App\Modules\Applications\Models\ApplicationFeature;
 use App\Modules\Applications\Support\TenantRedirectUris;
 use App\Modules\Audit\AuditLogger;
 use App\Modules\Entitlements\Models\Entitlement;
+use App\Modules\Entitlements\Support\TrialRefused;
 use App\Modules\Integration\Support\IntegrationEvents;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Products\Models\ErpProduct;
@@ -45,7 +46,8 @@ final class ManageEntitlements
 
         $trialEndsAt = $startTrial && $plan->trial_days > 0 ? now()->addDays($plan->trial_days) : null;
 
-        $subscription = $this->tenant->run($organization, fn () => DB::transaction(function () use ($plan, $trialEndsAt): Subscription {
+        [$subscription, $converted] = $this->tenant->run($organization, fn () => DB::transaction(function () use ($plan, $trialEndsAt): array {
+            $converted = [];
             $subscription = new Subscription;
             $subscription->forceFill([
                 'status' => $trialEndsAt === null ? 'active' : 'trialing',
@@ -72,11 +74,36 @@ final class ManageEntitlements
                 }
             }
 
-            return $subscription;
+            // A paid plan converts the self-serve trials it covers: the
+            // subscription's rows above carry access on without a gap, and
+            // the trial ends here. Business data in the products is untouched.
+            if ($trialEndsAt === null) {
+                $converted = Entitlement::query()
+                    ->current()
+                    ->whereIn('application_id', $plan->applications->pluck('id'))
+                    ->whereNull('feature_key')
+                    ->whereNull('subscription_item_id')
+                    ->where('source', 'trial')
+                    ->get()
+                    ->all();
+
+                Entitlement::query()->whereKey(array_map(fn (Entitlement $trial) => $trial->id, $converted))->update(['revoked_at' => now()]);
+            }
+
+            return [$subscription, $converted];
         }));
 
         $this->afterEntitlementChange($organization, $plan->applications->pluck('id')->all(), provision: true);
         $this->record('subscription.started', $subscription, $organization, $actor, ['plan' => $plan->code, 'trial_ends_at' => $trialEndsAt?->toIso8601String()]);
+
+        foreach ($converted as $trial) {
+            $this->record('entitlement.trial_converted', $trial, $organization, $actor, [
+                'application' => $plan->applications->firstWhere('id', $trial->application_id)?->code,
+                'plan' => $plan->code,
+                'trial_started_at' => $trial->valid_from->toIso8601String(),
+                'trial_ends_at' => $trial->valid_until?->toIso8601String(),
+            ]);
+        }
 
         return $subscription;
     }
@@ -110,25 +137,46 @@ final class ManageEntitlements
     }
 
     /**
-     * Self-serve: the owner of a new workspace tries one application free
-     * for the configured number of days. One trial per application, ever,
-     * so ending and restarting never extends it. The shared modules its ERP
-     * products require (Finance for Pharmacy) are tried alongside, unless
-     * the organization already has or has tried them.
+     * Self-serve: an organization's owner tries one application free for
+     * the configured number of days, counted here on the server. One trial
+     * per application, ever, so ending and restarting never extends it, and
+     * none for an application the organization already has. The shared
+     * modules its ERP products require (Finance for Pharmacy) are tried
+     * alongside, unless the organization already has or has tried them.
+     * Concurrent requests for the same trial are serialized, so a double
+     * submit starts it once and the second is refused as RUNNING.
+     *
+     * @throws TrialRefused
      */
     public function startTrial(Organization $organization, Application $application, User $owner): Entitlement
     {
         $days = (int) config('platform.marketing.trial_days');
         $companions = $this->sharedModulesRequiredWith($application);
 
-        [$entitlement, $alongside] = $this->tenant->run($organization, function () use ($application, $companions, $days): array {
+        [$entitlement, $alongside] = $this->tenant->run($organization, fn () => DB::transaction(function () use ($organization, $application, $companions, $days): array {
+            DB::select('SELECT pg_advisory_xact_lock(hashtext(?))', ["trial:{$organization->id}:{$application->id}"]);
+
+            $access = Entitlement::query()
+                ->current()
+                ->where('application_id', $application->id)
+                ->whereNull('feature_key')
+                ->get(['source']);
+
+            if ($access->contains('source', 'trial')) {
+                throw new TrialRefused(TrialRefused::RUNNING, $application->name);
+            }
+
+            if ($access->isNotEmpty()) {
+                throw new TrialRefused(TrialRefused::ACTIVE, $application->name);
+            }
+
             $tried = Entitlement::query()
                 ->where('application_id', $application->id)
                 ->where('source', 'trial')
                 ->exists();
 
             if ($tried) {
-                throw new RuntimeException("This organization has already tried {$application->name}.");
+                throw new TrialRefused(TrialRefused::USED, $application->name);
             }
 
             $until = now()->addDays($days);
@@ -147,7 +195,7 @@ final class ManageEntitlements
             }
 
             return [$this->writeEntitlement($application->id, null, null, 'trial', $until, null), $alongside];
-        });
+        }));
 
         $this->afterEntitlementChange($organization, [$application->id, ...array_map(fn (Entitlement $e) => $e->application_id, array_values($alongside))], provision: true);
 
