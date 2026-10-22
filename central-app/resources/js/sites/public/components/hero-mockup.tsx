@@ -1,4 +1,3 @@
-import { BellRing, TrendingUp } from 'lucide-react';
 import { productIcon } from '@/sites/public/components/product';
 
 /** Bar heights of the mock sales chart, in percent. */
@@ -106,34 +105,6 @@ export default function HeroMockup({ codes }: { codes: string[] }) {
                         </ul>
                     </div>
                 </div>
-            </div>
-
-            {/* Floating cards over the corners. */}
-            <div className="site-float absolute -bottom-6 -left-4 hidden items-center gap-3 rounded-2xl bg-white p-3 pr-5 ring-1 ring-site-line sm:flex lg:-left-6 xl:-left-10">
-                <span className="site-gradient inline-flex size-10 items-center justify-center rounded-xl text-white">
-                    <TrendingUp className="size-5" />
-                </span>
-                <span>
-                    <span className="block text-[11px] text-slate-500">
-                        Sale recorded
-                    </span>
-                    <span className="block font-public-display text-sm font-semibold text-site-ink">
-                        + 12,500
-                    </span>
-                </span>
-            </div>
-            <div className="site-float-slow absolute -top-5 -right-2 hidden items-center gap-2.5 rounded-2xl bg-white p-3 pr-4 ring-1 ring-site-line sm:flex xl:-right-8">
-                <span className="inline-flex size-9 items-center justify-center rounded-xl bg-site-coral/15 text-[#c4413b]">
-                    <BellRing className="size-4" />
-                </span>
-                <span>
-                    <span className="block text-[11px] text-slate-500">
-                        Low stock
-                    </span>
-                    <span className="block text-xs font-semibold text-site-ink">
-                        3 items to reorder
-                    </span>
-                </span>
             </div>
         </div>
     );

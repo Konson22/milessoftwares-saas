@@ -99,25 +99,8 @@ export default function MarketingHome({
                                 Explore ERP Solutions
                             </Link>
                         </div>
-                        <ul className="mt-9 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm font-semibold text-white/85 lg:justify-start">
-                            {[
-                                'No payment details',
-                                'Nothing charged automatically',
-                                'Keep your data when you upgrade',
-                            ].map((point) => (
-                                <li
-                                    key={point}
-                                    className="inline-flex items-center gap-2"
-                                >
-                                    <span className="inline-flex size-5 items-center justify-center rounded-full bg-white/15">
-                                        <Check className="size-3" aria-hidden />
-                                    </span>
-                                    {point}
-                                </li>
-                            ))}
-                        </ul>
                     </div>
-                    <div className="site-tilt">
+                    <div className="site-tilt hidden md:block">
                         <HeroMockup
                             codes={
                                 products.length > 0
@@ -128,6 +111,27 @@ export default function MarketingHome({
                     </div>
                 </div>
             </section>
+
+            {/* The trial's terms, just under the hero. */}
+            <div className="border-b border-site-line bg-site-soft">
+                <ul className="mx-auto flex max-w-7xl flex-wrap justify-center gap-x-8 gap-y-3 px-4 py-5 text-sm font-semibold text-slate-700 sm:px-6">
+                    {[
+                        'No payment details',
+                        'Nothing charged automatically',
+                        'Keep your data when you upgrade',
+                    ].map((point) => (
+                        <li
+                            key={point}
+                            className="inline-flex items-center gap-2"
+                        >
+                            <span className="site-gradient inline-flex size-5 items-center justify-center rounded-full text-white">
+                                <Check className="size-3" aria-hidden />
+                            </span>
+                            {point}
+                        </li>
+                    ))}
+                </ul>
+            </div>
 
             {/* 2. Our solutions */}
             <section
