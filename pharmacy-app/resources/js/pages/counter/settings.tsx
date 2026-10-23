@@ -14,6 +14,7 @@ type Settings = {
     defaultFloat: string;
     blindClose: boolean;
     managerClosesShifts: boolean;
+    priceListId: string;
     requireCustomerAlways: boolean;
     requireCustomerForRestricted: boolean;
     requireCustomerAbove: string;
@@ -42,6 +43,7 @@ type Props = {
     settings: Settings;
     workflows: { value: string; label: string; description: string }[];
     paperSizes: string[];
+    priceLists: { id: string; name: string }[];
 };
 
 const DIRECT_PAYMENTS = [
@@ -109,7 +111,7 @@ function Field({
 }
 
 /**
- * How this branch's counter works: its workflow, cash shifts, when the
+ * How this branch's counter works: its workflow, its prices, cash shifts, when the
  * customer must be named, and what prints, on which paper, with what on it. Nothing prints
  * and nobody has to be named until the branch says so.
  */
@@ -117,6 +119,7 @@ export default function CounterSettings({
     settings,
     workflows,
     paperSizes,
+    priceLists,
 }: Props) {
     const { branch } = usePage().props;
 
@@ -201,6 +204,47 @@ export default function CounterSettings({
                                 </fieldset>
                             </PanelBody>
                         </Panel>
+
+                        {priceLists.length > 0 && (
+                            <Panel>
+                                <PanelHeader
+                                    title="Shelf prices"
+                                    description="What this branch sells at: the shop's own prices, or a price list of its own"
+                                />
+                                <PanelBody className="grid gap-3">
+                                    <Field
+                                        id="price_list_id"
+                                        label="Price level"
+                                        error={errors.price_list_id}
+                                    >
+                                        <select
+                                            id="price_list_id"
+                                            name="price_list_id"
+                                            defaultValue={settings.priceListId}
+                                            className="h-9 w-full max-w-sm rounded-md border bg-transparent px-3 text-sm"
+                                        >
+                                            <option value="">
+                                                The shop's own prices
+                                            </option>
+                                            {priceLists.map((list) => (
+                                                <option
+                                                    key={list.id}
+                                                    value={list.id}
+                                                >
+                                                    {list.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </Field>
+                                    <p className="text-xs text-muted-foreground">
+                                        What the list does not price sells at
+                                        the shop's own price. Account customers
+                                        with a price list of their own still buy
+                                        at theirs on quotations.
+                                    </p>
+                                </PanelBody>
+                            </Panel>
+                        )}
 
                         <Panel>
                             <PanelHeader

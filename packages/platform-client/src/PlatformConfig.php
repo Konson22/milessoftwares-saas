@@ -158,6 +158,19 @@ final class PlatformConfig
         return $this->own('sign_in.client_secret', 'SIGN_IN_CLIENT_SECRET');
     }
 
+    /**
+     * The mobile app's public client, whose access tokens the product's API
+     * accepts; null when the application has no mobile app.
+     *
+     * @return non-empty-string|null
+     */
+    public function mobileClientId(): ?string
+    {
+        $value = $this->config->get($this->key('mobile.client_id'));
+
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
     public function serviceClientId(): string
     {
         return $this->own('service.client_id', 'SERVICE_CLIENT_ID');

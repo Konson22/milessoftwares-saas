@@ -66,7 +66,7 @@ class ProfitabilityReportController extends Controller
 
             return [
                 'id' => (string) $id,
-                'medicine' => $items->get($id)->name ?? '',
+                'item' => $items->get($id)->name ?? '',
                 'category' => $items->get($id)->category ?? null,
                 'quantity' => (int) ($s->quantity ?? 0) - (int) ($r->quantity ?? 0),
                 'returnedQuantity' => (int) ($r->quantity ?? 0),
@@ -91,7 +91,7 @@ class ProfitabilityReportController extends Controller
         return match ($request->query('export')) {
             null => Inertia::render($industry->page('reports/profitability'), $props),
             'medicines', 'items' => CsvExport::download("profitability-{$period->from->toDateString()}-to-{$period->to->toDateString()}", [
-                'Medicine' => 'medicine',
+                $industry->itemLabel() => 'item',
                 'Quantity sold' => 'quantity',
                 'Quantity returned' => 'returnedQuantity',
                 'Discounts' => 'discountMinor',

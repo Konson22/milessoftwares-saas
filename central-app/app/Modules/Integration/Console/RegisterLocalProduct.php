@@ -19,7 +19,8 @@ use Illuminate\Validation\Rule;
  * Wires a product folder of this repository (e.g. pharmacy-app) to the
  * local platform, as staff would in admin → Applications → Integration:
  * catalog, workspace path, sign-in client with the tenant callback path,
- * service client, webhook and provisioning endpoint. The issued values go
+ * service client, webhook and provisioning endpoint, and with
+ * --mobile-redirect the mobile app's public client. The issued values go
  * into the product's .env. Local development only.
  */
 class RegisterLocalProduct extends Command
@@ -30,6 +31,7 @@ class RegisterLocalProduct extends Command
         {--prefix= : Path on workspace hosts (default: the application code)}
         {--entitle=* : Workspace slugs to entitle to the product}
         {--fresh : Issue new clients and secrets even if the product .env has them}
+        {--mobile-redirect=* : Redirect URIs of the mobile app (e.g. com.milesoftwares.pharmacy://oauth): registers its public client}
         {--catalog=platform/catalog.json : Catalog to register, relative to the folder. Another application than the folder\'s own is hosted by it}';
 
     protected $description = 'Register a product folder with the local platform and write its .env';
@@ -112,9 +114,18 @@ class RegisterLocalProduct extends Command
                 $key.'WEBHOOK_SECRET' => (string) $integration->configureWebhook($application, "{$base}/{$prefix}/platform/webhooks", true, null),
             ];
             $this->components->info("Registered clients for {$application->name}".($hosted ? ", hosted by {$primary}." : '.'));
+            // Disabled with the others above.
+            $values[$key.'MOBILE_CLIENT_ID'] = '';
         } else {
             $integration->configureWebhook($application, "{$base}/{$prefix}/platform/webhooks", false, null);
             $this->components->info("{$application->name} is already registered (use --fresh to issue new clients).");
+        }
+
+        // The mobile app signs in on the device (PKCE, no secret) and calls the product's API.
+        $mobile = array_values(array_filter(array_map('strval', (array) $this->option('mobile-redirect'))));
+        if ($mobile !== [] && (($values[$key.'MOBILE_CLIENT_ID'] ?? $this->envValue($env, $key.'MOBILE_CLIENT_ID') ?? '') === '')) {
+            $values[$key.'MOBILE_CLIENT_ID'] = $integration->registerSignInClient($application, "{$application->name} mobile", false, $mobile, null, null)['client_id'];
+            $this->components->info('Registered the mobile app\'s client: '.implode(', ', $mobile));
         }
 
         file_put_contents($envPath, $this->writeEnv($env, $values));

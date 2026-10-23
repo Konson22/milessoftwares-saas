@@ -91,13 +91,21 @@ class Prescriptions
      * that is left by default, or the quantities asked for (item id =>
      * quantity) when the patient takes part now and the rest later.
      *
+     * Dispensing submitted again with the same $submissionId (a retried
+     * request) is the sale already made, not a second one.
+     *
      * @param  array<string, int>|null  $quantities
      */
-    public function dispense(Prescription $prescription, User $by, PaymentMethod $method, ?string $paymentReference, ?int $tenderedMinor, ?array $quantities = null): Sale
+    public function dispense(Prescription $prescription, User $by, PaymentMethod $method, ?string $paymentReference, ?int $tenderedMinor, ?array $quantities = null, ?string $submissionId = null): Sale
     {
-        return DB::transaction(function () use ($prescription, $by, $method, $paymentReference, $tenderedMinor, $quantities) {
+        return DB::transaction(function () use ($prescription, $by, $method, $paymentReference, $tenderedMinor, $quantities, $submissionId) {
             // Locked first: the same quantities are never dispensed twice.
             $locked = Prescription::query()->whereKey($prescription->id)->lockForUpdate()->firstOrFail();
+
+            // Checked under the lock: a retry running alongside waits for the first.
+            if ($submissionId !== null && ($earlier = Sale::query()->where('submission_id', $submissionId)->first()) !== null) {
+                return $earlier;
+            }
 
             if (! in_array($locked->status, [PrescriptionStatus::Verified, PrescriptionStatus::PartlyDispensed], true)) {
                 throw ValidationException::withMessages(['status' => "Prescription {$locked->number} is not ready to dispense ({$locked->status->label()})."]);
@@ -138,6 +146,7 @@ class Prescriptions
                 tenderedMinor: $tenderedMinor,
                 customerName: $locked->patient_name,
                 authorized: array_values($items->map(fn (PrescriptionItem $item) => $item->medicine_id)->all()),
+                submissionId: $submissionId,
             );
             $sale->forceFill(['prescription_id' => $locked->id])->save();
 

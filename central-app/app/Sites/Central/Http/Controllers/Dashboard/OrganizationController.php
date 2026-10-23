@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Modules\Applications\Models\Application;
 use App\Modules\Entitlements\Actions\ManageEntitlements;
 use App\Modules\Marketing\Support\MarketingCatalog;
+use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Memberships\Support\CurrentOrganization;
 use App\Modules\Organizations\Actions\CheckSlugAvailability;
 use App\Modules\Organizations\Actions\CreateOrganization;
 use App\Sites\Central\Http\Requests\Dashboard\CreateOrganizationRequest;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,10 +22,18 @@ class OrganizationController extends Controller
 {
     /**
      * ?app=<code> comes from "Start free trial" on the public site and
-     * preselects that application's trial.
+     * preselects that application's trial. The owner of the current business
+     * adds it there instead (the trial page), without a new name and address.
      */
-    public function create(Request $request, MarketingCatalog $catalog): Response
+    public function create(Request $request, MarketingCatalog $catalog, TenantContext $tenant): Response|RedirectResponse
     {
+        $membership = $request->attributes->get('membership');
+        if ($request->filled('app')
+            && $membership instanceof OrganizationMembership
+            && $tenant->organization()?->owner_membership_id === $membership->id) {
+            return redirect()->route('trial', ['app' => $request->string('app')->toString()]);
+        }
+
         $trialable = array_map(fn (array $product) => [
             'code' => $product['code'],
             'name' => $product['name'],

@@ -19,6 +19,7 @@ JSON Schemas in `contracts/events/`:
 | `finance.sales_return.issued.v1.schema.json` | part of a sale returned, refunded |
 | `finance.stock.adjusted.v1.schema.json`      | opening stock, count, write-off at cost |
 | `finance.cash.counted.v1.schema.json`        | till over or short            |
+| `finance.cash.moved.v1.schema.json`          | till cash banked, from the bank, paid out |
 | `hr.employee.joined.v1.schema.json`          | a person starts working       |
 | `payroll.timesheet.submitted.v1.schema.json` | hours worked                  |
 

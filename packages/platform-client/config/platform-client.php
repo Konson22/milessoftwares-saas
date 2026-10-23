@@ -37,6 +37,13 @@ return [
         'client_secret' => env('PLATFORM_SIGN_IN_CLIENT_SECRET'),
     ],
 
+    // Mobile app client (public: authorization code + PKCE in the app). The
+    // product's API (platform.api) accepts its access tokens; without it the
+    // API answers 404.
+    'mobile' => [
+        'client_id' => env('PLATFORM_MOBILE_CLIENT_ID'),
+    ],
+
     // Service client (client credentials) for the platform API.
     'service' => [
         'client_id' => env('PLATFORM_SERVICE_CLIENT_ID'),
@@ -62,12 +69,13 @@ return [
     //
     // PLATFORM_HOSTED=retail reads PLATFORM_RETAIL_PATH, _SIGN_IN_CLIENT_ID,
     // _SIGN_IN_CLIENT_SECRET, _SERVICE_CLIENT_ID, _SERVICE_CLIENT_SECRET and
-    // _WEBHOOK_SECRET into:
+    // _WEBHOOK_SECRET (and the optional _MOBILE_CLIENT_ID) into:
     //
     //   'retail' => [
     //       'path' => 'retail',
     //       'sign_in' => ['client_id' => ..., 'client_secret' => ...],
     //       'service' => ['client_id' => ..., 'client_secret' => ...],
+    //       'mobile' => ['client_id' => ...],
     //       'webhook_secret' => ...,
     //   ],
     'hosted' => array_reduce(
@@ -78,6 +86,7 @@ return [
                 'path' => env($env.'PATH'),
                 'sign_in' => ['client_id' => env($env.'SIGN_IN_CLIENT_ID'), 'client_secret' => env($env.'SIGN_IN_CLIENT_SECRET')],
                 'service' => ['client_id' => env($env.'SERVICE_CLIENT_ID'), 'client_secret' => env($env.'SERVICE_CLIENT_SECRET')],
+                'mobile' => ['client_id' => env($env.'MOBILE_CLIENT_ID')],
                 'webhook_secret' => env($env.'WEBHOOK_SECRET'),
             ];
 

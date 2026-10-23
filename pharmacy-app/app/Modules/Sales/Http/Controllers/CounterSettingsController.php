@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Sales\Enums\CounterWorkflow;
 use App\Modules\Sales\Models\BranchCounterSettings;
 use App\Modules\Sales\Models\CounterOrder;
+use App\Modules\Sales\Models\PriceList;
 use App\Support\CurrentBranch;
 use App\Support\Industry;
 use App\Support\Money;
@@ -15,10 +16,12 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Miles\PlatformClient\Tenancy\CurrentTenant;
 
 /**
- * The counter settings of the branch being worked in: its workflow, when
- * the customer must be named, and what it prints.
+ * The counter settings of the branch being worked in: its workflow, the
+ * price level it sells at, when the customer must be named, and what it
+ * prints.
  */
 class CounterSettingsController extends Controller
 {
@@ -39,6 +42,7 @@ class CounterSettingsController extends Controller
                 'defaultFloat' => $settings->default_float_minor === null ? '' : Money::toMajor($settings->default_float_minor),
                 'blindClose' => $settings->blind_close,
                 'managerClosesShifts' => $settings->manager_closes_shifts,
+                'priceListId' => $settings->price_list_id ?? '',
                 'requireCustomerAlways' => $settings->require_customer_always,
                 'requireCustomerForRestricted' => $settings->require_customer_for_restricted,
                 'requireCustomerAbove' => $settings->require_customer_above_minor === null ? '' : Money::toMajor($settings->require_customer_above_minor),
@@ -68,6 +72,13 @@ class CounterSettingsController extends Controller
                 'description' => $workflow->description(),
             ], CounterWorkflow::cases()),
             'paperSizes' => BranchCounterSettings::PAPER_SIZES,
+            // Price levels the branch can sell at (ShelfPrices).
+            'priceLists' => PriceList::query()
+                ->where('application', $this->industry->code())
+                ->where('active', true)
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(fn (PriceList $list) => ['id' => $list->id, 'name' => $list->name]),
         ]);
     }
 
@@ -80,6 +91,9 @@ class CounterSettingsController extends Controller
             'default_float' => ['nullable', 'string', Money::rule()],
             'blind_close' => ['boolean'],
             'manager_closes_shifts' => ['boolean'],
+            'price_list_id' => ['sometimes', 'nullable', 'uuid', Rule::exists('price_lists', 'id')
+                ->where('organization_id', app(CurrentTenant::class)->id())
+                ->where('application', $this->industry->code())],
             'require_customer_always' => ['boolean'],
             'require_customer_for_restricted' => ['boolean'],
             'require_customer_above' => ['nullable', 'string', Money::rule()],
@@ -128,6 +142,7 @@ class CounterSettingsController extends Controller
             'default_float_minor' => ($validated['default_float'] ?? null) === null ? null : Money::toMinor($validated['default_float']),
             'blind_close' => (bool) ($validated['blind_close'] ?? false),
             'manager_closes_shifts' => (bool) ($validated['manager_closes_shifts'] ?? false),
+            'price_list_id' => array_key_exists('price_list_id', $validated) ? $validated['price_list_id'] : $settings->price_list_id,
             'require_customer_always' => (bool) ($validated['require_customer_always'] ?? false),
             'require_customer_for_restricted' => (bool) ($validated['require_customer_for_restricted'] ?? false),
             'require_customer_above_minor' => ($validated['require_customer_above'] ?? null) === null ? null : Money::toMinor($validated['require_customer_above']),

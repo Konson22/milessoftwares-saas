@@ -33,7 +33,7 @@ type Props = {
         lines: {
             id: string;
             itemId: string;
-            medicine: string;
+            item: string;
             batchNumber: string;
             expiresOn: string | null;
             quantity: number;
@@ -130,7 +130,7 @@ export default function Transfer({
                                         href={stockShow(line.itemId)}
                                         className="font-medium hover:underline"
                                     >
-                                        {line.medicine}
+                                        {line.item}
                                     </Link>
                                 </TableCell>
                                 <TableCell>{line.batchNumber}</TableCell>

@@ -111,6 +111,57 @@ it('closes without a note when the count is right, and keeps the figures fixed a
         ->and($sale->refresh()->void_till_session_id)->toBe(till('T-00002')->id);
 });
 
+it('counts cash put in and taken out in what the till should hold, and never more out than it holds', function () {
+    $cashier = $this->actingAsMember('acme', ['pharmacy.sales.create'], branch: $this->juba);
+    $this->post($this->workspaceUrl('acme', 'tills'), ['opening_float' => '10.00']);
+    sellAtCounter(4);                    // 10.00 cash
+    $url = $this->workspaceUrl('acme', 'tills/'.till()->id.'/movements');
+
+    $this->post($url, ['direction' => 'in', 'amount' => '5.00', 'reason' => 'Change from the safe'])->assertSessionHasNoErrors();
+    $this->post($url, ['direction' => 'out', 'amount' => '12.00', 'reason' => 'Drop to the safe'])->assertSessionHasNoErrors();
+
+    // 10.00 float + 10.00 cash taken + 5.00 in − 12.00 out.
+    $this->post($url, ['direction' => 'out', 'amount' => '13.01', 'reason' => 'Drop'])->assertSessionHasErrors('amount');
+    $this->post($url, ['direction' => 'out', 'amount' => '0', 'reason' => 'Drop'])->assertSessionHasErrors('amount');
+    $this->post($url, ['direction' => 'out', 'amount' => '1.00'])->assertSessionHasErrors('reason');
+    $this->post($url, ['direction' => 'sideways', 'amount' => '1.00', 'reason' => 'x'])->assertSessionHasErrors('direction');
+
+    $this->get($this->workspaceUrl('acme', 'tills/'.till()->id))->assertInertia(fn (Assert $page) => $page
+        ->where('summary.cashInMinor', 500)
+        ->where('summary.cashOutMinor', 1200)
+        ->where('summary.movementsCount', 2)
+        ->where('summary.expectedCashMinor', 1300)
+        ->where('canMove', true)
+        ->has('movements', 2)
+        ->where('movements.0.direction', 'in')
+        ->where('movements.1.reason', 'Drop to the safe')
+        ->where('movements.1.recordedBy', $cashier->name));
+
+    $this->post($this->workspaceUrl('acme', 'tills/'.till()->id.'/close'), ['counted_cash' => '13.00'])->assertSessionHasNoErrors();
+    expect(till())->expected_cash_minor->toBe(1300);
+
+    // A closed till takes no more cash in or out.
+    $this->post($url, ['direction' => 'in', 'amount' => '1.00', 'reason' => 'Late'])->assertSessionHasErrors('amount');
+    $this->get($this->workspaceUrl('acme', 'tills/'.till()->id))->assertInertia(fn (Assert $page) => $page->where('canMove', false));
+});
+
+it('lets a manager move cash in a cashier\'s till, and nobody else', function () {
+    $cashier = $this->actingAsMember('acme', ['pharmacy.sales.create'], branch: $this->juba);
+    $this->openTill($cashier, $this->juba);
+    $url = $this->workspaceUrl('acme', 'tills/'.till()->id.'/movements');
+
+    $this->actingAsMember('acme', ['pharmacy.sales.create'], branch: $this->juba);
+    $this->post($url, ['direction' => 'in', 'amount' => '1.00', 'reason' => 'Change'])->assertForbidden();
+
+    $this->actingAsMember('acme', ['pharmacy.tills.manage'], branch: $this->wau);
+    $this->post($url, ['direction' => 'in', 'amount' => '1.00', 'reason' => 'Change'])->assertNotFound();
+
+    $this->actingAsMember('acme', ['pharmacy.tills.manage'], branch: $this->juba);
+    $this->post($url, ['direction' => 'in', 'amount' => '1.00', 'reason' => 'Change'])->assertSessionHasNoErrors();
+
+    expect(till()->cashMovements()->sole())->amount_minor->toBe(100);
+});
+
 it('gives cash back only from an open till', function () {
     $this->actingAsMember('acme', ['pharmacy.sales.create'], branch: $this->juba);
     $this->post($this->workspaceUrl('acme', 'tills'), ['opening_float' => '0']);

@@ -71,8 +71,8 @@ it('reports the month so far: takings, profit, payments, days and best sellers',
                 ['day' => '2026-10-01', 'count' => 1, 'totalMinor' => 1000],
                 ['day' => '2026-10-12', 'count' => 1, 'totalMinor' => 500],
             ])
-            ->where('topMedicines', [
-                ['id' => $this->para->id, 'medicine' => $this->para->label(), 'quantity' => 6, 'revenueMinor' => 1500, 'costMinor' => 600],
+            ->where('topItems', [
+                ['id' => $this->para->id, 'item' => $this->para->label(), 'quantity' => 6, 'revenueMinor' => 1500, 'costMinor' => 600],
             ])
             // P-1: 40 − 4 − 2 (the voided one came back); E-1's 4 expired.
             ->where('stock', [

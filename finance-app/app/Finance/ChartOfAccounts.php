@@ -41,7 +41,7 @@ class ChartOfAccounts
         ['code' => '6300', 'name' => 'Bank and mobile money charges', 'type' => AccountType::Expense],
         ['code' => '6400', 'name' => 'Depreciation', 'type' => AccountType::Expense],
         ['code' => '6800', 'name' => 'Cash over and short', 'type' => AccountType::Expense, 'key' => Account::CASH_OVER_SHORT],
-        ['code' => '6900', 'name' => 'Other expenses', 'type' => AccountType::Expense],
+        ['code' => '6900', 'name' => 'Other expenses', 'type' => AccountType::Expense, 'key' => Account::OTHER_EXPENSES],
         ['code' => '6950', 'name' => 'Exchange gains and losses', 'type' => AccountType::Expense, 'key' => Account::FX],
         ['code' => '6960', 'name' => 'Gain or loss on disposal of assets', 'type' => AccountType::Expense, 'key' => Account::DISPOSAL],
     ];

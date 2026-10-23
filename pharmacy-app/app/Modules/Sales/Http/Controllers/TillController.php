@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Modules\Sales\Actions\Tills;
 use App\Modules\Sales\Enums\PaymentMethod;
 use App\Modules\Sales\Models\BranchCounterSettings;
+use App\Modules\Sales\Models\TillCashMovement;
 use App\Modules\Sales\Models\TillSession;
 use App\Support\CurrentBranch;
 use App\Support\Industry;
@@ -89,10 +90,41 @@ class TillController extends Controller
         return Inertia::render($this->industry->page('tills/show'), [
             'till' => $this->present($till, $managing),
             'summary' => $summary,
+            // Recorded by the cashier or a manager, so seen even when blind.
+            'movements' => $this->tills->movements($till)->map(fn (TillCashMovement $movement) => [
+                'id' => $movement->id,
+                'direction' => $movement->direction,
+                'counterpart' => $movement->counterpart,
+                'label' => $movement->label(),
+                'amountMinor' => $movement->amount_minor,
+                'reason' => $movement->reason,
+                'recordedBy' => $movement->recorder->name,
+                'recordedAt' => $movement->created_at->toIso8601String(),
+            ]),
             'methods' => array_map(fn (PaymentMethod $method) => ['value' => $method->value, 'label' => $method->label()], PaymentMethod::cases()),
             'shifts' => $rules,
             'canClose' => $till->status === TillSession::OPEN && ($managing || ! $rules['managerCloses']),
+            'canMove' => $till->status === TillSession::OPEN,
         ]);
+    }
+
+    /**
+     * Cash put into or taken out of an open shift: to or from the safe or
+     * the bank, or paid out for an expense.
+     */
+    public function move(Request $request, TillSession $till): RedirectResponse
+    {
+        $this->ensureVisible($request, $till);
+        $validated = $request->validate([
+            'direction' => ['required', 'in:'.TillCashMovement::IN.','.TillCashMovement::OUT],
+            'counterpart' => ['nullable', 'in:'.implode(',', TillCashMovement::COUNTERPARTS)],
+            'amount' => ['required', 'string', Money::rule()],
+            'reason' => ['required', 'string', 'max:255'],
+        ]);
+
+        $movement = $this->tills->move($till, $this->user($request), $validated['direction'], Money::toMinor($validated['amount']), $validated['reason'], counterpart: $validated['counterpart'] ?? TillCashMovement::SAFE);
+
+        return back()->with('success', "{$movement->label()}: ".Money::toMajor($movement->amount_minor).'.');
     }
 
     public function close(Request $request, TillSession $till): RedirectResponse

@@ -2,14 +2,20 @@
 
 namespace Miles\PlatformClient\Testing;
 
+use DateTimeImmutable;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Lcobucci\JWT\Configuration;
+use Lcobucci\JWT\Signer\Key\InMemory;
+use Lcobucci\JWT\Signer\Rsa\Sha256;
 use Miles\PlatformClient\PlatformConfig;
 
 /**
  * The platform API, faked at the HTTP layer for product tests: service
- * tokens, organization lookups, effective access, event tokens and health.
+ * tokens, organization lookups, effective access, event tokens and health,
+ * and the JWKS that the mobile app's tokens (appToken(), appIdToken()) are
+ * signed with.
  * Use it through InteractsWithPlatform.
  */
 final class PlatformFake
@@ -43,6 +49,12 @@ final class PlatformFake
 
     /** @var list<string> modules the organization is not entitled to: event tokens answer 404 */
     public array $notEntitledTo = [];
+
+    /** @var array{private: string, public: string}|null */
+    private static ?array $keys = null;
+
+    /** @var array<string, string> more public keys the JWKS publishes, by kid (PEM) */
+    private array $publishedKeys = [];
 
     public function install(): self
     {
@@ -97,6 +109,10 @@ final class PlatformFake
                 $this->eventTokens[] = ['organization_id' => (string) $request['organization_id'], 'audience' => (string) $request['audience'], 'application' => $this->caller($request)];
 
                 return Http::response(['token' => 'fake-event-token', 'expires_in' => 300]);
+            }
+
+            if ($path === '/oauth/jwks') {
+                return Http::response($this->jwks());
             }
 
             if ($path === '/api/v1/health') {
@@ -190,6 +206,119 @@ final class PlatformFake
             ], $roles),
             'max_age' => 60,
         ];
+    }
+
+    /**
+     * An access token of the mobile app for this user, as the platform issues
+     * it: for the mobile client, no issuer, ten minutes.
+     *
+     * @param  non-empty-string|null  $audience  another client than the mobile one
+     */
+    public function appToken(string $subject, ?string $audience = null, ?DateTimeImmutable $expiresAt = null): string
+    {
+        $config = self::jwt();
+
+        return $config->builder()
+            ->permittedFor($audience ?? self::mobileClient())
+            ->identifiedBy(bin2hex(random_bytes(20)))
+            ->relatedTo($subject !== '' ? $subject : throw new \InvalidArgumentException('No subject.'))
+            ->issuedAt(now()->subSeconds(5)->toDateTimeImmutable())
+            ->canOnlyBeUsedAfter(now()->subSeconds(5)->toDateTimeImmutable())
+            ->expiresAt($expiresAt ?? now()->addMinutes(10)->toDateTimeImmutable())
+            ->withClaim('scopes', ['openid', 'profile', 'email'])
+            ->getToken($config->signer(), $config->signingKey())
+            ->toString();
+    }
+
+    /**
+     * The id token the mobile app received with it.
+     */
+    public function appIdToken(string $subject, string $name = 'Test Member', string $email = 'member@example.test'): string
+    {
+        $config = self::jwt();
+
+        return $config->builder()
+            ->issuedBy(app(PlatformConfig::class)->issuer())
+            ->permittedFor(self::mobileClient())
+            ->relatedTo($subject !== '' ? $subject : throw new \InvalidArgumentException('No subject.'))
+            ->issuedAt(now()->subSeconds(5)->toDateTimeImmutable())
+            ->expiresAt(now()->addHour()->toDateTimeImmutable())
+            ->withClaim('name', $name)
+            ->withClaim('email', $email)
+            ->withClaim('email_verified', true)
+            ->getToken($config->signer(), $config->signingKey())
+            ->toString();
+    }
+
+    /**
+     * @return array{keys: list<array<string, string>>}
+     */
+    public function jwks(): array
+    {
+        $keys = [self::jwk(self::keys()['public'])];
+        foreach ($this->publishedKeys as $kid => $public) {
+            $keys[] = ['kid' => $kid, ...self::jwk($public)];
+        }
+
+        return ['keys' => $keys];
+    }
+
+    /**
+     * Publishes another public key in the JWKS, for a test that signs its
+     * own tokens (event tokens a module verifies, say).
+     */
+    public function publishKey(string $kid, string $publicPem): self
+    {
+        $this->publishedKeys[$kid] = $publicPem;
+
+        return $this;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function jwk(string $publicPem): array
+    {
+        $details = openssl_pkey_get_details(openssl_pkey_get_public($publicPem) ?: throw new \RuntimeException('Bad test key.')) ?: [];
+
+        return [
+            'kty' => 'RSA',
+            'alg' => 'RS256',
+            'use' => 'sig',
+            'n' => rtrim(strtr(base64_encode($details['rsa']['n']), '+/', '-_'), '='),
+            'e' => rtrim(strtr(base64_encode($details['rsa']['e']), '+/', '-_'), '='),
+        ];
+    }
+
+    /**
+     * @return non-empty-string
+     */
+    private static function mobileClient(): string
+    {
+        return app(PlatformConfig::class)->mobileClientId() ?? throw new \RuntimeException('Set platform-client.mobile.client_id.');
+    }
+
+    private static function jwt(): Configuration
+    {
+        return Configuration::forAsymmetricSigner(new Sha256, InMemory::plainText(self::keys()['private']), InMemory::plainText(self::keys()['public']));
+    }
+
+    /**
+     * One RSA key for the test run.
+     *
+     * @return array{private: non-empty-string, public: non-empty-string}
+     */
+    private static function keys(): array
+    {
+        if (self::$keys === null) {
+            $options = ['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA, 'config' => __DIR__.'/openssl.cnf'];
+            $key = openssl_pkey_new($options) ?: throw new \RuntimeException('Cannot generate a test key.');
+            openssl_pkey_export($key, $private, null, $options);
+            self::$keys = ['private' => (string) $private, 'public' => (string) (openssl_pkey_get_details($key) ?: [])['key']];
+        }
+
+        /** @var array{private: non-empty-string, public: non-empty-string} */
+        return self::$keys;
     }
 
     /**

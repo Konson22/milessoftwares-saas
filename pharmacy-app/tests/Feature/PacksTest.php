@@ -184,9 +184,9 @@ it('shows what a unit last cost beside its selling price, and the pack sizes to 
         ->assertInertia(fn (AssertableInertia $page) => $page->where('medicine.lastUnitCostMinor', 103));
     $this->get($this->workspaceUrl('acme', 'purchase-orders/create'))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->where('medicines.0.label', 'Amoxil 500 mg tablet')
-            ->where('medicines.0.lastUnitCostMinor', 103)
-            ->where('medicines.0.sellPriceMinor', $this->amox->sell_price_minor)
-            ->where('medicines.0.packs.0.name', 'box')
-            ->where('medicines.0.packs.0.units', 30));
+            ->where('items.0.label', 'Amoxil 500 mg tablet')
+            ->where('items.0.lastUnitCostMinor', 103)
+            ->where('items.0.sellPriceMinor', $this->amox->sell_price_minor)
+            ->where('items.0.packs.0.name', 'box')
+            ->where('items.0.packs.0.units', 30));
 });

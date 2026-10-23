@@ -8,6 +8,7 @@ use App\Models\JournalLine;
 use App\Models\Supplier;
 use App\Models\TaxCode;
 use App\Models\TaxReturn;
+use Carbon\CarbonImmutable;
 use Inertia\Testing\AssertableInertia as Assert;
 
 const TAX_OFFICER = [
@@ -183,7 +184,7 @@ it('locks a filed period for anything that touches the tax account', function ()
     expect($journal->entry_date->toDateString())->toBe('2026-10-01')->and($journal->memo)->toContain('books locked');
 
     // Returns follow one another, and cover days that are over.
-    $this->post(taxUrl('tax-returns'), ['starts_on' => '2026-08-01', 'ends_on' => '2026-10-20'])->assertSessionHasErrors('ends_on');
+    $this->post(taxUrl('tax-returns'), ['starts_on' => '2026-08-01', 'ends_on' => CarbonImmutable::today()->toDateString()])->assertSessionHasErrors('ends_on');
     $this->post(taxUrl('tax-returns'), ['ends_on' => '2026-10-15'])->assertSessionHasNoErrors();
     $second = $this->asTenant('acme', fn () => TaxReturn::query()->orderByDesc('ends_on')->first());
     expect($second->starts_on->toDateString())->toBe('2026-10-01')->and($second->output_minor)->toBe(1800);

@@ -6,7 +6,7 @@
         "kind": "shared_module",
         "status": "planned"
     },
-    "version": "1.0.0",
+    "version": "1.1.0",
     "permissions": [
         {
             "key": "hr.employees.view",
@@ -51,22 +51,52 @@
             "name": "Upload and remove staff documents",
             "sensitivity": 3,
             "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "hr.leave.view",
+            "name": "View leave",
+            "description": "Leave requests and balances of the staff in reach.",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch", "department"]
+        },
+        {
+            "key": "hr.leave.manage",
+            "name": "Record and cancel leave, change leave days",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch", "department"]
+        },
+        {
+            "key": "hr.leave.approve",
+            "name": "Approve or reject leave",
+            "description": "Never one's own leave, nor a request one recorded.",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch", "department"]
+        },
+        {
+            "key": "hr.leave.settings",
+            "name": "Set up kinds of leave and public holidays",
+            "sensitivity": 3,
+            "scopes": ["organization"]
         }
     ],
     "roles": [
         {
             "key": "line_manager",
             "name": "Line manager",
-            "description": "Sees the work details of the staff in their branch or department.",
-            "sensitivity": 1,
+            "description": "Sees the work details of the staff in their branch or department and decides on their leave.",
+            "sensitivity": 2,
             "delegable": true,
             "scopes": ["organization", "branch", "department"],
-            "permissions": ["hr.employees.view"]
+            "permissions": [
+                "hr.employees.view",
+                "hr.leave.view",
+                "hr.leave.approve"
+            ]
         },
         {
             "key": "hr_officer",
             "name": "HR officer",
-            "description": "Keeps staff records, contracts and documents. No personal or bank details.",
+            "description": "Keeps staff records, contracts, documents and leave. No personal or bank details.",
             "sensitivity": 3,
             "delegable": true,
             "scopes": ["organization", "branch"],
@@ -75,7 +105,10 @@
                 "hr.employees.manage",
                 "hr.employment.manage",
                 "hr.documents.view",
-                "hr.documents.manage"
+                "hr.documents.manage",
+                "hr.leave.view",
+                "hr.leave.manage",
+                "hr.leave.approve"
             ]
         },
         {
@@ -92,7 +125,11 @@
                 "hr.personal.view",
                 "hr.personal.manage",
                 "hr.documents.view",
-                "hr.documents.manage"
+                "hr.documents.manage",
+                "hr.leave.view",
+                "hr.leave.manage",
+                "hr.leave.approve",
+                "hr.leave.settings"
             ]
         }
     ]

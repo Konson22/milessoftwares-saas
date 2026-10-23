@@ -3,6 +3,7 @@ import { PageHeader } from '@miles/ui/components/page-header';
 import { Panel, PanelHeader } from '@miles/ui/components/panel';
 import { StatCard } from '@miles/ui/components/stat-card';
 import { StatusBadge } from '@miles/ui/components/status-badge';
+import { Button } from '@miles/ui/components/ui/button';
 import {
     Table,
     TableBody,
@@ -12,6 +13,7 @@ import {
 import { formatDate } from '@/components/fields';
 import { show } from '@/routes/employees';
 import { index as documents } from '@/routes/employees/documents';
+import { index as leave } from '@/routes/leave';
 
 type Props = {
     summary: {
@@ -37,6 +39,8 @@ type Props = {
                   expiry: 'expired' | 'expiring';
               }[]
             | null;
+        /** Null without the leave permission. */
+        leave: { awayToday: number; waiting: number } | null;
     } | null;
 };
 
@@ -72,6 +76,20 @@ export default function Home({ summary }: Props) {
                             value={summary.leftThisMonth}
                         />
                     </div>
+
+                    {summary.leave !== null && (
+                        <Panel className="mb-3">
+                            <PanelHeader
+                                title="Leave"
+                                description={`${summary.leave.awayToday === 1 ? '1 person is' : `${summary.leave.awayToday} people are`} on leave today; ${summary.leave.waiting === 1 ? '1 request waits' : `${summary.leave.waiting} requests wait`} for a decision.`}
+                                actions={
+                                    <Button asChild size="sm" variant="outline">
+                                        <Link href={leave()}>Open leave</Link>
+                                    </Button>
+                                }
+                            />
+                        </Panel>
+                    )}
 
                     <Panel>
                         <PanelHeader

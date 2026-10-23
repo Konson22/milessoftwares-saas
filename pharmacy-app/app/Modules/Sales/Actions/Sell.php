@@ -22,8 +22,9 @@ use Miles\PlatformClient\Events\Outbox;
 
 /**
  * A sale at the counter of a branch: stock taken oldest expiry first,
- * by the unit or by the pack (at the pack's price), priced at today's price
- * less any discount, paid, and reported to Finance
+ * by the unit or by the pack (at the pack's price), priced at today's shelf
+ * price of the branch (ShelfPrices: its price level, or the shop's own)
+ * less any discount (a running promotion's, or the seller's: the bigger), paid, and reported to Finance
  * as a receipt (finance.invoice.issued) and a payment
  * (finance.payment.received). All in one transaction: a sale either
  * happened completely or not at all.
@@ -46,6 +47,12 @@ use Miles\PlatformClient\Events\Outbox;
  * Stock already taken for a line ($taken, by line: a counter order
  * dispensed before it was paid) is sold as it is, not taken again.
  *
+ * An item that tracks serial numbers names the recorded serial of each
+ * unit sold (Serials).
+ *
+ * A sale naming a customer earns loyalty points, and may redeem some: their
+ * value comes off as a discount shared over the lines (Loyalty).
+ *
  * A sale submitted with a $submissionId that was already used is that
  * sale again, not a second one (a double click, a retried request).
  */
@@ -60,14 +67,19 @@ class Sell
         private readonly Industry $industry,
         private readonly CustomerAccounts $accounts,
         private readonly CustomerRequirement $customers,
+        private readonly ShelfPrices $shelf,
+        private readonly Promotions $promotions,
+        private readonly Loyalty $loyalty,
+        private readonly Serials $serials,
     ) {}
 
     /**
-     * @param  list<array{item_id: string, quantity: int, discount_percent?: int, pack_id?: string|null}>  $items  quantity in packs when a pack is named
+     * @param  list<array{item_id: string, quantity: int, discount_percent?: int, pack_id?: string|null, serials?: list<string>}>  $items  quantity in packs when a pack is named
      * @param  list<string>  $authorized  restricted item ids allowed in this sale (a verified prescription's)
      * @param  int  $maxDiscountPercent  the most this seller may take off a line (0: no discounts)
      * @param  string|null  $customerId  an account customer of this industry (required on account)
      * @param  array<int, list<array{batch: Batch, quantity: int}>>  $taken  by line index: the batches its stock already came from
+     * @param  int  $redeemPoints  the named customer's loyalty points taken off this sale
      *
      * @throws ValidationException
      * @throws InsufficientStock
@@ -86,13 +98,14 @@ class Sell
         ?string $customerId = null,
         ?string $customerPhone = null,
         array $taken = [],
+        int $redeemPoints = 0,
     ): Sale {
         if ($submissionId !== null && ($earlier = $this->submitted($submissionId)) !== null) {
             return $earlier;
         }
 
         try {
-            return $this->sell($by, $branchId, $items, $method, $paymentReference, $tenderedMinor, $customerName, $authorized, $maxDiscountPercent, $submissionId, $customerId, $customerPhone, $taken);
+            return $this->sell($by, $branchId, $items, $method, $paymentReference, $tenderedMinor, $customerName, $authorized, $maxDiscountPercent, $submissionId, $customerId, $customerPhone, $taken, $redeemPoints);
         } catch (UniqueConstraintViolationException $e) {
             // The same submission, committed by a request running alongside.
             if ($submissionId !== null && ($earlier = $this->submitted($submissionId)) !== null) {
@@ -104,7 +117,7 @@ class Sell
     }
 
     /**
-     * @param  list<array{item_id: string, quantity: int, discount_percent?: int, pack_id?: string|null}>  $items
+     * @param  list<array{item_id: string, quantity: int, discount_percent?: int, pack_id?: string|null, serials?: list<string>}>  $items
      * @param  list<string>  $authorized
      * @param  array<int, list<array{batch: Batch, quantity: int}>>  $taken
      */
@@ -122,8 +135,9 @@ class Sell
         ?string $customerId,
         ?string $customerPhone,
         array $taken,
+        int $redeemPoints,
     ): Sale {
-        return DB::transaction(function () use ($by, $branchId, $items, $method, $paymentReference, $tenderedMinor, $customerName, $authorized, $maxDiscountPercent, $submissionId, $customerId, $customerPhone, $taken) {
+        return DB::transaction(function () use ($by, $branchId, $items, $method, $paymentReference, $tenderedMinor, $customerName, $authorized, $maxDiscountPercent, $submissionId, $customerId, $customerPhone, $taken, $redeemPoints) {
             $till = $this->tills->requireOpen($by, $branchId);
 
             // Locked until the sale commits: its balance cannot move meanwhile.
@@ -133,7 +147,7 @@ class Sell
             }
 
             // Price and check everything before touching stock.
-            ['lines' => $priced, 'total' => $total, 'discount' => $discountTotal] = $this->price($items, $authorized, $maxDiscountPercent);
+            ['lines' => $priced, 'total' => $total, 'discount' => $discountTotal] = $this->price($items, $authorized, $maxDiscountPercent, $branchId);
 
             $this->customers->ensure(
                 BranchCounterSettings::forBranch($branchId, $this->industry->code()),
@@ -141,6 +155,15 @@ class Sell
                 array_any($priced, fn (array $line) => $line[0]->restricted),
                 $total,
             );
+
+            // Points redeemed come off as a discount, shared over the lines.
+            $program = $customer === null ? null : $this->loyalty->program();
+            if ($redeemPoints > 0) {
+                $redeemedMinor = $this->loyalty->worth($program, $customer, $redeemPoints, $total);
+                $priced = $this->spread($priced, $redeemedMinor, $total);
+                $total -= $redeemedMinor;
+                $discountTotal += $redeemedMinor;
+            }
 
             if ($method === PaymentMethod::Account) {
                 $this->accounts->ensureCredit($customer, $total);
@@ -180,7 +203,7 @@ class Sell
 
             $invoiceLines = [];
 
-            foreach ($priced as [$item, $quantity, $gross, $discount, $pack, $packs, $index]) {
+            foreach ($priced as [$item, $quantity, $gross, $discount, $pack, $packs, $index, $unitPrice, $packPrice, $promotionId, $serials]) {
                 // What the stock sold cost, batch by batch: Finance's cost of
                 // goods sold. The price and the discount are shared across the
                 // batches in proportion, the last one taking what rounding
@@ -202,13 +225,18 @@ class Sell
                         'item_id' => $item->id,
                         'batch_id' => $part['batch']->id,
                         'quantity' => $part['quantity'],
-                        'unit_price_minor' => $item->sell_price_minor,
+                        'unit_price_minor' => $unitPrice,
                         'discount_minor' => $partDiscount,
+                        'promotion_id' => $promotionId,
                         'line_total_minor' => $partGross - $partDiscount,
                         'pack_name' => $pack?->name,
                         'units_per_pack' => $pack->units ?? 1,
-                        'pack_price_minor' => $pack?->sellPrice($item),
+                        'pack_price_minor' => $packPrice,
                     ]);
+                }
+
+                if ($serials !== []) {
+                    $this->serials->sell($sale, $item, $serials, "items.{$index}.serials");
                 }
 
                 $invoiceLines[] = [
@@ -218,6 +246,10 @@ class Sell
                     'revenue_account' => null,
                     'cost_minor' => $cost,
                 ];
+            }
+
+            if ($customer !== null) {
+                $this->loyalty->settle($program, $sale, $customer, $redeemPoints);
             }
 
             $this->outbox->record('finance', 'finance.invoice.issued', 1, "sale:{$sale->id}:invoice", [
@@ -250,16 +282,17 @@ class Sell
     /**
      * Prices and checks a basket without touching stock: only active items
      * of this industry, restricted ones only when authorized, discounts
-     * within what the seller may give.
+     * within what the seller may give; at the branch's shelf prices, with
+     * its running promotions, when one is named, the shop's own otherwise.
      *
-     * @param  list<array{item_id: string, quantity: int, discount_percent?: int, pack_id?: string|null}>  $items
+     * @param  list<array{item_id: string, quantity: int, discount_percent?: int, pack_id?: string|null, serials?: list<string>}>  $items
      * @param  list<string>  $authorized
-     *                                    Each line is [item, units, gross, discount, pack, quantity (in packs when a pack is named), line index].
-     * @return array{lines: list<array{0: Item, 1: int, 2: int, 3: int, 4: ItemPack|null, 5: int, 6: int}>, total: int, discount: int}
+     *                                    Each line is [item, units, gross, discount, pack, quantity (in packs when a pack is named), line index, unit price, pack price (null by the unit), the promotion giving the discount, the serials sold].
+     * @return array{lines: list<array{0: Item, 1: int, 2: int, 3: int, 4: ItemPack|null, 5: int, 6: int, 7: int, 8: int|null, 9: string|null, 10: list<string>}>, total: int, discount: int}
      *
      * @throws ValidationException
      */
-    public function price(array $items, array $authorized, int $maxDiscountPercent): array
+    public function price(array $items, array $authorized, int $maxDiscountPercent, ?string $branchId = null): array
     {
         $priced = [];
         $total = 0;
@@ -279,7 +312,10 @@ class Sell
             if ($percent < 0 || $percent > 100) {
                 throw ValidationException::withMessages(["items.{$index}.discount_percent" => 'A discount is between 0 and 100%.']);
             }
-            if ($percent > $maxDiscountPercent) {
+            // A promotion is given whoever sells; the seller's own discount only within their limit.
+            $promotion = $branchId === null ? null : $this->promotions->best($item, $branchId);
+            $promoted = $promotion->percent_off ?? 0;
+            if ($percent > $maxDiscountPercent && $percent > $promoted) {
                 throw ValidationException::withMessages(["items.{$index}.discount_percent" => $maxDiscountPercent === 0
                     ? 'You may not give discounts.'
                     : "You may give at most {$maxDiscountPercent}% off."]);
@@ -287,15 +323,57 @@ class Sell
 
             $pack = $this->packs->find($item->id, $line['pack_id'] ?? null, "items.{$index}.pack_id");
             $units = $pack === null ? $line['quantity'] : $line['quantity'] * $pack->units;
-            $gross = $line['quantity'] * ($pack === null ? $item->sell_price_minor : $pack->sellPrice($item));
+
+            // An item that tracks serials names each unit sold.
+            $serials = [];
+            if ($item->tracks_serials) {
+                $serials = $this->serials->clean($line['serials'] ?? []);
+                if (count($serials) !== $units) {
+                    throw ValidationException::withMessages(["items.{$index}.serials" => "Scan the serial number of each {$item->name} sold ({$units})."]);
+                }
+            }
+            $unitPrice = $branchId === null ? $item->sell_price_minor : $this->shelf->price($branchId, $item);
+            $packPrice = $pack === null ? null : ($branchId === null ? $pack->sellPrice($item) : $this->shelf->price($branchId, $item, $pack));
+            $gross = $line['quantity'] * ($packPrice ?? $unitPrice);
+            $promotionId = $promoted > 0 && $promoted >= $percent ? $promotion?->id : null;
+            $percent = max($percent, $promoted);
             $discount = intdiv($gross * $percent + 50, 100);
 
-            $priced[] = [$item, $units, $gross, $discount, $pack, $line['quantity'], $index];
+            $priced[] = [$item, $units, $gross, $discount, $pack, $line['quantity'], $index, $unitPrice, $packPrice, $promotionId, $serials];
             $total += $gross - $discount;
             $discountTotal += $discount;
         }
 
         return ['lines' => $priced, 'total' => $total, 'discount' => $discountTotal];
+    }
+
+    /**
+     * Shares an amount off over priced lines, in proportion to what each
+     * costs; the dearest line takes what rounding leaves.
+     *
+     * @param  list<array<int, mixed>>  $priced  as price() gives them
+     * @return list<array<int, mixed>>
+     */
+    private function spread(array $priced, int $amount, int $total): array
+    {
+        if ($amount === 0 || $total === 0) {
+            return $priced;
+        }
+
+        $nets = array_map(fn (array $line) => $line[2] - $line[3], $priced);
+        $dearest = array_search(max($nets), $nets, true);
+        $left = $amount;
+        foreach ($priced as $i => $line) {
+            if ($i === $dearest) {
+                continue;
+            }
+            $share = intdiv($amount * $nets[$i], $total);
+            $priced[$i][3] += $share;
+            $left -= $share;
+        }
+        $priced[$dearest][3] += $left;
+
+        return $priced;
     }
 
     private function submitted(string $submissionId): ?Sale

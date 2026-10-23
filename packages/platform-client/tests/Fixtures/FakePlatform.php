@@ -182,6 +182,36 @@ final class FakePlatform
         return $builder->getToken($config->signer(), $config->signingKey())->toString();
     }
 
+    /**
+     * A mobile app access token as Passport issues it: audience = the
+     * client, subject, no issuer, no kid.
+     *
+     * @param  array<string, mixed>  $claims
+     */
+    public function accessToken(array $claims = []): string
+    {
+        $claims += [
+            'aud' => 'mobile-client',
+            'sub' => self::subject('ada'),
+            'iat' => now()->subSeconds(10)->toDateTimeImmutable(),
+            'exp' => now()->addMinutes(10)->toDateTimeImmutable(),
+        ];
+
+        $keys = $this->idTokenSignedWith === 'other' ? self::otherKeys() : self::keys();
+        $config = Configuration::forAsymmetricSigner(new Sha256, InMemory::plainText($keys['private']), InMemory::plainText($keys['public']));
+
+        return $config->builder()
+            ->permittedFor($claims['aud'])
+            ->identifiedBy(bin2hex(random_bytes(8)))
+            ->relatedTo($claims['sub'])
+            ->issuedAt($claims['iat'])
+            ->canOnlyBeUsedAfter($claims['iat'])
+            ->expiresAt($claims['exp'])
+            ->withClaim('scopes', ['openid', 'profile', 'email'])
+            ->getToken($config->signer(), $config->signingKey())
+            ->toString();
+    }
+
     public function jwks(): array
     {
         $details = openssl_pkey_get_details(openssl_pkey_get_public(self::keys()['public']));

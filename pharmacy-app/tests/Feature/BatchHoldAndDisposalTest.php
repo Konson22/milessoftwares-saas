@@ -43,7 +43,7 @@ describe('holds', function () {
 
         $cashier = $this->actingAsMember('acme', ['pharmacy.sales.view', 'pharmacy.sales.create'], branch: $this->juba);
         $this->openTill($cashier, $this->juba);
-        $this->get($this->workspaceUrl('acme', 'sales/create'))->assertInertia(fn (Assert $page) => $page->where('medicines.0.available', 10));
+        $this->get($this->workspaceUrl('acme', 'sales/create'))->assertInertia(fn (Assert $page) => $page->where('items.0.available', 10));
         $this->post($this->workspaceUrl('acme', 'sales'), [
             'items' => [['item_id' => $this->para->id, 'quantity' => 11]],
             'payment_method' => 'mobile_money',

@@ -178,7 +178,7 @@ class StockController extends Controller
         $can = fn (string $permission) => $access?->allowsIn($permission, branchId: $this->branch->id()) ?? false;
 
         return Inertia::render($this->industry->page('stock/show'), [
-            'medicine' => [
+            'item' => [
                 'id' => $item->id,
                 'label' => $item->name,
                 'unit' => $item->unit,
@@ -231,8 +231,7 @@ class StockController extends Controller
 
     public function storeAdjustment(Request $request, Batch $batch, Stock $stock): RedirectResponse
     {
-        // Batches of other branches look unknown.
-        abort_unless($batch->branch_id === $this->branch->id(), 404);
+        $this->ensureBatchOurs($batch);
 
         $validated = $request->validate([
             'change' => ['required', 'integer', 'not_in:0', 'between:-1000000,1000000'],
@@ -259,7 +258,7 @@ class StockController extends Controller
 
     public function hold(Request $request, Batch $batch, BatchHolds $holds): RedirectResponse
     {
-        abort_unless($batch->branch_id === $this->branch->id(), 404);
+        $this->ensureBatchOurs($batch);
 
         $validated = $request->validate([
             'status' => ['required', Rule::in([Batch::QUARANTINED, Batch::RECALLED])],
@@ -273,7 +272,7 @@ class StockController extends Controller
 
     public function release(Batch $batch, BatchHolds $holds): RedirectResponse
     {
-        abort_unless($batch->branch_id === $this->branch->id(), 404);
+        $this->ensureBatchOurs($batch);
 
         $holds->release($batch);
 
@@ -294,5 +293,14 @@ class StockController extends Controller
     private function ensureOurs(Item $item): void
     {
         abort_unless(in_array($item->kind, $this->industry->itemKinds(), true), 404);
+    }
+
+    /**
+     * Batches of other branches, and of another industry's items at this
+     * one, look unknown: a shop's member never adjusts or holds medicines.
+     */
+    private function ensureBatchOurs(Batch $batch): void
+    {
+        abort_unless($batch->branch_id === $this->branch->id() && $this->industry->handles($batch->item->kind), 404);
     }
 }

@@ -18,6 +18,7 @@ type Product = {
     barcode: string | null;
     category: string | null;
     tracksExpiry: boolean;
+    tracksSerials: boolean;
     sellPrice: string;
     /** null: never received, so no buying price yet. */
     lastUnitCostMinor: number | null;
@@ -462,6 +463,24 @@ export default function ProductForm({ product, categories }: Props) {
                                             {errors.tracks_expiry}
                                         </p>
                                     )}
+                                    <input
+                                        type="hidden"
+                                        name="tracks_serials"
+                                        value="0"
+                                    />
+                                    <label className="flex items-center gap-2 text-sm">
+                                        <input
+                                            type="checkbox"
+                                            name="tracks_serials"
+                                            value="1"
+                                            defaultChecked={
+                                                product?.tracksSerials ?? false
+                                            }
+                                        />
+                                        Track serial numbers (phones,
+                                        appliances): each unit sold names its
+                                        serial
+                                    </label>
                                     <input
                                         type="hidden"
                                         name="active"

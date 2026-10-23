@@ -88,3 +88,32 @@ it('sends a till that was short to Finance, and nothing when it balances', funct
     $this->post($this->workspaceUrl('acme', "tills/{$second->id}/close"), ['counted_cash' => '10.00'])->assertSessionHasNoErrors();
     expect(financeEvents('finance.cash.counted'))->toHaveCount(1);
 });
+
+it('sends till cash banked, taken from the bank or paid out to Finance, and keeps moves to the safe to itself', function () {
+    $cashier = $this->actingAsMember('acme', ['pharmacy.sales.create'], branch: $this->juba);
+    $this->openTill($cashier, $this->juba, 10000);
+    $till = $this->asTenant('acme', fn () => TillSession::query()->sole());
+    $move = fn (array $data) => $this->post($this->workspaceUrl('acme', "tills/{$till->id}/movements"), $data);
+
+    $move(['direction' => 'out', 'amount' => '20.00', 'reason' => 'Drop to the safe'])->assertSessionHasNoErrors();
+    $move(['direction' => 'out', 'counterpart' => 'bank', 'amount' => '50.00', 'reason' => 'Deposited at the bank'])->assertSessionHasNoErrors();
+    $move(['direction' => 'in', 'counterpart' => 'bank', 'amount' => '5.00', 'reason' => 'Change from the bank'])->assertSessionHasNoErrors();
+    $move(['direction' => 'out', 'counterpart' => 'expense', 'amount' => '3.50', 'reason' => 'Cleaning materials'])->assertSessionHasNoErrors();
+    $move(['direction' => 'in', 'counterpart' => 'expense', 'amount' => '1.00', 'reason' => 'Refund'])->assertSessionHasErrors('counterpart');
+    $move(['direction' => 'out', 'counterpart' => 'elsewhere', 'amount' => '1.00', 'reason' => 'x'])->assertSessionHasErrors('counterpart');
+
+    $events = financeEvents('finance.cash.moved');
+    expect($events)->toHaveCount(3)
+        ->and(array_map(fn (Envelope $event) => [$event->payload['direction'], $event->payload['counterpart'], $event->payload['amount_minor']], $events))
+        ->toBe([['out', 'bank', 5000], ['in', 'bank', 500], ['out', 'expense', 350]])
+        ->and($events[0]->payload)
+        ->reference->toBe("{$till->number}/2")
+        ->moved_on->toBe('2026-10-18')
+        ->currency->toBe('SSP')
+        ->description->toBe('Deposited at the bank')
+        ->moved_by->toBe($cashier->name);
+
+    // 100.00 float − 20.00 − 50.00 + 5.00 − 3.50.
+    $this->post($this->workspaceUrl('acme', "tills/{$till->id}/close"), ['counted_cash' => '31.50'])->assertSessionHasNoErrors();
+    expect(financeEvents('finance.cash.counted'))->toHaveCount(0);
+});

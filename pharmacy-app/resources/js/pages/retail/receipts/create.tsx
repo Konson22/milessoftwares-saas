@@ -13,8 +13,8 @@ import { index, store } from '@/routes/retail/receipts';
 
 type OrderLine = {
     id: string;
-    medicineId: string;
-    medicine: string;
+    itemId: string;
+    item: string;
     remaining: number;
     pack: string | null;
     packName: string | null;
@@ -26,7 +26,7 @@ type Entered = { pack: string; cost: string; quantity: string };
 
 type Props = {
     suppliers: { id: string; name: string }[];
-    medicines: BuyableItem[];
+    items: BuyableItem[];
     order: {
         id: string;
         number: string;
@@ -50,7 +50,7 @@ const selectClass = 'h-9 w-full rounded-md border bg-transparent px-3 text-sm';
  */
 export default function ReceiveGoods({
     suppliers,
-    medicines,
+    items: medicines,
     order,
     locations,
     today,
@@ -88,10 +88,10 @@ export default function ReceiveGoods({
     // The item and pack a line is for: the order's, or as chosen.
     const breakdownOf = (line: Line) => {
         if (line.orderLine) {
-            const { medicineId, packName, unitsPerPack } = line.orderLine;
+            const { itemId, packName, unitsPerPack } = line.orderLine;
 
             return {
-                item: medicines.find((m) => m.id === medicineId),
+                item: medicines.find((m) => m.id === itemId),
                 pack:
                     packName === null
                         ? null
@@ -236,14 +236,14 @@ export default function ReceiveGoods({
                                                                 value={
                                                                     line
                                                                         .orderLine
-                                                                        .medicineId
+                                                                        .itemId
                                                                 }
                                                             />
                                                             <p className="text-sm font-medium">
                                                                 {
                                                                     line
                                                                         .orderLine
-                                                                        .medicine
+                                                                        .item
                                                                 }
                                                             </p>
                                                             <p className="text-xs text-muted-foreground">

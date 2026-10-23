@@ -7,6 +7,8 @@ use App\Modules\Documents\Http\Controllers\DocumentController;
 use App\Modules\Documents\Models\Document;
 use App\Modules\Employees\Models\Contract;
 use App\Modules\Employees\Models\Employee;
+use App\Modules\Leave\Enums\LeaveStatus;
+use App\Modules\Leave\Models\LeaveRequest;
 use App\Support\StaffScope;
 use Carbon\CarbonImmutable;
 use Inertia\Inertia;
@@ -15,7 +17,8 @@ use Inertia\Response;
 /**
  * The staff at a glance, for the staff the member can see: headcount,
  * who joined and left this month, contracts and probations ending soon,
- * and documents (permits, licences) that have expired or are about to.
+ * documents (permits, licences) that have expired or are about to, and
+ * who is on leave today and how many requests wait for a decision.
  */
 class HomeController extends Controller
 {
@@ -63,6 +66,18 @@ class HomeController extends Controller
                 'soonDays' => self::SOON_DAYS,
                 'endingSoon' => $ending,
                 'documents' => $scope->holds('hr.documents.view') ? $this->expiringDocuments($scope, $today) : null,
+                'leave' => $scope->holds('hr.leave.view') ? [
+                    'awayToday' => LeaveRequest::query()
+                        ->whereIn('employee_id', $scope->apply(Employee::query(), 'hr.leave.view')->where('status', Employee::ACTIVE)->select('id'))
+                        ->where('status', LeaveStatus::Approved->value)
+                        ->whereDate('starts_on', '<=', $today->toDateString())
+                        ->whereDate('ends_on', '>=', $today->toDateString())
+                        ->count(),
+                    'waiting' => LeaveRequest::query()
+                        ->whereIn('employee_id', $scope->apply(Employee::query(), 'hr.leave.view')->select('id'))
+                        ->where('status', LeaveStatus::Pending->value)
+                        ->count(),
+                ] : null,
             ],
         ]);
     }

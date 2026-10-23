@@ -31,9 +31,9 @@ type Props = {
     };
     byMethod: { method: string; count: number; totalMinor: number }[];
     byDay: { day: string; count: number; totalMinor: number }[];
-    topMedicines: {
+    topItems: {
         id: string;
-        medicine: string;
+        item: string;
         quantity: number;
         revenueMinor: number;
         costMinor: number;
@@ -58,7 +58,7 @@ export default function Reports({
     summary,
     byMethod,
     byDay,
-    topMedicines,
+    topItems: topMedicines,
     stock,
 }: Props) {
     const { currency } = usePage().props;
@@ -162,7 +162,7 @@ export default function Reports({
                                     topMedicines.map((row) => (
                                         <TableRow key={row.id}>
                                             <TableCell>
-                                                {row.medicine}
+                                                {row.item}
                                             </TableCell>
                                             <TableCell className="text-right tabular-nums">
                                                 {row.quantity}

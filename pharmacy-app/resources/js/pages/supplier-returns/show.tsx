@@ -25,7 +25,7 @@ type Props = {
         totalMinor: number;
         lines: {
             id: string;
-            medicine: string;
+            item: string;
             batchNumber: string;
             quantity: number;
             unitCostMinor: number;
@@ -78,7 +78,7 @@ export default function ShowSupplierReturn({ supplierReturn }: Props) {
                     <TableBody>
                         {supplierReturn.lines.map((line) => (
                             <TableRow key={line.id}>
-                                <TableCell>{line.medicine}</TableCell>
+                                <TableCell>{line.item}</TableCell>
                                 <TableCell>{line.batchNumber}</TableCell>
                                 <TableCell className="text-right tabular-nums">
                                     {line.quantity}

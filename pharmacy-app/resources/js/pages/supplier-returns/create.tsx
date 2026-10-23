@@ -24,7 +24,7 @@ type Props = {
         receivedOn: string;
         lines: {
             id: string;
-            medicine: string;
+            item: string;
             batchNumber: string;
             expiresOn: string | null;
             received: number;
@@ -83,7 +83,7 @@ export default function CreateSupplierReturn({ receipt, today }: Props) {
                                     {receipt.lines.map((line) => (
                                         <TableRow key={line.id}>
                                             <TableCell>
-                                                {line.medicine}
+                                                {line.item}
                                             </TableCell>
                                             <TableCell>
                                                 {line.batchNumber}
@@ -121,7 +121,7 @@ export default function CreateSupplierReturn({ receipt, today }: Props) {
                                                         )
                                                     }
                                                     className="text-right tabular-nums"
-                                                    aria-label={`Return ${line.medicine}, batch ${line.batchNumber}`}
+                                                    aria-label={`Return ${line.item}, batch ${line.batchNumber}`}
                                                 />
                                                 {errors[
                                                     `quantities.${line.id}`

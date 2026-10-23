@@ -81,7 +81,7 @@ class PurchaseReportController extends Controller
             'bySupplier' => $bySupplier,
             'byItem' => $byItem->map(fn (object $row) => [
                 'id' => (string) $row->item_id,
-                'medicine' => (string) ($items[$row->item_id] ?? ''),
+                'item' => (string) ($items[$row->item_id] ?? ''),
                 'quantity' => (int) $row->quantity,
                 'totalMinor' => (int) $row->total,
                 // Per base unit, so different pack sizes compare.
@@ -114,7 +114,7 @@ class PurchaseReportController extends Controller
         return match ($request->query('export')) {
             null => Inertia::render($industry->page('reports/purchases'), $props),
             'suppliers' => CsvExport::download("purchases-by-supplier-{$name}", ['Supplier' => 'supplier', 'Deliveries' => 'receipts', 'Received' => 'receivedMinor', 'Returned' => 'returnedMinor', 'Net' => 'netMinor'], $bySupplier),
-            'medicines', 'items' => CsvExport::download("purchases-by-medicine-{$name}", ['Medicine' => 'medicine', 'Quantity' => 'quantity', 'Total' => 'totalMinor', 'Average cost' => 'averageCostMinor', 'Lowest cost' => 'lowestCostMinor', 'Highest cost' => 'highestCostMinor'], $props['byItem']),
+            'medicines', 'items' => CsvExport::download("purchases-by-item-{$name}", [$industry->itemLabel() => 'item', 'Quantity' => 'quantity', 'Total' => 'totalMinor', 'Average cost' => 'averageCostMinor', 'Lowest cost' => 'lowestCostMinor', 'Highest cost' => 'highestCostMinor'], $props['byItem']),
             'deliveries' => CsvExport::download("deliveries-{$name}", ['Number' => 'number', 'Received on' => 'receivedOn', 'Supplier' => 'supplier', 'Supplier reference' => 'supplierReference', 'Total' => 'totalMinor'], $props['receipts']),
             default => abort(404),
         };

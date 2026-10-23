@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $quantity
  * @property int $unit_price_minor
  * @property int $discount_minor
+ * @property string|null $promotion_id the promotion it was sold under, when that gave the discount
  * @property int $line_total_minor
  * @property string|null $pack_name sold by the pack: its name, size and price as sold
  * @property int $units_per_pack

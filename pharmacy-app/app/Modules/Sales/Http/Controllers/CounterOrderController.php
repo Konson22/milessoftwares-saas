@@ -150,7 +150,7 @@ class CounterOrderController extends Controller
                 'cancelReason' => $order->cancel_reason,
                 'lines' => $order->lines->map(fn (CounterOrderLine $line) => [
                     'id' => $line->id,
-                    'medicine' => $line->item->name,
+                    'item' => $line->item->name,
                     'pack' => $line->pack === null ? null : "{$line->pack->name} of {$line->pack->units}",
                     'quantity' => $line->quantity,
                     'discountPercent' => $line->discount_percent,

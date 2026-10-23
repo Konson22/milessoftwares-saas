@@ -3,7 +3,6 @@
 namespace Tests\Support;
 
 use App\Platform\SetUpWorkspace;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Lcobucci\JWT\Configuration;
@@ -29,18 +28,14 @@ trait SendsEvents
         $this->asTenant($slug, fn () => app(SetUpWorkspace::class)->provision($organization));
     }
 
+    /**
+     * The platform fake already answers the JWKS (with the mobile app's
+     * key), so the event key is published there rather than in a second
+     * HTTP fake, which would never be reached.
+     */
     protected function publishEventKeys(): void
     {
-        $details = openssl_pkey_get_details(openssl_pkey_get_public(self::eventKeys()['public']));
-
-        Http::fake(['*/oauth/jwks' => Http::response(['keys' => [[
-            'kty' => 'RSA',
-            'alg' => 'RS256',
-            'use' => 'sig',
-            'kid' => 'test-key',
-            'n' => rtrim(strtr(base64_encode($details['rsa']['n']), '+/', '-_'), '='),
-            'e' => rtrim(strtr(base64_encode($details['rsa']['e']), '+/', '-_'), '='),
-        ]]])]);
+        $this->platform()->publishKey('test-key', self::eventKeys()['public']);
     }
 
     /**

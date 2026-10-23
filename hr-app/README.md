@@ -6,7 +6,7 @@ Staff records and, from HR Phase H5, payroll for every Miles ERP product, served
 [`docs/erp/hr-roadmap.md`](../docs/erp/hr-roadmap.md)). Built from `templates/product-app` and
 connected through [`miles/platform-client`](../packages/platform-client/README.md).
 
-## What is here (H1–H2)
+## What is here (H1–H3)
 
 - **Staff** (`app/Modules/Employees`): profiles with work details, employee numbers (`E-00001`),
   managers, an append-only employment history (hired, transfer, promotion, change, left),
@@ -23,6 +23,11 @@ connected through [`miles/platform-client`](../packages/platform-client/README.m
   minutes and are logged; identity documents also need the personal permissions. Expired and
   expiring documents are listed on the home page. Back the directory up with
   `ops/backup/backup-files.sh` (`miles-backup-files@hr.timer`).
+- **Leave** (`app/Modules/Leave`): kinds of leave and public holidays (Leave settings), each
+  person's days per kind and year with carry-over, requests in working days (Monday to Friday,
+  less holidays), approved or rejected by someone other than whoever recorded them and the
+  person they are for. Balances are worked out from the requests, never stored, and never go
+  below zero unless the kind allows it.
 - **Structure** (`App\Support\Structure`): branches, departments and positions come from the
   platform; HR stores only their ids.
 

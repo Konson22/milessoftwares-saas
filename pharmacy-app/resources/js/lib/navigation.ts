@@ -18,11 +18,13 @@ import {
     Undo2,
     Users,
     Wallet,
+    ClipboardCheck,
 } from 'lucide-react';
 import type { ShellNavItem } from '@miles/ui/shell/navigation';
 import { home } from '@/routes';
 import { index as controlled } from '@/routes/controlled';
 import { edit as counterSettings } from '@/routes/counter-settings';
+import { index as counts } from '@/routes/counts';
 import { index as customers } from '@/routes/customers';
 import { index as disposals } from '@/routes/disposals';
 import { index as locations } from '@/routes/locations';
@@ -135,6 +137,13 @@ export const navigation: NavGroup[] = [
                 title: 'Locations',
                 href: locations(),
                 icon: MapPin,
+                permission: 'pharmacy.stock.view',
+                scope: 'branch',
+            },
+            {
+                title: 'Stock counts',
+                href: counts(),
+                icon: ClipboardCheck,
                 permission: 'pharmacy.stock.view',
                 scope: 'branch',
             },

@@ -27,6 +27,8 @@ use Miles\PlatformClient\Events\Outbox;
  *
  * On a sale on account nothing is refunded: the return takes the amount off
  * what the customer still owes on that sale, and never more than that.
+ * Loyalty points the returned part earned are taken back (Loyalty); items
+ * that track serial numbers name the serials that came back (Serials).
  */
 class ReturnSale
 {
@@ -36,10 +38,12 @@ class ReturnSale
         private readonly Outbox $outbox,
         private readonly Tills $tills,
         private readonly CustomerAccounts $accounts,
+        private readonly Loyalty $loyalty,
+        private readonly Serials $serials,
     ) {}
 
     /**
-     * @param  list<array{sale_line_id: string, quantity: int, restock: bool}>  $lines
+     * @param  list<array{sale_line_id: string, quantity: int, restock: bool, serials?: list<string>}>  $lines  serials: of each unit back, for items that track them
      *
      * @throws ValidationException
      */
@@ -85,6 +89,15 @@ class ReturnSale
                 // half up; this return is the step from what it gave so far.
                 $after = $returnedQuantity + $line['quantity'];
                 $amount = intdiv(2 * $saleLine->line_total_minor * $after + $saleLine->quantity, 2 * $saleLine->quantity) - $returnedAmount;
+
+                $serials = [];
+                if ($saleLine->item->tracks_serials) {
+                    $serials = $this->serials->clean($line['serials'] ?? []);
+                    if (count($serials) !== $line['quantity']) {
+                        throw ValidationException::withMessages(["lines.{$index}.serials" => "Name the serial number of each {$saleLine->item->name} coming back ({$line['quantity']})."]);
+                    }
+                    $this->serials->returned($locked, $saleLine->item, $serials, "lines.{$index}.serials");
+                }
 
                 $returning[] = [$saleLine, $line['quantity'], $amount, $line['restock']];
             }
@@ -158,6 +171,9 @@ class ReturnSale
                     'payment_reference' => $return->number,
                 ] : null,
             ], $return->returned_at);
+
+            // The points this part of the sale earned come off.
+            $this->loyalty->returned($locked, $return);
 
             return $return;
         });

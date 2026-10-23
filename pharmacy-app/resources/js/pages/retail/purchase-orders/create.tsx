@@ -13,14 +13,14 @@ import { index, store } from '@/routes/retail/purchase-orders';
 
 type Props = {
     suppliers: { id: string; name: string }[];
-    medicines: BuyableItem[];
+    items: BuyableItem[];
 };
 
 type Entered = { pack: string; cost: string; quantity: string };
 
 const selectClass = 'h-9 w-full rounded-md border bg-transparent px-3 text-sm';
 
-export default function CreatePurchaseOrder({ suppliers, medicines }: Props) {
+export default function CreatePurchaseOrder({ suppliers, items: medicines }: Props) {
     const [lines, setLines] = useState([0]);
     const [nextKey, setNextKey] = useState(1);
     // The product chosen on each line (by line key), for its packs.

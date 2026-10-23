@@ -5,9 +5,14 @@ import { StatusBadge } from '@miles/ui/components/status-badge';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
 import { Label } from '@miles/ui/components/ui/label';
+import {
+    TillCashMovements,
+    type CashMovement,
+} from '@/components/till-cash-movements';
 import { formatMoney } from '@/lib/money';
 import { statusTone } from '@/lib/status';
 import { close, index } from '@/routes/retail/tills';
+import { store as storeMovement } from '@/routes/retail/tills/movements';
 import type { ShiftRules, Till } from './index';
 
 type Props = {
@@ -22,13 +27,18 @@ type Props = {
         /** Null when the cashier counts blind. */
         cashRefundsMinor: number | null;
         refundsCount: number;
+        cashInMinor: number;
+        cashOutMinor: number;
         /** Null when the cashier counts blind. */
         expectedCashMinor: number | null;
     };
+    movements: CashMovement[];
     methods: { value: string; label: string }[];
     shifts: ShiftRules;
     /** This member may count and close the shift now. */
     canClose: boolean;
+    /** Cash may still be put in or taken out. */
+    canMove: boolean;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -45,9 +55,11 @@ const STATUS_LABELS: Record<string, string> = {
 export default function ShowShift({
     till,
     summary,
+    movements,
     methods,
     shifts,
     canClose,
+    canMove,
 }: Props) {
     const { currency } = usePage().props;
     const money = (minor: number) => formatMoney(minor, currency ?? 'USD');
@@ -198,6 +210,26 @@ export default function ShowShift({
                                         <dd className="text-right tabular-nums">
                                             −{money(summary.cashRefundsMinor)}
                                         </dd>
+                                        {summary.cashInMinor > 0 && (
+                                            <>
+                                                <dt className="text-muted-foreground">
+                                                    Cash put in
+                                                </dt>
+                                                <dd className="text-right tabular-nums">
+                                                    {money(summary.cashInMinor)}
+                                                </dd>
+                                            </>
+                                        )}
+                                        {summary.cashOutMinor > 0 && (
+                                            <>
+                                                <dt className="text-muted-foreground">
+                                                    Cash taken out
+                                                </dt>
+                                                <dd className="text-right tabular-nums">
+                                                    −{money(summary.cashOutMinor)}
+                                                </dd>
+                                            </>
+                                        )}
                                         <dt className="font-medium">
                                             Should hold
                                         </dt>
@@ -296,6 +328,14 @@ export default function ShowShift({
                         )}
                     </PanelBody>
                 </Panel>
+
+                <div className="lg:col-span-2">
+                    <TillCashMovements
+                        movements={movements}
+                        form={canMove ? storeMovement.form(till.id) : null}
+                        money={money}
+                    />
+                </div>
             </div>
         </>
     );

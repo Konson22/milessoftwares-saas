@@ -87,6 +87,24 @@ it('keeps clients and secrets when run again, and issues new ones with --fresh',
         ->and(activeClients($retail))->toBe(['confidential', 'service']);
 });
 
+it('registers the mobile app\'s public client when asked, once', function () {
+    $this->artisan('platform:local-product', ['path' => $this->folder, '--mobile-redirect' => ['com.milesoftwares.retail:/oauth']])->assertSuccessful();
+
+    $retail = Application::query()->where('code', 'retail')->sole();
+    $mobile = env_of($this->folder)['PLATFORM_MOBILE_CLIENT_ID'];
+    expect(activeClients($retail))->toBe(['confidential', 'public', 'service'])
+        ->and(json_decode((string) DB::table('oauth_clients')->where('id', $mobile)->value('redirect_uris'), true))->toBe(['com.milesoftwares.retail:/oauth']);
+
+    $this->artisan('platform:local-product', ['path' => $this->folder, '--mobile-redirect' => ['com.milesoftwares.retail:/oauth']])->assertSuccessful();
+    expect(env_of($this->folder)['PLATFORM_MOBILE_CLIENT_ID'])->toBe($mobile)
+        ->and(activeClients($retail))->toBe(['confidential', 'public', 'service']);
+
+    // --fresh disables it with the others: without the option it is gone.
+    $this->artisan('platform:local-product', ['path' => $this->folder, '--fresh' => true])->assertSuccessful();
+    expect(env_of($this->folder)['PLATFORM_MOBILE_CLIENT_ID'])->toBe('')
+        ->and(activeClients($retail))->toBe(['confidential', 'service']);
+});
+
 it('refuses a path the workspace shell owns', function () {
     $this->artisan('platform:local-product', ['path' => $this->folder, '--prefix' => 'members'])->assertFailed();
 

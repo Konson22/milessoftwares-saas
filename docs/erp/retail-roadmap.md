@@ -19,9 +19,12 @@ stay `planned` (shown as coming soon, not sold) until the pilot list below is me
 | R3 Customers and credit | customer accounts (Sales), credit limit, sales on account (`finance.invoice.issued` with a due date), customer payments and statements | a sale on account over the limit is refused; statement balance = Finance receivable |
 | R4 Wholesale documents | price lists (retail / wholesale), quotations → sales orders → delivery notes → invoices, partial deliveries | an order line is never delivered beyond its quantity; an invoice equals what was delivered |
 | R5 Reports | sales by product, category, cashier and branch; margins; slow movers; reorder list; CSV export | totals equal the sales and Finance postings for the period |
-| Later | promotions and loyalty, multiple price levels per branch, serial numbers, SUNMI / offline POS (Phase 11) | — |
+| R6 Gaps | shelves and holds for the shop, stock-take count sheets (both industries), editing quotations, shared props renamed `medicines` → `items` | a count posts only the differences, once; a revised quotation keeps its number and is priced afresh; one industry's batches are never held or counted from the other |
+| R7 Later features | price levels per branch, promotions, loyalty points, serial numbers | the till takes the bigger of the promotion and the member's discount; points earned and redeemed are reversed by a void and a return; each tracked unit is sold once and comes back by its serial |
+| R8 Desktop counter | the counter API at `{workspace}/retail/api/v1` (own mobile client) and the shop's pages for the app; `pharmacy-electron-app` signs in to the pharmacy or the shop and sells offline for either | a pharmacy token never calls the shop's API; a sale queued for the shop is never sent to the pharmacy at the same branch |
+| Later | SUNMI handheld POS (Phase 11), native desktop screens for the back office | — |
 
-## Permissions (catalog 1.4.0)
+## Permissions (catalog 1.5.0)
 
 | Permission | Sensitivity | Scopes |
 | --- | --- | --- |
@@ -29,11 +32,13 @@ stay `planned` (shown as coming soon, not sold) until the pilot list below is me
 | `retail.products.manage` | 2 | organization |
 | `retail.stock.view` | 1 | organization, branch |
 | `retail.stock.adjust` | 3 | organization, branch |
+| `retail.stock.hold` | 3 | organization, branch |
 | `retail.sales.view` | 1 | organization, branch |
 | `retail.sales.create` | 2 | organization, branch |
 | `retail.sales.discount` | 2 | organization, branch |
 | `retail.sales.void` | 3 | organization, branch |
 | `retail.tills.manage` | 3 | organization, branch |
+| `retail.sales.settings` | 3 | organization, branch |
 | `retail.stock.dispose` | 3 | organization, branch |
 | `retail.purchasing.view` | 1 | organization, branch |
 | `retail.purchasing.manage` | 2 | organization, branch |
@@ -52,12 +57,19 @@ Store manager (everything at the branch, discounts, voids, tills, purchase order
 approvals, selling on account, customers, orders, price lists, reports), Owner (everything). Cashiers can
 look customers up; store keepers see orders and deliver them.
 Catalog 1.1.0 (R2) added write-off approval and purchasing; 1.2.0 (R3) added credit and
-customers; 1.3.0 (R4) added orders and price lists; 1.4.0 (R5) added reports.
+customers; 1.3.0 (R4) added orders and price lists; 1.4.0 (R5) added reports; 1.5.0 (R6–R7)
+added holds and counter settings, and `retail.prices.manage` now also covers branch price levels,
+promotions and loyalty.
 
 ## Pilot list (`planned` → `beta`)
 
 R0–R2 done; a real shop's catalogue loaded (barcodes scanned at the counter on the shop's own
 scanner); one week of sales reconciled against Finance; backups restored once.
+
+Beta was opened on 2026-10-23 at the owner's call, before the last three items: the catalogue,
+the week of reconciled sales and the backup restore are still to do with the first shop. Locally
+the application is `beta` and open for trials. In production its status is set in Admin →
+Applications (the catalog import does not change it) once catalog 1.5.0 is imported there.
 
 ## Status
 
@@ -73,13 +85,16 @@ scanner); one week of sales reconciled against Finance; backups restored once.
   exactly what was delivered.
 - **R5 Reports: done** 2026-10-20; details in `implementation-status.md` ("Retail R5"). Every
   report shows one industry only, so the shop and the pharmacy at one branch report apart.
+- **R6 Gaps: done** 2026-10-23; details in `implementation-status.md` ("Retail R6–R8").
+- **R7 Later features: done** 2026-10-23 (same section).
+- **R8 Desktop counter: done** 2026-10-23 (same section).
+- **Beta: opened** 2026-10-23 (pilot list above).
 
 Open after R2:
-- Stock locations (shelves) and quarantine or recall holds are Pharmacy screens only.
-- No stock-take count sheets yet (in either industry): counts are corrected with per-batch
-  adjustments.
+- ~~Stock locations (shelves) and quarantine or recall holds are Pharmacy screens only.~~ R6.
+- ~~No stock-take count sheets yet.~~ R6.
 - Tills are shared with Pharmacy: a member who sells in both uses one cash drawer per branch.
-- The shared counter, purchasing and stock screens still name their item prop `medicines`.
+- ~~The shared counter, purchasing and stock screens still name their item prop `medicines`.~~ R6.
 
 Open after R3:
 - Customers are Retail's only; Pharmacy has no account sales (its counter offers none).
@@ -91,8 +106,9 @@ Open after R4:
 - Wholesale is on account only: a customer paying cash on delivery needs a credit limit, and pays
   on their statement after the delivery.
 - Nothing is reserved by an order: stock and credit are checked when delivering.
-- A quotation cannot be edited; cancel it and quote again.
-- One price list per customer; no price levels per branch, quantity breaks or dated prices.
+- ~~A quotation cannot be edited.~~ R6: a quote is revised in place, repriced at today's prices.
+- One price list per customer, and one per branch for the till (R7); no quantity breaks or dated
+  prices.
 - No tax on invoices yet (`tax_minor` is 0, as at the counter).
 
 Open after R5:
@@ -105,3 +121,14 @@ Open after R5:
 - Pharmacy keeps its four reports; the sales-by-category, sales-by-cashier and stock reports are
   the shop's only so far (the controllers are shared, the pages are not).
 - The shared report props still name items `medicine` (`rows.*.medicine`, `topMedicines`).
+
+Open after R6–R8:
+- Promotions are a percent off an item or a category; no buy-one-get-one, bundles or fixed
+  prices. They do not stack: the till takes the biggest one, or the member's own discount.
+- Loyalty is one program per workspace, points per spend; no tiers or expiry of points.
+- Serial numbers are recorded on the Serial numbers page, not when goods are received; products
+  that track them cannot go on a quotation (they are sold at the till).
+- The desktop app shows the shop's back-office pages as data (GenericScreen) until each has its
+  own screen; it has no return screen yet (returns, with serials, are on the web or the API).
+- Desktop sign-in is per product: switching between the pharmacy and the shop signs out first.
+- Migrations 2026_10_24_* ran forward on local PostgreSQL; not yet rolled back there.

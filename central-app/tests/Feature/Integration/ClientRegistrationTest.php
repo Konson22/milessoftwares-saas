@@ -50,6 +50,16 @@ it('rejects public clients without any callback', function () {
         ->assertStatus(422);
 });
 
+it('registers a public mobile app client on its own scheme, never a confidential one', function () {
+    $this->actingAs($this->catalogAdmin->user)
+        ->post("{$this->base}/sign-in-clients", ['name' => 'Retail mobile', 'confidential' => '0', 'redirect_uris' => 'com.milesoftwares.retail:/oauth'])
+        ->assertSessionHas('issued_secret', fn (array $issued) => $issued['client_secret'] === null);
+
+    $this->post("{$this->base}/sign-in-clients", ['name' => 'Bad', 'confidential' => '1', 'redirect_uris' => 'com.milesoftwares.retail:/oauth'])->assertStatus(422);
+    // A bare scheme anyone could claim.
+    $this->post("{$this->base}/sign-in-clients", ['name' => 'Bad', 'confidential' => '0', 'redirect_uris' => 'retail:/oauth'])->assertStatus(422);
+});
+
 it('keeps integration settings to catalog administrators', function () {
     $this->actingAs($this->staffWith(['billing_admin'])->user)->get($this->base)->assertForbidden();
 });

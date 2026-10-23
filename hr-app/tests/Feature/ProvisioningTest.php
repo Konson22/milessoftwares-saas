@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Workspace;
+use App\Modules\Leave\Models\LeaveType;
 use Illuminate\Support\Str;
 use Miles\PlatformClient\Webhooks\Signature;
 
@@ -42,6 +43,17 @@ it('keeps one workspace per organization when provisioned again', function () {
 
     expect(Workspace::acrossTenants()->count())->toBe(1)
         ->and($this->asTenant('acme', fn () => Workspace::current())->display_name)->toBe('Acme Renamed');
+});
+
+it('starts a new workspace with kinds of leave, and leaves HR\'s own alone afterwards', function () {
+    provisionWorkspace('acme', 'step-1')->assertCreated();
+    $this->asTenant('acme', function () {
+        expect(LeaveType::query()->orderBy('name')->pluck('name')->all())->toBe(['Annual leave', 'Sick leave', 'Unpaid leave']);
+        LeaveType::query()->where('name', 'Sick leave')->delete();
+    });
+
+    provisionWorkspace('acme', 'step-2')->assertCreated();
+    expect($this->asTenant('acme', fn () => LeaveType::query()->count()))->toBe(2);
 });
 
 it('refuses unsigned provisioning calls', function () {

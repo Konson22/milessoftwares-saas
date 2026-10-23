@@ -132,7 +132,7 @@ describe('takings', function () {
             ->where('summary.profitMinor', 1000)
             ->where('summary.returnedCount', 1)
             ->where('summary.returnedMinor', 300)
-            ->has('topMedicines', 2)
+            ->has('topItems', 2)
             // Soap 100 − 5 + 1, rice 5 − 2, candles 50; no Panadol.
             ->where('stock.units', 149)
             ->where('stock.costMinor', 96 * 200 + 3 * 700 + 50 * 100));
@@ -166,9 +166,9 @@ describe('takings', function () {
         $this->get(reportUrl('reports/profitability'))->assertInertia(fn (Assert $page) => $page
             ->component('retail/reports/profitability')
             ->has('rows', 2)
-            ->where('rows.0.medicine', 'Rice 5kg')
+            ->where('rows.0.item', 'Rice 5kg')
             ->where('rows.0.category', 'Food')
-            ->where('rows.1.medicine', 'Soap')
+            ->where('rows.1.item', 'Soap')
             ->where('rows.1.quantity', 4)
             ->where('rows.1.profitMinor', 400)
             ->where('totals.revenueMinor', 3200)
@@ -220,7 +220,7 @@ describe('takings', function () {
             ->where('stock.units', 8));
         $this->get($this->workspaceUrl('acme', 'reports/profitability'))->assertInertia(fn (Assert $page) => $page
             ->has('rows', 1)
-            ->where('rows.0.medicine', $this->para->label()));
+            ->where('rows.0.item', $this->para->label()));
     });
 
     it('downloads the cuts as CSV', function () {
@@ -259,7 +259,7 @@ describe('purchases', function () {
             ->has('receipts', 1)
             ->where('receipts.0.supplierReference', 'DN-7')
             ->has('byItem', 1)
-            ->where('byItem.0.medicine', 'Soap')
+            ->where('byItem.0.item', 'Soap')
             ->where('totals.receivedMinor', 3600));
     });
 });

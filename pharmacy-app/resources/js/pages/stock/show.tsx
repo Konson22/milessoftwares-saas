@@ -46,7 +46,7 @@ type Movement = {
 };
 
 type Props = {
-    medicine: {
+    item: {
         id: string;
         label: string;
         unit: string;
@@ -87,7 +87,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export default function StockShow({
-    medicine,
+    item: medicine,
     batches,
     movements,
     pendingDisposals,

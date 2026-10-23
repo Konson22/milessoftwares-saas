@@ -16,7 +16,7 @@ type Disposal = {
     id: string;
     number: string;
     itemId: string;
-    medicine: string;
+    item: string;
     batchNumber: string;
     expiresOn: string | null;
     quantity: number;
@@ -100,7 +100,7 @@ export default function Disposals({ status, disposals, canDecide }: Props) {
                                         className="hover:underline"
                                     >
                                         {disposal.quantity} ×{' '}
-                                        {disposal.medicine}
+                                        {disposal.item}
                                     </Link>
                                     <span className="text-sm text-muted-foreground">
                                         batch {disposal.batchNumber}, exp{' '}

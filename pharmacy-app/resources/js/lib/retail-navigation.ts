@@ -3,11 +3,17 @@ import {
     BarChart3,
     Boxes,
     BookOpen,
+    ClipboardCheck,
     ClipboardList,
     FileText,
     LayoutDashboard,
+    MapPin,
     PackageCheck,
+    Percent,
+    Gift,
+    ScanBarcode,
     ReceiptText,
+    Settings2,
     ShoppingCart,
     Tags,
     Trash2,
@@ -18,15 +24,21 @@ import {
 } from 'lucide-react';
 import type { NavGroup } from '@/lib/navigation';
 import { home } from '@/routes/retail';
+import { edit as counterSettings } from '@/routes/retail/counter-settings';
+import { index as counts } from '@/routes/retail/counts';
 import { index as customers } from '@/routes/retail/customers';
 import { index as disposals } from '@/routes/retail/disposals';
+import { index as locations } from '@/routes/retail/locations';
+import { edit as loyalty } from '@/routes/retail/loyalty';
 import { index as orders } from '@/routes/retail/orders';
 import { index as priceLists } from '@/routes/retail/price-lists';
 import { index as products } from '@/routes/retail/products';
+import { index as promotions } from '@/routes/retail/promotions';
 import { index as purchaseOrders } from '@/routes/retail/purchase-orders';
 import { index as receipts } from '@/routes/retail/receipts';
 import { index as reports } from '@/routes/retail/reports';
 import { create as counter, index as sales } from '@/routes/retail/sales';
+import { index as serials } from '@/routes/retail/serials';
 import { index as stock } from '@/routes/retail/stock';
 import { index as supplierReturns } from '@/routes/retail/supplier-returns';
 import { index as suppliers } from '@/routes/retail/suppliers';
@@ -87,6 +99,13 @@ export const retailNavigation: NavGroup[] = [
                 permission: 'retail.customers.view',
                 scope: 'branch',
             },
+            {
+                title: 'Counter settings',
+                href: counterSettings(),
+                icon: Settings2,
+                permission: 'retail.sales.settings',
+                scope: 'branch',
+            },
         ],
     },
     {
@@ -106,6 +125,20 @@ export const retailNavigation: NavGroup[] = [
                 permission: 'retail.prices.manage',
                 scope: 'org',
             },
+            {
+                title: 'Promotions',
+                href: promotions(),
+                icon: Percent,
+                permission: 'retail.prices.manage',
+                scope: 'org',
+            },
+            {
+                title: 'Loyalty',
+                href: loyalty(),
+                icon: Gift,
+                permission: 'retail.prices.manage',
+                scope: 'org',
+            },
         ],
     },
     {
@@ -115,6 +148,27 @@ export const retailNavigation: NavGroup[] = [
                 title: 'Stock',
                 href: stock(),
                 icon: Boxes,
+                permission: 'retail.stock.view',
+                scope: 'branch',
+            },
+            {
+                title: 'Shelves',
+                href: locations(),
+                icon: MapPin,
+                permission: 'retail.stock.view',
+                scope: 'branch',
+            },
+            {
+                title: 'Stock counts',
+                href: counts(),
+                icon: ClipboardCheck,
+                permission: 'retail.stock.view',
+                scope: 'branch',
+            },
+            {
+                title: 'Serial numbers',
+                href: serials(),
+                icon: ScanBarcode,
                 permission: 'retail.stock.view',
                 scope: 'branch',
             },

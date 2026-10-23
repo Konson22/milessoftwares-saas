@@ -1,7 +1,8 @@
-import { LayoutDashboard, Users } from 'lucide-react';
+import { CalendarDays, LayoutDashboard, Users } from 'lucide-react';
 import type { ShellNavItem } from '@miles/ui/shell/navigation';
 import { home } from '@/routes';
 import { index as employees } from '@/routes/employees';
+import { index as leave } from '@/routes/leave';
 
 export type NavItem = ShellNavItem & {
     /** Shown to members holding this catalog permission (or owners); null for everyone. */
@@ -33,6 +34,12 @@ export const navigation: NavGroup[] = [
                 href: employees(),
                 icon: Users,
                 permission: 'hr.employees.view',
+            },
+            {
+                title: 'Leave',
+                href: leave(),
+                icon: CalendarDays,
+                permission: 'hr.leave.view',
             },
         ],
     },

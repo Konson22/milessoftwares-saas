@@ -22,6 +22,7 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property int|null $default_float_minor the usual starting cash of a shift
  * @property bool $blind_close cashiers count without seeing what the drawer should hold
  * @property bool $manager_closes_shifts only those who manage tills close shifts
+ * @property string|null $price_list_id the branch's price level (ShelfPrices); null: the shop's own prices
  * @property bool $require_customer_always
  * @property bool $require_customer_for_restricted
  * @property int|null $require_customer_above_minor

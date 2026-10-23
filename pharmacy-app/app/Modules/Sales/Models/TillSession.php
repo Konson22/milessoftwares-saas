@@ -84,4 +84,12 @@ class TillSession extends Model
     {
         return $this->hasMany(Sale::class);
     }
+
+    /**
+     * @return HasMany<TillCashMovement, $this>
+     */
+    public function cashMovements(): HasMany
+    {
+        return $this->hasMany(TillCashMovement::class);
+    }
 }

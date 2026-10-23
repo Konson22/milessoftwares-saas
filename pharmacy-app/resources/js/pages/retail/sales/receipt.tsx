@@ -19,7 +19,7 @@ type Props = {
         tenderedMinor: number | null;
         changeMinor: number | null;
         lines: {
-            medicine: string;
+            item: string;
             /** Sold by the pack: "box of 30"; quantity is then packs. */
             pack: string | null;
             quantity: number;
@@ -85,9 +85,9 @@ export default function Receipt({ sale }: Props) {
                 <table className="mt-3 w-full border-y border-dashed border-black">
                     <tbody>
                         {sale.lines.map((line) => (
-                            <tr key={line.medicine} className="align-top">
+                            <tr key={line.item} className="align-top">
                                 <td className="py-1">
-                                    {line.medicine}
+                                    {line.item}
                                     <span className="block">
                                         {line.quantity}
                                         {line.pack && ` ${line.pack}`} ×{' '}

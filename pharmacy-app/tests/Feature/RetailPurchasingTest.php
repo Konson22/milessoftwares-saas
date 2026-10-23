@@ -93,8 +93,8 @@ describe('purchase orders and deliveries', function () {
         $this->get(shopUrl("receipts/{$receipt->id}"))->assertInertia(fn (Assert $page) => $page->component('retail/receipts/show'));
         $this->get(shopUrl('receipts/create'))->assertInertia(fn (Assert $page) => $page
             ->component('retail/receipts/create')
-            ->has('medicines', 1)
-            ->where('medicines.0.tracksExpiry', false));
+            ->has('items', 1)
+            ->where('items.0.tracksExpiry', false));
     });
 
     it('never buys or receives a medicine for the shop', function () {
@@ -223,7 +223,7 @@ describe('write-offs', function () {
         $batch = $this->asTenant('acme', fn () => app(Stock::class)->add($this->para->item, $this->juba, 'P-1', CarbonImmutable::parse('2027-12-31'), 5, 100, $keeper));
         $this->actingAsMember('acme', ['retail.stock.adjust'], branch: $this->juba, application: 'retail');
 
-        $this->post(shopUrl("batches/{$batch->id}/disposals"), ['quantity' => 1, 'reason' => 'damaged'])->assertSessionHasErrors('quantity');
+        $this->post(shopUrl("batches/{$batch->id}/disposals"), ['quantity' => 1, 'reason' => 'damaged'])->assertNotFound();
 
         expect($this->asTenant('acme', fn () => StockDisposal::query()->count()))->toBe(0);
     });

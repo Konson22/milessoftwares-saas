@@ -32,7 +32,7 @@ type Props = {
         totalMinor: number;
         lines: {
             id: string;
-            medicine: string;
+            item: string;
             batchNumber: string;
             expiresOn: string | null;
             quantity: number;
@@ -120,7 +120,7 @@ export default function ShowReceipt({ receipt, returns, canReturn }: Props) {
                     <TableBody>
                         {receipt.lines.map((line) => (
                             <TableRow key={line.id}>
-                                <TableCell>{line.medicine}</TableCell>
+                                <TableCell>{line.item}</TableCell>
                                 <TableCell>{line.batchNumber}</TableCell>
                                 <TableCell className="tabular-nums">
                                     {line.expiresOn ?? '—'}

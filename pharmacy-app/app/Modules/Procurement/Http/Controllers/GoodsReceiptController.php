@@ -69,7 +69,7 @@ class GoodsReceiptController extends Controller
 
         return Inertia::render($this->industry->page('receipts/create'), [
             'suppliers' => Supplier::query()->where('active', true)->orderBy('name')->get(['id', 'name']),
-            'medicines' => PurchaseOrderController::itemOptions(),
+            'items' => PurchaseOrderController::itemOptions(),
             'order' => $order === null ? null : [
                 'id' => $order->id,
                 'number' => $order->number,
@@ -79,8 +79,8 @@ class GoodsReceiptController extends Controller
                     ->values()
                     ->map(fn (PurchaseOrderLine $line) => [
                         'id' => $line->id,
-                        'medicineId' => $line->item_id,
-                        'medicine' => $line->item->name,
+                        'itemId' => $line->item_id,
+                        'item' => $line->item->name,
                         'remaining' => $line->remaining(),
                         'pack' => $line->packLabel(),
                         'packName' => $line->pack_name,
@@ -175,7 +175,7 @@ class GoodsReceiptController extends Controller
                 'totalMinor' => $receipt->total_minor,
                 'lines' => $receipt->lines->map(fn (GoodsReceiptLine $line) => [
                     'id' => $line->id,
-                    'medicine' => $line->item->name,
+                    'item' => $line->item->name,
                     'batchNumber' => $line->batch_number,
                     'expiresOn' => $line->expires_on?->toDateString(),
                     'quantity' => $line->quantity,

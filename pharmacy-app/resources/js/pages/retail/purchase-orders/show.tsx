@@ -29,7 +29,7 @@ type Props = {
         totalMinor: number;
         lines: {
             id: string;
-            medicine: string;
+            item: string;
             unit: string;
             pack: string | null;
             ordered: number;
@@ -118,7 +118,7 @@ export default function ShowPurchaseOrder({
                     <TableBody>
                         {order.lines.map((line) => (
                             <TableRow key={line.id}>
-                                <TableCell>{line.medicine}</TableCell>
+                                <TableCell>{line.item}</TableCell>
                                 <TableCell className="text-right tabular-nums">
                                     {line.ordered}{' '}
                                     {line.pack ? `× ${line.pack}` : line.unit}

@@ -9,6 +9,7 @@ the security-sensitive parts.
 | Sign-in (OIDC code + PKCE, state, nonce)    | `GET /{path}/auth/login`, `GET /{path}/auth/callback`, `POST /{path}/logout` (named `platform.*`) |
 | The organization from the workspace host    | middleware `platform.tenant` → `CurrentTenant`                      |
 | Access gate on every request                | middleware `platform.access` (cached ≤ 60 s, dropped by webhooks)   |
+| Mobile app API (bearer tokens)              | middleware group `platform.api`; `POST /{path}/api/session` (`platform.api.session`) |
 | Catalog permissions in `can()` / `@can`     | `$user->can('pharmacy.dispense')`; scopes via `CurrentAccess`       |
 | Tenant-owned models, fail closed            | `use BelongsToTenant;` (needs an `organization_id` uuid column)     |
 | Signed, idempotent webhooks                 | `POST /{path}/platform/webhooks` → `PlatformEventReceived` event    |
@@ -46,6 +47,7 @@ PLATFORM_SIGN_IN_CLIENT_SECRET=
 PLATFORM_SERVICE_CLIENT_ID=          # scopes: access.read (+ events.issue, health.write)
 PLATFORM_SERVICE_CLIENT_SECRET=
 PLATFORM_WEBHOOK_SECRET=whsec_...
+PLATFORM_MOBILE_CLIENT_ID=           # optional: the mobile app's public client
 ```
 
 All values come from admin → Applications → _product_ → Integration. Register there:
@@ -78,6 +80,27 @@ abort_unless(app(CurrentAccess::class)->get()?->allowsIn('pharmacy.dispense', br
 // Setup for a newly entitled organization (runs inside the tenant, in a transaction)
 $this->app->bind(ProvisionsTenants::class, CreateDefaultPharmacy::class);
 ```
+
+### A mobile app
+
+A native app signs in on the platform itself (authorization code + PKCE, a public client with
+the app's redirect URI, e.g. `com.milesoftwares.pharmacy://oauth`) and calls the product with the
+access token as a bearer token. Set `PLATFORM_MOBILE_CLIENT_ID` to that client and put the API
+under `platform.api` (tenant from the host + token verified against the platform's keys, audience
+the mobile client, then the same access gate):
+
+```php
+Route::prefix(app(PlatformConfig::class)->path().'/api/v1')
+    ->middleware(['api', 'platform.api'])
+    ->group(fn () => Route::get('me', MeController::class));
+```
+
+After signing in the app posts its ID token once to `POST /{path}/api/session`, which records the
+user (name, email) and answers the user, organization and whether they own it. A refused token
+answers 401 `{"code": "invalid_token"}` (refresh and retry); a user the product has not seen
+yet answers 401 `{"code": "session_required"}`. With no mobile client configured these routes
+answer 404. In tests, `$this->actingAsAppMember('acme', ['pharmacy.dispense'])` signs in with an
+app token.
 
 Queued jobs and console commands have no request: wrap tenant work in
 `app(CurrentTenant::class)->run($organization, fn () => ...)`.

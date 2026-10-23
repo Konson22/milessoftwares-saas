@@ -49,7 +49,7 @@ class DisposalController extends Controller
                 'id' => $disposal->id,
                 'number' => $disposal->number,
                 'itemId' => $disposal->item_id,
-                'medicine' => $disposal->item->name,
+                'item' => $disposal->item->name,
                 'batchNumber' => $disposal->batch->batch_number,
                 'expiresOn' => $disposal->batch->expires_on?->toDateString(),
                 'quantity' => $disposal->quantity,
@@ -69,7 +69,8 @@ class DisposalController extends Controller
 
     public function store(Request $request, Batch $batch, Disposals $disposals): RedirectResponse
     {
-        abort_unless($batch->branch_id === $this->branch->id(), 404);
+        // Another industry's batch at this branch looks unknown too.
+        abort_unless($batch->branch_id === $this->branch->id() && $this->industry->handles($batch->item->kind), 404);
 
         $validated = $request->validate([
             'quantity' => ['required', 'integer', 'min:1', 'max:1000000'],

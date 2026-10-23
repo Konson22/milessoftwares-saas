@@ -20,12 +20,16 @@ type Product = {
     priceMinor: number;
     available: number;
     category: string | null;
+    /** Running here today: taken off by itself. */
+    promotion: { name: string; percentOff: number } | null;
+    /** Each unit sold names its serial number. */
+    tracksSerials: boolean;
     packs: { id: string; name: string; units: number; priceMinor: number }[];
 };
 
 type Props = {
     /** The shared counter's name for the items this industry sells. */
-    medicines: Product[];
+    items: Product[];
     paymentMethods: { value: string; label: string }[];
     /** 0 when this member may not give discounts. */
     maxDiscountPercent: number;
@@ -38,6 +42,12 @@ type Props = {
         name: string;
         availableMinor: number;
     }[];
+    /** While a loyalty program runs: its terms, and who collects points. */
+    loyalty: {
+        spendPerPointMinor: number;
+        pointValueMinor: number;
+        members: { id: string; number: string; name: string; points: number }[];
+    } | null;
 };
 
 /** Quantity counts packs when a pack is chosen, units otherwise. */
@@ -46,6 +56,8 @@ type BasketLine = {
     packId: string | null;
     quantity: number;
     discount: number;
+    /** One per unit, for products that track serials. */
+    serials: string[];
 };
 
 const packOf = (line: BasketLine) =>
@@ -85,11 +97,15 @@ function StockBadge({
     );
 }
 
+/** The promotion's percentage, or the seller's when that is bigger (as the server prices it). */
+const percentOff = (line: BasketLine) =>
+    Math.max(line.discount, line.product.promotion?.percentOff ?? 0);
+
 const lineTotal = (line: BasketLine) => {
     const gross =
         line.quantity * (packOf(line)?.priceMinor ?? line.product.priceMinor);
 
-    return gross - Math.round((gross * line.discount) / 100);
+    return gross - Math.round((gross * percentOff(line)) / 100);
 };
 
 /**
@@ -100,11 +116,12 @@ const lineTotal = (line: BasketLine) => {
  * with its own key, so a double click or a retry records one sale.
  */
 export default function RetailCounter({
-    medicines: products,
+    items: products,
     paymentMethods,
     maxDiscountPercent,
     till,
     customers,
+    loyalty,
 }: Props) {
     const { currency, branch } = usePage().props;
     const money = (minor: number) => formatMoney(minor, currency ?? 'USD');
@@ -116,6 +133,8 @@ export default function RetailCounter({
     const [method, setMethod] = useState(paymentMethods[0]?.value ?? 'cash');
     const [tendered, setTendered] = useState('');
     const [customerId, setCustomerId] = useState('');
+    const [memberId, setMemberId] = useState('');
+    const [redeem, setRedeem] = useState('');
     const [submissionId, setSubmissionId] = useState(() => uuid());
 
     const matches = useMemo(() => {
@@ -140,11 +159,30 @@ export default function RetailCounter({
         return line ? lineUnits(line) : 0;
     };
 
-    const total = basket.reduce((sum, line) => sum + lineTotal(line), 0);
+    const subtotal = basket.reduce((sum, line) => sum + lineTotal(line), 0);
+    const account = method === 'account';
+    // On account the customer is the one the sale goes on; otherwise whoever is named for points.
+    const member =
+        loyalty?.members.find(
+            (m) => m.id === (account ? customerId : memberId),
+        ) ?? null;
+    const maxRedeem =
+        member && loyalty
+            ? Math.min(
+                  member.points,
+                  Math.floor(subtotal / loyalty.pointValueMinor),
+              )
+            : 0;
+    const redeemPoints = Math.max(
+        0,
+        Math.min(Number.parseInt(redeem || '0', 10) || 0, maxRedeem),
+    );
+    const total = subtotal - redeemPoints * (loyalty?.pointValueMinor ?? 0);
+    const earns =
+        member && loyalty ? Math.floor(total / loyalty.spendPerPointMinor) : 0;
     const tenderedMinor = Math.round(
         Number.parseFloat(tendered || '0') * 10 ** decimals,
     );
-    const account = method === 'account';
     const customer = customers.find((c) => c.id === customerId) ?? null;
     const overLimit =
         account && customer !== null && total > customer.availableMinor;
@@ -172,7 +210,13 @@ export default function RetailCounter({
 
             return [
                 ...lines,
-                { product, packId: null, quantity: 1, discount: 0 },
+                {
+                    product,
+                    packId: null,
+                    quantity: 1,
+                    discount: 0,
+                    serials: [],
+                },
             ];
         });
         setSearch('');
@@ -233,6 +277,19 @@ export default function RetailCounter({
                     ? { ...line, packId, quantity: 1 }
                     : line,
             ),
+        );
+
+    const setSerial = (id: string, index: number, serial: string) =>
+        setBasket((lines) =>
+            lines.map((line) => {
+                if (line.product.id !== id) {
+                    return line;
+                }
+                const serials = [...line.serials];
+                serials[index] = serial;
+
+                return { ...line, serials };
+            }),
         );
 
     const setDiscount = (id: string, discount: number) =>
@@ -307,7 +364,9 @@ export default function RetailCounter({
                 description={branch?.name}
                 actions={
                     <Button variant="outline" size="sm" asChild>
-                        <Link href={showTill(till.id)}>Shift {till.number}</Link>
+                        <Link href={showTill(till.id)}>
+                            Shift {till.number}
+                        </Link>
                     </Button>
                 }
             />
@@ -367,6 +426,16 @@ export default function RetailCounter({
                                                     </span>
                                                 )}
                                                 <span className="ml-auto flex items-center gap-2 tabular-nums">
+                                                    {product.promotion && (
+                                                        <StatusBadge tone="info">
+                                                            {
+                                                                product
+                                                                    .promotion
+                                                                    .percentOff
+                                                            }
+                                                            % off
+                                                        </StatusBadge>
+                                                    )}
                                                     {money(product.priceMinor)}
                                                     <StockBadge
                                                         available={
@@ -395,6 +464,35 @@ export default function RetailCounter({
                                         key={line.product.id}
                                         className="flex flex-wrap items-center gap-3 px-4 py-2 text-sm"
                                     >
+                                        {line.product.tracksSerials && (
+                                            <div className="order-last flex w-full flex-wrap gap-2">
+                                                {Array.from(
+                                                    { length: lineUnits(line) },
+                                                    (_, k) => (
+                                                        <Input
+                                                            key={k}
+                                                            value={
+                                                                line.serials[
+                                                                    k
+                                                                ] ?? ''
+                                                            }
+                                                            onChange={(event) =>
+                                                                setSerial(
+                                                                    line.product
+                                                                        .id,
+                                                                    k,
+                                                                    event.target
+                                                                        .value,
+                                                                )
+                                                            }
+                                                            placeholder={`Serial ${k + 1}`}
+                                                            aria-label={`Serial number ${k + 1} of ${line.product.label}`}
+                                                            className="h-8 w-44 font-mono"
+                                                        />
+                                                    ),
+                                                )}
+                                            </div>
+                                        )}
                                         <span className="font-medium">
                                             {line.product.label}
                                         </span>
@@ -521,6 +619,17 @@ export default function RetailCounter({
                                         )}
                                         <span className="w-28 text-right tabular-nums">
                                             {money(lineTotal(line))}
+                                            {line.product.promotion &&
+                                                percentOff(line) ===
+                                                    line.product.promotion
+                                                        .percentOff && (
+                                                    <span className="block text-xs text-muted-foreground">
+                                                        {
+                                                            line.product
+                                                                .promotion.name
+                                                        }
+                                                    </span>
+                                                )}
                                         </span>
                                         <Button
                                             type="button"
@@ -556,6 +665,8 @@ export default function RetailCounter({
                         setBasket([]);
                         setTendered('');
                         setCustomerId('');
+                        setMemberId('');
+                        setRedeem('');
                         setSubmissionId(uuid());
                     }}
                     className="grid content-start gap-4 rounded-lg border bg-card p-4"
@@ -593,6 +704,17 @@ export default function RetailCounter({
                                             value={line.discount}
                                         />
                                     )}
+                                    {line.product.tracksSerials &&
+                                        line.serials
+                                            .slice(0, lineUnits(line))
+                                            .map((serial, k) => (
+                                                <input
+                                                    key={k}
+                                                    type="hidden"
+                                                    name={`items[${i}][serials][${k}]`}
+                                                    value={serial}
+                                                />
+                                            ))}
                                 </span>
                             ))}
                             <p className="flex items-baseline justify-between">
@@ -731,7 +853,75 @@ export default function RetailCounter({
                                 </div>
                             )}
 
-                            {!account && (
+                            {!account && loyalty && (
+                                <div className="grid gap-1.5">
+                                    <Label htmlFor="loyalty_customer">
+                                        Collects points (optional)
+                                    </Label>
+                                    <select
+                                        id="loyalty_customer"
+                                        name="customer_id"
+                                        value={memberId}
+                                        onChange={(event) => {
+                                            setMemberId(event.target.value);
+                                            setRedeem('');
+                                        }}
+                                        className="h-9 rounded-md border bg-transparent px-3 text-sm"
+                                    >
+                                        <option value="">Nobody</option>
+                                        {loyalty.members.map((option) => (
+                                            <option
+                                                key={option.id}
+                                                value={option.id}
+                                            >
+                                                {option.name} ({option.number})
+                                                · {option.points} points
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {member && loyalty && (
+                                <div className="grid gap-1.5">
+                                    {maxRedeem > 0 && (
+                                        <>
+                                            <Label htmlFor="redeem_points">
+                                                Points to spend (up to{' '}
+                                                {maxRedeem},{' '}
+                                                {money(loyalty.pointValueMinor)}{' '}
+                                                each)
+                                            </Label>
+                                            <Input
+                                                id="redeem_points"
+                                                name="redeem_points"
+                                                type="number"
+                                                min={0}
+                                                max={maxRedeem}
+                                                value={redeem}
+                                                onChange={(event) =>
+                                                    setRedeem(
+                                                        event.target.value,
+                                                    )
+                                                }
+                                                className="w-32"
+                                            />
+                                        </>
+                                    )}
+                                    <p className="text-sm text-muted-foreground">
+                                        {redeemPoints > 0 &&
+                                            `${money(redeemPoints * loyalty.pointValueMinor)} off. `}
+                                        Earns {earns} points.
+                                    </p>
+                                    {errors.redeem_points && (
+                                        <p className="text-sm text-destructive">
+                                            {errors.redeem_points}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            {!account && !member && (
                                 <div className="grid gap-1.5">
                                     <Label htmlFor="customer_name">
                                         Customer (optional)

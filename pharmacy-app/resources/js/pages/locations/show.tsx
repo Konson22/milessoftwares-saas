@@ -20,7 +20,7 @@ type Props = {
     contents: {
         id: string;
         itemId: string;
-        medicine: string;
+        item: string;
         batchNumber: string;
         expiresOn: string | null;
         status: string;
@@ -84,7 +84,7 @@ export default function Location({ location, contents }: Props) {
                                             href={stockShow(row.itemId)}
                                             className="font-medium hover:underline"
                                         >
-                                            {row.medicine}
+                                            {row.item}
                                         </Link>
                                     </TableCell>
                                     <TableCell>

@@ -9,17 +9,23 @@ use App\Http\Controllers\Reports\PurchaseReportController;
 use App\Http\Controllers\Reports\SalesAnalysisReportController;
 use App\Http\Controllers\Reports\StockReportController;
 use App\Modules\Inventory\Http\Controllers\DisposalController;
+use App\Modules\Inventory\Http\Controllers\LocationController;
 use App\Modules\Inventory\Http\Controllers\StockController;
+use App\Modules\Inventory\Http\Controllers\StockCountController;
 use App\Modules\Inventory\Http\Controllers\TransferController;
 use App\Modules\MasterData\Http\Controllers\SupplierController;
 use App\Modules\Procurement\Http\Controllers\GoodsReceiptController;
 use App\Modules\Procurement\Http\Controllers\PurchaseOrderController;
 use App\Modules\Procurement\Http\Controllers\SupplierReturnController;
 use App\Modules\Retail\Http\Controllers\ProductController;
+use App\Modules\Sales\Http\Controllers\CounterSettingsController;
 use App\Modules\Sales\Http\Controllers\CustomerController;
+use App\Modules\Sales\Http\Controllers\LoyaltyController;
 use App\Modules\Sales\Http\Controllers\PriceListController;
+use App\Modules\Sales\Http\Controllers\PromotionController;
 use App\Modules\Sales\Http\Controllers\SaleController;
 use App\Modules\Sales\Http\Controllers\SalesOrderController;
+use App\Modules\Sales\Http\Controllers\SerialController;
 use App\Modules\Sales\Http\Controllers\TillController;
 use Illuminate\Support\Facades\Route;
 use Miles\PlatformClient\PlatformConfig;
@@ -69,6 +75,13 @@ Route::prefix($path)
             Route::get('price-lists/{priceList}', [PriceListController::class, 'show'])->whereUuid('priceList')->name('price-lists.show');
             Route::put('price-lists/{priceList}', [PriceListController::class, 'update'])->whereUuid('priceList')->name('price-lists.update');
             Route::put('price-lists/{priceList}/prices', [PriceListController::class, 'updatePrices'])->whereUuid('priceList')->name('price-lists.prices.update');
+            // Promotions, given by the till by itself.
+            Route::get('promotions', [PromotionController::class, 'index'])->name('promotions.index');
+            Route::post('promotions', [PromotionController::class, 'store'])->name('promotions.store');
+            Route::post('promotions/{promotion}/end', [PromotionController::class, 'end'])->whereUuid('promotion')->name('promotions.end');
+            // The loyalty program: what earns a point, what a point is worth.
+            Route::get('loyalty', [LoyaltyController::class, 'edit'])->name('loyalty.edit');
+            Route::put('loyalty', [LoyaltyController::class, 'update'])->name('loyalty.update');
         });
 
         Route::middleware('branch')->group(function () {
@@ -114,6 +127,8 @@ Route::prefix($path)
             Route::middleware('branch.can:retail.orders.manage')->group(function () {
                 Route::get('orders/create', [SalesOrderController::class, 'create'])->name('orders.create');
                 Route::post('orders', [SalesOrderController::class, 'store'])->name('orders.store');
+                Route::get('orders/{order}/edit', [SalesOrderController::class, 'edit'])->whereUuid('order')->name('orders.edit');
+                Route::put('orders/{order}', [SalesOrderController::class, 'update'])->whereUuid('order')->name('orders.update');
                 Route::post('orders/{order}/confirm', [SalesOrderController::class, 'confirm'])->whereUuid('order')->name('orders.confirm');
                 Route::post('orders/{order}/cancel', [SalesOrderController::class, 'cancel'])->whereUuid('order')->name('orders.cancel');
                 Route::post('orders/{order}/close', [SalesOrderController::class, 'close'])->whereUuid('order')->name('orders.close');
@@ -124,17 +139,30 @@ Route::prefix($path)
                 ->name('orders.deliveries.store');
 
             // Tills: cashiers their own, managers everyone's.
+            // The branch's counter: workflow, price level, customer rules, printing.
+            Route::middleware('branch.can:retail.sales.settings')->group(function () {
+                Route::get('counter-settings', [CounterSettingsController::class, 'edit'])->name('counter-settings.edit');
+                // POST, not PUT: the form uploads a logo.
+                Route::post('counter-settings', [CounterSettingsController::class, 'update'])->name('counter-settings.update');
+            });
             Route::post('tills', [TillController::class, 'store'])->middleware('branch.can:retail.sales.create')->name('tills.store');
             Route::middleware('branch.can:retail.sales.create,retail.tills.manage')->group(function () {
                 Route::get('tills', [TillController::class, 'index'])->name('tills.index');
                 Route::get('tills/{till}', [TillController::class, 'show'])->whereUuid('till')->name('tills.show');
                 Route::post('tills/{till}/close', [TillController::class, 'close'])->whereUuid('till')->name('tills.close');
+                Route::post('tills/{till}/movements', [TillController::class, 'move'])->whereUuid('till')->name('tills.movements.store');
             });
 
             // Stock of the branch being worked in.
             Route::middleware('branch.can:retail.stock.view')->group(function () {
                 Route::get('stock', [StockController::class, 'index'])->name('stock.index');
                 Route::get('stock/{item}', [StockController::class, 'show'])->whereUuid('item')->name('stock.show');
+                // The branch's shelves (shared with a pharmacy there), the shop's goods on them.
+                Route::get('locations', [LocationController::class, 'index'])->name('locations.index');
+                Route::get('locations/{location}', [LocationController::class, 'show'])->whereUuid('location')->name('locations.show');
+                Route::get('counts', [StockCountController::class, 'index'])->name('counts.index');
+                Route::get('serials', [SerialController::class, 'index'])->name('serials.index');
+                Route::get('counts/{count}', [StockCountController::class, 'show'])->whereUuid('count')->name('counts.show');
             });
             Route::middleware('branch.can:retail.stock.view')->group(function () {
                 Route::get('transfers', [TransferController::class, 'index'])->name('transfers.index');
@@ -145,11 +173,26 @@ Route::prefix($path)
                 Route::post('batches/{batch}/adjustments', [StockController::class, 'storeAdjustment'])->whereUuid('batch')->name('stock.adjust');
                 // Write-offs (damaged, expired, stolen): asked for here, decided by someone else.
                 Route::post('batches/{batch}/disposals', [DisposalController::class, 'store'])->whereUuid('batch')->name('disposals.store');
+                // Stock-takes: counted line by line, the differences posted on completion.
+                Route::post('counts', [StockCountController::class, 'store'])->name('counts.store');
+                Route::post('serials', [SerialController::class, 'store'])->name('serials.store');
+                Route::put('counts/{count}', [StockCountController::class, 'update'])->whereUuid('count')->name('counts.update');
+                Route::post('counts/{count}/complete', [StockCountController::class, 'complete'])->whereUuid('count')->name('counts.complete');
+                Route::post('counts/{count}/cancel', [StockCountController::class, 'cancel'])->whereUuid('count')->name('counts.cancel');
+                // Shelves, and putting goods away on them.
+                Route::post('locations', [LocationController::class, 'store'])->name('locations.store');
+                Route::put('locations/{location}', [LocationController::class, 'update'])->whereUuid('location')->name('locations.update');
+                Route::post('batches/{batch}/move', [LocationController::class, 'move'])->whereUuid('batch')->name('locations.move');
                 // Stock sent to another branch, received from one.
                 Route::get('transfers/create', [TransferController::class, 'create'])->name('transfers.create');
                 Route::post('transfers', [TransferController::class, 'store'])->name('transfers.store');
                 Route::post('transfers/{transfer}/receive', [TransferController::class, 'receive'])->whereUuid('transfer')->name('transfers.receive');
                 Route::post('transfers/{transfer}/cancel', [TransferController::class, 'cancel'])->whereUuid('transfer')->name('transfers.cancel');
+            });
+            // Batches held back from sale: quarantine (checking them), recall, release.
+            Route::middleware('branch.can:retail.stock.hold')->group(function () {
+                Route::post('batches/{batch}/hold', [StockController::class, 'hold'])->whereUuid('batch')->name('stock.hold');
+                Route::post('batches/{batch}/release', [StockController::class, 'release'])->whereUuid('batch')->name('stock.release');
             });
             Route::get('disposals', [DisposalController::class, 'index'])
                 ->middleware('branch.can:retail.stock.adjust,retail.stock.dispose')

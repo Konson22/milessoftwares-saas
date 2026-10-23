@@ -141,7 +141,7 @@ class TransferController extends Controller
                 'lines' => $transfer->lines->map(fn (StockTransferLine $line) => [
                     'id' => $line->id,
                     'itemId' => $line->item_id,
-                    'medicine' => $line->item->name,
+                    'item' => $line->item->name,
                     'batchNumber' => $line->batch_number,
                     'expiresOn' => $line->expires_on?->toDateString(),
                     'quantity' => $line->quantity,

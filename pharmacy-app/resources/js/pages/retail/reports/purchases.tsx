@@ -27,7 +27,7 @@ type Props = {
     }[];
     byItem: {
         id: string;
-        medicine: string;
+        item: string;
         quantity: number;
         totalMinor: number;
         averageCostMinor: number;
@@ -160,7 +160,7 @@ export default function Purchases({
                                 byItem.map((row) => (
                                     <TableRow key={row.id}>
                                         <TableCell className="font-medium">
-                                            {row.medicine}
+                                            {row.item}
                                         </TableCell>
                                         <TableCell className="text-right tabular-nums">
                                             {row.quantity}

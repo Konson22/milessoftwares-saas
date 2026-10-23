@@ -22,6 +22,11 @@ use Miles\PlatformClient\Tenancy\CurrentTenant;
  * Fakes the platform API (no network) and signs the member in to that
  * workspace, exactly as a completed platform sign-in would.
  *
+ * The API the mobile app calls (platform.api):
+ *
+ *   $this->actingAsAppMember('acme', ['pharmacy.sales.create']);
+ *   $this->getJson($this->workspaceUrl('acme', '/api/v1/me'))->assertOk();
+ *
  * @mixin TestCase
  */
 trait InteractsWithPlatform
@@ -51,6 +56,36 @@ trait InteractsWithPlatform
 
         $this->actingAs($user);
         $this->withSession([RequirePlatformAccess::SESSION_TENANT => $this->platform()->organization($slug)['id']]);
+
+        return $user;
+    }
+
+    /**
+     * The same member calling the product's API from the mobile app: every
+     * following request carries their access token (no session). The mobile
+     * client is configured when the test has not set one. With $application
+     * (a hosted one), the access is in it and the token is for its mobile
+     * client.
+     *
+     * @param  list<string>  $permissions
+     */
+    protected function actingAsAppMember(string $slug = 'acme', array $permissions = [], bool $owner = false, ?Authenticatable $user = null, ?string $branch = null, ?string $application = null): Authenticatable
+    {
+        $config = app(PlatformConfig::class);
+        $hosted = $application !== null && $application !== $config->primary();
+        $client = $hosted
+            ? $config->runAs($application, fn () => $config->mobileClientId())
+            : $config->mobileClientId();
+        if ($client === null) {
+            $client = $hosted ? "{$application}-mobile-client" : 'mobile-client';
+            config([$hosted ? "platform-client.hosted.{$application}.mobile.client_id" : 'platform-client.mobile.client_id' => $client]);
+        }
+
+        $user ??= $this->platformUser();
+        $scope = $branch === null ? ['scope_type' => 'organization'] : ['scope_type' => 'branch', 'branch_id' => $branch];
+        $this->platform()->grant($slug, (string) $user->getAuthIdentifier(), $permissions === [] ? [] : [['permissions' => $permissions, 'scope' => $scope]], $owner, application: $application);
+
+        $this->withToken($this->platform()->appToken((string) $user->getAuthIdentifier(), $hosted ? $client : null));
 
         return $user;
     }

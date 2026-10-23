@@ -109,9 +109,9 @@ class ReportController extends Controller
                     'count' => (int) $row->count,
                     'totalMinor' => (int) $row->total,
                 ]),
-            'topMedicines' => $top->map(fn (object $row) => [
+            'topItems' => $top->map(fn (object $row) => [
                 'id' => (string) $row->item_id,
-                'medicine' => $items->get((string) $row->item_id)->name ?? '',
+                'item' => $items->get((string) $row->item_id)->name ?? '',
                 'quantity' => (int) $row->quantity,
                 'revenueMinor' => (int) $row->revenue,
                 'costMinor' => (int) $row->cost,
@@ -124,7 +124,7 @@ class ReportController extends Controller
             null => Inertia::render($industry->page('reports/index'), $props),
             'days' => CsvExport::download("sales-by-day-{$name}", ['Day' => 'day', 'Sales' => 'count', 'Takings' => 'totalMinor'], $props['byDay']),
             'methods' => CsvExport::download("sales-by-payment-{$name}", ['Payment method' => 'method', 'Sales' => 'count', 'Takings' => 'totalMinor'], $props['byMethod']),
-            'top' => CsvExport::download("top-medicines-{$name}", ['Medicine' => 'medicine', 'Quantity' => 'quantity', 'Revenue' => 'revenueMinor', 'Cost' => 'costMinor'], $props['topMedicines']),
+            'top' => CsvExport::download("top-items-{$name}", [$industry->itemLabel() => 'item', 'Quantity' => 'quantity', 'Revenue' => 'revenueMinor', 'Cost' => 'costMinor'], $props['topItems']),
             default => abort(404),
         };
     }

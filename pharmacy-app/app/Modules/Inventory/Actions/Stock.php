@@ -108,13 +108,13 @@ class Stock
      *
      * @throws ValidationException
      */
-    public function adjust(Batch $batch, int $change, AdjustmentReason $reason, ?string $note, User $user): Batch
+    public function adjust(Batch $batch, int $change, AdjustmentReason $reason, ?string $note, User $user, ?string $referenceType = null, ?string $referenceId = null): Batch
     {
         if ($change === 0) {
             throw ValidationException::withMessages(['change' => 'The change cannot be zero.']);
         }
 
-        return DB::transaction(function () use ($batch, $change, $reason, $note, $user) {
+        return DB::transaction(function () use ($batch, $change, $reason, $note, $user, $referenceType, $referenceId) {
             $locked = Batch::query()->whereKey($batch->id)->lockForUpdate()->firstOrFail();
 
             if ($locked->quantity_on_hand + $change < 0) {
@@ -126,7 +126,7 @@ class Stock
             $locked->quantity_on_hand += $change;
             $locked->save();
 
-            $movement = $this->record($locked, $change, MovementType::Adjustment, $user, $reason->value, $note);
+            $movement = $this->record($locked, $change, MovementType::Adjustment, $user, $reason->value, $note, $referenceType, $referenceId);
             $this->toFinance($locked, $change, 'count', $movement->id, $reason->label().($note === null ? '' : ": {$note}"));
 
             return $locked;

@@ -18,6 +18,8 @@ return [
         'name' => env('APP_NAME', 'Pharmacy'),
         // Items the pharmacy keeps: medicines (Pharmacy module).
         'item_kinds' => ['medicine'],
+        // What one item is called in headings and exports.
+        'item_label' => 'Medicine',
         // The most a member allowed to give discounts (pharmacy.sales.discount)
         // may take off one line at the counter, in percent.
         'max_discount_percent' => (int) env('PHARMACY_MAX_DISCOUNT_PERCENT', 20),
@@ -27,6 +29,7 @@ return [
         'name' => 'Retail',
         // Goods on a shop's shelves (Retail module).
         'item_kinds' => ['product'],
+        'item_label' => 'Product',
         'max_discount_percent' => (int) env('RETAIL_MAX_DISCOUNT_PERCENT', 20),
     ],
 

@@ -22,7 +22,7 @@ import { statusTone } from '@/lib/status';
 import { uuid } from '@/lib/uuid';
 import { show as showCustomer } from '@/routes/retail/customers';
 import { show as showDelivery } from '@/routes/retail/deliveries';
-import { cancel, close, confirm, index } from '@/routes/retail/orders';
+import { cancel, close, confirm, edit, index } from '@/routes/retail/orders';
 import { store as deliver } from '@/routes/retail/orders/deliveries';
 import { show as showSale } from '@/routes/retail/sales';
 
@@ -135,6 +135,13 @@ export default function ShowOrder({
                             <Printer className="size-4" aria-hidden />
                             Print
                         </Button>
+                        {canManage && isQuote && (
+                            <Button variant="outline" size="sm" asChild>
+                                <Link href={edit(order.id)}>
+                                    {order.expired ? 'Quote again' : 'Revise'}
+                                </Link>
+                            </Button>
+                        )}
                         {canManage && isQuote && !order.expired && (
                             <Form {...confirm.form(order.id)}>
                                 <Button type="submit" size="sm">

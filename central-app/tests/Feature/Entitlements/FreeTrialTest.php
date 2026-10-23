@@ -85,6 +85,35 @@ describe('the trial page', function () {
             ->assertRedirect(route('organizations.create', ['app' => 'retail']));
     });
 
+    it('adds the trial to the owner\'s business instead of asking for a new one', function () {
+        trialWorkAs($this->owner);
+
+        $this->get(trialAppUrl('organizations/create?app=retail'))
+            ->assertRedirect(route('trial', ['app' => 'retail']));
+
+        // Without a product it is a new business, as asked.
+        $this->get(trialAppUrl('organizations/create'))->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('central/organizations/create'));
+    });
+
+    it('lets a member who is not the owner start a business of their own for it', function () {
+        $member = OrganizationMembership::factory()->create(['organization_id' => $this->organization->id]);
+        trialWorkAs($member);
+
+        $this->get(trialAppUrl('organizations/create?app=retail'))->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('central/organizations/create')
+                ->where('trial.selected', 'retail'));
+    });
+
+    it('starts trials from Explore in the current business', function () {
+        trialWorkAs($this->owner);
+
+        $this->get(trialAppUrl('explore'))->assertOk();
+        $this->get(trialAppUrl('trial?app=retail'))->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('central/trial')->where('selected', 'retail'));
+    });
+
     it('shows the owner what the business may try, and starts nothing on a GET', function () {
         trialWorkAs($this->owner);
 

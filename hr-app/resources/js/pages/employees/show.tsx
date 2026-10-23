@@ -20,6 +20,7 @@ import {
 } from '@/components/fields';
 import type { Option, StructureOptions } from '@/components/fields';
 import { show, update } from '@/routes/employees';
+import { show as leaveBalances } from '@/routes/employees/balances';
 import { store as storeContract } from '@/routes/employees/contracts';
 import { index as documents } from '@/routes/employees/documents';
 import { leave } from '@/routes/employees';
@@ -86,6 +87,7 @@ type Props = {
         employment: boolean;
         personal: boolean;
         documents: boolean;
+        leave: boolean;
     };
     options:
         | (StructureOptions & {
@@ -167,6 +169,13 @@ export default function ShowEmployee({
                 }
                 actions={
                     <>
+                        {can.leave && (
+                            <Button asChild variant="outline">
+                                <Link href={leaveBalances(employee.id)}>
+                                    Leave
+                                </Link>
+                            </Button>
+                        )}
                         {can.documents && (
                             <Button asChild variant="outline">
                                 <Link href={documents(employee.id)}>

@@ -60,7 +60,7 @@ class PurchaseOrderController extends Controller
     {
         return Inertia::render($this->industry->page('purchase-orders/create'), [
             'suppliers' => Supplier::query()->where('active', true)->orderBy('name')->get(['id', 'name']),
-            'medicines' => self::itemOptions(),
+            'items' => self::itemOptions(),
         ]);
     }
 
@@ -110,7 +110,7 @@ class PurchaseOrderController extends Controller
                 'totalMinor' => $order->totalMinor(),
                 'lines' => $order->lines->map(fn (PurchaseOrderLine $line) => [
                     'id' => $line->id,
-                    'medicine' => $line->item->name,
+                    'item' => $line->item->name,
                     'unit' => $line->item->unit,
                     'pack' => $line->packLabel(),
                     'ordered' => $line->quantity_ordered,

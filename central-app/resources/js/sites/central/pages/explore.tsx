@@ -1,13 +1,12 @@
-import { Head, Link } from '@inertiajs/react';
-import { ArrowRight, Puzzle } from 'lucide-react';
-import { EmptyState } from '@miles/ui/components/empty-state';
-import { PageHeader } from '@miles/ui/components/page-header';
-import { Panel, PanelHeader } from '@miles/ui/components/panel';
-import { StatusBadge } from '@miles/ui/components/status-badge';
-import { Button } from '@/shared/components/ui/button';
-import { dashboard, explore } from '@/routes';
-import { create as createOrganization } from '@/routes/organizations';
-import { appIcon } from '@/shared/lib/app-icons';
+import { Head, Link } from "@inertiajs/react";
+import { ArrowRight, Puzzle } from "lucide-react";
+import { EmptyState } from "@miles/ui/components/empty-state";
+import { PageHeader } from "@miles/ui/components/page-header";
+import { Panel, PanelHeader } from "@miles/ui/components/panel";
+import { StatusBadge } from "@miles/ui/components/status-badge";
+import { Button } from "@/shared/components/ui/button";
+import { dashboard, explore, trial } from "@/routes";
+import { appIcon } from "@/shared/lib/app-icons";
 
 type Application = {
     code: string;
@@ -23,7 +22,8 @@ type Props = {
 
 /**
  * Every ERP application on the platform, as a way in: each released one
- * opens a new business with its free trial already chosen.
+ * starts its free trial, in the current business, or a new one when there
+ * is none.
  */
 export default function Explore({ trialDays, applications }: Props) {
     const available = applications.filter((app) => !app.comingSoon);
@@ -35,7 +35,7 @@ export default function Explore({ trialDays, applications }: Props) {
 
             <PageHeader
                 title="Explore the Miles Softwares ERP"
-                description={`Start a business on any of our applications, free for ${trialDays} days. No payment details needed.`}
+                description={`Try any of our applications free for ${trialDays} days. No payment details needed.`}
             />
 
             <div className="flex flex-col gap-3">
@@ -54,7 +54,7 @@ export default function Explore({ trialDays, applications }: Props) {
                     <Panel aria-labelledby="available">
                         <PanelHeader
                             title={<span id="available">Available now</span>}
-                            description="Try any of these free in a new business."
+                            description="Try any of these free in your business."
                         />
                         <ApplicationGrid applications={available} />
                     </Panel>
@@ -114,7 +114,7 @@ function ApplicationGrid({ applications }: { applications: Application[] }) {
                                 className="mt-auto self-start"
                             >
                                 <Link
-                                    href={createOrganization({
+                                    href={trial({
                                         query: { app: application.code },
                                     })}
                                 >
@@ -131,7 +131,7 @@ function ApplicationGrid({ applications }: { applications: Application[] }) {
 
 Explore.layout = {
     breadcrumbs: [
-        { title: 'Dashboard', href: dashboard() },
-        { title: 'Explore the ERP', href: explore() },
+        { title: "Dashboard", href: dashboard() },
+        { title: "Explore the ERP", href: explore() },
     ],
 };

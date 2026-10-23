@@ -1,0 +1,119 @@
+import { decimalsFor } from '../../shared/currencies';
+import type { Money } from '../../shared/pricing';
+import type { PaymentMethod } from '../../shared/types';
+import { one, run } from './database';
+
+/** The pharmacy and how its counter works: set up on first run, changed under Settings. */
+export interface PharmacySettings {
+  name: string;
+  address: string | null;
+  contact: string | null;
+  currency: string;
+  /** Minor-unit digits of the currency (2, or 0 for UGX, RWF…). */
+  decimals: number;
+  /** A second currency suppliers bill in and prices show in (USD), at `exchange_rate`. */
+  second_currency: string | null;
+  /** 1 of the second currency in the pharmacy's own; null until set. */
+  exchange_rate: number | null;
+
+  receipt_header: string | null;
+  receipt_footer: string | null;
+  paper_size: '80mm' | '58mm';
+  show_customer: boolean;
+  show_staff: boolean;
+
+  payment_methods: PaymentMethod[];
+  /** The most a pharmacist or manager may take off a line. */
+  max_discount_percent: number;
+  shifts_required: boolean;
+  default_float_minor: number;
+  /** Cashiers count the drawer without seeing what it should hold. */
+  blind_close: boolean;
+  require_customer_always: boolean;
+  require_customer_above_minor: number | null;
+  expiring_days: number;
+  prescription_valid_days: number;
+}
+
+export const PAYMENT_LABELS: Record<PaymentMethod, string> = {
+  cash: 'Cash',
+  mobile_money: 'Mobile money',
+  card: 'Card',
+  bank_transfer: 'Bank transfer',
+  other: 'Other',
+};
+
+export const DEFAULT_SETTINGS: PharmacySettings = {
+  name: 'My Pharmacy',
+  address: null,
+  contact: null,
+  currency: 'SSP',
+  decimals: 2,
+  second_currency: 'USD',
+  exchange_rate: null,
+  receipt_header: null,
+  receipt_footer: 'Thank you. Get well soon.',
+  paper_size: '80mm',
+  show_customer: true,
+  show_staff: true,
+  payment_methods: ['cash', 'mobile_money', 'card', 'bank_transfer'],
+  max_discount_percent: 10,
+  shifts_required: true,
+  default_float_minor: 0,
+  blind_close: true,
+  require_customer_always: false,
+  require_customer_above_minor: null,
+  expiring_days: 90,
+  prescription_valid_days: 30,
+};
+
+let cache: PharmacySettings | null = null;
+
+export function settings(): PharmacySettings {
+  if (!cache) {
+    const row = one<{ value: string }>("SELECT value FROM settings WHERE key = 'pharmacy'");
+    cache = { ...DEFAULT_SETTINGS, ...(row ? (JSON.parse(row.value) as Partial<PharmacySettings>) : {}) };
+  }
+  return cache;
+}
+
+export function saveSettings(next: PharmacySettings) {
+  run("INSERT INTO settings (key, value) VALUES ('pharmacy', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", JSON.stringify(next));
+  cache = next;
+}
+
+/** Forgets what was read (after a restore). */
+export function forgetSettings() {
+  cache = null;
+}
+
+export function getValue(key: string): string | null {
+  return one<{ value: string }>('SELECT value FROM settings WHERE key = ?', key)?.value ?? null;
+}
+
+export function setValue(key: string, value: string) {
+  run('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value', key, value);
+}
+
+/** "SSP 1,250.00", for messages. */
+export function formatMoney(minor: number): string {
+  const { currency, decimals } = settings();
+  const amount = (minor / 10 ** decimals).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  return `${currency} ${amount}`;
+}
+
+/** The pharmacy's currency, and the second one when its rate is set. */
+export function money(): Money {
+  const s = settings();
+  const second = s.second_currency;
+  return {
+    base: { code: s.currency, decimals: s.decimals },
+    foreign: second && second !== s.currency && s.exchange_rate && s.exchange_rate > 0 ? { code: second, decimals: decimalsFor(second), rate: s.exchange_rate } : null,
+  };
+}
+
+/** The one branch: the pharmacy itself. */
+export function branch() {
+  const s = settings();
+  return { id: 'main', name: s.name, code: 'MAIN', city: s.address };
+}

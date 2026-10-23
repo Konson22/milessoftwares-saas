@@ -42,6 +42,7 @@ abstract class TestCase extends Orchestra
             'backchannel_url' => self::BACKCHANNEL,
             'sign_in' => ['client_id' => 'sign-in-client', 'client_secret' => 'sign-in-secret'],
             'service' => ['client_id' => 'service-client', 'client_secret' => 'service-secret'],
+            'mobile' => ['client_id' => 'mobile-client'],
             'webhook_secret' => self::WEBHOOK_SECRET,
             'user_model' => User::class,
             // A second application served by the same deployment.
@@ -70,6 +71,14 @@ abstract class TestCase extends Orchestra
             ->middleware(['web', 'platform'])
             ->group(function (Router $router) {
                 $router->get('/', fn () => 'pharmacy home')->name('home');
+                $router->get('/dispense', fn () => Gate::allows('pharmacy.dispense') ? 'can dispense' : 'cannot dispense');
+            });
+
+        // The product's API, called by the mobile app.
+        $router->prefix(app(PlatformConfig::class)->path().'/api')
+            ->middleware(['platform.api'])
+            ->group(function (Router $router) {
+                $router->get('/whoami', fn () => (string) auth()->id());
                 $router->get('/dispense', fn () => Gate::allows('pharmacy.dispense') ? 'can dispense' : 'cannot dispense');
             });
 

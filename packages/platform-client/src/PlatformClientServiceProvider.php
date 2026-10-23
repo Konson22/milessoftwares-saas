@@ -10,6 +10,7 @@ use Illuminate\Support\ServiceProvider;
 use Miles\PlatformClient\Access\CurrentAccess;
 use Miles\PlatformClient\Events\DeliverDueEvents;
 use Miles\PlatformClient\Http\Middleware\RequirePlatformAccess;
+use Miles\PlatformClient\Http\Middleware\RequirePlatformToken;
 use Miles\PlatformClient\Http\Middleware\ResolveTenant;
 use Miles\PlatformClient\Http\Middleware\SelectApplication;
 use Miles\PlatformClient\Provisioning\NothingToProvision;
@@ -45,6 +46,9 @@ final class PlatformClientServiceProvider extends ServiceProvider
         $router->aliasMiddleware('platform.access', RequirePlatformAccess::class);
         // Everything a product page needs, in order.
         $router->middlewareGroup('platform', ['platform.tenant', 'platform.access']);
+        // The same for the API the mobile app calls: a bearer token, no session.
+        $router->aliasMiddleware('platform.token', RequirePlatformToken::class);
+        $router->middlewareGroup('platform.api', ['platform.tenant', 'platform.token']);
 
         // Tenant-owned models in the URL can only be bound once the tenant is
         // known (and the member checked): run both before SubstituteBindings.
@@ -52,6 +56,7 @@ final class PlatformClientServiceProvider extends ServiceProvider
             $kernel = $this->app->make(HttpKernel::class);
             $kernel->addToMiddlewarePriorityBefore(SubstituteBindings::class, ResolveTenant::class);
             $kernel->addToMiddlewarePriorityBefore(SubstituteBindings::class, RequirePlatformAccess::class);
+            $kernel->addToMiddlewarePriorityBefore(SubstituteBindings::class, RequirePlatformToken::class);
             // The application decides the clients the tenant is looked up with.
             $kernel->addToMiddlewarePriorityBefore(ResolveTenant::class, SelectApplication::class);
         }

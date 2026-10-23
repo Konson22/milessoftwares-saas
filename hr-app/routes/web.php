@@ -5,6 +5,9 @@ use App\Modules\Documents\Http\Controllers\DocumentController;
 use App\Modules\Employees\Http\Controllers\EmployeeController;
 use App\Modules\Employees\Http\Controllers\EmploymentController;
 use App\Modules\Employees\Http\Controllers\PersonalDetailsController;
+use App\Modules\Leave\Http\Controllers\EmployeeLeaveController;
+use App\Modules\Leave\Http\Controllers\LeaveController;
+use App\Modules\Leave\Http\Controllers\LeaveSettingsController;
 use Illuminate\Support\Facades\Route;
 use Miles\PlatformClient\PlatformConfig;
 
@@ -59,4 +62,22 @@ Route::prefix(app(PlatformConfig::class)->path())
         Route::get('documents/{document}/open', [DocumentController::class, 'open'])->whereUuid('document')->can('hr.documents.view')->name('documents.open');
         Route::get('documents/{document}/download', [DocumentController::class, 'download'])->whereUuid('document')->middleware('signed:relative')->can('hr.documents.view')->name('documents.download');
         Route::delete('documents/{document}', [DocumentController::class, 'destroy'])->whereUuid('document')->can('hr.documents.manage')->name('documents.destroy');
+
+        // Leave: requests and decisions, each person's balances, and the
+        // organization's kinds of leave and public holidays.
+        Route::get('leave', [LeaveController::class, 'index'])->can('hr.leave.view')->name('leave.index');
+        Route::post('leave', [LeaveController::class, 'store'])->can('hr.leave.manage')->name('leave.store');
+        Route::post('leave/{leaveRequest}/approve', [LeaveController::class, 'approve'])->whereUuid('leaveRequest')->can('hr.leave.approve')->name('leave.approve');
+        Route::post('leave/{leaveRequest}/reject', [LeaveController::class, 'reject'])->whereUuid('leaveRequest')->can('hr.leave.approve')->name('leave.reject');
+        // Whoever recorded a request may withdraw it; the controller checks.
+        Route::post('leave/{leaveRequest}/cancel', [LeaveController::class, 'cancel'])->whereUuid('leaveRequest')->can('hr.leave.view')->name('leave.cancel');
+        Route::get('employees/{employee}/leave-balances', [EmployeeLeaveController::class, 'show'])->whereUuid('employee')->can('hr.leave.view')->name('employees.balances.show');
+        Route::put('employees/{employee}/leave-balances/{leaveType}', [EmployeeLeaveController::class, 'update'])->whereUuid(['employee', 'leaveType'])->can('hr.leave.manage')->name('employees.balances.update');
+        Route::middleware('can:hr.leave.settings')->group(function () {
+            Route::get('leave/settings', [LeaveSettingsController::class, 'index'])->name('leave.settings');
+            Route::post('leave/types', [LeaveSettingsController::class, 'storeType'])->name('leave.types.store');
+            Route::put('leave/types/{leaveType}', [LeaveSettingsController::class, 'updateType'])->whereUuid('leaveType')->name('leave.types.update');
+            Route::post('leave/holidays', [LeaveSettingsController::class, 'storeHoliday'])->name('leave.holidays.store');
+            Route::delete('leave/holidays/{publicHoliday}', [LeaveSettingsController::class, 'destroyHoliday'])->whereUuid('publicHoliday')->name('leave.holidays.destroy');
+        });
     });

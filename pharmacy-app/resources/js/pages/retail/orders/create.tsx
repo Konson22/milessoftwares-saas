@@ -10,7 +10,7 @@ import { Label } from '@miles/ui/components/ui/label';
 import { formatMoney } from '@/lib/money';
 import { lineTotal, listPrice } from '@/lib/wholesale';
 import type { ListPrice } from '@/lib/wholesale';
-import { index, store } from '@/routes/retail/orders';
+import { index, show, store, update } from '@/routes/retail/orders';
 
 type Item = {
     id: string;
@@ -40,6 +40,14 @@ type Props = {
     priceLists: Record<string, { name: string; prices: ListPrice[] }>;
     maxDiscountPercent: number;
     validUntil: string;
+    /** Revising a saved quotation (its customer stays). */
+    quotation?: {
+        id: string;
+        quoteNumber: string;
+        customerReference: string | null;
+        notes: string | null;
+        lines: Omit<Line, 'key'>[];
+    };
 };
 
 type Line = {
@@ -54,7 +62,8 @@ const selectClass = 'h-9 w-full rounded-md border bg-transparent px-3 text-sm';
 
 /**
  * A quotation for an account customer, priced at their price list. Saved as
- * a quotation to send, or confirmed at once as a sales order.
+ * a quotation to send, or confirmed at once as a sales order. Revising one
+ * prices it again at today's prices, under the same number.
  */
 export default function CreateOrder({
     customers,
@@ -62,11 +71,12 @@ export default function CreateOrder({
     priceLists,
     maxDiscountPercent,
     validUntil,
+    quotation,
 }: Props) {
     const { currency } = usePage().props;
     const money = (minor: number) => formatMoney(minor, currency ?? 'USD');
     const [customerId, setCustomerId] = useState(customers[0]?.id ?? '');
-    const [nextKey, setNextKey] = useState(1);
+    const [nextKey, setNextKey] = useState(quotation?.lines.length || 1);
     const blank = (key: number): Line => ({
         key,
         itemId: items[0]?.id ?? '',
@@ -74,7 +84,14 @@ export default function CreateOrder({
         quantity: '',
         discount: '',
     });
-    const [lines, setLines] = useState<Line[]>([blank(0)]);
+    const [lines, setLines] = useState<Line[]>(() =>
+        quotation && quotation.lines.length > 0
+            ? quotation.lines.map((line, key) => ({ ...line, key }))
+            : [blank(0)],
+    );
+    const title = quotation
+        ? `Revise quotation ${quotation.quoteNumber}`
+        : 'New quotation';
 
     const customer = customers.find((c) => c.id === customerId);
     const list = customer?.priceListId
@@ -136,9 +153,9 @@ export default function CreateOrder({
 
     return (
         <>
-            <Head title="New quotation" />
+            <Head title={title} />
             <PageHeader
-                title="New quotation"
+                title={title}
                 description={
                     list
                         ? `Priced at ${list.name}.`
@@ -148,7 +165,12 @@ export default function CreateOrder({
 
             <Panel className="max-w-5xl">
                 <PanelBody>
-                    <Form {...store.form()} className="grid gap-4">
+                    <Form
+                        {...(quotation
+                            ? update.form(quotation.id)
+                            : store.form())}
+                        className="grid gap-4"
+                    >
                         {({ errors, processing }) => (
                             <>
                                 {/* Set by the button that sends the form. */}
@@ -165,6 +187,7 @@ export default function CreateOrder({
                                         <select
                                             id="customer_id"
                                             name="customer_id"
+                                            disabled={quotation !== undefined}
                                             value={customerId}
                                             onChange={(e) =>
                                                 setCustomerId(e.target.value)
@@ -214,6 +237,10 @@ export default function CreateOrder({
                                         <Input
                                             id="customer_reference"
                                             name="customer_reference"
+                                            defaultValue={
+                                                quotation?.customerReference ??
+                                                ''
+                                            }
                                         />
                                     </div>
                                 </div>
@@ -425,7 +452,11 @@ export default function CreateOrder({
 
                                 <div className="grid gap-1.5">
                                     <Label htmlFor="notes">Notes</Label>
-                                    <Input id="notes" name="notes" />
+                                    <Input
+                                        id="notes"
+                                        name="notes"
+                                        defaultValue={quotation?.notes ?? ''}
+                                    />
                                 </div>
 
                                 {errors.status && (
@@ -440,7 +471,9 @@ export default function CreateOrder({
                                         disabled={processing}
                                         onClick={(e) => submitAs(e, false)}
                                     >
-                                        Save quotation
+                                        {quotation
+                                            ? 'Save the revision'
+                                            : 'Save quotation'}
                                     </Button>
                                     <Button
                                         type="submit"
@@ -450,7 +483,15 @@ export default function CreateOrder({
                                         Confirm as order
                                     </Button>
                                     <Button variant="ghost" asChild>
-                                        <Link href={index()}>Cancel</Link>
+                                        <Link
+                                            href={
+                                                quotation
+                                                    ? show(quotation.id)
+                                                    : index()
+                                            }
+                                        >
+                                            Cancel
+                                        </Link>
                                     </Button>
                                 </div>
                             </>

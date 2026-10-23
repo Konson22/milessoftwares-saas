@@ -65,9 +65,9 @@ describe('selling packs', function () {
 
     it('offers the packs at the counter with their prices', function () {
         $this->get($this->workspaceUrl('acme', 'sales/create'))->assertInertia(fn (Assert $page) => $page
-            ->where('medicines.0.category', 'Pain relief')
-            ->where('medicines.0.storage', 'Keep cool')
-            ->where('medicines.0.packs', fn ($packs) => collect($packs)->sortBy('units')->map(fn ($pack) => [$pack['name'], $pack['units'], $pack['priceMinor']])->values()->all() === [
+            ->where('items.0.category', 'Pain relief')
+            ->where('items.0.storage', 'Keep cool')
+            ->where('items.0.packs', fn ($packs) => collect($packs)->sortBy('units')->map(fn ($pack) => [$pack['name'], $pack['units'], $pack['priceMinor']])->values()->all() === [
                 ['strip', 4, 1000],
                 ['box', 10, 2000],
             ]));

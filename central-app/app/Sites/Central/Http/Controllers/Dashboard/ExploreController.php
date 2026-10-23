@@ -8,8 +8,8 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Every listed ERP application, for anyone to start a business on: released
- * ones open a new business with their free trial already chosen.
+ * Every listed ERP application: released ones start their free trial, in the
+ * current business, or in a new one for someone without a business.
  */
 class ExploreController extends Controller
 {

@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Miles\PlatformClient\Http\Controllers\AppSessionController;
 use Miles\PlatformClient\Http\Controllers\ProvisioningController;
 use Miles\PlatformClient\Http\Controllers\SignInController;
 use Miles\PlatformClient\Http\Controllers\WebhookController;
@@ -22,6 +23,12 @@ foreach ($config->applications() as $application) {
                 Route::get('auth/callback', [SignInController::class, 'callback'])->name('callback');
                 Route::post('logout', [SignInController::class, 'logout'])->middleware('auth')->name('logout');
             });
+
+            // The mobile app, just signed in on the platform (PKCE on the
+            // device): records the user here. Its API calls carry the access token.
+            Route::post('api/session', AppSessionController::class)
+                ->middleware(['platform.api', 'throttle:30,1'])
+                ->name('api.session');
 
             // Server-to-server from the platform: signed, no session, no CSRF, any
             // host. Register in admin → Applications → Integration: webhook endpoint

@@ -69,7 +69,7 @@ class SupplierReturnController extends Controller
                 'totalMinor' => $return->total_minor,
                 'lines' => $return->lines->map(fn (SupplierReturnLine $line) => [
                     'id' => $line->id,
-                    'medicine' => $line->item->name,
+                    'item' => $line->item->name,
                     'batchNumber' => $line->batch->batch_number,
                     'quantity' => $line->quantity,
                     'unitCostMinor' => $line->unit_cost_minor,
@@ -96,7 +96,7 @@ class SupplierReturnController extends Controller
                 'receivedOn' => $receipt->received_on->toDateString(),
                 'lines' => $receipt->lines->map(fn (GoodsReceiptLine $line) => [
                     'id' => $line->id,
-                    'medicine' => $line->item->name,
+                    'item' => $line->item->name,
                     'batchNumber' => $line->batch_number,
                     'expiresOn' => $line->expires_on?->toDateString(),
                     'received' => $line->inUnits($line->quantity),

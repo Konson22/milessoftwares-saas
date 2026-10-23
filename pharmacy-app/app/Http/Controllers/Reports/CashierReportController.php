@@ -52,6 +52,8 @@ class CashierReportController extends Controller
                 'takenMinor' => array_sum($summary['takenMinor']),
                 'cashTakenMinor' => $summary['takenMinor'][PaymentMethod::Cash->value] ?? 0,
                 'cashRefundsMinor' => $summary['cashRefundsMinor'],
+                'cashInMinor' => $summary['cashInMinor'],
+                'cashOutMinor' => $summary['cashOutMinor'],
                 // Fixed at closing; while open, what it should hold so far.
                 'expectedCashMinor' => $till->expected_cash_minor ?? $summary['expectedCashMinor'],
                 'countedCashMinor' => $till->counted_cash_minor,
@@ -81,7 +83,7 @@ class CashierReportController extends Controller
                 'tills' => $rows->values(),
             ]),
             'cashiers' => CsvExport::download("cashiers-{$name}", ['Cashier' => 'cashier', 'Tills' => 'tills', 'Still open' => 'open', 'Sales' => 'salesCount', 'Taken' => 'takenMinor', 'Cash refunds' => 'cashRefundsMinor', 'Over' => 'overMinor', 'Short' => 'shortMinor'], $byCashier),
-            'tills' => CsvExport::download("tills-{$name}", ['Till' => 'number', 'Cashier' => 'cashier', 'Opened' => 'openedAt', 'Closed' => 'closedAt', 'Status' => 'status', 'Sales' => 'salesCount', 'Taken' => 'takenMinor', 'Cash taken' => 'cashTakenMinor', 'Cash refunds' => 'cashRefundsMinor', 'Expected cash' => 'expectedCashMinor', 'Counted cash' => 'countedCashMinor', 'Difference' => 'differenceMinor', 'Note' => 'closingNote'], $rows),
+            'tills' => CsvExport::download("tills-{$name}", ['Till' => 'number', 'Cashier' => 'cashier', 'Opened' => 'openedAt', 'Closed' => 'closedAt', 'Status' => 'status', 'Sales' => 'salesCount', 'Taken' => 'takenMinor', 'Cash taken' => 'cashTakenMinor', 'Cash refunds' => 'cashRefundsMinor', 'Cash in' => 'cashInMinor', 'Cash out' => 'cashOutMinor', 'Expected cash' => 'expectedCashMinor', 'Counted cash' => 'countedCashMinor', 'Difference' => 'differenceMinor', 'Note' => 'closingNote'], $rows),
             default => abort(404),
         };
     }

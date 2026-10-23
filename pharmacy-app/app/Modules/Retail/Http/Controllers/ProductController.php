@@ -108,6 +108,7 @@ class ProductController extends Controller
                     ->ignore($product->id),
             ],
             'tracks_expiry' => ['boolean'],
+            'tracks_serials' => ['boolean'],
             'sell_price' => ['required', 'string', Money::rule()],
             'reorder_level' => ['required', 'integer', 'min:0', 'max:1000000'],
             'active' => ['boolean'],
@@ -132,6 +133,8 @@ class ProductController extends Controller
                 // One spelling per category, whoever typed it first.
                 'category' => $this->category($validated['category'] ?? null),
                 'tracks_expiry' => $tracksExpiry,
+                // Turned on with stock on the shelf: record its serials before selling it.
+                'tracks_serials' => (bool) ($validated['tracks_serials'] ?? false),
                 'sell_price_minor' => Money::toMinor($validated['sell_price']),
                 'reorder_level' => (int) $validated['reorder_level'],
                 'active' => (bool) ($validated['active'] ?? true),
@@ -157,6 +160,7 @@ class ProductController extends Controller
             'barcode' => $product->barcode,
             'category' => $product->category,
             'tracksExpiry' => $product->tracks_expiry,
+            'tracksSerials' => $product->tracks_serials,
             'sellPriceMinor' => $product->sell_price_minor,
             'reorderLevel' => $product->reorder_level,
             'active' => $product->active,

@@ -74,6 +74,9 @@ class Account extends Model
 
     public const CASH_OVER_SHORT = 'cash_over_short';
 
+    /** Takes cash paid out of a till for an expense when no account is named. */
+    public const OTHER_EXPENSES = 'other_expenses';
+
     protected $guarded = ['organization_id', 'system_key'];
 
     protected function casts(): array

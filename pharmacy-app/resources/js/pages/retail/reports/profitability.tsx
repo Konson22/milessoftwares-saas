@@ -20,7 +20,7 @@ type Props = {
     to: string;
     rows: {
         id: string;
-        medicine: string;
+        item: string;
         quantity: number;
         returnedQuantity: number;
         discountMinor: number;
@@ -82,7 +82,7 @@ export default function Profitability({ from, to, rows, totals }: Props) {
                                             href={stockShow(row.id)}
                                             className="font-medium hover:underline"
                                         >
-                                            {row.medicine}
+                                            {row.item}
                                         </Link>
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">

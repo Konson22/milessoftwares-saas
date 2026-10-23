@@ -11,6 +11,7 @@ use App\Modules\Inventory\Models\ItemPack;
 use App\Modules\Sales\Actions\CustomerAccounts;
 use App\Modules\Sales\Actions\Deliver;
 use App\Modules\Sales\Actions\SalesOrders;
+use App\Modules\Sales\Actions\ShelfPrices;
 use App\Modules\Sales\Enums\SalesOrderStatus;
 use App\Modules\Sales\Models\Customer;
 use App\Modules\Sales\Models\DeliveryNote;
@@ -119,15 +120,7 @@ class SalesOrderController extends Controller
     {
         $validated = $request->validate([
             'customer_id' => ['required', 'uuid'],
-            'valid_until' => ['required', 'date'],
-            'customer_reference' => ['nullable', 'string', 'max:64'],
-            'notes' => ['nullable', 'string', 'max:500'],
-            'confirm' => ['boolean'],
-            'lines' => ['required', 'array', 'min:1', 'max:200'],
-            'lines.*.item_id' => ['required', 'uuid', Rule::exists('items', 'id')->where('organization_id', app(CurrentTenant::class)->id())],
-            'lines.*.pack_id' => ['nullable', 'uuid'],
-            'lines.*.quantity' => ['required', 'integer', 'min:1', 'max:1000000'],
-            'lines.*.discount_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
+            ...$this->quotationRules(),
         ]);
         $user = $this->user($request);
 
@@ -136,12 +129,7 @@ class SalesOrderController extends Controller
                 by: $user,
                 branchId: $this->branch->id(),
                 customerId: (string) $validated['customer_id'],
-                lines: array_values(array_map(fn (array $line) => [
-                    'item_id' => $line['item_id'],
-                    'pack_id' => $line['pack_id'] ?? null,
-                    'quantity' => (int) $line['quantity'],
-                    'discount_percent' => (int) ($line['discount_percent'] ?? 0),
-                ], $validated['lines'])),
+                lines: $this->lines($validated['lines']),
                 validUntil: CarbonImmutable::parse($validated['valid_until']),
                 customerReference: $validated['customer_reference'] ?? null,
                 notes: $validated['notes'] ?? null,
@@ -157,6 +145,84 @@ class SalesOrderController extends Controller
 
         return to_route($this->industry->route('orders.show'), $order)->with('success', $order->order_number === null
             ? "Quotation {$order->quote_number} saved."
+            : "Order {$order->order_number} confirmed.");
+    }
+
+    /**
+     * The quotation form again, filled in with what was quoted. An expired
+     * quotation gets a fresh validity: revising it prices it again.
+     */
+    public function edit(SalesOrder $order, CustomerAccounts $accounts): Response
+    {
+        $this->ensureHere($order);
+        abort_unless($order->status === SalesOrderStatus::Quote, 404);
+        $order->load(['customer', 'lines.item.packs']);
+
+        $customer = $order->customer;
+        $list = $customer->priceList;
+        $owed = $accounts->balance($customer);
+        $validUntil = $this->expired($order) ? CarbonImmutable::today()->addDays(14) : $order->valid_until;
+
+        return Inertia::render($this->industry->page('orders/create'), [
+            'customers' => [[
+                'id' => $customer->id,
+                'number' => $customer->number,
+                'name' => $customer->name,
+                'priceListId' => $list?->active ? $list->id : null,
+                'creditLimitMinor' => $customer->credit_limit_minor,
+                'availableMinor' => max(0, $customer->credit_limit_minor - $owed),
+            ]],
+            'items' => $this->itemOptions(),
+            'priceLists' => $list?->active ? [$list->id => [
+                'name' => $list->name,
+                'prices' => $list->prices()->get()->map(fn (PriceListPrice $price) => [
+                    'itemId' => $price->item_id,
+                    'packId' => $price->item_pack_id,
+                    'priceMinor' => $price->price_minor,
+                ])->values(),
+            ]] : (object) [],
+            'maxDiscountPercent' => $this->maxDiscountPercent(),
+            'validUntil' => $validUntil->toDateString(),
+            'quotation' => [
+                'id' => $order->id,
+                'quoteNumber' => $order->quote_number,
+                'customerReference' => $order->customer_reference,
+                'notes' => $order->notes,
+                'lines' => $order->lines->map(fn (SalesOrderLine $line) => [
+                    'itemId' => $line->item_id,
+                    // Lines keep the pack's name and size; find it again (gone: by the unit).
+                    'packId' => $line->pack_name === null ? '' : ($line->item->packs
+                        ->first(fn (ItemPack $pack) => $pack->name === $line->pack_name && $pack->units === $line->units_per_pack)?->id ?? ''),
+                    'quantity' => (string) $line->quantity,
+                    'discount' => $line->discount_percent === 0 ? '' : (string) $line->discount_percent,
+                ])->values(),
+            ],
+        ]);
+    }
+
+    public function update(Request $request, SalesOrder $order, SalesOrders $orders): RedirectResponse
+    {
+        $this->ensureHere($order);
+        $validated = $request->validate($this->quotationRules());
+        $user = $this->user($request);
+
+        DB::transaction(function () use ($orders, $order, $validated, $user) {
+            $orders->revise(
+                order: $order,
+                lines: $this->lines($validated['lines']),
+                validUntil: CarbonImmutable::parse($validated['valid_until']),
+                customerReference: $validated['customer_reference'] ?? null,
+                notes: $validated['notes'] ?? null,
+                maxDiscountPercent: $this->maxDiscountPercent(),
+            );
+
+            if ($validated['confirm'] ?? false) {
+                $orders->confirm($order, $user);
+            }
+        });
+
+        return to_route($this->industry->route('orders.show'), $order)->with('success', $order->order_number === null
+            ? "Quotation {$order->quote_number} revised."
             : "Order {$order->order_number} confirmed.");
     }
 
@@ -334,20 +400,55 @@ class SalesOrderController extends Controller
             ->orderBy('name')
             ->get();
         $stock = app(Stock::class);
+        $shelf = app(ShelfPrices::class);
 
         return array_values($items->map(fn (Item $item) => [
             'id' => $item->id,
             'label' => $item->name,
             'unit' => $item->unit,
-            'sellPriceMinor' => $item->sell_price_minor,
+            'sellPriceMinor' => $shelf->price($this->branch->id(), $item),
             'available' => $stock->sellable($item, $this->branch->id()),
             'packs' => array_values($item->packs->map(fn (ItemPack $pack) => [
                 'id' => $pack->id,
                 'label' => $pack->label(),
                 'units' => $pack->units,
-                'sellPriceMinor' => $pack->sellPrice($item),
+                'sellPriceMinor' => $shelf->price($this->branch->id(), $item, $pack),
             ])->all()),
         ])->all());
+    }
+
+    /**
+     * What a quotation form sends, new or revised.
+     *
+     * @return array<string, mixed>
+     */
+    private function quotationRules(): array
+    {
+        return [
+            'valid_until' => ['required', 'date'],
+            'customer_reference' => ['nullable', 'string', 'max:64'],
+            'notes' => ['nullable', 'string', 'max:500'],
+            'confirm' => ['boolean'],
+            'lines' => ['required', 'array', 'min:1', 'max:200'],
+            'lines.*.item_id' => ['required', 'uuid', Rule::exists('items', 'id')->where('organization_id', app(CurrentTenant::class)->id())],
+            'lines.*.pack_id' => ['nullable', 'uuid'],
+            'lines.*.quantity' => ['required', 'integer', 'min:1', 'max:1000000'],
+            'lines.*.discount_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
+        ];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $lines
+     * @return list<array{item_id: string, pack_id: string|null, quantity: int, discount_percent: int}>
+     */
+    private function lines(array $lines): array
+    {
+        return array_values(array_map(fn (array $line) => [
+            'item_id' => (string) $line['item_id'],
+            'pack_id' => $line['pack_id'] ?? null,
+            'quantity' => (int) $line['quantity'],
+            'discount_percent' => (int) ($line['discount_percent'] ?? 0),
+        ], $lines));
     }
 
     private function expired(SalesOrder $order): bool

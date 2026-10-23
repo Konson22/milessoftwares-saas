@@ -2,6 +2,7 @@
 
 namespace App\Finance;
 
+use App\Enums\AccountType;
 use App\Enums\PaymentMethod;
 use App\Models\Account;
 use App\Models\Bill;
@@ -29,6 +30,8 @@ use Miles\SharedModuleKit\Envelope;
  *                             count, write_off: Dr stock losses  Cr inventory
  *                             (a gain the other way round)
  *   finance.cash.counted      short: Dr cash over and short  Cr cash (over the reverse)
+ *   finance.cash.moved        banked: Dr bank  Cr cash; from the bank the reverse;
+ *                             paid out: Dr the expense (Other expenses)  Cr cash
  *   finance.bill.received     Dr inventory (or the line's account) (+ tax)
  *                                                  Cr payable
  *   finance.credit_note.received
@@ -61,6 +64,7 @@ class PostEvent
             'finance.sales_return.issued.v1' => $this->salesReturnIssued($event),
             'finance.stock.adjusted.v1' => $this->stockAdjusted($event),
             'finance.cash.counted.v1' => $this->cashCounted($event),
+            'finance.cash.moved.v1' => $this->cashMoved($event),
             'finance.bill.received.v1' => $this->billReceived($event),
             'finance.credit_note.received.v1' => $this->creditNoteReceived($event),
             default => throw new UnsupportedEvent("Finance does not handle {$event->eventType} v{$event->schemaVersion}."),
@@ -332,6 +336,49 @@ class PostEvent
             ['account' => $debit, 'debit' => abs($difference)],
             ['account' => $credit, 'credit' => abs($difference)],
         ], $this->source($event, $p['reference']));
+    }
+
+    private function cashMoved(Envelope $event): void
+    {
+        $p = $event->payload;
+        $amount = (int) $p['amount_minor'];
+        if ($amount <= 0) {
+            return;
+        }
+
+        $into = $p['direction'] === 'in';
+        $counterpart = match ($p['counterpart']) {
+            'bank' => Account::system(Account::BANK),
+            'expense' => $into
+                ? throw new UnsupportedEvent('Cash cannot come into a till from an expense.')
+                : $this->expenseAccount($p['expense_account'] ?? null),
+            default => throw new UnsupportedEvent("Finance does not know where cash moved to: {$p['counterpart']}."),
+        };
+        $cash = Account::system(Account::CASH);
+        [$debit, $credit] = $into ? [$cash, $counterpart] : [$counterpart, $cash];
+
+        $this->ledger->post(CarbonImmutable::parse($p['moved_on']), "{$p['description']} ({$p['reference']})", [
+            ['account' => $debit, 'debit' => $amount, 'description' => $p['description']],
+            ['account' => $credit, 'credit' => $amount],
+        ], $this->source($event, $p['reference']));
+    }
+
+    /**
+     * The active expense account the product named, or Other expenses
+     * (by key, or by its starting code in charts made before the key).
+     */
+    private function expenseAccount(?string $code): Account
+    {
+        $named = $code === null ? null : Account::query()
+            ->where('code', $code)
+            ->where('type', AccountType::Expense)
+            ->where('active', true)
+            ->first();
+
+        return $named
+            ?? Account::query()->where('system_key', Account::OTHER_EXPENSES)->first()
+            ?? Account::query()->where('code', '6900')->where('type', AccountType::Expense)->first()
+            ?? Account::system(Account::OTHER_EXPENSES);
     }
 
     private function billReceived(Envelope $event): void

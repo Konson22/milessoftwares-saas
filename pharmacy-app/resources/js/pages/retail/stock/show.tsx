@@ -1,4 +1,4 @@
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { PageHeader } from '@miles/ui/components/page-header';
 import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
@@ -20,7 +20,14 @@ import {
     index as disposals,
     store as storeDisposal,
 } from '@/routes/retail/disposals';
-import { adjust, index, opening } from '@/routes/retail/stock';
+import { move as moveStock } from '@/routes/retail/locations';
+import {
+    adjust,
+    hold,
+    index,
+    opening,
+    release,
+} from '@/routes/retail/stock';
 
 type Batch = {
     id: string;
@@ -29,6 +36,10 @@ type Batch = {
     expired: boolean;
     quantity: number;
     unitCostMinor: number;
+    status: 'available' | 'quarantined' | 'recalled';
+    holdReason: string | null;
+    locations: { id: string; name: string; quantity: number }[];
+    notPutAway: number;
 };
 
 type Movement = {
@@ -43,8 +54,7 @@ type Movement = {
 };
 
 type Props = {
-    /** The shared stock screen's name for the item. */
-    medicine: {
+        item: {
         id: string;
         label: string;
         unit: string;
@@ -62,9 +72,12 @@ type Props = {
         reason: string;
         requestedBy: string;
     }[];
+    /** The branch's shelves in use; none means goods are not placed. */
+    locations: { id: string; name: string }[];
     reasons: { value: string; label: string }[];
     disposalReasons: { value: string; label: string }[];
     canAdjust: boolean;
+    canHold: boolean;
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -85,18 +98,29 @@ const TYPE_LABELS: Record<string, string> = {
  * counts and corrections, and what moved it.
  */
 export default function RetailStockShow({
-    medicine: product,
+    item: product,
     batches,
     movements,
     pendingDisposals,
+    locations,
     reasons,
     disposalReasons,
     canAdjust,
+    canHold,
 }: Props) {
     const { branch, currency } = usePage().props;
     const [writeOffBatch, setWriteOffBatch] = useState(
         batches.find((batch) => batch.quantity > 0)?.id ?? '',
     );
+    const [holdBatch, setHoldBatch] = useState(
+        batches.find(
+            (batch) => batch.quantity > 0 && batch.status !== 'recalled',
+        )?.id ?? '',
+    );
+    const [moveBatch, setMoveBatch] = useState(
+        batches.find((batch) => batch.quantity > 0)?.id ?? '',
+    );
+    const movable = batches.find((batch) => batch.id === moveBatch);
     const columns = (product.tracksExpiry ? 4 : 3) + (canAdjust ? 1 : 0);
 
     return (
@@ -140,6 +164,46 @@ export default function RetailStockShow({
                                 <TableRow key={batch.id}>
                                     <TableCell className="font-medium">
                                         {batch.batchNumber}
+                                        {batch.status !== 'available' && (
+                                            <span className="block text-xs font-normal">
+                                                <StatusBadge
+                                                    tone={
+                                                        batch.status ===
+                                                        'recalled'
+                                                            ? 'danger'
+                                                            : 'warning'
+                                                    }
+                                                >
+                                                    {batch.status}
+                                                </StatusBadge>{' '}
+                                                <span className="text-muted-foreground">
+                                                    {batch.holdReason}
+                                                </span>
+                                                {canHold &&
+                                                    batch.status ===
+                                                        'quarantined' && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="link"
+                                                            size="sm"
+                                                            className="h-auto px-1"
+                                                            onClick={() =>
+                                                                router.post(
+                                                                    release.url(
+                                                                        batch.id,
+                                                                    ),
+                                                                    {},
+                                                                    {
+                                                                        preserveScroll: true,
+                                                                    },
+                                                                )
+                                                            }
+                                                        >
+                                                            Release
+                                                        </Button>
+                                                    )}
+                                            </span>
+                                        )}
                                     </TableCell>
                                     {product.tracksExpiry && (
                                         <TableCell className="tabular-nums">
@@ -153,6 +217,22 @@ export default function RetailStockShow({
                                     )}
                                     <TableCell className="text-right tabular-nums">
                                         {batch.quantity}
+                                        {locations.length > 0 &&
+                                            batch.quantity > 0 && (
+                                                <span className="block text-xs text-muted-foreground">
+                                                    {[
+                                                        ...batch.locations.map(
+                                                            (place) =>
+                                                                `${place.name} ${place.quantity}`,
+                                                        ),
+                                                        ...(batch.notPutAway > 0
+                                                            ? [
+                                                                  `not put away ${batch.notPutAway}`,
+                                                              ]
+                                                            : []),
+                                                    ].join(' · ')}
+                                                </span>
+                                            )}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
                                         {formatMoney(
@@ -247,6 +327,186 @@ export default function RetailStockShow({
                     </TableBody>
                 </Table>
             </Panel>
+
+            {canHold && holdBatch !== '' && (
+                <Panel className="mb-3 max-w-3xl">
+                    <PanelHeader
+                        title="Hold a batch back"
+                        description="Held goods are not sold. A quarantined batch (being checked) can be released; a recalled one goes back to the supplier or is written off."
+                    />
+                    <PanelBody>
+                        <Form
+                            {...hold.form(holdBatch)}
+                            resetOnSuccess
+                            options={{ preserveScroll: true }}
+                            className="flex flex-wrap items-start gap-2"
+                        >
+                            {({ errors, processing }) => (
+                                <>
+                                    <select
+                                        value={holdBatch}
+                                        onChange={(e) =>
+                                            setHoldBatch(e.target.value)
+                                        }
+                                        aria-label="Batch to hold"
+                                        className="h-9 rounded-md border bg-transparent px-2 text-sm"
+                                    >
+                                        {batches
+                                            .filter(
+                                                (batch) =>
+                                                    batch.quantity > 0 &&
+                                                    batch.status !==
+                                                        'recalled',
+                                            )
+                                            .map((batch) => (
+                                                <option
+                                                    key={batch.id}
+                                                    value={batch.id}
+                                                >
+                                                    {batch.batchNumber} (
+                                                    {batch.quantity} on hand)
+                                                </option>
+                                            ))}
+                                    </select>
+                                    <select
+                                        name="status"
+                                        aria-label="Hold"
+                                        className="h-9 rounded-md border bg-transparent px-2 text-sm"
+                                    >
+                                        <option value="quarantined">
+                                            Quarantine
+                                        </option>
+                                        <option value="recalled">Recall</option>
+                                    </select>
+                                    <Input
+                                        name="reason"
+                                        required
+                                        placeholder="Why? (e.g. recall notice)"
+                                        aria-label="Reason for the hold"
+                                        className="w-64"
+                                    />
+                                    <Button
+                                        type="submit"
+                                        variant="outline"
+                                        disabled={processing}
+                                    >
+                                        Hold back from sale
+                                    </Button>
+                                    {(errors.reason || errors.hold) && (
+                                        <p className="w-full text-sm text-destructive">
+                                            {errors.reason ?? errors.hold}
+                                        </p>
+                                    )}
+                                </>
+                            )}
+                        </Form>
+                    </PanelBody>
+                </Panel>
+            )}
+
+            {canAdjust && locations.length > 0 && movable && (
+                <Panel className="mb-3 max-w-3xl">
+                    <PanelHeader
+                        title="Put away or move"
+                        description="Which shelf the goods are on; what is on hand does not change."
+                    />
+                    <PanelBody>
+                        <Form
+                            {...moveStock.form(moveBatch)}
+                            resetOnSuccess
+                            options={{ preserveScroll: true }}
+                            className="flex flex-wrap items-start gap-2"
+                        >
+                            {({ errors, processing }) => (
+                                <>
+                                    <select
+                                        value={moveBatch}
+                                        onChange={(e) =>
+                                            setMoveBatch(e.target.value)
+                                        }
+                                        aria-label="Batch to move"
+                                        className="h-9 rounded-md border bg-transparent px-2 text-sm"
+                                    >
+                                        {batches
+                                            .filter(
+                                                (batch) => batch.quantity > 0,
+                                            )
+                                            .map((batch) => (
+                                                <option
+                                                    key={batch.id}
+                                                    value={batch.id}
+                                                >
+                                                    {batch.batchNumber}
+                                                </option>
+                                            ))}
+                                    </select>
+                                    <select
+                                        name="from_location_id"
+                                        aria-label="From"
+                                        className="h-9 rounded-md border bg-transparent px-2 text-sm"
+                                    >
+                                        {movable.notPutAway > 0 && (
+                                            <option value="">
+                                                From not put away (
+                                                {movable.notPutAway})
+                                            </option>
+                                        )}
+                                        {movable.locations.map((place) => (
+                                            <option
+                                                key={place.id}
+                                                value={place.id}
+                                            >
+                                                From {place.name} (
+                                                {place.quantity})
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        name="to_location_id"
+                                        aria-label="To"
+                                        className="h-9 rounded-md border bg-transparent px-2 text-sm"
+                                    >
+                                        {locations.map((location) => (
+                                            <option
+                                                key={location.id}
+                                                value={location.id}
+                                            >
+                                                To {location.name}
+                                            </option>
+                                        ))}
+                                        <option value="">
+                                            To not put away
+                                        </option>
+                                    </select>
+                                    <Input
+                                        name="quantity"
+                                        type="number"
+                                        min={1}
+                                        required
+                                        placeholder="How many"
+                                        aria-label="Quantity to move"
+                                        className="w-28"
+                                    />
+                                    <Button
+                                        type="submit"
+                                        variant="outline"
+                                        disabled={processing}
+                                    >
+                                        Move
+                                    </Button>
+                                    {(errors.quantity ||
+                                        errors.to_location_id) && (
+                                        <p className="w-full text-sm text-destructive">
+                                            {errors.quantity ??
+                                                errors.to_location_id}
+                                        </p>
+                                    )}
+                                </>
+                            )}
+                        </Form>
+                    </PanelBody>
+                </Panel>
+            )}
 
             {canAdjust && writeOffBatch !== '' && (
                 <Panel className="mb-3 max-w-3xl">

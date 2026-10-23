@@ -11,8 +11,11 @@ use App\Modules\Inventory\Models\Item;
 use App\Modules\Inventory\Models\ItemPack;
 use App\Modules\Sales\Actions\CounterPrinting;
 use App\Modules\Sales\Actions\CustomerAccounts;
+use App\Modules\Sales\Actions\Loyalty;
+use App\Modules\Sales\Actions\Promotions;
 use App\Modules\Sales\Actions\ReturnSale;
 use App\Modules\Sales\Actions\Sell;
+use App\Modules\Sales\Actions\ShelfPrices;
 use App\Modules\Sales\Actions\Tills;
 use App\Modules\Sales\Actions\VoidSale;
 use App\Modules\Sales\Enums\PaymentMethod;
@@ -20,6 +23,7 @@ use App\Modules\Sales\Models\BranchCounterSettings;
 use App\Modules\Sales\Models\CounterOrder;
 use App\Modules\Sales\Models\Customer;
 use App\Modules\Sales\Models\DeliveryNote;
+use App\Modules\Sales\Models\ItemSerial;
 use App\Modules\Sales\Models\Sale;
 use App\Modules\Sales\Models\SaleLine;
 use App\Modules\Sales\Models\SaleReturn;
@@ -86,7 +90,7 @@ class SaleController extends Controller
     /**
      * The counter: what can be sold here today, with prices.
      */
-    public function create(Request $request, Tills $tills): Response
+    public function create(Request $request, Tills $tills, ShelfPrices $shelf, Promotions $promotions, Loyalty $loyalty): Response
     {
         $till = $tills->openFor($this->user($request), $this->branch->id());
 
@@ -100,7 +104,7 @@ class SaleController extends Controller
             ->pluck('quantity', 'item_id');
 
         return Inertia::render($this->industry->page('sales/create'), [
-            'medicines' => Item::query()
+            'items' => Item::query()
                 ->where('active', true)
                 ->ofKind($this->industry->itemKinds())
                 ->with('packs')
@@ -112,8 +116,14 @@ class SaleController extends Controller
                     'genericName' => $item->alias ?? '',
                     'barcode' => $item->barcode,
                     'unit' => $item->unit,
-                    'priceMinor' => $item->sell_price_minor,
+                    'priceMinor' => $shelf->price($this->branch->id(), $item),
+                    // Given by itself at the till today (Sell::price).
+                    'promotion' => ($promotion = $promotions->best($item, $this->branch->id())) === null ? null : [
+                        'name' => $promotion->name,
+                        'percentOff' => $promotion->percent_off,
+                    ],
                     'available' => (int) ($sellable[$item->id] ?? 0),
+                    'tracksSerials' => $item->tracks_serials,
                     'prescriptionOnly' => $item->restricted,
                     'category' => $item->category,
                     // How it must be kept, when that matters at the counter.
@@ -122,7 +132,7 @@ class SaleController extends Controller
                         'id' => $pack->id,
                         'name' => $pack->name,
                         'units' => $pack->units,
-                        'priceMinor' => $pack->sellPrice($item),
+                        'priceMinor' => $shelf->price($this->branch->id(), $item, $pack),
                     ])->values(),
                 ]),
             'maxDiscountPercent' => $this->maxDiscountPercent(),
@@ -130,6 +140,23 @@ class SaleController extends Controller
             'paymentMethods' => array_map(fn (PaymentMethod $method) => ['value' => $method->value, 'label' => $method->label()], PaymentMethod::payments()),
             // Account customers, for members who may sell on account here.
             'customers' => $this->mayCredit() ? $this->accountCustomers() : [],
+            // While a loyalty program runs: its terms, and the customers who collect points.
+            'loyalty' => ($program = $loyalty->program()) === null ? null : [
+                'spendPerPointMinor' => $program->spend_per_point_minor,
+                'pointValueMinor' => $program->point_value_minor,
+                'members' => Customer::query()
+                    ->where('application', $this->industry->code())
+                    ->where('active', true)
+                    ->orderBy('name')
+                    ->limit(1000)
+                    ->get(['id', 'number', 'name', 'loyalty_points'])
+                    ->map(fn (Customer $customer) => [
+                        'id' => $customer->id,
+                        'number' => $customer->number,
+                        'name' => $customer->name,
+                        'points' => max(0, $customer->loyalty_points),
+                    ]),
+            ],
             // How this branch's counter works: a sale now, or an order first.
             'counter' => (function () {
                 $settings = BranchCounterSettings::forBranch($this->branch->id(), $this->industry->code());
@@ -160,6 +187,8 @@ class SaleController extends Controller
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:100000'],
             'items.*.discount_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
             'items.*.pack_id' => ['nullable', 'uuid'],
+            'items.*.serials' => ['sometimes', 'array', 'max:1000'],
+            'items.*.serials.*' => ['nullable', 'string', 'max:64'],
             'submission_id' => ['nullable', 'uuid'],
             'payment_method' => ['required', Rule::enum(PaymentMethod::class)],
             'payment_reference' => ['nullable', 'string', 'max:64'],
@@ -167,6 +196,7 @@ class SaleController extends Controller
             'customer_name' => ['nullable', 'string', 'max:255'],
             'customer_phone' => ['nullable', 'string', 'max:32'],
             'customer_id' => ['nullable', 'uuid'],
+            'redeem_points' => ['nullable', 'integer', 'min:0', 'max:100000000'],
         ]);
 
         $settings = BranchCounterSettings::forBranch($this->branch->id(), $this->industry->code());
@@ -191,6 +221,7 @@ class SaleController extends Controller
                     'quantity' => (int) $item['quantity'],
                     'discount_percent' => (int) ($item['discount_percent'] ?? 0),
                     'pack_id' => isset($item['pack_id']) ? (string) $item['pack_id'] : null,
+                    'serials' => array_values(array_map('strval', array_filter($item['serials'] ?? [], fn ($serial) => $serial !== null))),
                 ], $validated['items'])),
                 method: $method,
                 paymentReference: $validated['payment_reference'] ?? null,
@@ -200,6 +231,7 @@ class SaleController extends Controller
                 submissionId: $validated['submission_id'] ?? null,
                 customerId: isset($validated['customer_id']) ? (string) $validated['customer_id'] : null,
                 customerPhone: isset($validated['customer_phone']) ? trim($validated['customer_phone']) : null,
+                redeemPoints: (int) ($validated['redeem_points'] ?? 0),
             );
         } catch (InsufficientStock $e) {
             $index = array_search($e->item->id, array_column($validated['items'], 'item_id'), true);
@@ -255,7 +287,7 @@ class SaleController extends Controller
                 'voidReason' => $sale->void_reason,
                 'lines' => $sale->lines->map(fn (SaleLine $line) => [
                     'id' => $line->id,
-                    'medicine' => $line->item->name,
+                    'item' => $line->item->name,
                     'batchNumber' => $line->batch->batch_number,
                     'expiresOn' => $line->batch->expires_on?->toDateString(),
                     'quantity' => $line->quantity,
@@ -266,7 +298,10 @@ class SaleController extends Controller
                     'unitsPerPack' => $line->units_per_pack,
                     'packPriceMinor' => $line->pack_price_minor,
                     'returned' => $returned->get($line->id, 0),
+                    'tracksSerials' => $line->item->tracks_serials,
                 ]),
+                // The serial numbers it sold, still with it (not returned).
+                'serials' => ItemSerial::query()->where('sale_id', $sale->id)->orderBy('serial')->pluck('serial'),
                 'returns' => $sale->returns->map(fn (SaleReturn $return) => [
                     'id' => $return->id,
                     'number' => $return->number,
@@ -276,7 +311,7 @@ class SaleController extends Controller
                     'totalMinor' => $return->total_minor,
                     'lines' => $return->lines->map(fn (SaleReturnLine $line) => [
                         'id' => $line->id,
-                        'medicine' => $line->item->name,
+                        'item' => $line->item->name,
                         'quantity' => $line->quantity,
                         'amountMinor' => $line->amount_minor,
                         'restocked' => $line->restocked,
@@ -301,12 +336,20 @@ class SaleController extends Controller
             'lines.*.sale_line_id' => ['required', 'uuid', 'distinct'],
             'lines.*.quantity' => ['required', 'integer', 'min:0', 'max:100000'],
             'lines.*.restock' => ['sometimes', 'boolean'],
+            'lines.*.serials' => ['sometimes', 'array', 'max:1000'],
+            'lines.*.serials.*' => ['nullable', 'string', 'max:64'],
+            // Or typed in one box, separated by commas or spaces.
+            'lines.*.serials_text' => ['nullable', 'string', 'max:20000'],
         ]);
 
         $return = $returns->handle($sale, $this->user($request), array_values(array_map(fn (array $line) => [
             'sale_line_id' => (string) $line['sale_line_id'],
             'quantity' => (int) $line['quantity'],
             'restock' => (bool) ($line['restock'] ?? false),
+            'serials' => [
+                ...array_values(array_map('strval', array_filter($line['serials'] ?? [], fn ($serial) => $serial !== null))),
+                ...(preg_split('/[\s,]+/', (string) ($line['serials_text'] ?? ''), -1, PREG_SPLIT_NO_EMPTY) ?: []),
+            ],
         ], $validated['lines'])), $validated['reason']);
 
         return back()->with('success', $sale->onAccount()
@@ -349,7 +392,7 @@ class SaleController extends Controller
                 'changeMinor' => $sale->change_minor,
                 // Sold by the pack: so many packs at the pack's price.
                 'lines' => $sale->lines->groupBy('item_id')->map(fn ($lines) => [
-                    'medicine' => $lines->first()->item->name,
+                    'item' => $lines->first()->item->name,
                     'pack' => $lines->first()->pack_name === null ? null : "{$lines->first()->pack_name} of {$lines->first()->units_per_pack}",
                     'quantity' => intdiv((int) $lines->sum('quantity'), $lines->first()->units_per_pack),
                     'unitPriceMinor' => $lines->first()->pack_price_minor ?? $lines->first()->unit_price_minor,

@@ -83,7 +83,7 @@ class CounterOrders
 
         // Prescription-only medicines are dispensed from a verified
         // prescription, never from a counter order.
-        ['lines' => $priced, 'total' => $total] = $this->sell->price($items, [], $maxDiscountPercent);
+        ['lines' => $priced, 'total' => $total] = $this->sell->price($items, [], $maxDiscountPercent, $branchId);
 
         $customer = $customerId === null ? null : $this->customer($customerId);
         $customerName = $this->clean($customerName);

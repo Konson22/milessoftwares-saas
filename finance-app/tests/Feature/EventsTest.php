@@ -219,6 +219,40 @@ it('moves a till\'s over or short between cash and cash over and short', functio
         ->and(balanceOf(Account::CASH_OVER_SHORT))->toBe(100);
 });
 
+it('moves till cash to and from the bank, and out to an expense', function () {
+    sale(total: 10000);
+    $move = fn (string $reference, string $direction, string $counterpart, int $amount, ?string $account = null) => $this->sendEvent('finance.cash.moved', "till_move:{$reference}", [
+        'reference' => $reference, 'branch_id' => null, 'currency' => 'SSP', 'moved_on' => '2026-10-10',
+        'direction' => $direction, 'counterpart' => $counterpart, 'amount_minor' => $amount,
+        'description' => 'Moved by the cashier', 'expense_account' => $account, 'moved_by' => 'Achol',
+    ]);
+
+    $move('T-00001/1', 'out', 'bank', 6000)->assertCreated();
+    $move('T-00001/2', 'in', 'bank', 1000)->assertCreated();
+    $move('T-00001/3', 'out', 'expense', 700, '6200')->assertCreated();
+    $move('T-00001/4', 'out', 'expense', 300)->assertCreated();
+    // Not an expense account: Other expenses.
+    $move('T-00001/5', 'out', 'expense', 200, '1000')->assertCreated();
+
+    expect(balanceOf(Account::CASH))->toBe(10000 - 6000 + 1000 - 700 - 300 - 200)
+        ->and(balanceOf(Account::BANK))->toBe(5000)
+        ->and(balanceOf(Account::OTHER_EXPENSES))->toBe(500)
+        ->and($this->asTenant('acme', fn () => (int) Account::query()->where('code', '6200')->sole()->lines()->sum('debit_minor')))->toBe(700);
+});
+
+it('posts till cash paid out to Other expenses in a chart made before it had a key', function () {
+    sale(total: 1000);
+    $this->asTenant('acme', fn () => Account::query()->where('code', '6900')->update(['system_key' => null]));
+
+    $this->sendEvent('finance.cash.moved', 'till_move:T-00002/1', [
+        'reference' => 'T-00002/1', 'branch_id' => null, 'currency' => 'SSP', 'moved_on' => '2026-10-10',
+        'direction' => 'out', 'counterpart' => 'expense', 'amount_minor' => 400, 'description' => 'Cleaning',
+    ])->assertCreated();
+
+    expect($this->asTenant('acme', fn () => (int) Account::query()->where('code', '6900')->sole()->lines()->sum('debit_minor')))->toBe(400)
+        ->and(balanceOf(Account::CASH))->toBe(600);
+});
+
 it('posts a supplier bill to inventory and payables, one supplier per product supplier', function () {
     $bill = fn (string $number, int $total) => $this->sendEvent('finance.bill.received', "goods_receipt:{$number}", [
         'bill_number' => $number, 'supplier_reference' => 'INV-77', 'supplier_name' => 'Juba Medical Supplies',

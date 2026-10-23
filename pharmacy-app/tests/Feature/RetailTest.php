@@ -146,9 +146,9 @@ describe('the counter', function () {
 
         $this->get(retailUrl('sales/create'))->assertInertia(fn (Assert $page) => $page
             ->component('retail/sales/create')
-            ->has('medicines', 1)
-            ->where('medicines.0.barcode', '6001234500017')
-            ->where('medicines.0.available', 12));
+            ->has('items', 1)
+            ->where('items.0.barcode', '6001234500017')
+            ->where('items.0.available', 12));
     });
 
     it('sells a scanned product as a retail sale and books it in Finance as retail', function () {

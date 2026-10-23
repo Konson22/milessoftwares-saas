@@ -28,6 +28,7 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property string|null $address
  * @property int $credit_limit_minor 0: may not buy on account
  * @property int $payment_terms_days
+ * @property int $loyalty_points changed only by Loyalty
  * @property string|null $price_list_id null: buys at the shop's own prices
  * @property bool $active
  * @property CarbonImmutable $created_at
@@ -44,7 +45,7 @@ class Customer extends Model
 
     use HasUuids;
 
-    protected $guarded = ['organization_id'];
+    protected $guarded = ['organization_id', 'loyalty_points'];
 
     protected $attributes = ['credit_limit_minor' => 0, 'payment_terms_days' => 30, 'active' => true];
 
@@ -53,6 +54,7 @@ class Customer extends Model
         return [
             'credit_limit_minor' => 'integer',
             'payment_terms_days' => 'integer',
+            'loyalty_points' => 'integer',
             'active' => 'boolean',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',

@@ -30,7 +30,7 @@ type Medicine = {
 };
 
 type Props = {
-    medicines: Medicine[];
+    items: Medicine[];
     paymentMethods: { value: string; label: string }[];
     /** 0 when this member may not give discounts. */
     maxDiscountPercent: number;
@@ -115,7 +115,7 @@ const lineTotal = (line: BasketLine) => {
  * records one sale or order.
  */
 export default function Counter({
-    medicines,
+    items: medicines,
     paymentMethods,
     maxDiscountPercent,
     till,

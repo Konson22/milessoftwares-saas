@@ -418,3 +418,78 @@ describe('access', function () {
         expect($this->asTenant('acme', fn () => SalesOrder::query()->count()))->toBe(0);
     });
 });
+
+describe('revising quotations', function () {
+    it('opens a quotation filled in, and revises it under the same number', function () {
+        wholesaler();
+        $order = quoteHotel([['item_id' => $this->soap->id, 'pack_id' => $this->case->id, 'quantity' => 2]], confirm: false);
+
+        $this->get(wholesaleUrl("orders/{$order->id}/edit"))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('retail/orders/create')
+            ->has('customers', 1)
+            ->where('quotation.quoteNumber', $order->quote_number)
+            ->where('quotation.lines.0.packId', $this->case->id)
+            ->where('quotation.lines.0.quantity', '2')
+            ->where('validUntil', '2026-11-02'));
+
+        // The trade price of a case went up since.
+        $this->asTenant('acme', fn () => $this->trade->prices()->where('item_pack_id', $this->case->id)->update(['price_minor' => 2900]));
+
+        $this->put(wholesaleUrl("orders/{$order->id}"), [
+            'valid_until' => '2026-11-09',
+            'customer_reference' => 'PO-7',
+            'lines' => [
+                ['item_id' => $this->soap->id, 'pack_id' => $this->case->id, 'quantity' => 3],
+                ['item_id' => $this->brush->id, 'quantity' => 1],
+            ],
+        ])->assertSessionHasNoErrors()->assertRedirect(wholesaleUrl("orders/{$order->id}"));
+
+        $revised = $this->asTenant('acme', fn () => SalesOrder::query()->with('lines')->findOrFail($order->id));
+        expect($revised->quote_number)->toBe($order->quote_number)
+            ->and($revised->status)->toBe(SalesOrderStatus::Quote)
+            ->and($revised->customer_reference)->toBe('PO-7')
+            ->and($revised->valid_until->toDateString())->toBe('2026-11-09')
+            ->and($revised->lines)->toHaveCount(2)
+            ->and($revised->total_minor)->toBe(3 * 2900 + 333);
+    });
+
+    it('quotes an expired quotation again at today\'s prices, and can confirm it at once', function () {
+        wholesaler();
+        $order = quoteHotel([['item_id' => $this->soap->id, 'quantity' => 4]], confirm: false);
+        $this->travelTo(CarbonImmutable::parse('2026-11-05 10:00'));
+
+        $this->post(wholesaleUrl("orders/{$order->id}/confirm"))->assertSessionHasErrors('status');
+        $this->get(wholesaleUrl("orders/{$order->id}/edit"))->assertInertia(fn (Assert $page) => $page
+            ->where('validUntil', '2026-11-19'));
+
+        $this->put(wholesaleUrl("orders/{$order->id}"), [
+            'valid_until' => '2026-11-19',
+            'confirm' => '1',
+            'lines' => [['item_id' => $this->soap->id, 'quantity' => 4]],
+        ])->assertSessionHasNoErrors();
+
+        $confirmed = $this->asTenant('acme', fn () => $order->fresh());
+        expect($confirmed->status)->toBe(SalesOrderStatus::Confirmed)
+            ->and($confirmed->order_number)->not->toBeNull()
+            ->and($confirmed->total_minor)->toBe(4 * 250);
+    });
+
+    it('never revises a confirmed order, nor beyond what the member may discount', function () {
+        wholesaler();
+        $quote = quoteHotel([['item_id' => $this->soap->id, 'quantity' => 1]], confirm: false);
+        $order = quoteHotel([['item_id' => $this->soap->id, 'quantity' => 1]]);
+
+        $this->get(wholesaleUrl("orders/{$order->id}/edit"))->assertNotFound();
+        $this->put(wholesaleUrl("orders/{$order->id}"), ['valid_until' => '2026-11-02', 'lines' => [['item_id' => $this->soap->id, 'quantity' => 9]]])
+            ->assertSessionHasErrors('status');
+
+        // No sales.discount: no discounts on a revision either, and nothing changes.
+        $this->put(wholesaleUrl("orders/{$quote->id}"), ['valid_until' => '2026-11-02', 'lines' => [['item_id' => $this->soap->id, 'quantity' => 1, 'discount_percent' => 10]]])
+            ->assertSessionHasErrors('lines.0.discount_percent');
+        expect($this->asTenant('acme', fn () => $quote->lines()->sole()->discount_percent))->toBe(0);
+
+        wholesaler(['retail.orders.view']);
+        $this->get(wholesaleUrl("orders/{$quote->id}/edit"))->assertForbidden();
+        $this->put(wholesaleUrl("orders/{$quote->id}"), ['valid_until' => '2026-11-02', 'lines' => [['item_id' => $this->soap->id, 'quantity' => 2]]])->assertForbidden();
+    });
+});

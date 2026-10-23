@@ -32,6 +32,7 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property bool $restricted
  * @property bool $controlled
  * @property bool $tracks_expiry its batches carry an expiry date (medicines, food); otherwise none
+ * @property bool $tracks_serials each unit sold names its recorded serial number (Serials)
  * @property bool $active
  */
 #[UseFactory(ItemFactory::class)]
@@ -56,6 +57,7 @@ class Item extends Model
             'restricted' => 'boolean',
             'controlled' => 'boolean',
             'tracks_expiry' => 'boolean',
+            'tracks_serials' => 'boolean',
             'active' => 'boolean',
             'storage' => StorageCondition::class,
         ];

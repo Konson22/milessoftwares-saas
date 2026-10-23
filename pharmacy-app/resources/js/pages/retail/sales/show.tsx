@@ -39,7 +39,7 @@ type Props = {
         voidReason: string | null;
         lines: {
             id: string;
-            medicine: string;
+            item: string;
             batchNumber: string;
             expiresOn: string | null;
             quantity: number;
@@ -50,7 +50,10 @@ type Props = {
             unitsPerPack: number;
             packPriceMinor: number | null;
             returned: number;
+            tracksSerials: boolean;
         }[];
+        /** Serial numbers sold, not returned. */
+        serials: string[];
         returns: {
             id: string;
             number: string;
@@ -60,7 +63,7 @@ type Props = {
             totalMinor: number;
             lines: {
                 id: string;
-                medicine: string;
+                item: string;
                 quantity: number;
                 amountMinor: number;
                 restocked: boolean;
@@ -157,7 +160,7 @@ export default function ShowSale({ sale, canVoid, canReturn }: Props) {
                             {sale.lines.map((line) => (
                                 <tr key={line.id}>
                                     <td className="py-1.5">
-                                        {line.medicine}
+                                        {line.item}
                                         <span className="block text-xs text-muted-foreground">
                                             {line.packName
                                                 ? `${line.quantity} from ${line.packName}s of ${line.unitsPerPack} at ${money(line.packPriceMinor ?? 0)}`
@@ -175,6 +178,19 @@ export default function ShowSale({ sale, canVoid, canReturn }: Props) {
                             ))}
                         </tbody>
                         <tfoot className="border-t">
+                            {sale.serials.length > 0 && (
+                                <tr>
+                                    <td
+                                        colSpan={2}
+                                        className="py-0.5 text-xs text-muted-foreground"
+                                    >
+                                        Serial numbers:{' '}
+                                        <span className="font-mono">
+                                            {sale.serials.join(', ')}
+                                        </span>
+                                    </td>
+                                </tr>
+                            )}
                             {sale.discountMinor > 0 && (
                                 <tr>
                                     <td className="py-0.5 text-muted-foreground">
@@ -260,8 +276,7 @@ export default function ShowSale({ sale, canVoid, canReturn }: Props) {
                                     <ul className="mt-1">
                                         {ret.lines.map((line) => (
                                             <li key={line.id}>
-                                                {line.quantity} ×{' '}
-                                                {line.medicine}
+                                                {line.quantity} × {line.item}
                                                 {line.restocked
                                                     ? ' (back in stock)'
                                                     : ' (not resold)'}
@@ -301,7 +316,7 @@ export default function ShowSale({ sale, canVoid, canReturn }: Props) {
                                                     value={line.id}
                                                 />
                                                 <span className="min-w-40 flex-1">
-                                                    {line.medicine}{' '}
+                                                    {line.item}{' '}
                                                     <span className="text-muted-foreground">
                                                         (batch{' '}
                                                         {line.batchNumber}, up
@@ -320,9 +335,17 @@ export default function ShowSale({ sale, canVoid, canReturn }: Props) {
                                                         line.returned
                                                     }
                                                     defaultValue={0}
-                                                    aria-label={`Quantity of ${line.medicine} returned`}
+                                                    aria-label={`Quantity of ${line.item} returned`}
                                                     className="h-8 w-20"
                                                 />
+                                                {line.tracksSerials && (
+                                                    <Input
+                                                        name={`lines[${i}][serials_text]`}
+                                                        placeholder="Serial numbers back"
+                                                        aria-label={`Serial numbers of ${line.item} returned`}
+                                                        className="h-8 w-56 font-mono"
+                                                    />
+                                                )}
                                                 <label className="flex items-center gap-1">
                                                     <input
                                                         type="checkbox"

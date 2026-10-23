@@ -155,9 +155,9 @@ it('shows the counter, the day\'s takings without voided sales, and the receipt'
     $this->get($this->workspaceUrl('acme', 'sales/create'))
         ->assertInertia(fn (Assert $page) => $page
             ->component('sales/create')
-            ->where('medicines.0.label', $this->amox->label())
-            ->where('medicines.0.prescriptionOnly', true)
-            ->where('medicines.1.available', 21));
+            ->where('items.0.label', $this->amox->label())
+            ->where('items.0.prescriptionOnly', true)
+            ->where('items.1.available', 21));
 
     $this->get($this->workspaceUrl('acme', 'sales'))
         ->assertInertia(fn (Assert $page) => $page

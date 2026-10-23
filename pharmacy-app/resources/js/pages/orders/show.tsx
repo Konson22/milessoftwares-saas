@@ -51,7 +51,7 @@ type Props = {
         cancelReason: string | null;
         lines: {
             id: string;
-            medicine: string;
+            item: string;
             pack: string | null;
             quantity: number;
             discountPercent: number;
@@ -231,7 +231,7 @@ export default function Order({
                                     <TableRow key={line.id}>
                                         <TableCell>
                                             <span className="font-medium">
-                                                {line.medicine}
+                                                {line.item}
                                             </span>
                                             {line.batches.length > 0 && (
                                                 <span className="block text-xs text-muted-foreground">

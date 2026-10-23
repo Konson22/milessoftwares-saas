@@ -6,7 +6,7 @@
         "kind": "standalone",
         "status": "beta"
     },
-    "version": "1.4.0",
+    "version": "1.5.0",
     "roles": [
         {
             "key": "manager",
@@ -20,6 +20,7 @@
                 "retail.stock.view",
                 "retail.stock.adjust",
                 "retail.stock.dispose",
+                "retail.stock.hold",
                 "retail.purchasing.view",
                 "retail.purchasing.manage",
                 "retail.purchasing.receive",
@@ -28,6 +29,7 @@
                 "retail.sales.void",
                 "retail.sales.discount",
                 "retail.tills.manage",
+                "retail.sales.settings",
                 "retail.sales.credit",
                 "retail.customers.view",
                 "retail.customers.manage",
@@ -100,6 +102,12 @@
             "scopes": ["organization", "branch"]
         },
         {
+            "key": "retail.stock.hold",
+            "name": "Quarantine, recall and release batches",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
             "key": "retail.purchasing.view",
             "name": "View suppliers, orders and deliveries",
             "sensitivity": 1,
@@ -148,6 +156,12 @@
             "scopes": ["organization", "branch"]
         },
         {
+            "key": "retail.sales.settings",
+            "name": "Set the counter's workflow, prices, customer rules and printing",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
             "key": "retail.sales.credit",
             "name": "Sell on account to customers",
             "sensitivity": 3,
@@ -185,7 +199,7 @@
         },
         {
             "key": "retail.prices.manage",
-            "name": "Set the prices of price lists",
+            "name": "Set price lists, branch price levels, promotions and the loyalty program",
             "sensitivity": 3,
             "scopes": ["organization"]
         },

@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Identity\Http\Controllers\OpenIdDiscoveryController;
+use App\Modules\Identity\Http\Middleware\SignInWithHintedProvider;
 use App\Modules\Identity\Http\Middleware\ValidateAuthorizationRequest;
 use Illuminate\Support\Facades\Route;
 use Laravel\Passport\Http\Controllers\AccessTokenController;
@@ -30,7 +31,7 @@ Route::post('oauth/token', [AccessTokenController::class, 'issueToken'])
 
 Route::middleware('web')->group(function () {
     Route::get('oauth/authorize', [AuthorizationController::class, 'authorize'])
-        ->middleware(ValidateAuthorizationRequest::class)
+        ->middleware([ValidateAuthorizationRequest::class, SignInWithHintedProvider::class])
         ->name('passport.authorizations.authorize');
 
     Route::middleware('auth')->group(function () {

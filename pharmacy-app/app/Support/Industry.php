@@ -67,6 +67,15 @@ class Industry
     }
 
     /**
+     * What this industry calls one of its items, for headings and exports
+     * ("Medicine", "Product").
+     */
+    public function itemLabel(): string
+    {
+        return (string) config("industries.{$this->code()}.item_label", 'Item');
+    }
+
+    /**
      * Whether items of this kind are this industry's to buy, keep and sell.
      */
     public function handles(string $kind): bool

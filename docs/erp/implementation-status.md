@@ -24,6 +24,7 @@
 | HR H0 Foundation (structure API, `hr-app`) | Done 2026-10-19 |
 | HR H1 Staff records | Done 2026-10-19 |
 | HR H2 Documents | Done 2026-10-19 |
+| HR H3 Leave | Done 2026-10-23 |
 | Finance F1 Periods and close | Done 2026-10-20 |
 | Finance F2 Reports | Done 2026-10-20 |
 | Finance F3 Bank reconciliation | Done 2026-10-20 |
@@ -835,6 +836,70 @@ reference are not protected against being entered twice.
   SQLite (dates stored with a time); it compares dates now.
 
 
+## Retail R6–R8, beta — 2026-10-23 (local, Windows)
+
+**Implemented** (`pharmacy-app`, `pharmacy-electron-app`, `packages/platform-client`; plan in
+`retail-roadmap.md`):
+- R6 gaps:
+  - Shelves and holds for the shop: `LocationController` and the batch actions follow the
+    request's industry (a batch of the other industry is a 404); retail holds under
+    `retail.stock.hold`; pages `retail/locations/*`.
+  - Stock-take count sheets in both industries: `StockCount` and `StockCountLine`,
+    `Inventory/Actions/StockCounts` (start, record, complete, cancel), `StockCountController`,
+    routes `counts.*` and `retail.counts.*`, pages `counts/*` and `retail/counts/*`. Completing
+    posts one adjustment per line that differs, once.
+  - Editing quotations: `SalesOrders::revise()` relocks a quote, replaces its lines at today's
+    prices and keeps its number; `orders.edit` / `orders.update`, "Revise" on the order page.
+  - The shared counter, purchasing and stock props are named `items` (were `medicines`).
+- R7 later features:
+  - Price levels per branch: `branch_counter_settings.price_list_id`, `Sales/Actions/ShelfPrices`;
+    the till, the API and quotations price from the branch's list, falling back to the item's
+    price. Retail counter settings (`retail.sales.settings`).
+  - Promotions: `promotions`, `sale_lines.promotion_id`, `Sales/Actions/Promotions`; the till
+    takes the bigger of the running promotion and the member's own discount; page
+    `retail/promotions`.
+  - Loyalty: `loyalty_programs`, `customers.loyalty_points`, `loyalty_movements`,
+    `Sales/Actions/Loyalty`; points earned on a member's sale, redeemed at the till, reversed by
+    a void (`ReverseLoyaltyOfVoidedSale`) and by a return; page `retail/loyalty`.
+  - Serial numbers: `items.tracks_serials`, `item_serials`, `Sales/Actions/Serials`; a tracked
+    product sells one recorded serial per unit, a void releases them
+    (`ReleaseSerialsOfVoidedSale`), a return names those back; page `retail/serials`.
+- R8 desktop counter:
+  - `routes/api.php` registers the counter API for the shop at `{workspace}/retail/api/v1`
+    (`retail.api.*`, `platform.app:retail` first), without prescriptions; `AppPages` mirrors the
+    shop's pages under `retail/api/v1/app`. The API's items carry `promotion` and
+    `tracks_serials`; sales and returns take `serials`; a sale's lines show theirs.
+  - platform-client `actingAsAppMember(..., application:)` signs in with a hosted
+    application's own mobile client.
+  - `pharmacy-electron-app`: Pharmacy or Shop is chosen at sign-in (offered when
+    `VITE_RETAIL_CLIENT_ID` is set). Each product has its own path and client; the tokens keep
+    the product they were issued for, and a call for the other product gets no token. The
+    outbox, held carts, cache and catalog are keyed per product, so a sale queued for the shop
+    is never sent to the pharmacy at the same branch (the pharmacy keeps its old keys). The
+    shop's menu mirrors `retail-navigation.ts`; the till shows promotions, asks a serial per
+    unit of a tracked product, hides expiry, and names the shop in its messages.
+- Beta: catalog `platform/retail.json` 1.5.0 (`retail.stock.hold`, `retail.sales.settings`)
+  imported locally with the desktop's redirect (`--mobile-redirect=http://127.0.0.1:48217/oauth`),
+  which registered the shop's mobile client; the `retail` application set to `beta` locally. It
+  is trialable.
+
+**Tests executed:**
+- pharmacy-app: Pest 356 passed, 1 skipped. New: `StockCountTest` 7,
+  `RetailShelvesAndHoldsTest` 5, `RetailWholesaleTest` +3 (revising quotations),
+  `RetailPriceLevelsTest` 5, `RetailPromotionsTest` 5, `RetailLoyaltyTest` 6,
+  `RetailSerialsTest` 5, `RetailApiTest` 5. Architecture test green (Inventory does not use Sales).
+- packages/platform-client 120 passed. central-app catalog tests 62 passed.
+- PHPStan 0 (Api `SaleController`); Pint; `tsc`; electron `typecheck` and build.
+- The desktop app driven live (Playwright `_electron`, local platform): signed in to the shop
+  with email and password; the shop's menu; a shift opened; Bar soap at 10% off (SSP 270) and a
+  phone that would not take payment until its serial was typed; sale S-000004 recorded as
+  `application = retail` with the promotion on its line and IMEI-1001 sold. With the main
+  process's network cut, two soaps (SSP 540) were kept on the PC, then sent as S-000005 when it
+  came back. The pharmacy sign-in checked again after the change.
+- Not done: the 2026_10_24 migrations were not rolled back on PostgreSQL (they ran forward).
+- The local stack is slow under load (single-threaded `artisan serve` behind Apache): the first
+  shop sign-in hit the app's 15-second timeout once and went through on the retry.
+
 ## Finance F1 — 2026-10-20 (local, Windows)
 
 Periods and year-end close, the first phase of the standalone Finance & Accounting product
@@ -1317,3 +1382,87 @@ Plan feature `finance.fixed_assets`: without it the pages are not found.
 - Local PostgreSQL: `migrate`, `migrate:rollback --step=1`, `migrate`.
 - Mutation: dropping the end-of-life cap (depreciating below the residual value) fails a test.
   Allowing disposal before a depreciated month also fails a test.
+
+## Counter: cash in and out, offline sales on the app — 2026-10-23 (local, Windows)
+
+Cash put into or taken out of an open till, and sales the mobile counter makes without a
+connection.
+
+- Migration `2026_10_23_000003_create_till_cash_movements` (additive): `till_cash_movements`
+  (direction `in`/`out`, counterpart `safe`/`bank`/`expense`, amount, reason, who, submission id
+  unique per organization).
+- `Sales\Actions\Tills::move`: open tills only; an amount above zero and a reason; no more out
+  than the drawer should hold; `expense` only out; the same submission id answers the earlier
+  movement. The summary adds cash in and out, and expected cash = float + cash taken + cash
+  collected − cash refunds + in − out.
+- Finance: to or from the safe stays within cash and is not sent. Banked, from the bank, or paid
+  out sends `finance.cash.moved` v1 (new contract): Dr bank / Cr cash, the reverse, or Dr the
+  expense / Cr cash. The expense is the active expense account the event names, otherwise Other
+  expenses (new system key `other_expenses` on 6900; charts made before the key are found by
+  code).
+- Pages: `tills/{till}` (pharmacy and retail) list the movements and record one
+  (`POST tills/{till}/movements`): the cashier on their own till, or a manager in the branch.
+  The cashier report's till CSV has Cash in and Cash out columns.
+- API: `POST api/v1/till/movements` (`counterpart` defaults to the safe); the till includes
+  `movements`, `summary.cash_in_minor` and `summary.cash_out_minor`, shown even when counted blind.
+- Mobile: Shift tab, Cash in / Cash out (safe, bank, expense). Offline sales: a sale that finds no
+  connection can be queued on the device with its submission id and is sent when the connection
+  is back, by the same person at the same branch only. A refused one waits with the reason (back
+  to the cart, try again, discard). The shift does not close while sales wait. Dispensing is
+  never queued.
+- `PlatformFake::publishKey()`: the fake JWKS (which now also signs the mobile app's tokens)
+  publishes another test key. Finance's tests use it for their event key; their own
+  `Http::fake` of the JWKS was no longer reached.
+
+**Known limitations:**
+- Cash paid out goes to Other expenses: the till cannot name an expense account yet.
+- A queued sale is recorded when it arrives: its time and its shift are those of sending.
+- No receipt for a queued sale before it is sent.
+
+**Tests executed:**
+- Pharmacy: Pest 309 passed, 1 skipped (new: 2 `TillTest`, 1 `MobileApiTest`, 1
+  `FinanceAdjustmentsTest`); PHPStan 0; Pint; `tsc`.
+- finance-app: `EventsTest` 19 passed (2 new). The full suite has one failure that predates this
+  work: `TaxTest` › "locks a filed period" uses the real date and expects 2026-10-20 to be
+  in the future.
+- platform-client: Pest 120 passed; PHPStan 0; Pint.
+- Mobile: `tsc`, ESLint, `expo-doctor` 20/20, Android and web bundles. Not exercised on a device.
+
+## HR Phase H3 — Leave — 2026-10-23 (local, Windows)
+
+**Implemented** (`hr-app`, module `App\Modules\Leave`, catalog 1.1.0):
+- Kinds of leave per organization (`leave_types`): days per year, paid, "no limit" (the balance
+  may go below zero, e.g. unpaid leave), most days carried into the next year; archived, never
+  deleted. A new workspace starts with Annual (21, carry 5), Sick (14) and Unpaid (no limit),
+  only if it has none: starting values, not a statutory preset.
+- Entitlements per person, kind and year (`leave_entitlements`), made the first time a year is
+  used: the kind's days plus unused days of the year before, up to its carry-over limit. HR
+  changes one person's days for a year (part year, long service). Balances are never stored:
+  days + carried − approved; waiting requests hold days ("available").
+- Public holidays per organization and date (`public_holidays`). Days are working days: Monday to
+  Friday, less public holidays, counted once when requested.
+- Requests (`leave_requests`): pending → approved | rejected | cancelled; approved → cancelled
+  before it starts. Within one calendar year; no overlap with waiting or approved leave; refused
+  for someone who has left or before their start date. The balance is checked when requested
+  and again, under a lock, when approved. Someone leaving has waiting requests and leave after
+  their last day cancelled.
+- Separation of duties: whoever recorded a request cannot decide on it, nor can the person it is
+  for (their sign-in address is their work email; H7 replaces this with the membership link).
+- Permissions: `hr.leave.view` / `.manage` / `.approve` (organization, branch, department) and
+  `hr.leave.settings` (organization). Line manager: view, approve (role sensitivity 1 → 2); HR
+  officer: view, manage, approve; HR manager: all four.
+- Pages: Leave (away today, requests by status, record, decide with a note, cancel), each
+  person's leave by year (balances, change days, requests; linked from their profile), Leave
+  settings (kinds, holidays by year). Home shows who is away today and what waits.
+
+**Known limitations:**
+- Whole days only; no half days. The working week is Monday to Friday for every organization.
+- Carry-over is fixed when the new year's entitlement is made; later changes to the old year do
+  not move it.
+- No self-service yet (H7): HR records requests for staff. No notifications to approvers.
+- Approved leave that has started cannot be shortened (early return).
+
+**Tests executed:**
+- hr-app: Pest 40 passed (11 new in `LeaveTest`, 1 in `ProvisioningTest`); PHPStan 0; Pint;
+  `vp check`; `tsc`; `vp build`.
+- Migration forward, back and forward again on PostgreSQL (local `hr` database).

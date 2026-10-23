@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Inventory\Actions\ItemPacks;
 use App\Modules\Inventory\Models\Item;
 use App\Modules\Sales\Enums\SalesOrderStatus;
+use App\Modules\Sales\Models\Customer;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Support\DocumentNumbers;
 use App\Support\Industry;
@@ -21,6 +22,7 @@ use Illuminate\Validation\ValidationException;
  * until it is valid. Confirming it before then makes it a sales order
  * with its own number; the goods then leave in delivery notes (Deliver).
  * Nothing is reserved: stock and credit are checked when delivering.
+ * A quotation can be revised (repriced) until it is confirmed.
  */
 class SalesOrders
 {
@@ -76,47 +78,107 @@ class SalesOrders
             $order->status = SalesOrderStatus::Quote;
             $order->save();
 
-            $total = 0;
-            foreach ($lines as $index => $line) {
-                $item = Item::query()->find($line['item_id']);
-                if ($item === null || ! $item->active || ! $this->industry->handles($item->kind)) {
-                    throw ValidationException::withMessages(["lines.{$index}.item_id" => 'This item cannot be sold.']);
-                }
-                if ($item->restricted) {
-                    throw ValidationException::withMessages(["lines.{$index}.item_id" => "{$item->name} is not sold on order."]);
-                }
-
-                $percent = $line['discount_percent'] ?? 0;
-                if ($percent < 0 || $percent > 100) {
-                    throw ValidationException::withMessages(["lines.{$index}.discount_percent" => 'A discount is between 0 and 100%.']);
-                }
-                if ($percent > $maxDiscountPercent) {
-                    throw ValidationException::withMessages(["lines.{$index}.discount_percent" => $maxDiscountPercent === 0
-                        ? 'You may not give discounts.'
-                        : "You may give at most {$maxDiscountPercent}% off."]);
-                }
-
-                $pack = $this->packs->find($item->id, $line['pack_id'] ?? null, "lines.{$index}.pack_id");
-
-                $orderLine = $order->lines()->make([
-                    'item_id' => $item->id,
-                    'pack_name' => $pack?->name,
-                    'units_per_pack' => $pack->units ?? 1,
-                    'quantity' => $line['quantity'],
-                    'unit_price_minor' => $this->prices->price($list, $item, $pack),
-                    'discount_percent' => $percent,
-                    'line_total_minor' => 0,
-                ]);
-                $orderLine->line_total_minor = $orderLine->amountUpTo($orderLine->quantity);
-                $orderLine->save();
-
-                $total += $orderLine->line_total_minor;
-            }
-
-            $order->forceFill(['total_minor' => $total])->save();
+            $this->price($order, $customer, $lines, $maxDiscountPercent);
 
             return $order;
         });
+    }
+
+    /**
+     * A quotation the customer asked to change, expired or not: its lines
+     * are replaced and priced again at today's prices, under the same
+     * quotation number. Only while it is still a quotation.
+     *
+     * @param  list<array{item_id: string, pack_id?: string|null, quantity: int, discount_percent?: int}>  $lines
+     *
+     * @throws ValidationException
+     */
+    public function revise(
+        SalesOrder $order,
+        array $lines,
+        CarbonImmutable $validUntil,
+        ?string $customerReference,
+        ?string $notes,
+        int $maxDiscountPercent,
+    ): SalesOrder {
+        if ($validUntil->lessThan(CarbonImmutable::today())) {
+            throw ValidationException::withMessages(['valid_until' => 'A quotation is valid until today or later.']);
+        }
+        if ($lines === []) {
+            throw ValidationException::withMessages(['lines' => 'Add what the customer is buying.']);
+        }
+
+        return DB::transaction(function () use ($order, $lines, $validUntil, $customerReference, $notes, $maxDiscountPercent) {
+            $locked = $this->lock($order, [SalesOrderStatus::Quote]);
+            $customer = $this->accounts->lock($locked->customer_id);
+            $list = $customer->priceList;
+
+            $locked->lines()->delete();
+            $locked->forceFill([
+                'price_list_id' => $list?->active ? $list->id : null,
+                'valid_until' => $validUntil,
+                'customer_reference' => $customerReference,
+                'notes' => $notes,
+            ])->save();
+
+            $this->price($locked, $customer, $lines, $maxDiscountPercent);
+            $order->setRawAttributes($locked->getAttributes(), sync: true);
+
+            return $locked;
+        });
+    }
+
+    /**
+     * Writes a quotation's lines at the customer's prices, and its total.
+     *
+     * @param  list<array{item_id: string, pack_id?: string|null, quantity: int, discount_percent?: int}>  $lines
+     *
+     * @throws ValidationException
+     */
+    private function price(SalesOrder $order, Customer $customer, array $lines, int $maxDiscountPercent): void
+    {
+        $list = $customer->priceList;
+        $total = 0;
+        foreach ($lines as $index => $line) {
+            $item = Item::query()->find($line['item_id']);
+            if ($item === null || ! $item->active || ! $this->industry->handles($item->kind)) {
+                throw ValidationException::withMessages(["lines.{$index}.item_id" => 'This item cannot be sold.']);
+            }
+            if ($item->restricted) {
+                throw ValidationException::withMessages(["lines.{$index}.item_id" => "{$item->name} is not sold on order."]);
+            }
+            if ($item->tracks_serials) {
+                throw ValidationException::withMessages(["lines.{$index}.item_id" => "{$item->name} is sold at the till, with its serial numbers."]);
+            }
+
+            $percent = $line['discount_percent'] ?? 0;
+            if ($percent < 0 || $percent > 100) {
+                throw ValidationException::withMessages(["lines.{$index}.discount_percent" => 'A discount is between 0 and 100%.']);
+            }
+            if ($percent > $maxDiscountPercent) {
+                throw ValidationException::withMessages(["lines.{$index}.discount_percent" => $maxDiscountPercent === 0
+                    ? 'You may not give discounts.'
+                    : "You may give at most {$maxDiscountPercent}% off."]);
+            }
+
+            $pack = $this->packs->find($item->id, $line['pack_id'] ?? null, "lines.{$index}.pack_id");
+
+            $orderLine = $order->lines()->make([
+                'item_id' => $item->id,
+                'pack_name' => $pack?->name,
+                'units_per_pack' => $pack->units ?? 1,
+                'quantity' => $line['quantity'],
+                'unit_price_minor' => $this->prices->price($list, $item, $pack, $order->branch_id),
+                'discount_percent' => $percent,
+                'line_total_minor' => 0,
+            ]);
+            $orderLine->line_total_minor = $orderLine->amountUpTo($orderLine->quantity);
+            $orderLine->save();
+
+            $total += $orderLine->line_total_minor;
+        }
+
+        $order->forceFill(['total_minor' => $total])->save();
     }
 
     /**

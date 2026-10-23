@@ -28,6 +28,9 @@ use Inertia\Response;
  */
 class IntegrationController extends Controller
 {
+    /** A private-use scheme named after a domain the publisher owns: com.example.app:/oauth */
+    private const APP_REDIRECT = '~^[a-z][a-z0-9-]*(\.[a-z0-9-]+)+:/[A-Za-z0-9/_.-]*$~';
+
     public function __construct(private readonly ManageIntegration $integration) {}
 
     public function show(Request $request, Application $application): Response
@@ -105,7 +108,9 @@ class IntegrationController extends Controller
 
         $uris = array_values(array_filter(array_map('trim', preg_split('/\R/', (string) ($validated['redirect_uris'] ?? '')) ?: [])));
         foreach ($uris as $uri) {
-            abort_unless(filter_var($uri, FILTER_VALIDATE_URL) !== false && preg_match('~^https?://~', $uri) === 1, 422, "Invalid redirect URI: {$uri}");
+            // A mobile app (public) comes back on its own reverse-domain scheme (RFC 8252 7.1).
+            $app = ! $validated['confidential'] && preg_match(self::APP_REDIRECT, $uri) === 1;
+            abort_unless($app || (filter_var($uri, FILTER_VALIDATE_URL) !== false && preg_match('~^https?://~', $uri) === 1), 422, "Invalid redirect URI: {$uri}");
         }
 
         abort_if($uris === [] && empty($validated['tenant_redirect_path']), 422, 'Give at least one redirect URI or a tenant callback path.');

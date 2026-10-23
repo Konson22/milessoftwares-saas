@@ -9,6 +9,7 @@ use App\Http\Controllers\Reports\PurchaseReportController;
 use App\Modules\Inventory\Http\Controllers\DisposalController;
 use App\Modules\Inventory\Http\Controllers\LocationController;
 use App\Modules\Inventory\Http\Controllers\StockController;
+use App\Modules\Inventory\Http\Controllers\StockCountController;
 use App\Modules\Inventory\Http\Controllers\TransferController;
 use App\Modules\MasterData\Http\Controllers\SupplierController;
 use App\Modules\Pharmacy\Http\Controllers\ControlledRegisterController;
@@ -124,6 +125,7 @@ Route::prefix(app(PlatformConfig::class)->path())
                 Route::get('tills', [TillController::class, 'index'])->name('tills.index');
                 Route::get('tills/{till}', [TillController::class, 'show'])->whereUuid('till')->name('tills.show');
                 Route::post('tills/{till}/close', [TillController::class, 'close'])->whereUuid('till')->name('tills.close');
+                Route::post('tills/{till}/movements', [TillController::class, 'move'])->whereUuid('till')->name('tills.movements.store');
             });
 
             Route::middleware('branch.can:pharmacy.sales.void')->group(function () {
@@ -192,8 +194,15 @@ Route::prefix(app(PlatformConfig::class)->path())
                 Route::get('locations/{location}', [LocationController::class, 'show'])->whereUuid('location')->name('locations.show');
                 Route::get('transfers', [TransferController::class, 'index'])->name('transfers.index');
                 Route::get('transfers/{transfer}', [TransferController::class, 'show'])->whereUuid('transfer')->name('transfers.show');
+                Route::get('counts', [StockCountController::class, 'index'])->name('counts.index');
+                Route::get('counts/{count}', [StockCountController::class, 'show'])->whereUuid('count')->name('counts.show');
             });
             Route::middleware('branch.can:pharmacy.stock.adjust')->group(function () {
+                // Stock-takes: counted line by line, the differences posted on completion.
+                Route::post('counts', [StockCountController::class, 'store'])->name('counts.store');
+                Route::put('counts/{count}', [StockCountController::class, 'update'])->whereUuid('count')->name('counts.update');
+                Route::post('counts/{count}/complete', [StockCountController::class, 'complete'])->whereUuid('count')->name('counts.complete');
+                Route::post('counts/{count}/cancel', [StockCountController::class, 'cancel'])->whereUuid('count')->name('counts.cancel');
                 Route::post('stock/{item}/opening', [StockController::class, 'storeOpening'])->whereUuid('item')->name('stock.opening');
                 Route::post('batches/{batch}/adjustments', [StockController::class, 'storeAdjustment'])->whereUuid('batch')->name('stock.adjust');
                 Route::post('batches/{batch}/disposals', [DisposalController::class, 'store'])->whereUuid('batch')->name('disposals.store');

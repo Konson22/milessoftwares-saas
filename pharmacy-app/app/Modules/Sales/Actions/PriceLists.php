@@ -16,34 +16,22 @@ use Illuminate\Validation\ValidationException;
  * - a pack the list prices sells at that price;
  * - a pack it does not, at the list's unit price times the pack's units;
  * - an item the list does not price (or no list, or a list switched off),
- *   at the shop's own price (the pack's, or the item's).
+ *   at the branch's shelf price (ShelfPrices) when a branch is named, the
+ *   shop's own price (the pack's, or the item's) otherwise.
  */
 class PriceLists
 {
-    public function __construct(private readonly Industry $industry) {}
+    public function __construct(
+        private readonly Industry $industry,
+        private readonly ShelfPrices $shelf,
+    ) {}
 
-    public function price(?PriceList $list, Item $item, ?ItemPack $pack): int
+    public function price(?PriceList $list, Item $item, ?ItemPack $pack, ?string $branchId = null): int
     {
-        $retail = $pack === null ? $item->sell_price_minor : $pack->sellPrice($item);
-
-        if ($list === null || ! $list->active) {
-            return $retail;
-        }
-
-        $prices = PriceListPrice::query()
-            ->where('price_list_id', $list->id)
-            ->where('item_id', $item->id)
-            ->get()
-            ->keyBy(fn (PriceListPrice $price) => $price->item_pack_id ?? 'unit');
-
-        if ($pack !== null && isset($prices[$pack->id])) {
-            return $prices[$pack->id]->price_minor;
-        }
-        if (isset($prices['unit'])) {
-            return $prices['unit']->price_minor * ($pack->units ?? 1);
-        }
-
-        return $retail;
+        return $this->shelf->listed($list, $item, $pack)
+            ?? ($branchId === null
+                ? ($pack === null ? $item->sell_price_minor : $pack->sellPrice($item))
+                : $this->shelf->price($branchId, $item, $pack));
     }
 
     /**

@@ -9,6 +9,7 @@ use App\Modules\Employees\Enums\RecordKind;
 use App\Modules\Employees\Models\Contract;
 use App\Modules\Employees\Models\Employee;
 use App\Modules\Employees\Models\EmploymentRecord;
+use App\Modules\Leave\Actions\LeaveRequests;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -20,6 +21,8 @@ use Illuminate\Validation\ValidationException;
  */
 class Employment
 {
+    public function __construct(private readonly LeaveRequests $leave) {}
+
     /**
      * Moves someone to another branch, department or position from a date.
      *
@@ -138,6 +141,7 @@ class Employment
             ])->save();
             // Nobody keeps reporting to someone who has gone.
             Employee::query()->where('manager_id', $locked->id)->update(['manager_id' => null]);
+            $this->leave->cancelOnLeaving($locked, $date, $by);
             $employee->setRawAttributes($locked->getAttributes(), true);
 
             return $record;
