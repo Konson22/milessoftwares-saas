@@ -123,6 +123,9 @@ return [
     'billing' => [
         'payment_instructions' => array_values(array_filter(array_map('trim', explode('|', (string) env('PLATFORM_PAYMENT_INSTRUCTIONS', ''))))),
         'issuer' => env('PLATFORM_BILLING_ISSUER', 'Miles Global Link Co. Ltd'),
+        // Printed on invoices and trial confirmations, under the issuer.
+        'address' => env('PLATFORM_BILLING_ADDRESS') ?: 'Juba town, former GPOC building, 1st floor, office No 9, Juba, South Sudan',
+        'phone' => env('PLATFORM_BILLING_PHONE') ?: '+211 920 079 070',
         'contact_email' => env('PLATFORM_BILLING_EMAIL', env('PLATFORM_SALES_EMAIL')),
         'due_days' => (int) env('PLATFORM_INVOICE_DUE_DAYS', 14),
     ],

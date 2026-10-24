@@ -3,8 +3,11 @@
 use App\Modules\Applications\Catalog\CatalogImporter;
 use App\Modules\Applications\Models\Application;
 use App\Modules\Audit\Models\AuditLog;
+use App\Modules\Billing\Notifications\TrialStarted;
+use App\Modules\Billing\Support\TrialConfirmation;
 use App\Modules\Entitlements\Actions\ManageEntitlements;
 use App\Modules\Entitlements\Models\Entitlement;
+use App\Modules\Entitlements\Support\TrialRefused;
 use App\Modules\Marketing\Support\MarketingCatalog;
 use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Organizations\Models\Organization;
@@ -12,6 +15,7 @@ use App\Modules\Subscriptions\Models\Plan;
 use App\Support\Hosts\PlatformHosts;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia;
 use Tests\Support\AdminFixtures;
 
@@ -288,4 +292,49 @@ it('lets catalog admins close a product to trials', function () {
         ->assertSessionHasNoErrors();
 
     expect($this->retail->refresh()->trial_enabled)->toBeTrue();
+});
+
+describe('the trial invoice', function () {
+    it('emails the owner an invoice at zero for the trial', function () {
+        Notification::fake();
+
+        $trial = app(ManageEntitlements::class)->startTrial($this->organization, $this->retail, $this->owner->user);
+
+        Notification::assertSentTo($this->owner->user, TrialStarted::class, function (TrialStarted $notification) use ($trial) {
+            $data = $notification->confirmation;
+
+            return str_starts_with($data['number'], 'TRL-')
+                && str_ends_with($data['number'], strtoupper(substr(str_replace('-', '', $trial->id), -8)))
+                && $data['application'] === 'Retail'
+                && $data['days'] === 60
+                && str_ends_with($data['total'], '0.00')
+                && $data['from']['address'] === config('platform.billing.address')
+                && $data['billTo'][0] === ($this->organization->legal_name ?: $this->organization->display_name);
+        });
+    });
+
+    it('attaches the invoice as a PDF with the address on it', function () {
+        $trial = app(ManageEntitlements::class)->startTrial($this->organization, $this->retail, $this->owner->user);
+        $data = TrialConfirmation::data($this->organization, $this->retail, $trial, [], $this->owner->user->email);
+
+        $mail = (new TrialStarted($data))->toMail($this->owner->user);
+
+        expect($mail->subject)->toContain($data['number'])
+            ->and($mail->rawAttachments)->toHaveCount(1)
+            ->and($mail->rawAttachments[0]['name'])->toBe("invoice-{$data['number']}.pdf")
+            ->and(substr($mail->rawAttachments[0]['data'], 0, 4))->toBe('%PDF')
+            ->and(view('billing.trial-confirmation', $data + ['logo' => null])->render())
+            ->toContain('Juba town, former GPOC building, 1st floor, office No 9')
+            ->toContain($data['number']);
+    });
+
+    it('sends nothing when the trial is refused', function () {
+        app(ManageEntitlements::class)->startTrial($this->organization, $this->retail, $this->owner->user);
+        Notification::fake();
+
+        expect(fn () => app(ManageEntitlements::class)->startTrial($this->organization, $this->retail, $this->owner->user))
+            ->toThrow(TrialRefused::class);
+
+        Notification::assertNothingSent();
+    });
 });

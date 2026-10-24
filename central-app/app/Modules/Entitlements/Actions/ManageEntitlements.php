@@ -9,6 +9,8 @@ use App\Modules\Applications\Models\Application;
 use App\Modules\Applications\Models\ApplicationFeature;
 use App\Modules\Applications\Support\TenantRedirectUris;
 use App\Modules\Audit\AuditLogger;
+use App\Modules\Billing\Notifications\TrialStarted;
+use App\Modules\Billing\Support\TrialConfirmation;
 use App\Modules\Entitlements\Models\Entitlement;
 use App\Modules\Entitlements\Support\TrialRefused;
 use App\Modules\Integration\Support\IntegrationEvents;
@@ -205,6 +207,15 @@ final class ManageEntitlements
                 'valid_until' => $trial->valid_until?->toIso8601String(),
             ] + ($trial === $entitlement ? [] : ['with' => $application->code]), actor: $owner, organizationId: $organization->id);
         }
+
+        // The owner's invoice at zero for the trial, as a PDF in their inbox.
+        $owner->notify(new TrialStarted(TrialConfirmation::data(
+            $organization,
+            $application,
+            $entitlement,
+            array_values(Application::query()->whereIn('code', array_keys($alongside))->orderBy('sort_order')->pluck('name')->all()),
+            $owner->email,
+        )));
 
         return $entitlement;
     }
