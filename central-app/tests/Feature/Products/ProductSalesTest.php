@@ -18,12 +18,12 @@ beforeEach(function () {
     $this->hrApp = Application::query()->forceCreate(['code' => 'hr', 'name' => 'HR', 'category' => 'products', 'kind' => 'standalone', 'status' => 'planned', 'sort_order' => 3]);
 
     $catalog = app(ProductCatalog::class);
-    $this->pharmacy = $catalog->sync(['code' => 'pharmacy', 'name' => 'Miles Pharmacy ERP', 'tagline' => 'Medicines and the books.', 'status' => 'pilot', 'sort_order' => 10, 'applications' => [
+    $this->pharmacy = $catalog->sync(['code' => 'pharmacy', 'name' => 'Pharmacy ERP', 'tagline' => 'Medicines and the books.', 'status' => 'pilot', 'sort_order' => 10, 'applications' => [
         ['code' => 'pharmacy', 'requirement' => 'required'],
         ['code' => 'finance', 'requirement' => 'required'],
         ['code' => 'hr', 'requirement' => 'optional'],
     ]])['product'];
-    $this->ngo = $catalog->sync(['code' => 'ngo', 'name' => 'Miles NGO ERP', 'status' => 'planned', 'sort_order' => 40, 'applications' => [
+    $this->ngo = $catalog->sync(['code' => 'ngo', 'name' => 'NGO ERP', 'status' => 'planned', 'sort_order' => 40, 'applications' => [
         ['code' => 'finance', 'requirement' => 'required'],
     ]])['product'];
 
@@ -107,7 +107,7 @@ describe('plans', function () {
 
         try {
             app(ProductCatalog::class)->sync(array_merge([
-                'code' => 'pharmacy', 'name' => 'Miles Pharmacy ERP', 'status' => 'pilot', 'applications' => [
+                'code' => 'pharmacy', 'name' => 'Pharmacy ERP', 'status' => 'pilot', 'applications' => [
                     ['code' => 'pharmacy', 'requirement' => 'required'],
                     ['code' => 'finance', 'requirement' => 'required'],
                 ],
@@ -130,7 +130,7 @@ describe('plans', function () {
         $this->actingAs($this->billing->user)->post($this->adminUrl('/plans'), productPlanForm())->assertSessionHasNoErrors();
         Plan::query()->update(['status' => 'retired']);
 
-        app(ProductCatalog::class)->sync(['code' => 'pharmacy', 'name' => 'Miles Pharmacy ERP', 'status' => 'planned', 'applications' => [['code' => 'pharmacy', 'requirement' => 'required']]]);
+        app(ProductCatalog::class)->sync(['code' => 'pharmacy', 'name' => 'Pharmacy ERP', 'status' => 'planned', 'applications' => [['code' => 'pharmacy', 'requirement' => 'required']]]);
 
         expect($this->pharmacy->refresh()->status->value)->toBe('planned');
     });
@@ -191,7 +191,7 @@ describe('public site', function () {
     });
 
     it('moves old links by registry code to the solution page', function () {
-        app(ProductCatalog::class)->sync(['code' => 'retail_trading', 'name' => 'Miles Retail & Trading ERP', 'status' => 'planned', 'sort_order' => 20, 'applications' => [
+        app(ProductCatalog::class)->sync(['code' => 'retail_trading', 'name' => 'Retail & Trading ERP', 'status' => 'planned', 'sort_order' => 20, 'applications' => [
             ['code' => 'finance', 'requirement' => 'required'],
         ]]);
 
@@ -207,7 +207,7 @@ describe('public site', function () {
 
     it('labels product plans on the pricing page', function () {
         $this->get(apex('pricing'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
-            ->where('plans.0.product.name', 'Miles Pharmacy ERP'));
+            ->where('plans.0.product.name', 'Pharmacy ERP'));
     });
 
     it('lists ERP product pages in the sitemap', function () {

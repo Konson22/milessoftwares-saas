@@ -51,10 +51,10 @@ export function LightBackdrop() {
     return (
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
             <div className="site-float-slow absolute -top-32 -left-24 size-[28rem] rounded-full bg-site-accent/10 blur-3xl" />
-            <div className="site-float absolute -right-24 -bottom-40 size-[30rem] rounded-full bg-site-violet/10 blur-3xl" />
+            <div className="site-float absolute -right-24 -bottom-40 size-[30rem] rounded-full bg-site-sky/10 blur-3xl" />
             <div className="absolute top-16 right-[7%] hidden size-28 rounded-full border-2 border-dashed border-site-accent/25 md:block" />
-            <div className="site-float absolute top-[22%] left-[6%] hidden size-4 rounded-full bg-site-coral/70 md:block" />
-            <div className="site-float-slow absolute right-[16%] bottom-[18%] hidden size-3 rounded-full bg-site-purple/70 md:block" />
+            <div className="site-float absolute top-[22%] left-[6%] hidden size-4 rounded-full bg-site-aqua/70 md:block" />
+            <div className="site-float-slow absolute right-[16%] bottom-[18%] hidden size-3 rounded-full bg-site-sky/70 md:block" />
             <div className="site-dots absolute bottom-6 left-[12%] hidden h-24 w-40 text-site-accent/20 md:block" />
         </div>
     );

@@ -43,7 +43,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noindex">
-        <title>@yield('title') · Miles Softwares</title>
+        <title>@yield('title') · Miles Global Softwares</title>
         <link rel="icon" href="/favicon.ico" sizes="any">
         <style>
             :root {
@@ -104,7 +104,7 @@
                 text-decoration: none;
             }
 
-            .brand img { width: 32px; height: 32px; }
+            .brand img { height: 44px; width: auto; }
 
             .code {
                 margin: 40px 0 0;
@@ -189,8 +189,10 @@
     <body>
         <main>
             <a class="brand" href="{{ PlatformHosts::url(PlatformHosts::root()) }}">
-                <img src="/images/logo-icon.png" alt="">
-                Miles Softwares
+                <picture>
+                    <source srcset="/images/logo-with-text-light.png" media="(prefers-color-scheme: dark)">
+                    <img src="/images/logo-with-text.png" alt="Miles Global Softwares">
+                </picture>
             </a>
 
             <p class="code" aria-hidden="true">{{ $code }}</p>

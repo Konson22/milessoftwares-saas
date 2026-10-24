@@ -18,7 +18,7 @@ use Lcobucci\JWT\Signer\Rsa\Sha256;
 beforeEach(function () {
     /** @var OAuthClient $client */
     $client = app(ClientRepository::class)->createAuthorizationCodeGrantClient(
-        'Miles Softwares Dashboard',
+        'Miles Global Softwares Dashboard',
         [PlatformHosts::url(PlatformHosts::app(), 'auth/callback')],
         confidential: true,
     );

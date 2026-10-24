@@ -143,7 +143,7 @@ export const statusLabels: Record<CatalogEntry['status'], string | null> = {
 
 export function CatalogStatus({ status }: { status: CatalogEntry['status'] }) {
     const tone = {
-        available: 'bg-emerald-500/10 text-emerald-700',
+        available: 'bg-site-aqua/20 text-site-aqua-ink',
         early_access: 'bg-site-accent/10 text-site-accent-ink',
         coming_soon: 'bg-site-soft text-slate-700 ring-1 ring-site-line',
     }[status];

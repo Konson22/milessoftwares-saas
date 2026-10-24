@@ -203,7 +203,7 @@ describe('trials of an ERP product', function () {
         $this->pharmacy = Application::query()->forceCreate(['code' => 'pharmacy', 'name' => 'Pharmacy', 'category' => 'products', 'kind' => 'standalone', 'status' => 'available']);
         $this->finance = Application::query()->forceCreate(['code' => 'finance', 'name' => 'Finance', 'category' => 'shared', 'kind' => 'shared_module', 'status' => 'available']);
         app(ProductCatalog::class)->sync([
-            'code' => 'pharmacy', 'name' => 'Miles Pharmacy ERP', 'status' => 'pilot', 'sort_order' => 10,
+            'code' => 'pharmacy', 'name' => 'Pharmacy ERP', 'status' => 'pilot', 'sort_order' => 10,
             'applications' => [['code' => 'pharmacy', 'requirement' => 'required'], ['code' => 'finance', 'requirement' => 'required']],
         ]);
         $this->user = User::factory()->create();

@@ -184,7 +184,7 @@ export default function Dashboard({ organizations, current }: Props) {
                 description={
                     current
                         ? `Here is how ${current.displayName} is doing.`
-                        : 'Your Miles Softwares account.'
+                        : 'Your Miles Global Softwares account.'
                 }
                 actions={
                     current && (
@@ -460,7 +460,7 @@ function Applications({
                     }
                 >
                     {current.isOwner
-                        ? 'Choose a plan to start using Miles Softwares applications.'
+                        ? 'Choose a plan to start using Miles Global Softwares applications.'
                         : 'No applications have been given to you yet. Ask an administrator for access.'}
                 </EmptyState>
             ) : (
@@ -580,7 +580,8 @@ function SubscriptionsPanel({ billing }: { billing: Billing }) {
                         </Button>
                     }
                 >
-                    Choose a plan to start using Miles Softwares applications.
+                    Choose a plan to start using Miles Global Softwares
+                    applications.
                 </EmptyState>
             ) : (
                 <ul className="divide-y">
@@ -820,7 +821,7 @@ function RecommendationsPanel({
         <Panel aria-labelledby="recommendations">
             <PanelHeader
                 title={<span id="recommendations">Recommended for you</span>}
-                description={`More of the Miles Softwares ERP to add to ${workspace}.`}
+                description={`More of the Miles Global Softwares ERP to add to ${workspace}.`}
                 actions={
                     <Button asChild size="sm" variant="ghost">
                         <Link href={organizationPlans()}>See plans</Link>

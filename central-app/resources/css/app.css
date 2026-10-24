@@ -21,38 +21,38 @@
  */
 @theme {
     /* Brand colours, sampled from the logo (public/images/logo-*.png):
-       navy wordmark, blue → cyan and teal → green tiles, gold accent. */
-    --color-brand-ink: #050f2b;
-    --color-brand-navy: #0a1f4e;
-    --color-brand-navy-light: #13306f;
-    --color-brand-blue: #0b5bd6;
-    --color-brand-blue-dark: #0a47a8;
-    --color-brand-cyan: #06c8ea;
-    --color-brand-teal: #0e8f80;
-    --color-brand-green: #16b364;
-    --color-brand-gold: #f2b631;
-    --color-brand-gold-light: #f7cd5c;
-    --color-brand-gold-dark: #c98a10;
+       navy wordmark, royal blue → sky blue → teal across "Global" and
+       the mark. green is kept for success notes only. */
+    --color-brand-ink: #061640;
+    --color-brand-navy: #0a2260;
+    --color-brand-navy-light: #0b3a9a;
+    --color-brand-blue: #0058f5;
+    --color-brand-blue-dark: #0047d4;
+    --color-brand-cyan: #00a2f5;
+    --color-brand-teal: #006e69;
+    --color-brand-green: #03d5cd;
 
-    /* Public site: light-first (white / soft lavender), a bright blue →
-       violet gradient for actions and highlights, deep indigo for the
-       footer and closing bands. accent for shapes and lines; accent-ink
-       for blue text on light (5.3:1). violet and coral only ever appear
-       in gradients and decoration. site-black is the app sidebar in
+    /* Public site, in the logo's colours only: its navy, royal blue, sky
+       blue and teal, on white and soft blue. accent for shapes and lines;
+       accent-ink for blue text on light (6.4:1). sky and aqua appear in
+       gradients and decoration; their -ink forms are for text and icons
+       on light (4.5:1 or more). site-black is the app sidebar in
        product art. */
-    --color-site-ink: #161837;
-    --color-site-wash: #eef0fb;
-    --color-site-soft: #f6f7ff;
-    --color-site-line: #e5e7f4;
+    --color-site-ink: #0a2260;
+    --color-site-wash: #e8f1ff;
+    --color-site-soft: #f3f8ff;
+    --color-site-line: #dfe7f3;
     --color-site-black: #070707;
-    --color-site-navy: #1c1d4e;
-    --color-site-night: #0e0f2c;
-    --color-site-accent: #2575fc;
-    --color-site-accent-ink: #1559d6;
-    --color-site-accent-glow: #8fb8ff;
-    --color-site-violet: #6c41ff;
-    --color-site-purple: #a44cee;
-    --color-site-coral: #ff847f;
+    --color-site-navy: #0a2260;
+    --color-site-night: #061640;
+    --color-site-accent: #0058f5;
+    --color-site-accent-ink: #0047d4;
+    --color-site-accent-glow: #7fd4ff;
+    --color-site-sky: #00a2f5;
+    --color-site-sky-ink: #00689e;
+    --color-site-aqua: #03d5cd;
+    --color-site-aqua-ink: #006e69;
+    --color-site-slate: #515f6d;
     --font-public:
         'Nunito Variable', 'Nunito', ui-sans-serif, system-ui, sans-serif;
     --font-public-display:
@@ -98,22 +98,22 @@
     font-family: var(--font-public-display);
 }
 
-/* The blue → violet gradient: buttons, bands, icon chips and highlights. */
+/* The royal → sky blue of the logo: buttons, bands, icon chips and highlights. White text keeps 4.5:1. */
 .site-public .site-gradient {
     background-image: linear-gradient(
         120deg,
-        #2575fc 0%,
-        #4f5bff 50%,
-        #6c41ff 100%
+        #0a2260 0%,
+        #0052f0 50%,
+        #0066cc 100%
     );
 }
 
 .site-public .site-gradient-text {
     background-image: linear-gradient(
         100deg,
-        #1559d6 0%,
-        #5b3df5 60%,
-        #8a35e0 100%
+        #0047d4 0%,
+        #005ad8 55%,
+        #00689e 100%
     );
     -webkit-background-clip: text;
     background-clip: text;
@@ -124,30 +124,30 @@
 .site-public .site-dark .site-gradient-text {
     background-image: linear-gradient(
         100deg,
-        #8fb8ff 0%,
-        #c4b0ff 60%,
-        #ffb3ae 100%
+        #7fd4ff 0%,
+        #2cc3f5 55%,
+        #03d5cd 100%
     );
 }
 
 /*
- * The deep indigo → violet of heroes and closing bands, lit by two soft
- * glows. White text keeps at least 4.5:1 across it.
+ * The logo's deep navy → royal blue for heroes and closing bands, lit by
+ * two soft glows. White text keeps at least 4.5:1 across it.
  */
 .site-public .site-hero-bg {
-    background-color: #0e0f2c;
+    background-color: #061640;
     background-image:
         radial-gradient(
             60rem 30rem at 85% 10%,
-            rgb(108 65 255 / 0.45),
+            rgb(0 162 245 / 0.3),
             transparent 60%
         ),
         radial-gradient(
             40rem 24rem at 5% 90%,
-            rgb(37 117 252 / 0.35),
+            rgb(3 213 205 / 0.14),
             transparent 60%
         ),
-        linear-gradient(135deg, #0b0d33 0%, #1a1c63 50%, #3a22a8 100%);
+        linear-gradient(135deg, #04102f 0%, #0a2260 55%, #0b3a9a 100%);
 }
 
 /* A slanted gradient slab behind images and bands. Decorative. */

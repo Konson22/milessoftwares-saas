@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { ArrowRight, Check, Layers, LayoutGrid } from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
 import type { ReactNode } from 'react';
 import {
     CtaBand,
@@ -17,14 +17,17 @@ import {
 import FaqList, { faq } from '@/sites/public/components/faq';
 import HeroSlides from '@/sites/public/components/hero-slides';
 import {
+    DeploymentOptions,
+    ServiceCards,
+} from '@/sites/public/components/offerings';
+import {
     Accent,
     HeroBackdrop,
-    IconBox,
     LightBackdrop,
 } from '@/sites/public/components/page-hero';
 import type { Product } from '@/sites/public/components/product';
 import SectionHeading from '@/sites/public/components/section-heading';
-import Seo from '@/sites/public/components/seo';
+import Seo, { organization, siteName } from '@/sites/public/components/seo';
 import {
     button,
     card,
@@ -54,19 +57,27 @@ export default function MarketingHome({
 }: Props) {
     const erp = catalog.filter((entry) => entry.category === 'erp');
     const apps = catalog.filter((entry) => entry.category === 'application');
+    const origin = new URL(canonical).origin;
     const trialLabel = `Start Your ${trialDays}-Day Free Trial`;
 
     return (
         <>
             <Seo
-                title="ERP solutions and business applications"
-                description={`Industry ERP solutions and business applications on one connected platform: one sign-in, one organization, one set of books. Start your ${trialDays}-day free trial.`}
+                title="ERP software, websites and apps for your business"
+                description={`Ready-made and custom ERP for pharmacies, shops, schools and NGOs: cloud, desktop or mobile, even offline. We also build websites and apps. ${trialDays}-day free trial.`}
                 canonical={canonical}
                 jsonLd={{
                     '@context': 'https://schema.org',
-                    '@type': 'Organization',
-                    name: 'Miles Global Link Co. Ltd',
-                    url: canonical,
+                    '@graph': [
+                        organization(origin),
+                        {
+                            '@type': 'WebSite',
+                            '@id': `${origin}/#website`,
+                            name: siteName,
+                            url: `${origin}/`,
+                            publisher: { '@id': `${origin}/#organization` },
+                        },
+                    ],
                 }}
             />
 
@@ -81,21 +92,25 @@ export default function MarketingHome({
                         <h1
                             className={`text-[1.875rem] leading-[1.1] min-[400px]:text-[2.125rem] sm:text-6xl lg:text-[3.4rem] xl:text-[4rem] ${display}`}
                         >
-                            Everything your business needs.{' '}
-                            <Accent>Working together.</Accent>
+                            ERP, websites and apps.{' '}
+                            <Accent>Built for your business.</Accent>
                         </h1>
                         <p className="mx-auto mt-6 max-w-xl text-base text-pretty text-slate-300 sm:text-lg lg:mx-0">
-                            Industry ERP solutions and standalone business
-                            applications on one platform: one sign-in, one
-                            organization, one set of books.
+                            Ready-made and custom ERP for pharmacies, shops,
+                            schools and NGOs, in the cloud, on desktop or on
+                            mobile, even without internet. We also build
+                            websites, desktop apps and mobile apps.
                         </p>
                         <div className="mt-9 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
                             <Link href="/start" className={button.light}>
                                 {trialLabel}
                                 <ArrowRight className="size-4" aria-hidden />
                             </Link>
-                            <Link href="/erp" className={button.outlineDark}>
-                                Explore ERP Solutions
+                            <Link
+                                href="/services"
+                                className={button.outlineDark}
+                            >
+                                Our Services
                             </Link>
                         </div>
                     </div>
@@ -109,9 +124,10 @@ export default function MarketingHome({
             <div className="border-b border-site-line bg-site-soft">
                 <ul className="mx-auto flex max-w-7xl flex-wrap justify-center gap-x-8 gap-y-3 px-4 py-5 text-sm font-semibold text-slate-700 sm:px-6">
                     {[
-                        'No payment details',
-                        'Nothing charged automatically',
-                        'Keep your data when you upgrade',
+                        'Cloud, desktop and mobile',
+                        'Works offline',
+                        'One-time purchase for a single branch',
+                        'No payment details for the trial',
                     ].map((point) => (
                         <li
                             key={point}
@@ -126,7 +142,7 @@ export default function MarketingHome({
                 </ul>
             </div>
 
-            {/* 2. Our solutions */}
+            {/* 2. What we build */}
             <section
                 aria-labelledby="solutions-heading"
                 className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24"
@@ -135,60 +151,13 @@ export default function MarketingHome({
                     id="solutions-heading"
                     title={
                         <>
-                            Two ways to <Accent>run your business</Accent>
+                            What we <Accent>build</Accent>
                         </>
                     }
-                    lead="Take a complete ERP built for your industry, or start with the one application you need. Both run on the same platform."
+                    lead="Take one of our ready-made ERPs, or have us build the system, website or app your business needs."
                 />
-                <div className="mt-10 grid gap-5 sm:mt-14 md:grid-cols-2">
-                    {[
-                        {
-                            icon: Layers,
-                            title: 'ERP Solutions',
-                            body: 'Complete systems for an industry: stock, sales, purchasing and operations, with Miles Finance built in.',
-                            href: '/erp',
-                            cta: 'Explore ERP Solutions',
-                            count: erp.length,
-                        },
-                        {
-                            icon: LayoutGrid,
-                            title: 'Business Applications',
-                            body: 'Standalone applications for finance, people, projects, purchasing and more. Use one, or add them to an ERP.',
-                            href: '/apps',
-                            cta: 'Explore Business Applications',
-                            count: apps.length,
-                        },
-                    ].map((option, i) => (
-                        <Link
-                            key={option.title}
-                            href={option.href}
-                            className={`${card} group flex flex-col gap-5 p-7 sm:flex-row sm:p-9`}
-                        >
-                            <IconBox icon={option.icon} index={i} />
-                            <span className="flex-1">
-                                <span className="flex flex-wrap items-baseline gap-x-3">
-                                    <span
-                                        className={`text-2xl transition-colors group-hover:text-site-accent-ink ${display}`}
-                                    >
-                                        {option.title}
-                                    </span>
-                                    <span className="text-sm font-semibold text-slate-500">
-                                        {option.count} products
-                                    </span>
-                                </span>
-                                <span className="mt-2 block leading-relaxed text-slate-600">
-                                    {option.body}
-                                </span>
-                                <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-site-accent-ink">
-                                    {option.cta}
-                                    <ArrowRight
-                                        className="size-4 transition-transform group-hover:translate-x-1"
-                                        aria-hidden
-                                    />
-                                </span>
-                            </span>
-                        </Link>
-                    ))}
+                <div className="mt-10 sm:mt-14">
+                    <ServiceCards />
                 </div>
             </section>
 
@@ -209,6 +178,28 @@ export default function MarketingHome({
                 shaded
             />
 
+            {/* Every ERP: cloud, synced apps or offline */}
+            <section
+                id="ways-to-run"
+                aria-labelledby="ways-heading"
+                className="mx-auto max-w-7xl scroll-mt-24 px-4 py-16 sm:px-6 sm:py-24"
+            >
+                <Eyebrow>Your way</Eyebrow>
+                <SectionHeading
+                    id="ways-heading"
+                    title={
+                        <>
+                            Online, synced or <Accent>fully offline</Accent>
+                        </>
+                    }
+                    lead="Run any of our ERPs in the browser, as desktop and mobile apps that keep working without internet, or offline for one branch with a one-time purchase."
+                    align="left"
+                />
+                <div className="mt-10">
+                    <DeploymentOptions trialDays={trialDays} />
+                </div>
+            </section>
+
             {/* 4. Standalone business applications */}
             <CatalogSection
                 id="apps"
@@ -225,7 +216,7 @@ export default function MarketingHome({
                 linkLabel="Explore Business Applications"
             />
 
-            {/* 5. Why Miles Softwares */}
+            {/* 5. Why Miles Global Softwares */}
             <section
                 aria-labelledby="why-heading"
                 className="relative isolate overflow-hidden border-y border-site-line bg-site-soft"
@@ -236,7 +227,7 @@ export default function MarketingHome({
                         id="why-heading"
                         title={
                             <>
-                                Why <Accent>Miles Softwares</Accent>
+                                Why <Accent>Miles Global Softwares</Accent>
                             </>
                         }
                         lead="Built for the counter, the store room and month-end, by people who start where the work happens."

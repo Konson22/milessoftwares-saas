@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import AppLogoIcon from '@/shared/components/app-logo-icon';
+import AppLogo from '@/shared/components/app-logo';
 import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/shared/types';
 import { Accent, HeroBackdrop } from '@/sites/public/components/page-hero';
@@ -15,10 +15,10 @@ function BrandLink({
     return (
         <Link
             href={home()}
-            className={`flex items-center gap-3 font-public-display font-semibold tracking-tight ${inverted ? 'text-white' : 'text-site-ink'} ${className ?? ''}`}
+            aria-label="Miles Global Softwares home"
+            className={`flex items-center ${className ?? ''}`}
         >
-            <AppLogoIcon className="size-10" alt="" />
-            <span className="text-xl sm:text-2xl">Miles Softwares</span>
+            <AppLogo inverted={inverted} className="h-11 w-auto sm:h-12" />
         </Link>
     );
 }
@@ -45,7 +45,7 @@ export default function AuthSplitLayout({
                     </h2>
                     <p className="text-base text-pretty text-slate-300 xl:text-lg">
                         Pharmacy, retail, finance and HR, connected under one
-                        Miles Softwares account.
+                        Miles Global Softwares account.
                     </p>
                 </div>
 

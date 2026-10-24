@@ -33,6 +33,7 @@ Route::domain(PlatformHosts::root())->group(function () {
         Route::get('pricing', [PageController::class, 'pricing'])->name('pricing');
         Route::get('industries', [PageController::class, 'industries'])->name('industries');
         Route::get('solutions', fn () => redirect()->route('marketing.industries', status: 301));
+        Route::get('services', [PageController::class, 'services'])->name('services');
         Route::get('platform', [PageController::class, 'platform'])->name('platform');
         Route::get('coming-soon', [PageController::class, 'comingSoon'])->name('coming-soon');
         Route::get('about', [PageController::class, 'about'])->name('about');

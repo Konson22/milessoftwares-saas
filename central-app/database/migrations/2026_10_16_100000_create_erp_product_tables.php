@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Commercial ERP products (Miles Pharmacy ERP, ...) as opposed to the
+     * Commercial ERP products (Pharmacy ERP, ...) as opposed to the
      * technical applications in the registry. A product is a named set of
      * applications; it owns no entitlements of its own. Whether an
      * organization has a product is derived from its application

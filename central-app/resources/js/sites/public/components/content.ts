@@ -136,7 +136,7 @@ export const solutions: Solution[] = [
         icon: GraduationCap,
         title: 'Schools and colleges',
         pain: 'Fees tracked in one place, the accounts in another, and student records on paper.',
-        change: 'School ERP is being built to take admissions, classes, examinations and fees into one system, with fees posting to Miles Finance.',
+        change: 'School ERP is being built to take admissions, classes, examinations and fees into one system, with fees posting to Finance & Accounting.',
         proof: ['Admissions', 'Attendance', 'Examinations', 'Student fees'],
         product: 'erp/school',
     },
@@ -154,13 +154,13 @@ export const solutions: Solution[] = [
         icon: Truck,
         title: 'Transport and logistics',
         pain: 'Trips that are never costed, and deliveries tracked by phone call.',
-        change: 'Logistics ERP is planned for shipments, fleet and trip costs, with billing in Miles Finance.',
+        change: 'Logistics ERP is planned for shipments, fleet and trip costs, with billing in Finance & Accounting.',
         proof: ['Shipments', 'Fleet', 'Delivery tracking', 'Trip costs'],
         product: 'erp/logistics',
     },
 ];
 
-/** Why Miles Softwares, on the home page. */
+/** Why Miles Global Softwares, on the home page. */
 export const whyMiles: Feature[] = [
     {
         icon: Store,
@@ -170,7 +170,7 @@ export const whyMiles: Feature[] = [
     {
         icon: BookOpenCheck,
         title: 'Books that keep themselves',
-        body: 'Sales, purchases, returns and cash counts post to Miles Finance as they happen. Month-end is a check, not a rebuild.',
+        body: 'Sales, purchases, returns and cash counts post to Finance & Accounting as they happen. Month-end is a check, not a rebuild.',
     },
     {
         icon: UserCheck,
@@ -229,7 +229,7 @@ export const connected: Feature[] = [
     {
         icon: Landmark,
         title: 'One set of books',
-        body: 'Every ERP posts to Miles Finance automatically.',
+        body: 'Every ERP posts to Finance & Accounting automatically.',
     },
     {
         icon: ShieldCheck,

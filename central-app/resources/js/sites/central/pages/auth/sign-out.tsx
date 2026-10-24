@@ -19,7 +19,7 @@ export default function SignOut({ homeUrl, dashboardUrl }: Props) {
                         as="button"
                         data-test="central-logout"
                     >
-                        Sign out of Miles Softwares on this browser
+                        Sign out of Miles Global Softwares on this browser
                     </Link>
                 </Button>
 
@@ -39,5 +39,5 @@ export default function SignOut({ homeUrl, dashboardUrl }: Props) {
 SignOut.layout = {
     title: 'You signed out of the app',
     description:
-        'You are still signed in to your Miles Softwares account on this browser, so other apps can sign you in without a password.',
+        'You are still signed in to your Miles Global Softwares account on this browser, so other apps can sign you in without a password.',
 };

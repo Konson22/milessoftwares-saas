@@ -39,8 +39,8 @@ class StaffInvitationSent extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject("{$this->inviterName} invited you to the Miles Softwares admin")
-            ->line("{$this->inviterName} invited you to join the Miles Softwares staff.")
+            ->subject("{$this->inviterName} invited you to the Miles Global Softwares admin")
+            ->line("{$this->inviterName} invited you to join the Miles Global Softwares staff.")
             ->line('The link takes you through choosing a password and setting up two-factor authentication, which every administrator needs. Have an authenticator app ready on your phone.')
             ->action('Set up your admin access', $this->acceptUrl())
             ->line('The link can be used once and expires on '.$this->expiresAt->utc()->toFormattedDayDateString().'.')

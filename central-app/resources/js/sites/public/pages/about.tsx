@@ -8,7 +8,7 @@ import {
 import { aboutValues } from '@/sites/public/components/content';
 import PageHero, { Accent } from '@/sites/public/components/page-hero';
 import SectionHeading from '@/sites/public/components/section-heading';
-import Seo from '@/sites/public/components/seo';
+import Seo, { organization } from '@/sites/public/components/seo';
 import { button } from '@/sites/public/components/styles';
 
 type Props = {
@@ -20,13 +20,13 @@ export default function About({ canonical }: Props) {
         <>
             <Seo
                 title="About us"
-                description="Miles Global Softwares builds industry ERPs for pharmacies, shops, traders, schools and NGOs, starting where the work happens."
+                description="Miles Global Softwares builds ready-made and custom ERPs, websites, desktop and mobile apps for pharmacies, shops, schools and NGOs."
                 canonical={canonical}
                 jsonLd={{
                     '@context': 'https://schema.org',
-                    '@type': 'Organization',
-                    name: 'Miles Global Link Co. Ltd',
+                    '@type': 'AboutPage',
                     url: canonical,
+                    mainEntity: organization(new URL(canonical).origin),
                 }}
             />
 
@@ -68,6 +68,13 @@ export default function About({ canonical }: Props) {
                         store room and at month-end. Then we make sure every
                         transaction lands in the accounts without being typed
                         twice.
+                    </p>
+                    <p>
+                        Beyond our ready-made ERPs, we build custom ERPs,
+                        websites, desktop apps and mobile apps. Because power
+                        and connections are not always reliable, our desktop and
+                        mobile apps keep working offline, and a single branch
+                        can run with no internet at all.
                     </p>
                     <p>
                         Every Miles product shares one platform, so a business

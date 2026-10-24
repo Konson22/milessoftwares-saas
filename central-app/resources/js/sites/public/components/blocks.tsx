@@ -49,8 +49,8 @@ export function FeatureGrid({
 }
 
 /**
- * The closing band most pages end with: a deep indigo slab with a
- * heading, a line and the actions beside it.
+ * The closing band most pages end with: a slab with a
+ * heading, a line and the actions beside it (deep navy).
  */
 export function CtaBand({
     id,

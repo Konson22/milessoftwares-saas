@@ -7,11 +7,12 @@ import { cn } from '../lib/utils';
 type Accent = 'blue' | 'emerald' | 'amber' | 'red' | 'violet' | 'slate';
 
 const ACCENTS: Record<Accent, string> = {
-    blue: 'bg-blue-50 text-blue-600',
+    blue: 'bg-primary/10 text-primary',
     emerald: 'bg-emerald-50 text-emerald-600',
     amber: 'bg-amber-50 text-amber-600',
     red: 'bg-red-50 text-red-600',
-    violet: 'bg-violet-50 text-violet-600',
+    // The logo's teal.
+    violet: 'bg-[#03d5cd]/15 text-[#006e69]',
     slate: 'bg-slate-100 text-slate-600',
 };
 

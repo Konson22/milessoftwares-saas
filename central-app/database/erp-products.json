@@ -2,7 +2,7 @@
     "products": [
         {
             "code": "pharmacy",
-            "name": "Miles Pharmacy ERP",
+            "name": "Pharmacy ERP",
             "tagline": "Medicines, batches and the counter, with the books kept for you.",
             "description": "For retail pharmacies, medical stores and pharmaceutical wholesalers: medicine catalogue, batch and expiry tracking, purchasing and receiving, dispensing and sales at the counter, prescriptions, and accounting in Finance.",
             "status": "pilot",
@@ -14,7 +14,7 @@
         },
         {
             "code": "retail_trading",
-            "name": "Miles Retail & Trading ERP",
+            "name": "Retail & Trading ERP",
             "tagline": "Retail and wholesale trading on one set of books.",
             "description": "For retail stores, supermarkets, wholesalers and trading companies: point of sale, quotations, orders, invoices, delivery notes, purchasing, stock and accounting.",
             "status": "pilot",
@@ -26,7 +26,7 @@
         },
         {
             "code": "education",
-            "name": "Miles Education ERP",
+            "name": "Education ERP",
             "tagline": "Admissions to results, fees to the general ledger.",
             "description": "For schools, colleges and universities: admissions, classes, attendance, examinations, student fees, staff and accounting.",
             "status": "planned",
@@ -39,7 +39,7 @@
         },
         {
             "code": "ngo",
-            "name": "Miles NGO ERP",
+            "name": "NGO ERP",
             "tagline": "Programs, grants and donor reporting.",
             "description": "For NGOs and development organizations: programs and projects, donors and grants, budgets, expenses, procurement, staff and fund accounting.",
             "status": "planned",
@@ -52,9 +52,9 @@
         },
         {
             "code": "finance_accounting",
-            "name": "Miles Finance & Accounting",
+            "name": "Finance & Accounting",
             "tagline": "The shared accounting module, on its own.",
-            "description": "Chart of accounts, journals, receivables, payables, banking and financial statements: the same Finance application every Miles ERP product posts to.",
+            "description": "Chart of accounts, journals, receivables, payables, banking and financial statements: the same Finance application every ERP product posts to.",
             "status": "pilot",
             "sort_order": 50,
             "applications": [{ "code": "finance", "requirement": "required" }]

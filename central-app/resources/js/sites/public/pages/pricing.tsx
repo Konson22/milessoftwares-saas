@@ -2,6 +2,7 @@ import { Link } from '@inertiajs/react';
 import { ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 import FaqList, { pricingFaq } from '@/sites/public/components/faq';
+import { DeploymentOptions } from '@/sites/public/components/offerings';
 import PageHero, { Accent } from '@/sites/public/components/page-hero';
 import PlanCard from '@/sites/public/components/plan-card';
 import type { Plan } from '@/sites/public/components/plan-card';
@@ -37,7 +38,7 @@ export default function Pricing({ plans, trialDays, canonical }: Props) {
         <>
             <Seo
                 title="Pricing"
-                description={`Every Miles ERP includes Finance & Accounting. Start a ${trial} free trial of one application, no payment details.`}
+                description={`ERP pricing: cloud plans with desktop and mobile apps included, or a one-time purchase for an offline single branch. Start a ${trial} free trial.`}
                 canonical={canonical}
             />
 
@@ -48,7 +49,7 @@ export default function Pricing({ plans, trialDays, canonical }: Props) {
                         <Accent>Add apps as you grow.</Accent>
                     </>
                 }
-                intro={`Every ERP includes Finance & Accounting. Start with a ${trial} free trial of one application, no payment details needed.`}
+                intro={`Every ERP includes Finance & Accounting. Subscribe in the cloud, or buy once to run a single branch offline. Start with a ${trial} free trial, no payment details needed.`}
             />
 
             <section
@@ -113,6 +114,27 @@ export default function Pricing({ plans, trialDays, canonical }: Props) {
                         </ul>
                     </>
                 )}
+            </section>
+
+            <section
+                id="ways-to-run"
+                aria-labelledby="ways-heading"
+                className="scroll-mt-24 border-y border-site-line bg-site-soft"
+            >
+                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
+                    <SectionHeading
+                        id="ways-heading"
+                        title={
+                            <>
+                                Subscribe, or <Accent>buy it once</Accent>
+                            </>
+                        }
+                        lead="Cloud plans include the desktop and mobile apps that sync. A single branch that runs offline can buy its ERP once, with no subscription."
+                    />
+                    <div className="mt-10 sm:mt-14">
+                        <DeploymentOptions trialDays={trialDays} />
+                    </div>
+                </div>
             </section>
 
             <section aria-labelledby="faq-heading">

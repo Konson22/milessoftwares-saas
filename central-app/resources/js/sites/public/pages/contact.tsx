@@ -3,6 +3,11 @@ import { ArrowRight, Clock, Rocket } from 'lucide-react';
 import LeadForm, { Field } from '@/sites/public/components/lead-form';
 import PageHero, { Accent } from '@/sites/public/components/page-hero';
 import Seo from '@/sites/public/components/seo';
+import {
+    SocialIcon,
+    socialLinks,
+    whatsappNumber,
+} from '@/sites/public/components/social';
 import { button, panel, iconChip } from '@/sites/public/components/styles';
 
 type Props = {
@@ -46,6 +51,32 @@ export default function Contact({ formToken, subject, canonical }: Props) {
                             Every message reaches our team, and we reply within
                             one working day.
                         </p>
+                    </div>
+                    <div className="border-t border-site-line pt-6">
+                        <p className="text-lg font-semibold">
+                            Chat with us on WhatsApp
+                        </p>
+                        <p className="mt-1 text-sm text-slate-600">
+                            Message{' '}
+                            <a
+                                href={socialLinks[0].href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-semibold text-site-ink underline-offset-2 hover:underline"
+                            >
+                                {whatsappNumber}
+                            </a>
+                            , or follow us on Facebook.
+                        </p>
+                        <div className="mt-4 flex gap-3">
+                            {socialLinks.map((link) => (
+                                <SocialIcon
+                                    key={link.name}
+                                    link={link}
+                                    className="bg-site-ink/5 text-site-ink hover:bg-site-ink/10"
+                                />
+                            ))}
+                        </div>
                     </div>
                     <div className="border-t border-site-line pt-6">
                         <span className={`${iconChip} size-12`}>

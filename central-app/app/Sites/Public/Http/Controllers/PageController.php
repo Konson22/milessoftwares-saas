@@ -110,6 +110,15 @@ class PageController extends Controller
         ]);
     }
 
+    /** What we make: ready-made and custom ERP, websites, desktop and mobile apps. */
+    public function services(): Response
+    {
+        return Inertia::render('public/services', [
+            'trialDays' => $this->trialDays(),
+            'canonical' => PlatformHosts::url(PlatformHosts::root(), 'services'),
+        ]);
+    }
+
     public function platform(): Response
     {
         return Inertia::render('public/platform', [

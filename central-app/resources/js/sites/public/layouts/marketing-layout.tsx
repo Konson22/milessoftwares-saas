@@ -9,8 +9,9 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { PropsWithChildren } from 'react';
-import AppLogoIcon from '@/shared/components/app-logo-icon';
+import AppLogo from '@/shared/components/app-logo';
 import { HeroBackdrop } from '@/sites/public/components/page-hero';
+import { SocialIcon, socialLinks } from '@/sites/public/components/social';
 import { button, darkBand } from '@/sites/public/components/styles';
 import { login, register } from '@/routes';
 
@@ -34,6 +35,7 @@ const products = [
 // "Products" sits after Home and opens the menu above.
 const nav = [
     { title: 'Home', href: '/' },
+    { title: 'Services', href: '/services' },
     { title: 'Industries', href: '/industries' },
     { title: 'Pricing', href: '/pricing' },
     { title: 'About', href: '/about' },
@@ -44,11 +46,13 @@ function Brand({ inverted = false }: { inverted?: boolean }) {
     return (
         <Link
             href="/"
-            className={`flex shrink-0 items-center gap-2.5 font-public-display text-lg font-semibold tracking-tight whitespace-nowrap transition-colors ${inverted ? 'text-white' : 'text-site-ink'}`}
+            aria-label="Miles Global Softwares home"
+            className="flex shrink-0 items-center"
         >
-            {/* Decorative: the name beside it is the link text. */}
-            <AppLogoIcon className="size-9" alt="" />
-            Miles Softwares
+            <AppLogo
+                inverted={inverted}
+                className="h-11 w-auto sm:h-[3.25rem]"
+            />
         </Link>
     );
 }
@@ -196,7 +200,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
             >
                 <nav
                     aria-label="Main"
-                    className={`mx-auto flex max-w-7xl items-center gap-8 px-4 transition-[height] duration-300 sm:px-6 ${solid ? 'h-16 sm:h-[4.5rem]' : 'h-16 sm:h-24'}`}
+                    className={`mx-auto flex max-w-7xl items-center gap-8 px-4 transition-[height] duration-300 sm:px-6 ${solid ? 'h-14 sm:h-16' : 'h-14 sm:h-[4.5rem]'}`}
                 >
                     <Brand inverted={!solid} />
                     <ul
@@ -259,7 +263,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                 <div
                     id="mobile-menu"
                     hidden={!menuOpen}
-                    className="max-h-[calc(100svh-4rem)] overflow-y-auto border-t border-site-line bg-white xl:hidden"
+                    className="max-h-[calc(100svh-3.5rem)] overflow-y-auto border-t border-site-line bg-white xl:hidden"
                 >
                     <ul className="mx-auto max-w-7xl space-y-1 px-4 py-3 sm:px-6">
                         <li>
@@ -326,8 +330,8 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                     <div className="col-span-2 md:col-span-3 lg:col-span-1">
                         <Brand inverted />
                         <p className="mt-5 max-w-xs leading-relaxed">
-                            Run your business. All connected. Industry ERP
-                            solutions and business applications on one platform.
+                            Ready-made and custom ERP, websites, desktop and
+                            mobile apps. Online, synced or fully offline.
                         </p>
                         <Link
                             href="/contact"
@@ -336,6 +340,15 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                             Questions? Talk to us
                             <ArrowRight className="size-4" aria-hidden />
                         </Link>
+                        <div className="mt-5 flex gap-3">
+                            {socialLinks.map((link) => (
+                                <SocialIcon
+                                    key={link.name}
+                                    link={link}
+                                    className="bg-white/10 text-white hover:bg-white/20"
+                                />
+                            ))}
+                        </div>
                     </div>
                     {/* Slugs from resources/content/marketing-catalog.json. */}
                     <FooterColumn
@@ -347,7 +360,10 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                                 href: '/apps',
                             },
                             { title: 'Pharmacy ERP', href: '/erp/pharmacy' },
-                            { title: 'Miles Finance', href: '/apps/finance' },
+                            {
+                                title: 'Finance & Accounting',
+                                href: '/apps/finance',
+                            },
                             { title: 'Coming soon', href: '/coming-soon' },
                         ]}
                     />
@@ -368,6 +384,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                         title="Company"
                         links={[
                             { title: 'About', href: '/about' },
+                            { title: 'Services', href: '/services' },
                             {
                                 title: 'Platform & security',
                                 href: '/platform',

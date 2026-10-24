@@ -1,12 +1,12 @@
-import { Head, Link } from "@inertiajs/react";
-import { ArrowRight, Puzzle } from "lucide-react";
-import { EmptyState } from "@miles/ui/components/empty-state";
-import { PageHeader } from "@miles/ui/components/page-header";
-import { Panel, PanelHeader } from "@miles/ui/components/panel";
-import { StatusBadge } from "@miles/ui/components/status-badge";
-import { Button } from "@/shared/components/ui/button";
-import { dashboard, explore, trial } from "@/routes";
-import { appIcon } from "@/shared/lib/app-icons";
+import { Head, Link } from '@inertiajs/react';
+import { ArrowRight, Puzzle } from 'lucide-react';
+import { EmptyState } from '@miles/ui/components/empty-state';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelHeader } from '@miles/ui/components/panel';
+import { StatusBadge } from '@miles/ui/components/status-badge';
+import { Button } from '@/shared/components/ui/button';
+import { dashboard, explore, trial } from '@/routes';
+import { appIcon } from '@/shared/lib/app-icons';
 
 type Application = {
     code: string;
@@ -34,7 +34,7 @@ export default function Explore({ trialDays, applications }: Props) {
             <Head title="Explore the ERP" />
 
             <PageHeader
-                title="Explore the Miles Softwares ERP"
+                title="Explore the Miles Global Softwares ERP"
                 description={`Try any of our applications free for ${trialDays} days. No payment details needed.`}
             />
 
@@ -64,7 +64,7 @@ export default function Explore({ trialDays, applications }: Props) {
                     <Panel aria-labelledby="coming-soon">
                         <PanelHeader
                             title={<span id="coming-soon">Coming soon</span>}
-                            description="On the way to the Miles Softwares ERP."
+                            description="On the way to the Miles Global Softwares ERP."
                         />
                         <ApplicationGrid applications={comingSoon} />
                     </Panel>
@@ -131,7 +131,7 @@ function ApplicationGrid({ applications }: { applications: Application[] }) {
 
 Explore.layout = {
     breadcrumbs: [
-        { title: "Dashboard", href: dashboard() },
-        { title: "Explore the ERP", href: explore() },
+        { title: 'Dashboard', href: dashboard() },
+        { title: 'Explore the ERP', href: explore() },
     ],
 };

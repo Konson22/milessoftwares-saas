@@ -4,8 +4,8 @@ import { trial } from '@/routes';
  * Pill buttons shared by links across the public site. Links, not
  * <Button>, because most of them navigate (some to another host).
  *
- * Light-first surfaces with a blue → violet gradient for the main action
- * and highlights; deep indigo for the footer and closing bands (see the
+ * Light-first surfaces with the logo's royal → sky blue gradient for the main action
+ * and highlights; deep navy for the footer and closing bands (see the
  * site-* colours and .site-gradient in resources/css/app.css).
  */
 const base =
@@ -57,7 +57,7 @@ export const railItem =
 export const iconChip =
     'site-gradient inline-flex shrink-0 items-center justify-center rounded-2xl text-white';
 
-/** A deep indigo → violet band: headings, labels and links inside switch to their light forms. */
+/** A deep navy → royal blue band: headings, labels and links inside switch to their light forms. */
 export const darkBand =
     'site-dark site-hero-bg relative isolate overflow-hidden text-slate-300';
 
@@ -67,9 +67,9 @@ export const darkBand =
  */
 export const tints = [
     'bg-site-accent/10 text-site-accent-ink',
-    'bg-site-violet/10 text-site-violet',
-    'bg-site-coral/15 text-[#c4413b]',
-    'bg-emerald-500/10 text-emerald-700',
+    'bg-site-sky/10 text-site-sky-ink',
+    'bg-site-aqua/20 text-site-aqua-ink',
+    'bg-site-navy/10 text-site-navy',
 ] as const;
 
 /** "2-month" for 60 days, "14-day" otherwise. */

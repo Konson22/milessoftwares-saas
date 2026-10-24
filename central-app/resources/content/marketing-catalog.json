@@ -9,7 +9,7 @@
             "registry": { "type": "erp", "code": "pharmacy" },
             "summary": "Medicines, batches and expiry, the counter and prescriptions, with the books kept for you.",
             "headline": "Every medicine accounted for, from delivery to dispensing.",
-            "subhead": "Batch and expiry tracking, a fast counter, prescriptions and a controlled-drugs register, with sales, stock and cash posted straight to Miles Finance.",
+            "subhead": "Batch and expiry tracking, a fast counter, prescriptions and a controlled-drugs register, with sales, stock and cash posted straight to Finance & Accounting.",
             "audience": "Retail pharmacies, medical stores and pharmaceutical wholesalers, from one branch to many.",
             "seoTitle": "Pharmacy ERP with batch and expiry tracking",
             "seoDescription": "Pharmacy software with batch and expiry tracking, expiry-first selling, prescriptions, a controlled-drugs register and tills, with accounting built in.",
@@ -81,7 +81,7 @@
                 },
                 {
                     "question": "Is accounting included?",
-                    "answer": "Yes. Pharmacy ERP includes Miles Finance, and every sale, purchase, return and write-off posts to it automatically."
+                    "answer": "Yes. Pharmacy ERP includes Finance & Accounting, and every sale, purchase, return and write-off posts to it automatically."
                 }
             ]
         },
@@ -162,10 +162,10 @@
             "registry": { "type": "erp", "code": "education" },
             "summary": "Admissions to results, fees to the general ledger.",
             "headline": "Run the school, from admissions to the fee ledger.",
-            "subhead": "School ERP is being built for schools, colleges and universities, with fees posting straight to Miles Finance.",
+            "subhead": "School ERP is being built for schools, colleges and universities, with fees posting straight to Finance & Accounting.",
             "audience": "Primary and secondary schools, colleges and universities.",
             "seoTitle": "School ERP (coming soon)",
-            "seoDescription": "School management software on the way: admissions, classes, attendance, examinations and student fees, with accounting in Miles Finance.",
+            "seoDescription": "School management software on the way: admissions, classes, attendance, examinations and student fees, with the books kept in Finance & Accounting.",
             "features": [
                 {
                     "icon": "user-plus",
@@ -217,10 +217,10 @@
             "registry": null,
             "summary": "Shipments, fleet and deliveries, with the costs in the books.",
             "headline": "Every shipment tracked, every trip costed.",
-            "subhead": "Logistics ERP is planned for transport and distribution businesses, with trip costs and billing in Miles Finance.",
+            "subhead": "Logistics ERP is planned for transport and distribution businesses, with trip costs and billing in Finance & Accounting.",
             "audience": "Transport, freight, courier and distribution companies.",
             "seoTitle": "Logistics ERP (coming soon)",
-            "seoDescription": "Logistics software on the way: shipments, fleet, deliveries and trip costs, with billing and accounting in Miles Finance.",
+            "seoDescription": "Logistics software on the way: shipments, fleet, deliveries and trip costs, with billing and the books in Finance & Accounting.",
             "features": [
                 {
                     "icon": "package",
@@ -272,10 +272,10 @@
             "registry": { "type": "erp", "code": "ngo" },
             "summary": "Programs, grants and donor reporting on fund accounting.",
             "headline": "Programs delivered, every grant accounted for.",
-            "subhead": "NGO ERP is being built for NGOs and development organizations, with fund accounting in Miles Finance.",
+            "subhead": "NGO ERP is being built for NGOs and development organizations, with fund accounting in Finance & Accounting.",
             "audience": "NGOs, charities and development organizations.",
             "seoTitle": "NGO ERP (coming soon)",
-            "seoDescription": "NGO software on the way: programs, donors and grants, budgets, procurement and donor reporting, on fund accounting in Miles Finance.",
+            "seoDescription": "NGO software on the way: programs, donors and grants, budgets, procurement and donor reporting, on fund accounting in Finance & Accounting.",
             "features": [
                 {
                     "icon": "folder-kanban",
@@ -319,14 +319,14 @@
         {
             "slug": "finance",
             "category": "application",
-            "name": "Miles Finance",
+            "name": "Finance & Accounting",
             "icon": "landmark",
             "registry": { "type": "application", "code": "finance" },
             "summary": "Double-entry accounting with bank reconciliation, tax, budgets and fixed assets.",
             "headline": "Accounting your accountant will trust.",
-            "subhead": "A double-entry ledger with periods, bank reconciliation, tax, budgets and fixed assets, fed automatically by every Miles ERP or used on its own.",
-            "audience": "Businesses that want proper books, the accountants who serve them, and every Miles ERP customer.",
-            "seoTitle": "Miles Finance: accounting with bank reconciliation",
+            "subhead": "A double-entry ledger with periods, bank reconciliation, tax, budgets and fixed assets, fed automatically by our ERPs or used on its own.",
+            "audience": "Businesses that want proper books, the accountants who serve them, and every customer of our ERPs.",
+            "seoTitle": "Finance & Accounting software with bank reconciliation",
             "seoDescription": "Accounting software with a double-entry ledger, bank reconciliation, tax returns, budgets, fixed assets and multi-currency.",
             "features": [
                 {
@@ -373,7 +373,7 @@
             "workflow": [
                 {
                     "title": "Record",
-                    "body": "Sales and purchases arrive from your Miles ERP, or are entered in Finance."
+                    "body": "Sales and purchases arrive from your ERP, or are entered in Finance & Accounting directly."
                 },
                 {
                     "title": "Reconcile",
@@ -387,7 +387,7 @@
             "faqs": [
                 {
                     "question": "Can I use Finance without an ERP?",
-                    "answer": "Yes. Miles Finance works on its own, and connects automatically if you add an ERP later."
+                    "answer": "Yes. Finance & Accounting works on its own, and connects automatically if you add an ERP later."
                 },
                 {
                     "question": "Can I bring my opening balances?",
@@ -398,15 +398,15 @@
         {
             "slug": "projects",
             "category": "application",
-            "name": "Miles Projects",
+            "name": "Project Management",
             "icon": "folder-kanban",
             "registry": null,
             "summary": "Projects, tasks and budgets, with actual costs from Finance.",
             "headline": "Deliver projects on time and on budget.",
-            "subhead": "Miles Projects is planned for teams that run projects, with actual costs coming straight from Miles Finance.",
+            "subhead": "Project Management is planned for teams that run projects, with actual costs coming straight from Finance & Accounting.",
             "audience": "Consultancies, contractors, NGOs and any team that runs projects.",
-            "seoTitle": "Miles Projects (coming soon)",
-            "seoDescription": "Project management on the way: projects, tasks and milestones, team assignments, and budgets against actual costs from Miles Finance.",
+            "seoTitle": "Project Management software (coming soon)",
+            "seoDescription": "Project management on the way: projects, tasks and milestones, team assignments, and budgets against actual costs from Finance & Accounting.",
             "features": [
                 {
                     "icon": "folder-kanban",
@@ -440,7 +440,7 @@
             ],
             "faqs": [
                 {
-                    "question": "When will Miles Projects be available?",
+                    "question": "When will Project Management be available?",
                     "answer": "It is planned. Join the waitlist and we will tell you first."
                 }
             ]
@@ -448,14 +448,14 @@
         {
             "slug": "hr",
             "category": "application",
-            "name": "Miles HR",
+            "name": "HR",
             "icon": "users",
             "registry": { "type": "application", "code": "hr" },
             "summary": "Staff records, contracts and documents, with leave and payroll on the way.",
             "headline": "Your people, on record and in order.",
             "subhead": "Staff profiles, employment history, contracts and documents with expiry reminders. Leave, attendance and payroll are being built.",
             "audience": "Any organization with staff to keep records for.",
-            "seoTitle": "Miles HR: staff records and documents",
+            "seoTitle": "HR software: staff records, contracts and documents",
             "seoDescription": "HR software for staff profiles, employment history, contracts and documents with expiry reminders. Leave and payroll on the way.",
             "features": [
                 {
@@ -503,15 +503,15 @@
         {
             "slug": "procurement",
             "category": "application",
-            "name": "Miles Procurement",
+            "name": "Procurement",
             "icon": "clipboard-list",
             "registry": null,
             "summary": "Purchase requests, approvals and orders that flow into stock and the books.",
             "headline": "Buy right, with approvals.",
-            "subhead": "Miles Procurement is planned for organizations that need requests, approvals and supplier quotes before they buy.",
+            "subhead": "Procurement is planned for organizations that need requests, approvals and supplier quotes before they buy.",
             "audience": "Organizations with purchasing approvals: NGOs, schools, companies with several departments.",
-            "seoTitle": "Miles Procurement (coming soon)",
-            "seoDescription": "Procurement software on the way: purchase requests, approvals, supplier quotes and purchase orders that flow into stock and Miles Finance.",
+            "seoTitle": "Procurement software (coming soon)",
+            "seoDescription": "Procurement software on the way: purchase requests, approvals, supplier quotes and purchase orders that flow into stock and Finance & Accounting.",
             "features": [
                 {
                     "icon": "clipboard-list",
@@ -542,7 +542,7 @@
             ],
             "faqs": [
                 {
-                    "question": "When will Miles Procurement be available?",
+                    "question": "When will Procurement be available?",
                     "answer": "It is planned. Join the waitlist and we will tell you first."
                 }
             ]
@@ -550,14 +550,14 @@
         {
             "slug": "inventory",
             "category": "application",
-            "name": "Miles Inventory",
+            "name": "Inventory",
             "icon": "warehouse",
             "registry": { "type": "application", "code": "inventory" },
             "summary": "Stock across shelves, stores and branches.",
             "headline": "Know what you have and where it is.",
-            "subhead": "Miles Inventory is planned as a standalone stock application, on the same stock engine the ERPs use today.",
+            "subhead": "Inventory is planned as a standalone stock application, on the same stock engine the ERPs use today.",
             "audience": "Businesses that hold stock in several places.",
-            "seoTitle": "Miles Inventory (coming soon)",
+            "seoTitle": "Inventory management software (coming soon)",
             "seoDescription": "Inventory software on the way: stock across shelves, stores and branches, counts, transfers and reorder alerts.",
             "features": [
                 {
@@ -590,22 +590,22 @@
             "faqs": [
                 {
                     "question": "Is stock control available today?",
-                    "answer": "Yes, inside Pharmacy ERP and Retail ERP. A standalone Miles Inventory is planned."
+                    "answer": "Yes, inside Pharmacy ERP and Retail ERP. A standalone Inventory application is planned."
                 }
             ]
         },
         {
             "slug": "crm",
             "category": "application",
-            "name": "Miles CRM",
+            "name": "CRM",
             "icon": "handshake",
             "registry": { "type": "application", "code": "crm" },
             "summary": "Leads, quotations and customer history beside invoices and payments.",
             "headline": "Win customers and keep them.",
-            "subhead": "Miles CRM is planned for sales teams, with every customer's invoices and payments from Miles Finance in view.",
+            "subhead": "CRM is planned for sales teams, with every customer's invoices and payments from Finance & Accounting in view.",
             "audience": "Sales teams and businesses that sell to other businesses.",
-            "seoTitle": "Miles CRM (coming soon)",
-            "seoDescription": "CRM on the way: leads, quotations, follow-ups and customer history beside invoices and payments in Miles Finance.",
+            "seoTitle": "CRM software (coming soon)",
+            "seoDescription": "CRM on the way: leads, quotations, follow-ups and customer history beside invoices and payments in Finance & Accounting.",
             "features": [
                 {
                     "icon": "user-plus",
@@ -636,7 +636,7 @@
             ],
             "faqs": [
                 {
-                    "question": "When will Miles CRM be available?",
+                    "question": "When will CRM be available?",
                     "answer": "It is planned. Join the waitlist and we will tell you first."
                 }
             ]
@@ -644,15 +644,15 @@
         {
             "slug": "assets",
             "category": "application",
-            "name": "Miles Assets",
+            "name": "Asset Management",
             "icon": "package",
             "registry": null,
             "summary": "Equipment, vehicles and property: who has what, and what it is worth.",
             "headline": "Every asset tracked, from purchase to disposal.",
-            "subhead": "Miles Assets is planned for tracking equipment and vehicles day to day. Asset accounting and depreciation are already in Miles Finance.",
+            "subhead": "Asset Management is planned for tracking equipment and vehicles day to day. Asset accounting and depreciation are already in Finance & Accounting.",
             "audience": "Organizations with equipment, vehicles or property to look after.",
-            "seoTitle": "Miles Assets (coming soon)",
-            "seoDescription": "Asset management on the way: equipment, vehicles and property, assignments and maintenance, with depreciation in Miles Finance.",
+            "seoTitle": "Asset Management software (coming soon)",
+            "seoDescription": "Asset management on the way: equipment, vehicles and property, assignments and maintenance, with depreciation in Finance & Accounting.",
             "features": [
                 {
                     "icon": "package",
@@ -684,21 +684,21 @@
             "faqs": [
                 {
                     "question": "Can I depreciate assets today?",
-                    "answer": "Yes. Miles Finance has an asset register with monthly depreciation and disposals. Miles Assets will add day-to-day tracking."
+                    "answer": "Yes. Finance & Accounting has an asset register with monthly depreciation and disposals. Asset Management will add day-to-day tracking."
                 }
             ]
         },
         {
             "slug": "documents",
             "category": "application",
-            "name": "Miles Documents",
+            "name": "Document Management",
             "icon": "file-check",
             "registry": null,
             "summary": "Upload, route and approve documents with a full trail.",
             "headline": "Paperwork that moves.",
-            "subhead": "Miles Documents is planned for routing documents for approval, with a record of who signed what.",
+            "subhead": "Document Management is planned for routing documents for approval, with a record of who signed what.",
             "audience": "Any organization that approves documents: contracts, requests, policies.",
-            "seoTitle": "Miles Documents (coming soon)",
+            "seoTitle": "Document Management software (coming soon)",
             "seoDescription": "Document management on the way: upload, route and approve documents with a full trail of who signed what.",
             "features": [
                 {
@@ -724,7 +724,7 @@
             ],
             "faqs": [
                 {
-                    "question": "When will Miles Documents be available?",
+                    "question": "When will Document Management be available?",
                     "answer": "It is planned. Join the waitlist and we will tell you first."
                 }
             ]

@@ -266,5 +266,5 @@ function CodeForm({ token }: { token: string }) {
 
 StaffInvitation.layout = {
     title: 'Set up your admin access',
-    description: 'Miles Softwares staff',
+    description: 'Miles Global Softwares staff',
 };

@@ -7,7 +7,7 @@ export function faq(trialDays: number): Question[] {
     return [
         {
             question: 'Do I need to install anything?',
-            answer: 'No. Miles runs in the browser on any computer, tablet or phone.',
+            answer: 'Not for the cloud version: it runs in the browser on any computer, tablet or phone. Desktop and mobile apps are there too if you want them.',
         },
         {
             question: 'Can I try it before paying?',
@@ -26,8 +26,16 @@ export function faq(trialDays: number): Question[] {
             answer: 'Yes. Opening stock and opening balances are loaded when you set up, so you start from where you are.',
         },
         {
-            question: 'Does it work offline?',
-            answer: 'Not yet. Miles needs an internet connection today; selling offline is on our roadmap.',
+            question: 'Does it work without internet?',
+            answer: 'Yes. Our desktop and mobile apps keep working offline and sync with the cloud when the connection is back. For a single branch with no internet at all, there is a fully offline version.',
+        },
+        {
+            question: 'Can I pay once instead of every month?',
+            answer: 'Yes. The offline single-branch version, on desktop or mobile, is a one-time purchase with no subscription. Contact us for the price.',
+        },
+        {
+            question: 'Do you build custom software?',
+            answer: 'Yes. We build custom ERPs, websites, desktop apps and mobile apps. Tell us what you need and we send a quote.',
         },
         {
             question: 'Who can see my data?',
@@ -45,7 +53,7 @@ export function pricingFaq(trialDays: number): Question[] {
         },
         {
             question: 'Do I pay extra for Finance?',
-            answer: 'No. Every Miles ERP includes Finance & Accounting, because that is where your sales and purchases land.',
+            answer: 'No. Every ERP we make includes Finance & Accounting, because that is where your sales and purchases land.',
         },
         {
             question: 'Can I run a pharmacy and a shop together?',
@@ -58,6 +66,14 @@ export function pricingFaq(trialDays: number): Question[] {
         {
             question: 'Can I add applications later?',
             answer: 'Yes. New applications join the same workspace and sign-in. Your team, branches and roles are already set up.',
+        },
+        {
+            question: 'Is there a one-time purchase option?',
+            answer: 'Yes. Any ERP can run offline for a single branch on one computer or device, bought once with no subscription. Contact us for the price.',
+        },
+        {
+            question: 'Do the desktop and mobile apps cost extra?',
+            answer: 'No. The desktop and mobile apps that sync with the cloud are included with your cloud plan.',
         },
         {
             question: 'We need something different. Can you help?',

@@ -127,7 +127,11 @@ export default function AppLayout({
 
     return (
         <AppShell
-            crumbs={crumbs.length > 0 ? crumbs : [{ label: 'Miles Softwares' }]}
+            crumbs={
+                crumbs.length > 0
+                    ? crumbs
+                    : [{ label: 'Miles Global Softwares' }]
+            }
             actions={
                 auth.user && (
                     <UserMenu
@@ -173,7 +177,7 @@ export default function AppLayout({
                 <ShellSidebar
                     label="Account"
                     brand={{
-                        title: 'Miles Softwares',
+                        title: 'Miles Global Softwares',
                         subtitle: auth.user?.name,
                         icon: LayoutGrid,
                         href: dashboard(),

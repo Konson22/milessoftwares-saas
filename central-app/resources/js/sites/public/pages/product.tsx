@@ -6,7 +6,7 @@ import type { Plan } from '@/sites/public/components/plan-card';
 import { ProductTile, statusLabel } from '@/sites/public/components/product';
 import type { Product } from '@/sites/public/components/product';
 import SectionHeading from '@/sites/public/components/section-heading';
-import Seo from '@/sites/public/components/seo';
+import Seo, { organization } from '@/sites/public/components/seo';
 import {
     button,
     card,
@@ -47,8 +47,10 @@ export default function ProductPage({
                     '@type': 'SoftwareApplication',
                     name: product.name,
                     applicationCategory: 'BusinessApplication',
+                    operatingSystem: 'Web',
                     description: summary,
                     url: canonical,
+                    publisher: organization(new URL(canonical).origin),
                 }}
             />
 

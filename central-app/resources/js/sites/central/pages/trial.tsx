@@ -1,23 +1,23 @@
-import { Form, Head, Link } from "@inertiajs/react";
-import { Check, Puzzle } from "lucide-react";
-import { useState } from "react";
-import { EmptyState } from "@miles/ui/components/empty-state";
-import { PageHeader } from "@miles/ui/components/page-header";
-import { Panel, PanelHeader } from "@miles/ui/components/panel";
-import { StatusBadge } from "@miles/ui/components/status-badge";
-import InputError from "@/shared/components/input-error";
-import { Button } from "@/shared/components/ui/button";
-import { dashboard } from "@/routes";
-import { plans as organizationPlans } from "@/routes/organization";
-import { create as createOrganization } from "@/routes/organizations";
-import { appIcon } from "@/shared/lib/app-icons";
-import { formatDate } from "@/shared/lib/billing";
+import { Form, Head, Link } from '@inertiajs/react';
+import { Check, Puzzle } from 'lucide-react';
+import { useState } from 'react';
+import { EmptyState } from '@miles/ui/components/empty-state';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelHeader } from '@miles/ui/components/panel';
+import { StatusBadge } from '@miles/ui/components/status-badge';
+import InputError from '@/shared/components/input-error';
+import { Button } from '@/shared/components/ui/button';
+import { dashboard } from '@/routes';
+import { plans as organizationPlans } from '@/routes/organization';
+import { create as createOrganization } from '@/routes/organizations';
+import { appIcon } from '@/shared/lib/app-icons';
+import { formatDate } from '@/shared/lib/billing';
 
 type Application = {
     code: string;
     name: string;
     tagline: string | null;
-    state: "eligible" | "trialing" | "used" | "active";
+    state: 'eligible' | 'trialing' | 'used' | 'active';
     endsAt: string | null;
     daysLeft: number | null;
 };
@@ -30,11 +30,11 @@ type Props = {
     selected: string | null;
 };
 
-const stateLabels: Record<Application["state"], string | null> = {
+const stateLabels: Record<Application['state'], string | null> = {
     eligible: null,
-    trialing: "On free trial",
-    used: "Trial used",
-    active: "Already yours",
+    trialing: 'On free trial',
+    used: 'Trial used',
+    active: 'Already yours',
 };
 
 /**
@@ -48,11 +48,11 @@ export default function Trial({
     applications,
     selected: initial,
 }: Props) {
-    const eligible = applications.filter((app) => app.state === "eligible");
+    const eligible = applications.filter((app) => app.state === 'eligible');
     const [selected, setSelected] = useState(
         eligible.find((app) => app.code === initial)?.code ??
             eligible[0]?.code ??
-            "",
+            '',
     );
 
     return (
@@ -132,9 +132,9 @@ export default function Trial({
                                 <ul className="space-y-2.5 px-4 text-sm">
                                     {[
                                         `${trialDays} days, starting when you confirm`,
-                                        "Shared modules it needs, such as Finance, come with it",
-                                        "Your data stays when you choose a plan",
-                                        "Access pauses when the trial ends; nothing is charged",
+                                        'Shared modules it needs, such as Finance, come with it',
+                                        'Your data stays when you choose a plan',
+                                        'Access pauses when the trial ends; nothing is charged',
                                     ].map((line) => (
                                         <li key={line} className="flex gap-2">
                                             <Check
@@ -149,12 +149,12 @@ export default function Trial({
                                     <Button
                                         type="submit"
                                         className="w-full"
-                                        disabled={processing || selected === ""}
+                                        disabled={processing || selected === ''}
                                     >
                                         Start free trial
                                     </Button>
                                     <p className="mt-3 text-center text-xs text-muted-foreground">
-                                        Want to pay right away?{" "}
+                                        Want to pay right away?{' '}
                                         <Link
                                             href={organizationPlans()}
                                             className="underline"
@@ -182,12 +182,12 @@ function Option({
     onSelect: () => void;
 }) {
     const Icon = appIcon(app.code);
-    const disabled = app.state !== "eligible";
+    const disabled = app.state !== 'eligible';
     const label = stateLabels[app.state];
 
     return (
         <label
-            className={`flex gap-3 rounded-lg border p-3 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-primary/40"}`}
+            className={`flex gap-3 rounded-lg border p-3 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-primary/40'}`}
         >
             <input
                 type="radio"
@@ -206,13 +206,13 @@ function Option({
                     <span className="font-medium">{app.name}</span>
                     {label && (
                         <StatusBadge
-                            tone={app.state === "trialing" ? "info" : "neutral"}
+                            tone={app.state === 'trialing' ? 'info' : 'neutral'}
                         >
                             {label}
                         </StatusBadge>
                     )}
                 </span>
-                {app.state === "trialing" && app.endsAt ? (
+                {app.state === 'trialing' && app.endsAt ? (
                     <span className="mt-0.5 block text-sm text-muted-foreground">
                         {app.daysLeft} days left, ends {formatDate(app.endsAt)}
                     </span>
@@ -230,7 +230,7 @@ function Option({
 
 Trial.layout = {
     breadcrumbs: [
-        { title: "Dashboard", href: dashboard() },
-        { title: "Free trial", href: "/trial" },
+        { title: 'Dashboard', href: dashboard() },
+        { title: 'Free trial', href: '/trial' },
     ],
 };

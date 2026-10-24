@@ -2,7 +2,7 @@ import type { ImgHTMLAttributes } from 'react';
 
 export default function AppLogoIcon({
     className,
-    alt = 'Miles Softwares',
+    alt = 'Miles Global Softwares',
     ...props
 }: ImgHTMLAttributes<HTMLImageElement>) {
     return (

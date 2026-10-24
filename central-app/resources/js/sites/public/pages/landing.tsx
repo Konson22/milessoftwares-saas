@@ -20,7 +20,7 @@ import PlanCard from '@/sites/public/components/plan-card';
 import type { Plan } from '@/sites/public/components/plan-card';
 import { ProductTile } from '@/sites/public/components/product';
 import SectionHeading from '@/sites/public/components/section-heading';
-import Seo from '@/sites/public/components/seo';
+import Seo, { organization } from '@/sites/public/components/seo';
 import {
     button,
     card,
@@ -46,6 +46,7 @@ export default function LandingPage({
     trialDays,
     canonical,
 }: Props) {
+    const origin = new URL(canonical).origin;
     const comingSoon = product.status === 'coming_soon';
     const demoUrl = `/contact?subject=${encodeURIComponent(`Demo: ${product.name}`)}`;
     const features = product.features.map((feature) => ({
@@ -78,12 +79,56 @@ export default function LandingPage({
                 canonical={canonical}
                 jsonLd={{
                     '@context': 'https://schema.org',
-                    '@type': 'SoftwareApplication',
-                    name: product.name,
-                    applicationCategory: 'BusinessApplication',
-                    operatingSystem: 'Web',
-                    description: product.seoDescription,
-                    url: canonical,
+                    '@graph': [
+                        {
+                            '@type': 'SoftwareApplication',
+                            name: product.name,
+                            applicationCategory: 'BusinessApplication',
+                            operatingSystem: 'Web',
+                            description: product.seoDescription,
+                            url: canonical,
+                            publisher: organization(origin),
+                        },
+                        {
+                            '@type': 'BreadcrumbList',
+                            itemListElement: [
+                                {
+                                    '@type': 'ListItem',
+                                    position: 1,
+                                    name: 'Home',
+                                    item: `${origin}/`,
+                                },
+                                {
+                                    '@type': 'ListItem',
+                                    position: 2,
+                                    name: categoryLabels[product.category],
+                                    item: `${origin}${categoryPaths[product.category]}`,
+                                },
+                                {
+                                    '@type': 'ListItem',
+                                    position: 3,
+                                    name: product.name,
+                                    item: canonical,
+                                },
+                            ],
+                        },
+                        // The questions answered on the page, for rich results.
+                        ...(product.faqs.length > 0
+                            ? [
+                                  {
+                                      '@type': 'FAQPage',
+                                      mainEntity: product.faqs.map((faq) => ({
+                                          '@type': 'Question',
+                                          name: faq.question,
+                                          acceptedAnswer: {
+                                              '@type': 'Answer',
+                                              text: faq.answer,
+                                          },
+                                      })),
+                                  },
+                              ]
+                            : []),
+                    ],
                 }}
             />
 

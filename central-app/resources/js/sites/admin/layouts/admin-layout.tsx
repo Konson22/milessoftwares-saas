@@ -153,7 +153,7 @@ export default function AdminLayout({ children }: PropsWithChildren) {
                     label="Administration"
                     brand={{
                         title: 'Administration',
-                        subtitle: 'Miles Softwares staff',
+                        subtitle: 'Miles Global Softwares staff',
                         icon: ShieldHalf,
                         href: '/',
                         tone: 'amber',

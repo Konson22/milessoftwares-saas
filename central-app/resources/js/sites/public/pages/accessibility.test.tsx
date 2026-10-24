@@ -12,6 +12,7 @@ import MarketingHome from './home';
 import LandingPage from './landing';
 import Platform from './platform';
 import Pricing from './pricing';
+import Services from './services';
 import ProductPage from './product';
 import Solutions from './solutions';
 import Start from './start';
@@ -77,7 +78,7 @@ const plan = {
 
 const erpProduct = {
     code: 'pharmacy',
-    name: 'Miles Pharmacy ERP',
+    name: 'Pharmacy ERP',
     tagline: 'Medicines and the books.',
     description: null,
     status: 'pilot' as const,
@@ -107,7 +108,7 @@ const entry = {
     subhead: 'Expiry-first selling and books that keep themselves.',
     audience: 'Pharmacies and wholesalers',
     seoTitle: 'Pharmacy ERP',
-    seoDescription: 'Pharmacy ERP by Miles Softwares.',
+    seoDescription: 'Pharmacy ERP by Miles Global Softwares.',
     features: [{ icon: 'pill', title: 'Expiry first', body: 'Sells oldest.' }],
     workflow: [{ title: 'Receive', body: 'Batches in.' }],
     faqs: [{ question: 'Is there a trial?', answer: 'Yes.' }],
@@ -131,7 +132,7 @@ const catalog = [
         ...entry,
         slug: 'finance',
         category: 'application' as const,
-        name: 'Miles Finance',
+        name: 'Finance & Accounting',
         url: 'apps/finance',
         status: 'available' as const,
         includes: [],
@@ -141,7 +142,7 @@ const catalog = [
         ...entry,
         slug: 'hr',
         category: 'application' as const,
-        name: 'Miles HR',
+        name: 'HR',
         url: 'apps/hr',
         status: 'available' as const,
         includes: [],
@@ -155,7 +156,7 @@ const productPlan = {
     name: 'Pharmacy Standard',
     product: {
         code: 'pharmacy',
-        name: 'Miles Pharmacy ERP',
+        name: 'Pharmacy ERP',
         status: 'pilot' as const,
     },
 };
@@ -275,6 +276,14 @@ const pages: [string, ReactNode][] = [
     [
         'platform',
         <Platform key="platform" canonical="https://example.test/platform" />,
+    ],
+    [
+        'services',
+        <Services
+            key="services"
+            trialDays={60}
+            canonical="https://example.test/services"
+        />,
     ],
     [
         'coming soon',

@@ -189,14 +189,14 @@ function SidebarItem({
             className={cn(
                 itemClass,
                 current
-                    ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-cyan-400'
+                    ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-sidebar-ring'
                     : 'text-sidebar-foreground hover:bg-white/5 hover:text-white',
             )}
         >
             <Icon
                 className={cn(
                     'size-4 shrink-0',
-                    current ? 'text-cyan-300' : 'text-sidebar-foreground/70',
+                    current ? 'text-sidebar-ring' : 'text-sidebar-foreground/70',
                 )}
                 aria-hidden
             />

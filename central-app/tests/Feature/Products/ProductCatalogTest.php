@@ -32,7 +32,7 @@ function pharmacyProduct(array $overrides = []): array
 {
     return array_merge([
         'code' => 'pharmacy',
-        'name' => 'Miles Pharmacy ERP',
+        'name' => 'Pharmacy ERP',
         'status' => 'pilot',
         'sort_order' => 10,
         'applications' => [
@@ -96,7 +96,7 @@ describe('catalog', function () {
     it('lets a planned product name applications that do not exist yet', function () {
         $result = app(ProductCatalog::class)->sync([
             'code' => 'retail_trading',
-            'name' => 'Miles Retail & Trading ERP',
+            'name' => 'Retail & Trading ERP',
             'status' => 'planned',
             'applications' => [['code' => 'retail', 'requirement' => 'required'], ['code' => 'finance', 'requirement' => 'required']],
         ]);
@@ -212,7 +212,7 @@ describe('catalog', function () {
 describe('access', function () {
     beforeEach(function () {
         app(ProductCatalog::class)->sync(pharmacyProduct());
-        app(ProductCatalog::class)->sync(['code' => 'finance_accounting', 'name' => 'Miles Finance & Accounting', 'status' => 'pilot', 'sort_order' => 50, 'applications' => [['code' => 'finance', 'requirement' => 'required']]]);
+        app(ProductCatalog::class)->sync(['code' => 'finance_accounting', 'name' => 'Finance & Accounting', 'status' => 'pilot', 'sort_order' => 50, 'applications' => [['code' => 'finance', 'requirement' => 'required']]]);
         $this->organization = Organization::factory()->create();
     });
 

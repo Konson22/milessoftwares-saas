@@ -249,6 +249,7 @@ it('serves the industries, catalog, platform, coming-soon and about pages', func
     ['platform', 'public/platform'],
     ['coming-soon', 'public/coming-soon'],
     ['about', 'public/about'],
+    ['services', 'public/services'],
 ]);
 
 it('moves the old solutions page to industries', function () {
@@ -274,7 +275,7 @@ it('shows only unreleased catalog products on the coming-soon page', function ()
 it('gives each catalog product its own page, and 404s anything else', function () {
     $this->get(site('apps/projects'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
         ->component('public/landing')
-        ->where('product.name', 'Miles Projects')
+        ->where('product.name', 'Project Management')
         ->where('product.status', 'coming_soon')
         ->where('canonical', site('apps/projects')));
 
@@ -292,6 +293,7 @@ it('lists the new pages in the sitemap', function () {
         ->assertSee(site('platform'), false)
         ->assertSee(site('coming-soon'), false)
         ->assertSee(site('about'), false)
+        ->assertSee(site('services'), false)
         ->assertDontSee(site('solutions'), false);
 });
 
