@@ -6,7 +6,7 @@ import {
     Eyebrow,
     FeatureGrid,
 } from "@/sites/public/components/blocks";
-import { ProductCard } from "@/sites/public/components/catalog";
+import { ProductCard, catalogIcon } from "@/sites/public/components/catalog";
 import type { CatalogEntry } from "@/sites/public/components/catalog";
 import {
     cloudPillars,
@@ -15,7 +15,6 @@ import {
     whyMiles,
 } from "@/sites/public/components/content";
 import FaqList, { faq } from "@/sites/public/components/faq";
-import HeroSlides from "@/sites/public/components/hero-slides";
 import {
     DeploymentOptions,
     ServiceCards,
@@ -23,7 +22,6 @@ import {
 } from "@/sites/public/components/offerings";
 import {
     Accent,
-    HeroBackdrop,
     IconBox,
     LightBackdrop,
 } from "@/sites/public/components/page-hero";
@@ -33,8 +31,8 @@ import Seo, { organization, siteName } from "@/sites/public/components/seo";
 import {
     button,
     card,
-    darkBand,
     display,
+    iconChip,
     panel,
     textLink,
 } from "@/sites/public/components/styles";
@@ -122,41 +120,71 @@ export default function MarketingHome({
                 }}
             />
 
-            {/* 1. Hero */}
-            <section className={darkBand}>
-                <HeroBackdrop />
-                <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 pt-28 pb-20 sm:gap-16 sm:px-6 sm:pt-40 sm:pb-28 lg:grid-cols-[1.05fr_1fr] lg:gap-10 xl:pt-44">
-                    <div className="site-rise text-center lg:text-left">
-                        <p className="mb-5 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-white ring-1 ring-white/20">
-                            Miles Products on Miles Cloud
-                        </p>
-                        <h1
-                            className={`text-[1.875rem] leading-[1.1] min-[400px]:text-[2.125rem] sm:text-6xl lg:text-[3.4rem] xl:text-[4rem] ${display}`}
-                        >
-                            Business software{" "}
-                            <Accent>that works together.</Accent>
-                        </h1>
-                        <p className="mx-auto mt-6 max-w-xl text-base text-pretty text-slate-300 sm:text-lg lg:mx-0">
-                            Miles Global Softwares builds powerful business
-                            applications and tailored software solutions to help
-                            organizations manage operations, connect teams and
-                            grow with confidence.
-                        </p>
-                        <div className="mt-9 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-                            <a href="#products" className={button.light}>
-                                Explore Products
-                                <ArrowRight className="size-4" aria-hidden />
-                            </a>
-                            <Link
-                                href="/platform"
-                                className={button.outlineDark}
-                            >
-                                Discover Miles Cloud
-                            </Link>
-                        </div>
+            {/* 1. Hero: light, under the white header; the products as tiles, no pictures. */}
+            <section className="relative isolate overflow-hidden bg-linear-to-b from-site-soft via-white to-white">
+                <LightBackdrop />
+                <div className="site-rise mx-auto flex max-w-7xl flex-col items-center px-4 pt-32 pb-16 text-center sm:px-6 sm:pt-44 sm:pb-20">
+                    <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-site-line bg-white px-4 py-1.5 text-sm font-semibold text-site-ink">
+                        <span
+                            aria-hidden
+                            className="size-2 rounded-full bg-site-accent"
+                        />
+                        Miles Products on Miles Cloud
+                    </p>
+                    <h1
+                        className={`max-w-4xl text-[2rem] leading-[1.1] min-[400px]:text-[2.375rem] sm:text-6xl xl:text-7xl ${display}`}
+                    >
+                        Business software{" "}
+                        <Accent>that works together.</Accent>
+                    </h1>
+                    <p className="mt-6 max-w-2xl text-base text-pretty text-slate-600 sm:text-lg">
+                        Miles Global Softwares builds powerful business
+                        applications and tailored software solutions to help
+                        organizations manage operations, connect teams and grow
+                        with confidence.
+                    </p>
+                    <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+                        <a href="#products" className={button.primary}>
+                            Explore Products
+                            <ArrowRight className="size-4" aria-hidden />
+                        </a>
+                        <Link href="/platform" className={button.outline}>
+                            Discover Miles Cloud
+                        </Link>
                     </div>
-                    <div className="hidden md:block">
-                        <HeroSlides />
+
+                    {/* The six products on one line, joined like the apps they are. */}
+                    <div className="relative mt-16 w-full max-w-5xl sm:mt-20">
+                        <div
+                            aria-hidden
+                            className="absolute inset-x-[8%] top-1/2 hidden h-px bg-linear-to-r from-transparent via-site-accent/40 to-transparent lg:block"
+                        />
+                        <ul className="relative grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
+                            {milesProducts.map((product) => {
+                                const Icon = catalogIcon(product.icon);
+
+                                return (
+                                    <li key={product.slug}>
+                                        <Link
+                                            href={`/${product.category === "erp" ? "erp" : "apps"}/${product.slug}`}
+                                            className={`${card} group flex h-full flex-col items-center gap-3 px-3 py-5`}
+                                        >
+                                            <span
+                                                className={`${iconChip} size-11 transition-transform group-hover:scale-110`}
+                                            >
+                                                <Icon
+                                                    className="size-5"
+                                                    aria-hidden
+                                                />
+                                            </span>
+                                            <span className="text-sm font-semibold text-site-ink transition-colors group-hover:text-site-accent-ink">
+                                                {product.title}
+                                            </span>
+                                        </Link>
+                                    </li>
+                                );
+                            })}
+                        </ul>
                     </div>
                 </div>
             </section>

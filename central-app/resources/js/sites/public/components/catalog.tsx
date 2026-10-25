@@ -293,7 +293,7 @@ export function ProductCard({
                 {product.trial ? (
                     <a
                         href={trialUrl(product.trial)}
-                        className="site-gradient inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold text-white transition-transform hover:-translate-y-0.5"
+                        className="inline-flex items-center gap-2 rounded-full bg-site-accent-ink px-4 py-2 text-sm font-bold text-white transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-site-navy"
                     >
                         Start {trialDays}-day free trial
                         <span className="sr-only"> of {name}</span>

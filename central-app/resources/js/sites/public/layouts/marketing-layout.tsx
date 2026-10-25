@@ -105,8 +105,8 @@ function Brand({ inverted = false }: { inverted?: boolean }) {
                 }
                 alt="Miles Global Softwares"
                 width={1000}
-                height={373}
-                className="h-11 w-auto sm:h-[3.25rem]"
+                height={265}
+                className="h-10 w-auto sm:h-12"
             />
         </Link>
     );
@@ -120,10 +120,9 @@ function useCurrentPath(): string {
 }
 
 /**
- * A header fixed over the page: solid deep indigo with white links over
- * the dark hero every page opens with, white with a hairline once the page
- * scrolls (or the mobile menu opens). Then the page, and a deep indigo
- * footer (see styles.ts for the palette).
+ * A white header fixed over the page, with a hairline that turns into a
+ * soft shadow and a slimmer bar once the page scrolls. Then the page, and
+ * a deep navy footer (see styles.ts for the palette).
  */
 /**
  * A menu in the header: a disclosure button over its links. Closes on
@@ -133,13 +132,11 @@ function NavMenu({
     title,
     id,
     items,
-    solid,
     path,
 }: {
     title: string;
     id: string;
     items: MenuItem[];
-    solid: boolean;
     path: string;
 }) {
     const [open, setOpen] = useState(false);
@@ -182,7 +179,7 @@ function NavMenu({
                 aria-expanded={open}
                 aria-controls={`${id}-menu`}
                 onClick={() => setOpen((value) => !value)}
-                className={`inline-flex items-center gap-1 px-3 py-2 font-semibold 2xl:px-4 transition-colors ${current ? (solid ? "text-site-accent-ink" : "text-white") : ""} ${solid ? "hover:text-site-accent-ink" : "hover:text-white"}`}
+                className={`inline-flex items-center gap-1 px-3 py-2 font-semibold 2xl:px-4 transition-colors hover:text-site-accent-ink ${current ? "text-site-accent-ink" : ""}`}
             >
                 {title}
                 <ChevronDown
@@ -233,7 +230,6 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
     const [menuOpen, setMenuOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const path = useCurrentPath();
-    const solid = scrolled || menuOpen;
 
     useEffect(() => {
         if (!menuOpen) {
@@ -270,15 +266,15 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                 Skip to content
             </a>
             <header
-                className={`fixed inset-x-0 top-0 z-40 transition-colors duration-300 ${solid ? "border-b border-site-line bg-white" : "site-dark bg-site-night"}`}
+                className={`fixed inset-x-0 top-0 z-40 transition-colors duration-300 border-b border-site-line bg-white ${scrolled ? "shadow-[0_8px_24px_-16px_rgb(6_36_78/0.35)]" : ""}`}
             >
                 <nav
                     aria-label="Main"
-                    className={`mx-auto flex max-w-7xl items-center gap-6 px-4 transition-[height] duration-300 sm:px-6 ${solid ? "h-14 sm:h-16" : "h-14 sm:h-[4.5rem]"}`}
+                    className={`mx-auto flex max-w-7xl items-center gap-6 px-4 transition-[height] duration-300 sm:px-6 ${scrolled ? "h-14 sm:h-16" : "h-16 sm:h-[4.5rem]"}`}
                 >
-                    <Brand inverted={!solid} />
+                    <Brand />
                     <ul
-                        className={`mx-auto hidden items-center gap-1 text-[15px] font-semibold whitespace-nowrap xl:flex ${solid ? "text-slate-700" : "text-white/85"}`}
+                        className={`mx-auto hidden items-center gap-1 text-[15px] font-semibold whitespace-nowrap xl:flex text-slate-700`}
                     >
                         {nav.map((item) =>
                             "items" in item ? (
@@ -287,7 +283,6 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                                     title={item.title}
                                     id={item.id}
                                     items={item.items}
-                                    solid={solid}
                                     path={path}
                                 />
                             ) : (
@@ -299,7 +294,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                                                 ? "page"
                                                 : undefined
                                         }
-                                        className={`relative block px-3 py-2 transition-colors after:absolute after:inset-x-3 2xl:px-4 2xl:after:inset-x-4 after:bottom-0 after:h-0.5 after:origin-left after:scale-x-0 after:rounded-full after:transition-transform hover:after:scale-x-100 aria-[current=page]:after:scale-x-100 ${solid ? "after:bg-site-accent hover:text-site-accent-ink aria-[current=page]:text-site-accent-ink" : "after:bg-white hover:text-white aria-[current=page]:text-white"}`}
+                                        className={`relative block px-3 py-2 transition-colors after:absolute after:inset-x-3 2xl:px-4 2xl:after:inset-x-4 after:bottom-0 after:h-0.5 after:origin-left after:scale-x-0 after:rounded-full after:transition-transform hover:after:scale-x-100 aria-[current=page]:after:scale-x-100 after:bg-site-accent hover:text-site-accent-ink aria-[current=page]:text-site-accent-ink`}
                                     >
                                         {item.title}
                                     </Link>
@@ -310,13 +305,13 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                     <div className="ml-auto hidden items-center gap-5 whitespace-nowrap lg:flex xl:ml-0">
                         <a
                             href={login.url()}
-                            className={`text-[15px] font-semibold transition-colors ${solid ? "text-slate-700 hover:text-site-accent-ink" : "text-white/85 hover:text-white"}`}
+                            className={`text-[15px] font-semibold transition-colors text-slate-700 hover:text-site-accent-ink`}
                         >
                             Sign in
                         </a>
                         <Link
                             href="/start"
-                            className={`${solid ? button.primary : button.light} py-3`}
+                            className={`${button.primary} py-3`}
                         >
                             Get Started
                             <ArrowRight className="size-4" aria-hidden />
@@ -324,7 +319,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                     </div>
                     <button
                         type="button"
-                        className={`ml-auto inline-flex size-10 shrink-0 items-center justify-center rounded-full border lg:ml-0 xl:hidden ${solid ? "border-site-line text-site-ink hover:bg-site-soft" : "border-white/30 text-white hover:bg-white/10"}`}
+                        className={`ml-auto inline-flex size-10 shrink-0 items-center justify-center rounded-full border lg:ml-0 xl:hidden border-site-line text-site-ink hover:bg-site-soft`}
                         aria-expanded={menuOpen}
                         aria-controls="mobile-menu"
                         onClick={() => setMenuOpen((open) => !open)}

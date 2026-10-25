@@ -139,7 +139,7 @@ export default function Pricing({
                                                 onClick={() =>
                                                     setPeriod(option)
                                                 }
-                                                className={`rounded-full px-6 py-2.5 text-sm font-bold transition-colors ${period === option ? 'site-gradient text-white' : 'text-slate-600 hover:text-site-ink'}`}
+                                                className={`rounded-full px-6 py-2.5 text-sm font-bold transition-colors ${period === option ? 'bg-site-accent-ink text-white' : 'text-slate-600 hover:text-site-ink'}`}
                                             >
                                                 {option === 'monthly'
                                                     ? 'Monthly'

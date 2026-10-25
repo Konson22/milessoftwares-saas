@@ -4,16 +4,16 @@ import { trial } from '@/routes';
  * Pill buttons shared by links across the public site. Links, not
  * <Button>, because most of them navigate (some to another host).
  *
- * Light-first surfaces with the logo's royal → sky blue gradient for the main action
- * and highlights; deep navy for the footer and closing bands (see the
+ * Light-first surfaces with a solid blue main action and the logo's navy → blue
+ * gradient for highlights; deep navy for the footer and closing bands (see the
  * site-* colours and .site-gradient in resources/css/app.css).
  */
 const base =
     'inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-sm font-bold tracking-wide transition-[color,background-color,border-color,transform] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 active:scale-[0.98]';
 
 export const button = {
-    /** Main action: the gradient. */
-    primary: `${base} site-gradient text-white hover:-translate-y-0.5 focus-visible:outline-site-accent`,
+    /** Main action: solid blue. */
+    primary: `${base} bg-site-accent-ink text-white hover:-translate-y-0.5 hover:bg-site-navy focus-visible:outline-site-accent`,
     /** Strong secondary action on light. */
     dark: `${base} bg-site-navy text-white hover:bg-site-night focus-visible:outline-site-navy`,
     /** Main action on a dark or gradient band. */
@@ -57,7 +57,7 @@ export const railItem =
 export const iconChip =
     'site-gradient inline-flex shrink-0 items-center justify-center rounded-2xl text-white';
 
-/** A deep navy → royal blue band: headings, labels and links inside switch to their light forms. */
+/** A deep navy → globe blue band: headings, labels and links inside switch to their light forms. */
 export const darkBand =
     'site-dark site-hero-bg relative isolate overflow-hidden text-slate-300';
 

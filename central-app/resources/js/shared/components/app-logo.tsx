@@ -19,7 +19,7 @@ export default function AppLogo({
                     : '/images/logo-with-text.png'
             }
             alt={alt}
-            width={870}
+            width={906}
             height={240}
             className={className}
         />
