@@ -12,8 +12,11 @@ import {
     catalogIcon,
     categoryLabels,
     categoryPaths,
+    connectivityLabels,
+    licensingLabels,
+    platformLabels,
 } from '@/sites/public/components/catalog';
-import type { CatalogEntry } from '@/sites/public/components/catalog';
+import type { CatalogEntry, Platform } from '@/sites/public/components/catalog';
 import FaqList from '@/sites/public/components/faq';
 import PageHero, { Accent } from '@/sites/public/components/page-hero';
 import PlanCard from '@/sites/public/components/plan-card';
@@ -33,6 +36,14 @@ type Props = {
     plans: Plan[];
     trialDays: number;
     canonical: string;
+};
+
+/** schema.org operatingSystem for each platform. */
+const operatingSystems: Record<Platform, string> = {
+    web: 'Web',
+    desktop: 'Windows',
+    android: 'Android',
+    ios: 'iOS',
 };
 
 /**
@@ -84,7 +95,9 @@ export default function LandingPage({
                             '@type': 'SoftwareApplication',
                             name: product.name,
                             applicationCategory: 'BusinessApplication',
-                            operatingSystem: 'Web',
+                            operatingSystem: product.offering.platforms
+                                .map((platform) => operatingSystems[platform])
+                                .join(', '),
                             description: product.seoDescription,
                             url: canonical,
                             publisher: organization(origin),
@@ -258,6 +271,128 @@ export default function LandingPage({
                 </section>
             )}
 
+            {/* Where it runs, offline or not, and how it is licensed */}
+            <section
+                id="platforms"
+                aria-labelledby="platforms-heading"
+                className="mx-auto max-w-7xl scroll-mt-24 px-4 py-16 sm:px-6 sm:py-24"
+            >
+                <SectionHeading
+                    id="platforms-heading"
+                    title={
+                        <>
+                            Platforms and <Accent>licensing</Accent>
+                        </>
+                    }
+                    lead={
+                        comingSoon
+                            ? 'What is planned for release. Details may change.'
+                            : undefined
+                    }
+                    align="left"
+                />
+                <dl className="mt-10 grid gap-5 md:grid-cols-3">
+                    {[
+                        {
+                            term: 'Platforms',
+                            values: product.offering.platforms.map(
+                                (platform) => platformLabels[platform],
+                            ),
+                        },
+                        {
+                            term: 'Connectivity',
+                            values: product.offering.connectivity.map(
+                                (mode) => connectivityLabels[mode],
+                            ),
+                        },
+                        {
+                            term: 'Licensing',
+                            values: product.offering.licensing.map((licence) =>
+                                licence === 'one_time'
+                                    ? `${licensingLabels[licence]} (standalone offline edition, price on request)`
+                                    : licensingLabels[licence],
+                            ),
+                        },
+                    ].map(({ term, values }) => (
+                        <div key={term} className={`${panel} p-6 sm:p-7`}>
+                            <dt className="text-sm font-semibold text-slate-500">
+                                {term}
+                            </dt>
+                            {values.map((value) => (
+                                <dd
+                                    key={value}
+                                    className="mt-2.5 flex items-start gap-2.5 font-semibold"
+                                >
+                                    <Check
+                                        className="mt-1 size-4 shrink-0 text-site-accent-ink"
+                                        aria-hidden
+                                    />
+                                    {value}
+                                </dd>
+                            ))}
+                        </div>
+                    ))}
+                </dl>
+                {(product.offering.desktop.length > 0 ||
+                    product.offering.mobile.length > 0) && (
+                    <div className="mt-5 grid gap-5 md:grid-cols-2">
+                        {[
+                            {
+                                title: 'Desktop application',
+                                points: product.offering.desktop,
+                            },
+                            {
+                                title: 'Mobile application',
+                                points: product.offering.mobile,
+                            },
+                        ]
+                            .filter(({ points }) => points.length > 0)
+                            .map(({ title, points }) => (
+                                <div
+                                    key={title}
+                                    className={`${panel} p-6 sm:p-7`}
+                                >
+                                    <h3 className="text-lg font-semibold">
+                                        {title}
+                                    </h3>
+                                    <ul className="mt-4 space-y-2.5 text-sm text-slate-700">
+                                        {points.map((point) => (
+                                            <li
+                                                key={point}
+                                                className="flex items-start gap-2.5"
+                                            >
+                                                <Check
+                                                    className="mt-0.5 size-4 shrink-0 text-site-accent-ink"
+                                                    aria-hidden
+                                                />
+                                                {point}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    {title === 'Desktop application' && (
+                                        <Link
+                                            href="/downloads"
+                                            className="mt-5 inline-flex items-center gap-1.5 text-sm font-bold text-site-accent-ink hover:underline"
+                                        >
+                                            Download for Windows
+                                            <ArrowRight
+                                                className="size-4"
+                                                aria-hidden
+                                            />
+                                        </Link>
+                                    )}
+                                </div>
+                            ))}
+                    </div>
+                )}
+                {product.offering.platforms.length > 1 && (
+                    <p className="mt-6 text-sm text-slate-600">
+                        The desktop and mobile apps do less than the web
+                        version, and what works offline differs between them.
+                    </p>
+                )}
+            </section>
+
             {/* What it connects to: the registry's applications */}
             {product.includes.length > 0 && (
                 <section
@@ -273,7 +408,7 @@ export default function LandingPage({
                                 <Accent>{product.name}</Accent>
                             </>
                         }
-                        lead="Every application runs on the same platform and posts to the same Finance books."
+                        lead="Every application runs on the same platform, and posts to the same Finance books once you add Finance & Accounting."
                         align="left"
                     />
                     <ul className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

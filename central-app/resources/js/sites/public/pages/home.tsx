@@ -1,33 +1,35 @@
-import { Link } from '@inertiajs/react';
-import { ArrowRight, Check } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { Link } from "@inertiajs/react";
+import { ArrowRight, Code2, LayoutGrid, Rocket } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import {
     CtaBand,
     Eyebrow,
     FeatureGrid,
-} from '@/sites/public/components/blocks';
-import { ProductCard } from '@/sites/public/components/catalog';
-import type { CatalogEntry } from '@/sites/public/components/catalog';
+} from "@/sites/public/components/blocks";
+import { ProductCard } from "@/sites/public/components/catalog";
+import type { CatalogEntry } from "@/sites/public/components/catalog";
 import {
-    connected,
+    cloudPillars,
     howItWorks,
-    solutions,
+    milesProducts,
     whyMiles,
-} from '@/sites/public/components/content';
-import FaqList, { faq } from '@/sites/public/components/faq';
-import HeroSlides from '@/sites/public/components/hero-slides';
+} from "@/sites/public/components/content";
+import FaqList, { faq } from "@/sites/public/components/faq";
+import HeroSlides from "@/sites/public/components/hero-slides";
 import {
     DeploymentOptions,
     ServiceCards,
-} from '@/sites/public/components/offerings';
+    quoteUrl,
+} from "@/sites/public/components/offerings";
 import {
     Accent,
     HeroBackdrop,
+    IconBox,
     LightBackdrop,
-} from '@/sites/public/components/page-hero';
-import type { Product } from '@/sites/public/components/product';
-import SectionHeading from '@/sites/public/components/section-heading';
-import Seo, { organization, siteName } from '@/sites/public/components/seo';
+} from "@/sites/public/components/page-hero";
+import type { Product } from "@/sites/public/components/product";
+import SectionHeading from "@/sites/public/components/section-heading";
+import Seo, { organization, siteName } from "@/sites/public/components/seo";
 import {
     button,
     card,
@@ -35,7 +37,7 @@ import {
     display,
     panel,
     textLink,
-} from '@/sites/public/components/styles';
+} from "@/sites/public/components/styles";
 
 type Props = {
     catalog: CatalogEntry[];
@@ -45,9 +47,42 @@ type Props = {
     canonical: string;
 };
 
+/** The cards just under the hero: subscriptions, custom work, the trial. */
+function highlights(trialDays: number): {
+    icon: LucideIcon;
+    title: string;
+    body: string;
+    cta: string;
+    href: string;
+}[] {
+    return [
+        {
+            icon: LayoutGrid,
+            title: "Subscribe only to what you need",
+            body: "Pick the applications your business uses and add the next one as you grow.",
+            cta: "See plans",
+            href: "/pricing",
+        },
+        {
+            icon: Code2,
+            title: "Custom software",
+            body: "Web, desktop and mobile systems built around how you work, quoted as a project.",
+            cta: "Custom solutions",
+            href: "/services",
+        },
+        {
+            icon: Rocket,
+            title: `${trialDays}-day free trial`,
+            body: "Start with the application you need first. No payment details.",
+            cta: "Get started",
+            href: "/start",
+        },
+    ];
+}
+
 /** Two digits, as numbered steps read: 01, 02, … */
 function ordinal(i: number): string {
-    return String(i + 1).padStart(2, '0');
+    return String(i + 1).padStart(2, "0");
 }
 
 export default function MarketingHome({
@@ -55,27 +90,33 @@ export default function MarketingHome({
     trialDays,
     canonical,
 }: Props) {
-    const erp = catalog.filter((entry) => entry.category === 'erp');
-    const apps = catalog.filter((entry) => entry.category === 'application');
     const origin = new URL(canonical).origin;
-    const trialLabel = `Start Your ${trialDays}-Day Free Trial`;
+    const portfolio = milesProducts.flatMap((item) => {
+        const entry = catalog.find(
+            (candidate) =>
+                candidate.category === item.category &&
+                candidate.slug === item.slug,
+        );
+
+        return entry ? [{ title: item.title, entry }] : [];
+    });
 
     return (
         <>
             <Seo
-                title="ERP software, websites and apps for your business"
-                description={`Ready-made and custom ERP for pharmacies, shops, schools and NGOs: cloud, desktop or mobile, even offline. We also build websites and apps. ${trialDays}-day free trial.`}
+                title="Business software that works together"
+                description="Miles Global Softwares builds business applications on Miles Cloud and tailored software, helping organizations manage operations, connect teams and grow with confidence."
                 canonical={canonical}
                 jsonLd={{
-                    '@context': 'https://schema.org',
-                    '@graph': [
+                    "@context": "https://schema.org",
+                    "@graph": [
                         organization(origin),
                         {
-                            '@type': 'WebSite',
-                            '@id': `${origin}/#website`,
+                            "@type": "WebSite",
+                            "@id": `${origin}/#website`,
                             name: siteName,
                             url: `${origin}/`,
-                            publisher: { '@id': `${origin}/#organization` },
+                            publisher: { "@id": `${origin}/#organization` },
                         },
                     ],
                 }}
@@ -87,30 +128,30 @@ export default function MarketingHome({
                 <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 pt-28 pb-20 sm:gap-16 sm:px-6 sm:pt-40 sm:pb-28 lg:grid-cols-[1.05fr_1fr] lg:gap-10 xl:pt-44">
                     <div className="site-rise text-center lg:text-left">
                         <p className="mb-5 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-white ring-1 ring-white/20">
-                            Run your business. All connected.
+                            Miles Products on Miles Cloud
                         </p>
                         <h1
                             className={`text-[1.875rem] leading-[1.1] min-[400px]:text-[2.125rem] sm:text-6xl lg:text-[3.4rem] xl:text-[4rem] ${display}`}
                         >
-                            ERP, websites and apps.{' '}
-                            <Accent>Built for your business.</Accent>
+                            Business software{" "}
+                            <Accent>that works together.</Accent>
                         </h1>
                         <p className="mx-auto mt-6 max-w-xl text-base text-pretty text-slate-300 sm:text-lg lg:mx-0">
-                            Ready-made and custom ERP for pharmacies, shops,
-                            schools and NGOs, in the cloud, on desktop or on
-                            mobile, even without internet. We also build
-                            websites, desktop apps and mobile apps.
+                            Miles Global Softwares builds powerful business
+                            applications and tailored software solutions to help
+                            organizations manage operations, connect teams and
+                            grow with confidence.
                         </p>
                         <div className="mt-9 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-                            <Link href="/start" className={button.light}>
-                                {trialLabel}
+                            <a href="#products" className={button.light}>
+                                Explore Products
                                 <ArrowRight className="size-4" aria-hidden />
-                            </Link>
+                            </a>
                             <Link
-                                href="/services"
+                                href="/platform"
                                 className={button.outlineDark}
                             >
-                                Our Services
+                                Discover Miles Cloud
                             </Link>
                         </div>
                     </div>
@@ -120,106 +161,211 @@ export default function MarketingHome({
                 </div>
             </section>
 
-            {/* The trial's terms, just under the hero. */}
-            <div className="border-b border-site-line bg-site-soft">
-                <ul className="mx-auto flex max-w-7xl flex-wrap justify-center gap-x-8 gap-y-3 px-4 py-5 text-sm font-semibold text-slate-700 sm:px-6">
-                    {[
-                        'Cloud, desktop and mobile',
-                        'Works offline',
-                        'One-time purchase for a single branch',
-                        'No payment details for the trial',
-                    ].map((point) => (
-                        <li
-                            key={point}
-                            className="inline-flex items-center gap-2"
-                        >
-                            <span className="site-gradient inline-flex size-5 items-center justify-center rounded-full text-white">
-                                <Check className="size-3" aria-hidden />
-                            </span>
-                            {point}
+            {/* Three ways in, just under the hero. */}
+            <div className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 sm:pt-14">
+                <ul className="grid gap-4 md:grid-cols-3">
+                    {highlights(trialDays).map((item, i) => (
+                        <li key={item.href}>
+                            <Link
+                                href={item.href}
+                                className={`${card} group flex h-full items-start gap-5 p-6`}
+                            >
+                                <IconBox icon={item.icon} index={i} />
+                                <span className="flex-1">
+                                    <span
+                                        className={`block text-lg transition-colors group-hover:text-site-accent-ink ${display}`}
+                                    >
+                                        {item.title}
+                                    </span>
+                                    <span className="mt-1 block text-sm leading-relaxed text-slate-600">
+                                        {item.body}
+                                    </span>
+                                    <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-site-accent-ink">
+                                        {item.cta}
+                                        <ArrowRight
+                                            className="size-4 transition-transform group-hover:translate-x-1"
+                                            aria-hidden
+                                        />
+                                    </span>
+                                </span>
+                            </Link>
                         </li>
                     ))}
                 </ul>
             </div>
 
-            {/* 2. What we build */}
+            {/* 2. Miles Products */}
             <section
-                aria-labelledby="solutions-heading"
-                className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24"
+                id="products"
+                aria-labelledby="products-heading"
+                className="mx-auto max-w-7xl scroll-mt-24 px-4 py-16 sm:px-6 sm:py-24"
             >
-                <SectionHeading
-                    id="solutions-heading"
-                    title={
-                        <>
-                            What we <Accent>build</Accent>
-                        </>
-                    }
-                    lead="Take one of our ready-made ERPs, or have us build the system, website or app your business needs."
-                />
-                <div className="mt-10 sm:mt-14">
-                    <ServiceCards />
+                <div className="flex flex-wrap items-end justify-between gap-6">
+                    <div>
+                        <Eyebrow>Miles Products</Eyebrow>
+                        <SectionHeading
+                            id="products-heading"
+                            title={
+                                <>
+                                    Applications for each part of{" "}
+                                    <Accent>your business.</Accent>
+                                </>
+                            }
+                            lead="Use one on its own or several together in the same workspace. Each product shows where it stands today: available, in early access or coming soon."
+                            align="left"
+                        />
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                        <Link href="/erp" className={button.outline}>
+                            ERP Solutions
+                        </Link>
+                        <Link href="/apps" className={button.outline}>
+                            Business Applications
+                        </Link>
+                    </div>
+                </div>
+                <ul className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                    {portfolio.map(({ title, entry }) => (
+                        <li key={entry.url}>
+                            <ProductCard
+                                product={entry}
+                                title={title}
+                                trialDays={trialDays}
+                                highlights
+                            />
+                        </li>
+                    ))}
+                </ul>
+            </section>
+
+            {/* 3. Miles Cloud */}
+            <section
+                id="cloud"
+                aria-labelledby="cloud-heading"
+                className="scroll-mt-24 border-y border-site-line bg-site-soft"
+            >
+                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
+                    <div className="flex flex-wrap items-end justify-between gap-6">
+                        <div>
+                            <Eyebrow>Miles Cloud</Eyebrow>
+                            <SectionHeading
+                                id="cloud-heading"
+                                title={
+                                    <>
+                                        Your business applications.{" "}
+                                        <Accent>
+                                            One connected workspace.
+                                        </Accent>
+                                    </>
+                                }
+                                lead="Miles Cloud is the platform every Miles product runs on: one account, one organization and one set of permissions, whichever applications you use."
+                                align="left"
+                            />
+                        </div>
+                        <Link href="/platform" className={button.outline}>
+                            Discover Miles Cloud
+                        </Link>
+                    </div>
+                    <div className="mt-10">
+                        <FeatureGrid features={cloudPillars} columns={3} />
+                    </div>
                 </div>
             </section>
 
-            {/* 3. Industry ERP solutions */}
-            <CatalogSection
-                id="erp"
-                eyebrow="ERP Solutions"
-                title={
-                    <>
-                        An ERP for <Accent>your industry</Accent>
-                    </>
-                }
-                lead="Each solution brings together what a business of that kind needs, on one set of books."
-                entries={erp}
-                trialDays={trialDays}
-                href="/erp"
-                linkLabel="Explore ERP Solutions"
-                shaded
-            />
+            {/* 4. Custom software development: built for you, not a subscription */}
+            <section
+                id="custom"
+                aria-labelledby="custom-heading"
+                className="mx-auto max-w-7xl scroll-mt-24 px-4 py-16 sm:px-6 sm:py-24"
+            >
+                <Eyebrow>Custom Software Development</Eyebrow>
+                <SectionHeading
+                    id="custom-heading"
+                    title={
+                        <>
+                            Your business is unique.{" "}
+                            <Accent>Your software can be too.</Accent>
+                        </>
+                    }
+                    lead="Not every organization fits into ready-made software. Separately from our subscription products, we develop systems designed around your workflows, operational requirements and goals: scoped with you, quoted, and delivered as a project."
+                    align="left"
+                />
+                <div className="mt-10 grid gap-5 md:grid-cols-2">
+                    <div className={`${panel} p-7`}>
+                        <h3 className="text-lg font-semibold">
+                            Customize a Miles product
+                        </h3>
+                        <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                            Start from one of our ERPs and have it adapted:
+                            extra fields, documents, reports and approval steps.
+                            You pay the product licence plus a setup or
+                            customization charge.
+                        </p>
+                    </div>
+                    <div className={`${panel} p-7`}>
+                        <h3 className="text-lg font-semibold">
+                            Commission a new system
+                        </h3>
+                        <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                            A system built for you from your requirements: an
+                            ERP, a web, desktop or mobile application, or an
+                            integration. Priced by quotation after a
+                            requirements assessment.
+                        </p>
+                    </div>
+                </div>
+                <div className="mt-5">
+                    <ServiceCards />
+                </div>
+                <div className="mt-10 flex flex-wrap justify-center gap-3">
+                    <Link
+                        href={quoteUrl("Project: Custom software")}
+                        className={button.primary}
+                    >
+                        Discuss Your Project
+                        <ArrowRight className="size-4" aria-hidden />
+                    </Link>
+                    <Link
+                        href={quoteUrl("Quote: Custom software")}
+                        className={button.outline}
+                    >
+                        Request a Quotation
+                    </Link>
+                </div>
+            </section>
 
-            {/* Every ERP: cloud, synced apps or offline */}
+            {/* 5. Flexible software deployment */}
             <section
                 id="ways-to-run"
                 aria-labelledby="ways-heading"
-                className="mx-auto max-w-7xl scroll-mt-24 px-4 py-16 sm:px-6 sm:py-24"
+                className="scroll-mt-24 border-y border-site-line bg-site-soft"
             >
-                <Eyebrow>Your way</Eyebrow>
-                <SectionHeading
-                    id="ways-heading"
-                    title={
-                        <>
-                            Online, synced or <Accent>fully offline</Accent>
-                        </>
-                    }
-                    lead="Run any of our ERPs in the browser, as desktop and mobile apps that keep working without internet, or offline for one branch with a one-time purchase."
-                    align="left"
-                />
-                <div className="mt-10">
-                    <DeploymentOptions trialDays={trialDays} />
+                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
+                    <Eyebrow>Flexible Software Deployment</Eyebrow>
+                    <SectionHeading
+                        id="ways-heading"
+                        title={
+                            <>
+                                Online, offline or connected.{" "}
+                                <Accent>You choose how to work.</Accent>
+                            </>
+                        }
+                        lead="Not every product offers every option. Each one below names the products that have it today."
+                        align="left"
+                    />
+                    <div className="mt-10">
+                        <DeploymentOptions
+                            catalog={catalog}
+                            trialDays={trialDays}
+                        />
+                    </div>
                 </div>
             </section>
 
-            {/* 4. Standalone business applications */}
-            <CatalogSection
-                id="apps"
-                eyebrow="Business Applications"
-                title={
-                    <>
-                        Applications that <Accent>stand on their own</Accent>
-                    </>
-                }
-                lead="Start with the application you need today. Every one shares your sign-in, your organization and your books."
-                entries={apps}
-                trialDays={trialDays}
-                href="/apps"
-                linkLabel="Explore Business Applications"
-            />
-
-            {/* 5. Why Miles Global Softwares */}
+            {/* 6. Why Miles Global Softwares */}
             <section
                 aria-labelledby="why-heading"
-                className="relative isolate overflow-hidden border-y border-site-line bg-site-soft"
+                className="relative isolate overflow-hidden"
             >
                 <LightBackdrop />
                 <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
@@ -230,177 +376,50 @@ export default function MarketingHome({
                                 Why <Accent>Miles Global Softwares</Accent>
                             </>
                         }
-                        lead="Built for the counter, the store room and month-end, by people who start where the work happens."
                     />
                     <div className="mt-10 sm:mt-14">
-                        <FeatureGrid features={whyMiles} />
+                        <FeatureGrid features={whyMiles} columns={4} />
                     </div>
                 </div>
             </section>
 
-            {/* 6. How it works */}
+            {/* 7. How we work */}
             <section
                 id="how-it-works"
                 aria-labelledby="how-heading"
-                className="mx-auto max-w-7xl scroll-mt-24 px-4 py-16 sm:px-6 sm:py-24"
-            >
-                <SectionHeading
-                    id="how-heading"
-                    title={
-                        <>
-                            How it <Accent>works</Accent>
-                        </>
-                    }
-                    lead="Four steps from here to working in your own workspace."
-                />
-                <ol className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                    {howItWorks.map((step, i) => (
-                        <li key={step.title} className={`${panel} p-6 sm:p-7`}>
-                            <span className="site-gradient inline-flex size-11 items-center justify-center rounded-full font-public-display text-sm font-bold text-white">
-                                {ordinal(i)}
-                            </span>
-                            <h3 className="mt-5 text-lg font-semibold">
-                                {step.title}
-                            </h3>
-                            <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                                {step.body}
-                            </p>
-                        </li>
-                    ))}
-                </ol>
-                <div className="mt-12 flex flex-wrap justify-center gap-3">
-                    <Link href="/start" className={button.primary}>
-                        {trialLabel}
-                        <ArrowRight className="size-4" aria-hidden />
-                    </Link>
-                    <Link
-                        href="/contact?subject=Request%20a%20demo"
-                        className={button.outline}
-                    >
-                        Request a Demo
-                    </Link>
-                </div>
-            </section>
-
-            {/* 7. The free trial */}
-            <section
-                id="free-trial"
-                aria-labelledby="trial-heading"
-                className="scroll-mt-24 px-4 sm:px-6"
-            >
-                <div
-                    className={`${darkBand} mx-auto grid max-w-7xl items-center gap-10 rounded-[2rem] px-6 py-14 sm:px-14 sm:py-20 lg:grid-cols-[1.2fr_1fr]`}
-                >
-                    <HeroBackdrop />
-                    <div>
-                        <Eyebrow>{trialDays}-day free trial</Eyebrow>
-                        <h2
-                            id="trial-heading"
-                            className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-[2.6rem] sm:leading-tight"
-                        >
-                            Try it in your own workspace,{' '}
-                            <Accent>with your own data</Accent>
-                        </h2>
-                        <p className="mt-4 max-w-xl text-slate-300">
-                            Any product marked with a free trial can be tried
-                            for {trialDays} days. When you are ready, choose a
-                            plan and carry straight on with everything you
-                            entered.
-                        </p>
-                        <Link href="/start" className={`mt-8 ${button.light}`}>
-                            {trialLabel}
-                            <ArrowRight className="size-4" aria-hidden />
-                        </Link>
-                    </div>
-                    <ul className="grid gap-3 text-sm text-white">
-                        {[
-                            `${trialDays} days, counted from the day you start`,
-                            'No payment details to start',
-                            'Nothing is charged unless you choose a plan',
-                            'One trial per product for each business',
-                            'Your data stays when you upgrade',
-                        ].map((line) => (
-                            <li
-                                key={line}
-                                className="flex items-center gap-3 rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15"
-                            >
-                                <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-white text-site-accent-ink">
-                                    <Check className="size-3.5" aria-hidden />
-                                </span>
-                                {line}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            </section>
-
-            {/* 8. One connected platform */}
-            <section
-                aria-labelledby="platform-heading"
-                className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24"
-            >
-                <div className="flex flex-wrap items-end justify-between gap-6">
-                    <SectionHeading
-                        id="platform-heading"
-                        title={
-                            <>
-                                One <Accent>connected</Accent> platform
-                            </>
-                        }
-                        lead="Every Miles product shares the same foundation, so adding the next one never means starting again."
-                        align="left"
-                    />
-                    <Link href="/platform" className={button.outline}>
-                        Learn More
-                        <span className="sr-only"> about the platform</span>
-                    </Link>
-                </div>
-                <div className="mt-10">
-                    <FeatureGrid features={connected} columns={4} />
-                </div>
-            </section>
-
-            {/* 9. Who we serve */}
-            <section
-                aria-labelledby="serve-heading"
-                className="border-y border-site-line bg-site-soft"
+                className="scroll-mt-24 border-y border-site-line bg-site-soft"
             >
                 <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
                     <SectionHeading
-                        id="serve-heading"
+                        id="how-heading"
                         title={
                             <>
-                                Who we <Accent>serve</Accent>
+                                How we <Accent>work</Accent>
                             </>
                         }
-                        lead="Growing organizations that have outgrown spreadsheets and cash books."
                     />
-                    <ul className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {solutions.map(({ id, icon: Icon, title, pain }) => (
-                            <li key={id}>
-                                <Link
-                                    href={`/industries#${id}`}
-                                    className={`${card} group flex h-full items-start gap-4 p-5`}
-                                >
-                                    <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-site-accent/10 text-site-accent-ink">
-                                        <Icon className="size-5" aria-hidden />
-                                    </span>
-                                    <span>
-                                        <span className="block font-semibold transition-colors group-hover:text-site-accent-ink">
-                                            {title}
-                                        </span>
-                                        <span className="mt-1 line-clamp-2 block text-sm text-slate-600">
-                                            {pain}
-                                        </span>
-                                    </span>
-                                </Link>
+                    <ol className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                        {howItWorks.map((step, i) => (
+                            <li
+                                key={step.title}
+                                className={`${panel} p-6 sm:p-7`}
+                            >
+                                <span className="site-gradient inline-flex size-11 items-center justify-center rounded-full font-public-display text-sm font-bold text-white">
+                                    {ordinal(i)}
+                                </span>
+                                <h3 className="mt-5 text-lg font-semibold">
+                                    {step.title}
+                                </h3>
+                                <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                                    {step.body}
+                                </p>
                             </li>
                         ))}
-                    </ul>
+                    </ol>
                 </div>
             </section>
 
-            {/* 10. FAQ */}
+            {/* FAQ */}
             <section aria-labelledby="faq-heading">
                 <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1fr_1.5fr] lg:gap-16">
                     <div className="lg:sticky lg:top-32 lg:self-start">
@@ -414,10 +433,10 @@ export default function MarketingHome({
                             align="left"
                         />
                         <p className="mt-6 max-w-sm text-slate-600">
-                            Something else on your mind?{' '}
+                            Something else on your mind?{" "}
                             <Link href="/contact" className={textLink}>
                                 Ask us
-                            </Link>{' '}
+                            </Link>{" "}
                             and we reply within one working day.
                         </p>
                     </div>
@@ -425,84 +444,31 @@ export default function MarketingHome({
                 </div>
             </section>
 
-            {/* 11. Final call to action */}
+            {/* 8. Final call to action */}
             <CtaBand
                 id="cta-heading"
                 title={
                     <>
-                        Run your business. <Accent>All connected.</Accent>
+                        Let's build the right solution{" "}
+                        <Accent>for your business.</Accent>
                     </>
                 }
-                body={`Start a ${trialDays}-day free trial today, or talk to us about the right solution for your business.`}
+                body="Whether you need ready-made business software or a completely customized application, we can help you find the right solution."
             >
-                <Link href="/start" className={button.light}>
-                    {trialLabel}
+                <a href="#products" className={button.light}>
+                    Explore Products
                     <ArrowRight className="size-4" aria-hidden />
+                </a>
+                <Link href="/start" className={button.outlineDark}>
+                    Get Started
                 </Link>
                 <Link
-                    href="/contact?subject=Request%20a%20demo"
+                    href={quoteUrl("Project: Custom software")}
                     className={button.outlineDark}
                 >
-                    Request a Demo
+                    Discuss a Custom Project
                 </Link>
             </CtaBand>
         </>
-    );
-}
-
-function CatalogSection({
-    id,
-    eyebrow,
-    title,
-    lead,
-    entries,
-    trialDays,
-    href,
-    linkLabel,
-    shaded = false,
-}: {
-    id: string;
-    eyebrow: string;
-    title: ReactNode;
-    lead: string;
-    entries: CatalogEntry[];
-    trialDays: number;
-    href: string;
-    linkLabel: string;
-    shaded?: boolean;
-}) {
-    return (
-        <section
-            id={id}
-            aria-labelledby={`${id}-heading`}
-            className={`scroll-mt-24 ${shaded ? 'border-y border-site-line bg-site-soft' : ''}`}
-        >
-            <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
-                <div className="flex flex-wrap items-end justify-between gap-6">
-                    <div>
-                        <Eyebrow>{eyebrow}</Eyebrow>
-                        <SectionHeading
-                            id={`${id}-heading`}
-                            title={title}
-                            lead={lead}
-                            align="left"
-                        />
-                    </div>
-                    <Link href={href} className={button.outline}>
-                        {linkLabel}
-                    </Link>
-                </div>
-                <ul className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                    {entries.map((entry) => (
-                        <li key={entry.slug}>
-                            <ProductCard
-                                product={entry}
-                                trialDays={trialDays}
-                            />
-                        </li>
-                    ))}
-                </ul>
-            </div>
-        </section>
     );
 }

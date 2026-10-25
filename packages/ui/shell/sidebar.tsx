@@ -38,6 +38,8 @@ export function ShellSidebar({
         title: string;
         subtitle?: string | null;
         icon: LucideIcon;
+        /** The product's own logo, shown in place of the icon tile. */
+        image?: string;
         href: ShellHref;
         tone?: keyof typeof tiles;
         /** On another host: a full page load. */
@@ -53,14 +55,22 @@ export function ShellSidebar({
         'flex min-w-0 items-center gap-3 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none';
     const brandContent = (
         <>
-            <span
-                className={cn(
-                    'grid size-7 shrink-0 place-items-center',
-                    tiles[brand.tone ?? 'blue'],
-                )}
-            >
-                <BrandIcon className="size-4" aria-hidden />
-            </span>
+            {brand.image ? (
+                <img
+                    src={brand.image}
+                    alt=""
+                    className="size-7 shrink-0 object-contain"
+                />
+            ) : (
+                <span
+                    className={cn(
+                        'grid size-7 shrink-0 place-items-center',
+                        tiles[brand.tone ?? 'blue'],
+                    )}
+                >
+                    <BrandIcon className="size-4" aria-hidden />
+                </span>
+            )}
             <span className={cn('min-w-0 leading-tight', labelClass)}>
                 <span className="block truncate text-sm font-semibold text-white">
                     {brand.title}

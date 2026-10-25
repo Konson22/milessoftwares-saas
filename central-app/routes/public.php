@@ -38,6 +38,10 @@ Route::domain(PlatformHosts::root())->group(function () {
         Route::get('coming-soon', [PageController::class, 'comingSoon'])->name('coming-soon');
         Route::get('about', [PageController::class, 'about'])->name('about');
 
+        // Desktop installers; a file not on the server yet is a 404.
+        Route::get('downloads', [PageController::class, 'downloads'])->name('downloads');
+        Route::get('download/{code}', [PageController::class, 'download'])->where('code', '[a-z][a-z0-9-]*')->name('download');
+
         // Choose an application and start its free trial (a new workspace).
         Route::get('start', [PageController::class, 'start'])->name('start');
         // Demo requests were replaced by self-serve trials; keep old links working.

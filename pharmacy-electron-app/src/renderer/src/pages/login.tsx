@@ -8,6 +8,8 @@ import { DEMO_ACCOUNTS } from '@/lib/api/mock';
 import { normalizeWorkspace, PRODUCTS, RETAIL_AVAILABLE } from '@/lib/config';
 import { useAuth } from '@/store/auth';
 
+import { CreateBusiness } from './create-business';
+
 export function LoginPage() {
   const savedWorkspace = useAuth((s) => s.workspace);
   const signIn = useAuth((s) => s.signIn);
@@ -22,6 +24,15 @@ export function LoginPage() {
   const [code, setCode] = useState<{ value: string; recovery: boolean } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<{ message: string; browser?: boolean } | null>(null);
+  /** Open an existing workspace, or create a business (signed in on the platform first). */
+  const [intent, setIntent] = useState<'open' | 'create'>('open');
+  /** Creating: a new account made here, rather than one that exists. */
+  const [newAccount, setNewAccount] = useState(true);
+  const [name, setName] = useState('');
+  /** Signed in to create a business: its form, with the ID token to open it after. */
+  const [creating, setCreating] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const creatingNow = intent === 'create';
 
   const run = async (key: string, task: () => Promise<void>) => {
     setBusy(key);
@@ -35,25 +46,41 @@ export function LoginPage() {
     }
   };
 
-  /** Signs in on the platform, then opens the session at the workspace. */
+  /** Signs in on the platform, then opens the session at the workspace (or the new business's form). */
   const platform = (key: string, how: SignInWith) => {
     const slug = normalizeWorkspace(workspace);
-    if (!slug) return setError({ message: 'Enter your workspace address.' });
+    if (!slug && !creatingNow) return setError({ message: 'Enter your workspace address.' });
+    setNotice(null);
     void run(key, async () => {
       const result = await window.desktop.signIn(how, product);
       if (result.status === 'twoFactor') {
         setCode({ value: '', recovery: false });
       } else if (result.status === 'refused') {
         setError({ message: result.message, browser: result.browser });
+      } else if (creatingNow) {
+        setCode(null);
+        setCreating(result.idToken);
       } else {
         await signIn(slug, result.idToken, product);
       }
     });
   };
 
+  const switchIntent = (next: 'open' | 'create') => {
+    setIntent(next);
+    setNewAccount(true);
+    setCreating(null);
+    setCode(null);
+    setError(null);
+    setNotice(null);
+  };
+
   const submitPassword = (e: FormEvent) => {
     e.preventDefault();
-    platform('password', { with: 'password', email: email.trim(), password });
+    platform(
+      'password',
+      creatingNow && newAccount ? { with: 'register', name: name.trim(), email: email.trim(), password } : { with: 'password', email: email.trim(), password },
+    );
   };
 
   const submitCode = (e: FormEvent) => {
@@ -83,17 +110,25 @@ export function LoginPage() {
       <main className="flex flex-1 items-center justify-center p-8">
         <div className="w-full max-w-sm space-y-6">
           <div>
-            <h1 className="text-2xl font-semibold">Sign in</h1>
+            <h1 className="text-2xl font-semibold">{creatingNow ? `Create your ${PRODUCTS[product].place}` : 'Sign in'}</h1>
             <p className="text-sm text-muted-foreground">
               {API_MODE === 'mock'
                 ? 'Demo pharmacy: choose who works the counter.'
-                : code
+                : creating
+                  ? 'You become its owner, and the counter opens in it.'
+                  : code
                   ? code.recovery
                     ? 'Enter one of your recovery codes.'
                     : 'Enter the 6-digit code from your authenticator app.'
-                  : 'With your Miles Softwares account.'}
+                  : creatingNow
+                    ? newAccount
+                      ? 'First, your Miles Softwares account.'
+                      : 'First, sign in with your Miles Softwares account.'
+                    : 'With your Miles Softwares account.'}
             </p>
           </div>
+
+          {notice ? <Notice tone="green">{notice}</Notice> : null}
 
           {error ? (
             <Notice tone="red">
@@ -124,6 +159,17 @@ export function LoginPage() {
                 </button>
               ))}
             </div>
+          ) : creating ? (
+            <CreateBusiness
+              product={product}
+              idToken={creating}
+              onBack={() => switchIntent('open')}
+              onCreated={(slug, message) => {
+                switchIntent('open');
+                setWorkspace(slug);
+                setNotice(message);
+              }}
+            />
           ) : code ? (
             <form onSubmit={submitCode} className="space-y-4">
               <Field label={code.recovery ? 'Recovery code' : 'Code'}>
@@ -171,23 +217,31 @@ export function LoginPage() {
                     ))}
                   </div>
                 ) : null}
-                <Field label="Workspace" hint={`As in your${PRODUCTS[product].place}.milesoftwares.com`}>
-                  <Input
-                    autoFocus={!savedWorkspace}
-                    value={workspace}
-                    onChange={(e) => setWorkspace(e.target.value)}
-                    placeholder={`your${PRODUCTS[product].place}`}
-                    required
-                  />
-                </Field>
+                {creatingNow ? (
+                  newAccount ? (
+                    <Field label="Your name">
+                      <Input autoFocus autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} required />
+                    </Field>
+                  ) : null
+                ) : (
+                  <Field label="Workspace" hint={`As in your${PRODUCTS[product].place}.milesoftwares.com`}>
+                    <Input
+                      autoFocus={!savedWorkspace}
+                      value={workspace}
+                      onChange={(e) => setWorkspace(e.target.value)}
+                      placeholder={`your${PRODUCTS[product].place}`}
+                      required
+                    />
+                  </Field>
+                )}
                 <Field label="Email">
-                  <Input type="email" autoFocus={!!savedWorkspace} autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <Input type="email" autoFocus={!!savedWorkspace || (creatingNow && !newAccount)} autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 </Field>
                 <Field label="Password">
                   <div className="relative">
                     <Input
                       type={showPassword ? 'text' : 'password'}
-                      autoComplete="current-password"
+                      autoComplete={creatingNow && newAccount ? 'new-password' : 'current-password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="pr-10"
@@ -205,9 +259,17 @@ export function LoginPage() {
                 </Field>
                 <Button type="submit" className="w-full" disabled={busy !== null}>
                   {busy === 'password' ? <Loader2 size={16} className="animate-spin" /> : null}
-                  Sign in
+                  {creatingNow ? (newAccount ? 'Create account' : 'Continue') : 'Sign in'}
                 </Button>
               </form>
+              {creatingNow ? (
+                <p className="text-center text-sm text-muted-foreground">
+                  {newAccount ? 'Already have an account? ' : 'No account yet? '}
+                  <button type="button" className="text-primary hover:underline" disabled={busy !== null} onClick={() => setNewAccount(!newAccount)}>
+                    {newAccount ? 'Sign in instead' : 'Create one'}
+                  </button>
+                </p>
+              ) : null}
 
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="h-px flex-1 bg-border" /> or <span className="h-px flex-1 bg-border" />
@@ -229,6 +291,20 @@ export function LoginPage() {
               )}
             </div>
           )}
+
+          {API_MODE === 'live' && !creating && !code ? (
+            <p className="border-t border-border pt-4 text-center text-sm text-muted-foreground">
+              {creatingNow ? 'Your business is already on Miles? ' : 'New to Miles? '}
+              <button
+                type="button"
+                className="font-medium text-primary hover:underline"
+                disabled={busy !== null}
+                onClick={() => switchIntent(creatingNow ? 'open' : 'create')}
+              >
+                {creatingNow ? 'Sign in to it' : `Create your ${PRODUCTS[product].place}`}
+              </button>
+            </p>
+          ) : null}
         </div>
       </main>
     </div>

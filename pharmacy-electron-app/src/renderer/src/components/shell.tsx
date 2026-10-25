@@ -1,6 +1,7 @@
-import { Building2, CloudOff, LogOut, Pill, RefreshCw, Store, Wifi } from 'lucide-react';
+import { Building2, CloudOff, LogOut, RefreshCw, Store, Wifi } from 'lucide-react';
 import { useEffect, useMemo } from 'react';
 
+import pharmacyLogo from '@/assets/pharmacy-logo.png';
 import { loadAccess, useAccess } from '@/hooks/use-page';
 import { API_MODE } from '@/lib/api';
 import { PRODUCTS } from '@/lib/config';
@@ -85,9 +86,13 @@ export function Shell() {
           <div className="flex h-full w-64 flex-col bg-sidebar text-sidebar-foreground">
             {/* Same height as the top bar, so the two borders line up. */}
             <div className="flex h-13 shrink-0 items-center gap-3 border-b border-sidebar-border px-3.5">
-              <span className="grid size-7 shrink-0 place-items-center bg-sidebar-primary text-sidebar-primary-foreground">
-                {product === 'retail' ? <Store className="size-4" aria-hidden /> : <Pill className="size-4" aria-hidden />}
-              </span>
+              {product === 'retail' ? (
+                <span className="grid size-7 shrink-0 place-items-center bg-sidebar-primary text-sidebar-primary-foreground">
+                  <Store className="size-4" aria-hidden />
+                </span>
+              ) : (
+                <img src={pharmacyLogo} alt="" className="size-7 shrink-0 object-contain" />
+              )}
               <span className={cn('min-w-0 leading-tight', labelClass)}>
                 <span className="block truncate text-sm font-semibold text-white">{PRODUCTS[product].name}</span>
                 <span className="block truncate text-xs text-sidebar-foreground/70">{branch?.name}</span>

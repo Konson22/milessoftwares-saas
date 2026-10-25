@@ -9,6 +9,7 @@ import { QuickSearch } from '@miles/ui/shell/quick-search';
 import type { QuickSearchTarget } from '@miles/ui/shell/quick-search';
 import { ShellSidebar } from '@miles/ui/shell/sidebar';
 import { UserMenu } from '@miles/ui/shell/user-menu';
+import pharmacyLogo from '@/../images/pharmacy-logo.png';
 import { AutoPrint } from '@/components/auto-print';
 import { BranchSwitcher } from '@/components/layout/branch-switcher';
 import { useCan, useCanHere } from '@/lib/access';
@@ -124,6 +125,7 @@ export default function ProductLayout({ children }: PropsWithChildren) {
                         title: product.name,
                         subtitle: workspace?.name,
                         icon: Pill,
+                        image: pharmacyLogo,
                         href: home(),
                     }}
                     groups={[...groups, ...shared]}

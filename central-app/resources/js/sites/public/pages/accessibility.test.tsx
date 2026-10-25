@@ -22,6 +22,7 @@ import Thanks from './thanks';
 // replaced with their plain HTML equivalents.
 vi.mock('@inertiajs/react', () => ({
     Head: () => null,
+    router: { on: () => () => {} },
     usePage: () => ({ url: '/pricing', props: { trialDays: 60 } }),
     Link: ({
         href,
@@ -116,6 +117,14 @@ const entry = {
     status: 'early_access' as const,
     includes: erpProduct.applications,
     trial: 'pharmacy',
+    highlights: ['Batch and expiry tracking', 'Mobile application'],
+    offering: {
+        platforms: ['web' as const, 'desktop' as const, 'android' as const],
+        connectivity: ['online' as const, 'offline_sync' as const],
+        licensing: ['subscription' as const, 'one_time' as const],
+        desktop: ['Keeps selling offline'],
+        mobile: ['Scan barcodes with the camera'],
+    },
 };
 
 const catalog = [
@@ -239,6 +248,7 @@ const pages: [string, ReactNode][] = [
                 { ...plan, code: 'all', isBundle: true },
                 productPlan,
             ]}
+            catalog={catalog}
             trialDays={60}
             canonical="https://example.test/pricing"
         />,
@@ -321,6 +331,9 @@ describe('marketing pages', () => {
                 ),
             ).toEqual([]);
         },
+        // The first run loads axe and jsdom, which takes longer than the
+        // 5-second default on slower machines.
+        30_000,
     );
 
     it.each(pages)('%s has exactly one top-level heading', (_name, page) => {

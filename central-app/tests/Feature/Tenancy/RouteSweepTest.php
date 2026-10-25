@@ -74,11 +74,18 @@ test('every admin route requires active platform staff', function () {
     }
 });
 
-test('every product API route requires a client token with a scope', function () {
+test('every product API route requires a client token with a scope, or a person\'s app token', function () {
     $api = array_filter(routesOnHost(PlatformHosts::auth()), fn (RoutingRoute $route) => str_starts_with($route->uri(), 'api/'));
     expect($api)->not->toBeEmpty();
 
     foreach ($api as $route) {
+        // A person in an application's own app: api/v1/account only.
+        if (in_array('api.user', middlewareOf($route), true)) {
+            expect($route->uri())->toStartWith('api/v1/account/');
+
+            continue;
+        }
+
         $scoped = array_filter(middlewareOf($route), fn (string $m) => str_starts_with($m, 'api.client:'));
         expect($scoped)->not->toBeEmpty("{$route->uri()} has no api.client scope");
     }

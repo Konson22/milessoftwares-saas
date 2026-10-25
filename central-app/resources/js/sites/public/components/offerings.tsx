@@ -2,23 +2,34 @@ import { Link } from '@inertiajs/react';
 import {
     ArrowRight,
     Boxes,
+    Cable,
     Check,
     Cloud,
     Globe,
     HardDrive,
-    Layers,
     Monitor,
+    MonitorSmartphone,
     RefreshCw,
+    Settings2,
     Smartphone,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import type { CatalogEntry } from '@/sites/public/components/catalog';
 import { IconBox } from '@/sites/public/components/page-hero';
-import { button, card, display, panel } from '@/sites/public/components/styles';
+import {
+    card,
+    display,
+    panel,
+    textLink,
+} from '@/sites/public/components/styles';
 
 /** A request through the contact form, subject filled in. */
 export function quoteUrl(subject: string): string {
     return `/contact?subject=${encodeURIComponent(subject)}`;
 }
+
+/** The demo request every "Request a Demo" button leads to. */
+export const demoUrl = quoteUrl('Request a demo');
 
 export type Service = {
     id: string;
@@ -30,54 +41,44 @@ export type Service = {
     points: string[];
 };
 
-/** What we make: our ready-made ERPs, custom systems, websites and apps. */
+/**
+ * Custom development: software we build or adapt for one customer, apart
+ * from the ready-made products in the catalog.
+ */
 export const services: Service[] = [
-    {
-        id: 'ready-made-erp',
-        icon: Layers,
-        title: 'Ready-made ERP',
-        body: 'Complete systems for pharmacies, shops, schools, logistics and NGOs, ready to use today, with Finance & Accounting built in.',
-        href: '/erp',
-        cta: 'Explore ERP Solutions',
-        points: [
-            'Stock, sales, purchasing and reports',
-            'Finance & Accounting included',
-            'Free trial on released products',
-        ],
-    },
     {
         id: 'custom-erp',
         icon: Boxes,
-        title: 'Custom ERP',
-        body: 'An ERP shaped around how your organization works: your departments, approvals, documents and reports, built on our proven platform.',
-        href: quoteUrl('Quote: Custom ERP'),
-        cta: 'Request a quote',
+        title: 'Custom ERP Development',
+        body: 'A new ERP designed around your departments, approvals, documents and reports, built on the platform our own ERPs run on.',
+        href: quoteUrl('Project: Custom ERP'),
+        cta: 'Discuss your project',
         points: [
             'Your workflows, forms and reports',
             'Built on modules already in use',
-            'Training, data migration and support',
+            'Data migration, training and support',
         ],
     },
     {
-        id: 'websites',
+        id: 'web-applications',
         icon: Globe,
-        title: 'Websites',
-        body: 'Fast, mobile-friendly websites for businesses, schools and organizations, built to be found on Google and easy to keep up to date.',
-        href: quoteUrl('Quote: Website'),
-        cta: 'Request a quote',
+        title: 'Web Application Development',
+        body: 'Business portals, internal systems, company websites and online shops that work on any screen and are easy to keep up to date.',
+        href: quoteUrl('Project: Web application'),
+        cta: 'Discuss your project',
         points: [
-            'Company sites, online shops and portals',
-            'Search-engine ready from day one',
+            'Portals and internal business systems',
+            'Company websites and online shops',
             'Domain, hosting and email set up for you',
         ],
     },
     {
-        id: 'desktop-apps',
+        id: 'desktop-applications',
         icon: Monitor,
-        title: 'Desktop apps',
-        body: 'Windows, macOS and Linux applications that keep working when the internet goes down, for the counter, the office or the warehouse.',
-        href: quoteUrl('Quote: Desktop app'),
-        cta: 'Request a quote',
+        title: 'Desktop Application Development',
+        body: 'Installed applications for the counter, the office or the warehouse, built to keep working when the internet goes down.',
+        href: quoteUrl('Project: Desktop application'),
+        cta: 'Discuss your project',
         points: [
             'Works offline, syncs when back online',
             'Barcode scanners and receipt printers',
@@ -85,16 +86,42 @@ export const services: Service[] = [
         ],
     },
     {
-        id: 'mobile-apps',
+        id: 'mobile-applications',
         icon: Smartphone,
-        title: 'Mobile apps',
+        title: 'Mobile Application Development',
         body: 'Android and iOS apps for your customers or your staff, from sales in the field to stock counts in the store room.',
-        href: quoteUrl('Quote: Mobile app'),
-        cta: 'Request a quote',
+        href: quoteUrl('Project: Mobile application'),
+        cta: 'Discuss your project',
         points: [
-            'Android and iOS from one build',
+            'Android and iOS from one code base',
             'Offline first, synced with your system',
-            'Published to Google Play and the App Store',
+            'Prepared for Google Play and the App Store',
+        ],
+    },
+    {
+        id: 'system-integration',
+        icon: Cable,
+        title: 'System Integration',
+        body: 'Connect the systems you already use with each other or with Miles, so information is entered once and flows where it is needed.',
+        href: quoteUrl('Project: System integration'),
+        cta: 'Discuss your project',
+        points: [
+            'APIs between your systems',
+            'Data imports from spreadsheets or older systems',
+            'Scheduled exports and shared reports',
+        ],
+    },
+    {
+        id: 'erp-customization',
+        icon: Settings2,
+        title: 'ERP Customization',
+        body: 'Adapt a Miles ERP you already use or are about to buy: extra fields, documents, reports, print layouts and approval steps.',
+        href: quoteUrl('Quote: ERP customization'),
+        cta: 'Request a quotation',
+        points: [
+            'Your product licence, plus a setup or customization charge',
+            'Reports, documents and print layouts',
+            'Approval steps and roles',
         ],
     },
 ];
@@ -104,126 +131,182 @@ export type Deployment = {
     icon: LucideIcon;
     title: string;
     tag: string;
-    body: string;
     points: string[];
-    price: string;
-    href: string;
-    cta: string;
+    licence: string;
+    /** Which released products offer it. */
+    offers: (entry: CatalogEntry) => boolean;
 };
 
-/** The three ways to run any of our ERPs. */
+const hasMobile = (entry: CatalogEntry) =>
+    entry.offering.platforms.some(
+        (platform) => platform === 'android' || platform === 'ios',
+    );
+
+/** The ways a Miles product can run. Not every product offers each one. */
 export function deployments(trialDays: number): Deployment[] {
     return [
         {
             id: 'cloud',
             icon: Cloud,
-            title: 'Cloud',
+            title: 'Cloud-based web applications',
             tag: 'In the browser',
-            body: 'Use your ERP from any computer, tablet or phone, with every branch on one set of books.',
             points: [
-                'Nothing to install',
-                'All branches and staff together',
-                'Backups and updates included',
+                'Use it in the browser on a computer, tablet or phone',
+                'Hosted for you, with backups and updates',
+                'Needs an internet connection',
             ],
-            price: `Monthly or yearly plan, ${trialDays}-day free trial`,
-            href: '/start',
-            cta: 'Start free trial',
+            licence: `Subscription; ${trialDays}-day free trial where offered`,
+            offers: (entry) => entry.offering.platforms.includes('web'),
         },
         {
             id: 'synced',
             icon: RefreshCw,
-            title: 'Desktop & mobile, synced',
+            title: 'Desktop applications with cloud sync',
             tag: 'Works offline',
-            body: 'Desktop and mobile apps that keep selling without internet and send everything to the cloud when the connection is back.',
             points: [
-                'Keeps working when the internet stops',
-                'Syncs automatically with every branch',
-                'Windows, macOS, Linux, Android and iOS',
+                'Installed on the computer at the counter',
+                'Supported work carries on without internet',
+                'Data syncs when the connection is back',
+                'What syncs differs from product to product',
             ],
-            price: 'Included with your cloud plan',
-            href: '/pricing',
-            cta: 'See plans',
+            licence: 'Included with the cloud plan of products that have it',
+            offers: (entry) =>
+                entry.offering.platforms.includes('desktop') &&
+                entry.offering.connectivity.includes('offline_sync'),
         },
         {
             id: 'offline',
             icon: HardDrive,
-            title: 'Offline, single branch',
-            tag: 'One-time purchase',
-            body: 'The full ERP for one branch on one computer or device, with its own database. No internet, server or subscription needed.',
+            title: 'Standalone offline desktop applications',
+            tag: 'One-time licence',
             points: [
-                'Pay once, use it for good',
-                'No internet or monthly fees',
-                'Desktop or mobile',
+                'Installed on one computer, with its own database',
+                'Core work runs with no internet at all',
+                'Cloud sync is not included',
             ],
-            price: 'One-time purchase, contact us for the price',
-            href: quoteUrl('Price: Offline single-branch ERP'),
-            cta: 'Ask for the price',
+            licence: 'One-time purchase; ask us for the price',
+            offers: (entry) => entry.offering.connectivity.includes('offline'),
+        },
+        {
+            id: 'mobile',
+            icon: Smartphone,
+            title: 'Mobile applications',
+            tag: 'Android and iOS',
+            points: [
+                'Business work on a phone or tablet',
+                'Online or offline, depending on the product',
+                'Can do less than the desktop or web version',
+            ],
+            licence: 'Included with the cloud plan of products that have it',
+            offers: hasMobile,
+        },
+        {
+            id: 'connected',
+            icon: MonitorSmartphone,
+            title: 'Connected desktop and mobile',
+            tag: 'Shared data',
+            points: [
+                'Desktop and mobile apps for the same product',
+                'One set of business data where sync is supported',
+            ],
+            licence: 'Included with the cloud plan of products that have it',
+            offers: (entry) =>
+                entry.offering.platforms.includes('desktop') &&
+                hasMobile(entry),
         },
     ];
 }
 
-/** The three ways to run an ERP, as cards side by side. */
-export function DeploymentOptions({ trialDays }: { trialDays: number }) {
+/**
+ * The ways to run Miles software, each naming the released products that
+ * offer it, so no option reads as available for everything.
+ */
+export function DeploymentOptions({
+    catalog,
+    trialDays,
+}: {
+    catalog: CatalogEntry[];
+    trialDays: number;
+}) {
+    const released = catalog.filter((entry) => entry.status !== 'coming_soon');
+
     return (
-        <ul className="grid gap-5 lg:grid-cols-3">
-            {deployments(trialDays).map((option, i) => (
-                <li
-                    key={option.id}
-                    id={option.id}
-                    className={`${panel} flex scroll-mt-28 flex-col p-7 sm:p-8`}
-                >
-                    <div className="flex items-start justify-between gap-4">
-                        <IconBox icon={option.icon} index={i} />
-                        <span className="rounded-full bg-site-wash px-3 py-1 text-xs font-bold text-site-accent-ink">
-                            {option.tag}
-                        </span>
-                    </div>
-                    <h3 className={`mt-6 text-xl ${display}`}>
-                        {option.title}
-                    </h3>
-                    <p className="mt-2 leading-relaxed text-slate-600">
-                        {option.body}
-                    </p>
-                    <ul className="mt-5 space-y-2.5 text-sm text-slate-700">
-                        {option.points.map((point) => (
-                            <li
-                                key={point}
-                                className="flex items-start gap-2.5"
-                            >
-                                <Check
-                                    className="mt-0.5 size-4 shrink-0 text-site-accent-ink"
-                                    aria-hidden
-                                />
-                                {point}
-                            </li>
-                        ))}
-                    </ul>
-                    <div className="mt-auto pt-7">
-                        <p className="border-t border-site-line pt-5 text-sm font-semibold text-site-ink">
-                            {option.price}
-                        </p>
-                        <Link
-                            href={option.href}
-                            className={`mt-4 w-full ${i === 0 ? button.primary : button.outline}`}
-                        >
-                            {option.cta}
-                            <ArrowRight className="size-4" aria-hidden />
-                        </Link>
-                    </div>
-                </li>
-            ))}
+        <ul className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {deployments(trialDays).map((option, i) => {
+                const products = released.filter(option.offers);
+
+                return (
+                    <li
+                        key={option.id}
+                        id={option.id}
+                        className={`${panel} flex scroll-mt-28 flex-col p-7`}
+                    >
+                        <div className="flex items-start justify-between gap-4">
+                            <IconBox icon={option.icon} index={i} />
+                            <span className="rounded-full bg-site-wash px-3 py-1 text-xs font-bold text-site-accent-ink">
+                                {option.tag}
+                            </span>
+                        </div>
+                        <h3 className={`mt-6 text-xl ${display}`}>
+                            {option.title}
+                        </h3>
+                        <ul className="mt-4 space-y-2.5 text-sm text-slate-700">
+                            {option.points.map((point) => (
+                                <li
+                                    key={point}
+                                    className="flex items-start gap-2.5"
+                                >
+                                    <Check
+                                        className="mt-0.5 size-4 shrink-0 text-site-accent-ink"
+                                        aria-hidden
+                                    />
+                                    {point}
+                                </li>
+                            ))}
+                        </ul>
+                        <div className="mt-auto space-y-2 pt-6 text-sm">
+                            <p className="border-t border-site-line pt-5 font-semibold text-site-ink">
+                                {option.licence}
+                            </p>
+                            <p className="text-slate-600">
+                                {products.length > 0 ? (
+                                    <>
+                                        Available for{' '}
+                                        {products.map((entry, j) => (
+                                            <span key={entry.slug}>
+                                                {j > 0 &&
+                                                    (j === products.length - 1
+                                                        ? ' and '
+                                                        : ', ')}
+                                                <Link
+                                                    href={`/${entry.url}`}
+                                                    className={textLink}
+                                                >
+                                                    {entry.name}
+                                                </Link>
+                                            </span>
+                                        ))}
+                                    </>
+                                ) : (
+                                    'Not offered by a released product yet.'
+                                )}
+                            </p>
+                        </div>
+                    </li>
+                );
+            })}
         </ul>
     );
 }
 
-/** What we make, as link cards. */
+/** Custom development, as link cards. */
 export function ServiceCards() {
     return (
         <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {services.map((service, i) => (
                 <li key={service.id}>
                     <Link
-                        href={service.href}
+                        href={`/services#${service.id}`}
                         className={`${card} group flex h-full flex-col p-7`}
                     >
                         <IconBox icon={service.icon} index={i} />
@@ -236,7 +319,11 @@ export function ServiceCards() {
                             {service.body}
                         </span>
                         <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-site-accent-ink">
-                            {service.cta}
+                            Learn more
+                            <span className="sr-only">
+                                {' '}
+                                about {service.title}
+                            </span>
                             <ArrowRight
                                 className="size-4 transition-transform group-hover:translate-x-1"
                                 aria-hidden

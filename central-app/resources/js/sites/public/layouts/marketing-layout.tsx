@@ -1,46 +1,93 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage } from "@inertiajs/react";
 import {
     ArrowRight,
+    Boxes,
     ChevronDown,
     Layers,
+    Download,
     LayoutGrid,
     Menu,
     X,
-} from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import type { PropsWithChildren } from 'react';
-import AppLogo from '@/shared/components/app-logo';
-import { HeroBackdrop } from '@/sites/public/components/page-hero';
-import { SocialIcon, socialLinks } from '@/sites/public/components/social';
-import { button, darkBand } from '@/sites/public/components/styles';
-import { login, register } from '@/routes';
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import type { PropsWithChildren } from "react";
+import { catalogIcon } from "@/sites/public/components/catalog";
+import { milesProducts } from "@/sites/public/components/content";
+import MetaPixel from "@/sites/public/components/meta-pixel";
+import { demoUrl, services } from "@/sites/public/components/offerings";
+import { HeroBackdrop } from "@/sites/public/components/page-hero";
+import { SocialIcon, socialLinks } from "@/sites/public/components/social";
+import { button, darkBand } from "@/sites/public/components/styles";
+import { login, register } from "@/routes";
+
+type MenuItem = {
+    title: string;
+    body?: string;
+    href: string;
+    icon: LucideIcon;
+};
+
+type NavEntry =
+    | { title: string; href: string }
+    | { title: string; id: string; items: MenuItem[] };
 
 // Relative paths on the apex host; sign-in and registration live on the
 // auth host, so those are plain links.
-const products = [
+const products: MenuItem[] = [
+    ...milesProducts.map((product) => ({
+        title: product.title,
+        href: `/${product.category === "erp" ? "erp" : "apps"}/${product.slug}`,
+        icon: catalogIcon(product.icon),
+    })),
     {
-        title: 'ERP Solutions',
-        body: 'Complete systems for your industry',
-        href: '/erp',
+        title: "ERP Solutions",
+        body: "Ready-made systems for your industry",
+        href: "/erp",
         icon: Layers,
     },
     {
-        title: 'Business Applications',
-        body: 'Standalone apps that work together',
-        href: '/apps',
+        title: "Business Applications",
+        body: "Standalone apps that work together",
+        href: "/apps",
         icon: LayoutGrid,
+    },
+    {
+        title: "Desktop downloads",
+        body: "Windows apps for the counter",
+        href: "/downloads",
+        icon: Download,
     },
 ];
 
-// "Products" sits after Home and opens the menu above.
-const nav = [
-    { title: 'Home', href: '/' },
-    { title: 'Services', href: '/services' },
-    { title: 'Industries', href: '/industries' },
-    { title: 'Pricing', href: '/pricing' },
-    { title: 'About', href: '/about' },
-    { title: 'Contact', href: '/contact' },
+const customSolutions: MenuItem[] = [
+    {
+        title: "All custom solutions",
+        body: "Software built or adapted for you",
+        href: "/services",
+        icon: Boxes,
+    },
+    ...services.map((service) => ({
+        title: service.title,
+        href: `/services#${service.id}`,
+        icon: service.icon,
+    })),
 ];
+
+const nav: NavEntry[] = [
+    { title: "Home", href: "/" },
+    { title: "Miles Cloud", href: "/platform" },
+    { title: "Products", id: "products", items: products },
+    { title: "Custom Solutions", id: "custom", items: customSolutions },
+    { title: "Industries", href: "/industries" },
+    { title: "About Us", href: "/about" },
+    { title: "Contact", href: "/contact" },
+];
+
+/** A menu link without its fragment, for the current-page check. */
+function pageOf(href: string): string {
+    return href.split("#")[0];
+}
 
 function Brand({ inverted = false }: { inverted?: boolean }) {
     return (
@@ -49,8 +96,16 @@ function Brand({ inverted = false }: { inverted?: boolean }) {
             aria-label="Miles Global Softwares home"
             className="flex shrink-0 items-center"
         >
-            <AppLogo
-                inverted={inverted}
+            {/* The public site's logo; white lettering over the dark header and footer. */}
+            <img
+                src={
+                    inverted
+                        ? "/images/logo-site-light.png"
+                        : "/images/logo-site.png"
+                }
+                alt="Miles Global Softwares"
+                width={1000}
+                height={373}
                 className="h-11 w-auto sm:h-[3.25rem]"
             />
         </Link>
@@ -61,7 +116,7 @@ function Brand({ inverted = false }: { inverted?: boolean }) {
 function useCurrentPath(): string {
     const { url } = usePage();
 
-    return url.split('?')[0];
+    return url.split("?")[0];
 }
 
 /**
@@ -71,13 +126,29 @@ function useCurrentPath(): string {
  * footer (see styles.ts for the palette).
  */
 /**
- * The Products menu: a disclosure button over the two catalog pages.
- * Closes on Escape, on a click elsewhere and when a link is followed.
+ * A menu in the header: a disclosure button over its links. Closes on
+ * Escape, on a click elsewhere and when a link is followed.
  */
-function ProductsMenu({ solid, path }: { solid: boolean; path: string }) {
+function NavMenu({
+    title,
+    id,
+    items,
+    solid,
+    path,
+}: {
+    title: string;
+    id: string;
+    items: MenuItem[];
+    solid: boolean;
+    path: string;
+}) {
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLLIElement>(null);
-    const current = products.some((item) => path.startsWith(item.href));
+    const current = items.some(
+        (item) =>
+            path === pageOf(item.href) ||
+            path.startsWith(`${pageOf(item.href)}/`),
+    );
 
     useEffect(() => {
         if (!open) {
@@ -85,7 +156,7 @@ function ProductsMenu({ solid, path }: { solid: boolean; path: string }) {
         }
 
         const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') {
+            if (event.key === "Escape") {
                 setOpen(false);
             }
         };
@@ -95,12 +166,12 @@ function ProductsMenu({ solid, path }: { solid: boolean; path: string }) {
             }
         };
 
-        window.addEventListener('keydown', onKeyDown);
-        window.addEventListener('pointerdown', onPointerDown);
+        window.addEventListener("keydown", onKeyDown);
+        window.addEventListener("pointerdown", onPointerDown);
 
         return () => {
-            window.removeEventListener('keydown', onKeyDown);
-            window.removeEventListener('pointerdown', onPointerDown);
+            window.removeEventListener("keydown", onKeyDown);
+            window.removeEventListener("pointerdown", onPointerDown);
         };
     }, [open]);
 
@@ -109,31 +180,31 @@ function ProductsMenu({ solid, path }: { solid: boolean; path: string }) {
             <button
                 type="button"
                 aria-expanded={open}
-                aria-controls="products-menu"
+                aria-controls={`${id}-menu`}
                 onClick={() => setOpen((value) => !value)}
-                className={`inline-flex items-center gap-1 px-4 py-2 font-semibold transition-colors ${current ? (solid ? 'text-site-accent-ink' : 'text-white') : ''} ${solid ? 'hover:text-site-accent-ink' : 'hover:text-white'}`}
+                className={`inline-flex items-center gap-1 px-3 py-2 font-semibold 2xl:px-4 transition-colors ${current ? (solid ? "text-site-accent-ink" : "text-white") : ""} ${solid ? "hover:text-site-accent-ink" : "hover:text-white"}`}
             >
-                Products
+                {title}
                 <ChevronDown
-                    className={`size-4 transition-transform ${open ? 'rotate-180' : ''}`}
+                    className={`size-4 transition-transform ${open ? "rotate-180" : ""}`}
                     aria-hidden
                 />
             </button>
             <div
-                id="products-menu"
+                id={`${id}-menu`}
                 hidden={!open}
-                className="absolute top-full left-1/2 mt-3 w-80 -translate-x-1/2 rounded-2xl border border-site-line bg-white p-2 text-site-ink shadow-xl shadow-site-night/10"
+                className="absolute top-full left-1/2 mt-3 max-h-[calc(100svh-6rem)] w-80 -translate-x-1/2 overflow-y-auto rounded-2xl border border-site-line bg-white p-2 text-site-ink shadow-xl shadow-site-night/10"
             >
                 <ul>
-                    {products.map(({ icon: Icon, ...item }) => (
+                    {items.map(({ icon: Icon, ...item }) => (
                         <li key={item.href}>
                             <Link
                                 href={item.href}
                                 onClick={() => setOpen(false)}
                                 aria-current={
-                                    path === item.href ? 'page' : undefined
+                                    path === item.href ? "page" : undefined
                                 }
-                                className="flex items-start gap-3 rounded-xl p-3 whitespace-normal transition-colors hover:bg-site-soft aria-[current=page]:bg-site-accent/10"
+                                className={`flex gap-3 rounded-xl whitespace-normal transition-colors hover:bg-site-soft aria-[current=page]:bg-site-accent/10 ${item.body ? "items-start p-3" : "items-center px-3 py-2"}`}
                             >
                                 <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-site-accent/10 text-site-accent-ink">
                                     <Icon className="size-4" aria-hidden />
@@ -142,9 +213,11 @@ function ProductsMenu({ solid, path }: { solid: boolean; path: string }) {
                                     <span className="block font-semibold">
                                         {item.title}
                                     </span>
-                                    <span className="block text-sm font-normal text-slate-600">
-                                        {item.body}
-                                    </span>
+                                    {item.body && (
+                                        <span className="block text-sm font-normal text-slate-600">
+                                            {item.body}
+                                        </span>
+                                    )}
                                 </span>
                             </Link>
                         </li>
@@ -168,27 +241,28 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
         }
 
         const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') {
+            if (event.key === "Escape") {
                 setMenuOpen(false);
             }
         };
 
-        window.addEventListener('keydown', onKeyDown);
+        window.addEventListener("keydown", onKeyDown);
 
-        return () => window.removeEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
     }, [menuOpen]);
 
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 24);
 
         onScroll();
-        window.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener("scroll", onScroll, { passive: true });
 
-        return () => window.removeEventListener('scroll', onScroll);
+        return () => window.removeEventListener("scroll", onScroll);
     }, []);
 
     return (
         <div className="site-public flex min-h-screen flex-col overflow-x-clip bg-white font-public text-site-ink">
+            <MetaPixel />
             <a
                 href="#main"
                 className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2"
@@ -196,58 +270,61 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                 Skip to content
             </a>
             <header
-                className={`fixed inset-x-0 top-0 z-40 transition-colors duration-300 ${solid ? 'border-b border-site-line bg-white' : 'site-dark bg-site-night'}`}
+                className={`fixed inset-x-0 top-0 z-40 transition-colors duration-300 ${solid ? "border-b border-site-line bg-white" : "site-dark bg-site-night"}`}
             >
                 <nav
                     aria-label="Main"
-                    className={`mx-auto flex max-w-7xl items-center gap-8 px-4 transition-[height] duration-300 sm:px-6 ${solid ? 'h-14 sm:h-16' : 'h-14 sm:h-[4.5rem]'}`}
+                    className={`mx-auto flex max-w-7xl items-center gap-6 px-4 transition-[height] duration-300 sm:px-6 ${solid ? "h-14 sm:h-16" : "h-14 sm:h-[4.5rem]"}`}
                 >
                     <Brand inverted={!solid} />
                     <ul
-                        className={`mx-auto hidden items-center gap-1 text-[15px] font-semibold whitespace-nowrap xl:flex ${solid ? 'text-slate-700' : 'text-white/85'}`}
+                        className={`mx-auto hidden items-center gap-1 text-[15px] font-semibold whitespace-nowrap xl:flex ${solid ? "text-slate-700" : "text-white/85"}`}
                     >
-                        {nav.map((item, i) => [
-                            i === 1 && (
-                                <ProductsMenu
-                                    key="products"
+                        {nav.map((item) =>
+                            "items" in item ? (
+                                <NavMenu
+                                    key={item.id}
+                                    title={item.title}
+                                    id={item.id}
+                                    items={item.items}
                                     solid={solid}
                                     path={path}
                                 />
+                            ) : (
+                                <li key={item.href}>
+                                    <Link
+                                        href={item.href}
+                                        aria-current={
+                                            item.href === path
+                                                ? "page"
+                                                : undefined
+                                        }
+                                        className={`relative block px-3 py-2 transition-colors after:absolute after:inset-x-3 2xl:px-4 2xl:after:inset-x-4 after:bottom-0 after:h-0.5 after:origin-left after:scale-x-0 after:rounded-full after:transition-transform hover:after:scale-x-100 aria-[current=page]:after:scale-x-100 ${solid ? "after:bg-site-accent hover:text-site-accent-ink aria-[current=page]:text-site-accent-ink" : "after:bg-white hover:text-white aria-[current=page]:text-white"}`}
+                                    >
+                                        {item.title}
+                                    </Link>
+                                </li>
                             ),
-                            <li key={item.href}>
-                                <Link
-                                    href={item.href}
-                                    aria-current={
-                                        item.href === path ? 'page' : undefined
-                                    }
-                                    className={`relative block px-4 py-2 transition-colors after:absolute after:inset-x-4 after:bottom-0 after:h-0.5 after:origin-left after:scale-x-0 after:rounded-full after:transition-transform hover:after:scale-x-100 aria-[current=page]:after:scale-x-100 ${solid ? 'after:bg-site-accent hover:text-site-accent-ink aria-[current=page]:text-site-accent-ink' : 'after:bg-white hover:text-white aria-[current=page]:text-white'}`}
-                                >
-                                    {item.title}
-                                </Link>
-                            </li>,
-                        ])}
+                        )}
                     </ul>
                     <div className="ml-auto hidden items-center gap-5 whitespace-nowrap lg:flex xl:ml-0">
                         <a
                             href={login.url()}
-                            className={`text-[15px] font-semibold transition-colors ${solid ? 'text-slate-700 hover:text-site-accent-ink' : 'text-white/85 hover:text-white'}`}
+                            className={`text-[15px] font-semibold transition-colors ${solid ? "text-slate-700 hover:text-site-accent-ink" : "text-white/85 hover:text-white"}`}
                         >
                             Sign in
                         </a>
                         <Link
                             href="/start"
-                            aria-current={
-                                path === '/start' ? 'page' : undefined
-                            }
                             className={`${solid ? button.primary : button.light} py-3`}
                         >
-                            Start Free Trial
+                            Get Started
                             <ArrowRight className="size-4" aria-hidden />
                         </Link>
                     </div>
                     <button
                         type="button"
-                        className={`ml-auto inline-flex size-10 shrink-0 items-center justify-center rounded-full border lg:ml-0 xl:hidden ${solid ? 'border-site-line text-site-ink hover:bg-site-soft' : 'border-white/30 text-white hover:bg-white/10'}`}
+                        className={`ml-auto inline-flex size-10 shrink-0 items-center justify-center rounded-full border lg:ml-0 xl:hidden ${solid ? "border-site-line text-site-ink hover:bg-site-soft" : "border-white/30 text-white hover:bg-white/10"}`}
                         aria-expanded={menuOpen}
                         aria-controls="mobile-menu"
                         onClick={() => setMenuOpen((open) => !open)}
@@ -266,43 +343,40 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                     className="max-h-[calc(100svh-3.5rem)] overflow-y-auto border-t border-site-line bg-white xl:hidden"
                 >
                     <ul className="mx-auto max-w-7xl space-y-1 px-4 py-3 sm:px-6">
-                        <li>
-                            <p className="px-3 pt-2 pb-1 text-xs font-bold tracking-wider text-slate-500 uppercase">
-                                Products
-                            </p>
-                            <ul className="space-y-1">
-                                {products.map((item) => (
-                                    <li key={item.href}>
-                                        <Link
-                                            href={item.href}
-                                            aria-current={
-                                                item.href === path
-                                                    ? 'page'
-                                                    : undefined
-                                            }
-                                            onClick={() => setMenuOpen(false)}
-                                            className="block rounded-xl px-3 py-2.5 font-semibold text-slate-700 hover:bg-site-soft aria-[current=page]:bg-site-accent/10 aria-[current=page]:text-site-accent-ink"
-                                        >
-                                            {item.title}
-                                        </Link>
-                                    </li>
-                                ))}
-                            </ul>
-                        </li>
-                        {nav.map((item) => (
-                            <li key={item.href}>
-                                <Link
-                                    href={item.href}
-                                    aria-current={
-                                        item.href === path ? 'page' : undefined
-                                    }
-                                    onClick={() => setMenuOpen(false)}
-                                    className="block rounded-xl px-3 py-2.5 font-semibold text-slate-700 hover:bg-site-soft aria-[current=page]:bg-site-accent/10 aria-[current=page]:text-site-accent-ink"
-                                >
-                                    {item.title}
-                                </Link>
-                            </li>
-                        ))}
+                        {nav.map((item) =>
+                            "items" in item ? (
+                                <li key={item.id}>
+                                    <p className="px-3 pt-2 pb-1 text-xs font-bold tracking-wider text-slate-500 uppercase">
+                                        {item.title}
+                                    </p>
+                                    <ul className="space-y-1">
+                                        {item.items.map((link) => (
+                                            <li key={link.href}>
+                                                <MobileLink
+                                                    href={link.href}
+                                                    path={path}
+                                                    onClick={() =>
+                                                        setMenuOpen(false)
+                                                    }
+                                                >
+                                                    {link.title}
+                                                </MobileLink>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </li>
+                            ) : (
+                                <li key={item.href}>
+                                    <MobileLink
+                                        href={item.href}
+                                        path={path}
+                                        onClick={() => setMenuOpen(false)}
+                                    >
+                                        {item.title}
+                                    </MobileLink>
+                                </li>
+                            ),
+                        )}
                     </ul>
                     <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 pb-4 sm:px-6">
                         <Link
@@ -310,7 +384,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                             onClick={() => setMenuOpen(false)}
                             className={`${button.primary} py-2.5`}
                         >
-                            Start Your {trialDays}-Day Free Trial
+                            Get Started: {trialDays}-day free trial
                         </Link>
                         <a
                             href={login.url()}
@@ -330,8 +404,9 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                     <div className="col-span-2 md:col-span-3 lg:col-span-1">
                         <Brand inverted />
                         <p className="mt-5 max-w-xs leading-relaxed">
-                            Ready-made and custom ERP, websites, desktop and
-                            mobile apps. Online, synced or fully offline.
+                            Business software that works together: Miles
+                            Products on Miles Cloud, and custom software for
+                            web, desktop and mobile.
                         </p>
                         <Link
                             href="/contact"
@@ -354,58 +429,55 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                     <FooterColumn
                         title="Products"
                         links={[
-                            { title: 'ERP Solutions', href: '/erp' },
-                            {
-                                title: 'Business Applications',
-                                href: '/apps',
-                            },
-                            { title: 'Pharmacy ERP', href: '/erp/pharmacy' },
-                            {
-                                title: 'Finance & Accounting',
-                                href: '/apps/finance',
-                            },
-                            { title: 'Coming soon', href: '/coming-soon' },
+                            ...products,
+                            { title: "Coming soon", href: "/coming-soon" },
                         ]}
                     />
                     <FooterColumn
                         title="Industries"
                         links={[
                             {
-                                title: 'Pharmacies',
-                                href: '/industries#pharmacies',
+                                title: "Pharmacies",
+                                href: "/industries#pharmacies",
                             },
-                            { title: 'Shops', href: '/industries#shops' },
-                            { title: 'Schools', href: '/industries#schools' },
-                            { title: 'NGOs', href: '/industries#ngos' },
-                            { title: 'All industries', href: '/industries' },
+                            { title: "Shops", href: "/industries#shops" },
+                            {
+                                title: "Restaurants",
+                                href: "/industries#restaurants",
+                            },
+                            { title: "Schools", href: "/industries#schools" },
+                            { title: "NGOs", href: "/industries#ngos" },
+                            { title: "All industries", href: "/industries" },
                         ]}
                     />
                     <FooterColumn
                         title="Company"
                         links={[
-                            { title: 'About', href: '/about' },
-                            { title: 'Services', href: '/services' },
-                            {
-                                title: 'Platform & security',
-                                href: '/platform',
-                            },
-                            { title: 'Pricing', href: '/pricing' },
-                            { title: 'Contact', href: '/contact' },
+                            { title: "About Us", href: "/about" },
+                            { title: "Miles Cloud", href: "/platform" },
+                            { title: "Custom Solutions", href: "/services" },
+                            { title: "Pricing", href: "/pricing" },
+                            { title: "Contact", href: "/contact" },
                         ]}
                     />
                     <FooterColumn
                         title="Account"
                         links={[
-                            { title: 'Start free trial', href: '/start' },
+                            { title: "Get started", href: "/start" },
+                            { title: "Request a demo", href: demoUrl },
                             {
-                                title: 'Sign in',
+                                title: "Sign in",
                                 href: login.url(),
                                 external: true,
                             },
                             {
-                                title: 'Create an account',
+                                title: "Create an account",
                                 href: register.url(),
                                 external: true,
+                            },
+                            {
+                                title: "Download desktop apps",
+                                href: "/downloads",
                             },
                         ]}
                     />
@@ -428,7 +500,7 @@ function FooterColumn({
     links: { title: string; href: string; external?: boolean }[];
 }) {
     const linkClass =
-        'inline-flex items-center py-0.5 transition-colors before:h-px before:w-0 before:bg-site-accent-glow before:transition-[width,margin] hover:text-white hover:before:mr-2 hover:before:w-3';
+        "inline-flex items-center py-0.5 transition-colors before:h-px before:w-0 before:bg-site-accent-glow before:transition-[width,margin] hover:text-white hover:before:mr-2 hover:before:w-3";
 
     return (
         <div>
@@ -453,5 +525,23 @@ function FooterColumn({
                 ))}
             </ul>
         </div>
+    );
+}
+
+function MobileLink({
+    href,
+    path,
+    onClick,
+    children,
+}: PropsWithChildren<{ href: string; path: string; onClick: () => void }>) {
+    return (
+        <Link
+            href={href}
+            aria-current={href === path ? "page" : undefined}
+            onClick={onClick}
+            className="block rounded-xl px-3 py-2.5 font-semibold text-slate-700 hover:bg-site-soft aria-[current=page]:bg-site-accent/10 aria-[current=page]:text-site-accent-ink"
+        >
+            {children}
+        </Link>
     );
 }

@@ -143,7 +143,7 @@ final class ManageEntitlements
      * the configured number of days, counted here on the server. One trial
      * per application, ever, so ending and restarting never extends it, and
      * none for an application the organization already has. The shared
-     * modules its ERP products require (Finance for Pharmacy) are tried
+     * modules its ERP products require are tried
      * alongside, unless the organization already has or has tried them.
      * Concurrent requests for the same trial are serialized, so a double
      * submit starts it once and the second is refused as RUNNING.
@@ -221,7 +221,7 @@ final class ManageEntitlements
     }
 
     /**
-     * Shared modules (Finance) that an ERP product built on this application
+     * Shared modules that an ERP product built on this application
      * cannot work without. Nothing for a shared module itself.
      *
      * @return list<Application>

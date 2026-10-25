@@ -110,6 +110,51 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Desktop downloads
+    |--------------------------------------------------------------------------
+    |
+    | Installers the public site offers at /download/{code}. The files live
+    | outside the repository, in `path` (on the server, under the shared
+    | storage, so a release keeps them). One that is not there yet is listed
+    | without a download. `product` is the catalog page it belongs to.
+    |
+    */
+
+    'downloads' => [
+        'path' => env('PLATFORM_DOWNLOADS_PATH', storage_path('app/downloads')),
+        'apps' => [
+            [
+                'code' => 'pharmacy',
+                'name' => 'Miles Pharmacy',
+                'summary' => 'The counter of your workspace pharmacy on a Windows PC: sell, take payment and run your shift. Keeps selling when the internet drops and sends the sales once it is back. Shops sign in to Miles Retail with the same app.',
+                'needs' => 'A Miles workspace with Pharmacy or Retail',
+                'file' => 'Miles Pharmacy Setup 1.0.0.exe',
+                'version' => '1.0.0',
+                'product' => 'erp/pharmacy',
+            ],
+            [
+                'code' => 'pharmacy-offline',
+                'name' => 'Miles Pharmacy Offline',
+                'summary' => 'A standalone pharmacy for one shop on one PC, with its own database. No internet, server or Miles account needed.',
+                'needs' => 'A one-time licence: talk to us',
+                'file' => 'Miles Pharmacy Offline Setup 1.0.0.exe',
+                'version' => '1.0.0',
+                'product' => 'erp/pharmacy',
+            ],
+            [
+                'code' => 'restaurant',
+                'name' => 'Miles Restaurant',
+                'summary' => 'The floor, orders, kitchen screen, shifts and bills of your workspace restaurant on a Windows PC.',
+                'needs' => 'A Miles workspace with Restaurant',
+                'file' => 'Miles Restaurant Setup 1.0.0.exe',
+                'version' => '1.0.0',
+                'product' => 'erp/restaurant',
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Billing
     |--------------------------------------------------------------------------
     |

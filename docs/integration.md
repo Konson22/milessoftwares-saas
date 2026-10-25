@@ -109,6 +109,25 @@ Your token only ever sees **your own application**: organizations that never use
 - Errors: `401 invalid_token`, `403 insufficient_scope | client_credentials_required | unknown_client`,
   `404` (not visible to your application).
 
+### A new business from your own app
+
+An app of yours (desktop, mobile) can create its user's business. It sends the **person's**
+access token from its **public** client, not a service token. These routes are under
+`/api/v1/account` on the auth host:
+
+| Method and path | What it does |
+|---|---|
+| `GET organizations/slug-availability?slug=` | `{ "available": bool, "errors": [...] }` |
+| `POST organizations` | Creates the business, as "New business" on the dashboard does: `display_name`, `legal_name`, `slug`, `country_code`, `default_currency`, `timezone`, optional `business_type` and `contact_email`. It also needs `branch_name` and takes an optional `branch_city` for the first branch (code `MAIN`). |
+
+- The person becomes the owner. The business gets the free trial of the application whose client
+  sent the request, when that application offers trials.
+- Answers `201 { "organization": { "id", "slug", "name" }, "trial": { "application", "ends_at" } | null }`.
+  Next, open the workspace with the same sign-in.
+- Errors: `401 invalid_token` (also for accounts that are no longer active),
+  `403 user_token_required | unknown_client`, `403 email_unverified` (with a `message`: the person
+  must confirm their address first), `422` validation errors.
+
 ## 3. Webhooks
 
 `POST` to your endpoint, JSON body:

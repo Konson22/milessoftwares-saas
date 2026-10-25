@@ -7,6 +7,7 @@ use App\Http\Middleware\SecurityHeaders;
 use App\Modules\Identity\Http\Middleware\EnforceSessionState;
 use App\Modules\Identity\Http\Middleware\RequirePasswordChange;
 use App\Modules\Integration\Http\AuthenticateApplicationClient;
+use App\Modules\Integration\Http\AuthenticateAppUser;
 use App\Sites\Admin\Http\Middleware\AdminIdleTimeout;
 use App\Sites\Admin\Http\Middleware\EnsurePlatformStaff;
 use App\Sites\Admin\Http\Middleware\RequirePlatformPermission;
@@ -65,6 +66,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'staff.can' => RequirePlatformPermission::class,
             'admin.idle' => AdminIdleTimeout::class,
             'api.client' => AuthenticateApplicationClient::class,
+            'api.user' => AuthenticateAppUser::class,
         ]);
 
         $middleware->append(SecurityHeaders::class);

@@ -33,6 +33,8 @@
 | Finance F6 Multicurrency | Done 2026-10-20 |
 | Finance F7 Budgets | Done 2026-10-20 |
 | Finance F8 Fixed assets | Done 2026-10-20 |
+| Restaurant T0 Application | Done 2026-10-25 |
+| Restaurant T1 Menu, tables, orders, kitchen and bills | Done 2026-10-25 |
 
 Decisions accepted 2026-10-16: D1 → `docs/adr/0003-erp-workspace-application.md`,
 D2 → `docs/adr/0004-companies-as-organizations.md`. Accepted 2026-10-19: D3 →
@@ -1466,3 +1468,43 @@ connection.
 - hr-app: Pest 40 passed (11 new in `LeaveTest`, 1 in `ProvisioningTest`); PHPStan 0; Pint;
   `vp check`; `tsc`; `vp build`.
 - Migration forward, back and forward again on PostgreSQL (local `hr` database).
+
+## Restaurant T0–T1 — 2026-10-25 (local, Windows)
+
+**Implemented** (`restaurant-app`, a separate application: ADR-0007; plan in
+`restaurant-roadmap.md`):
+- T0: `restaurant-app` from `templates/new-product.php` (port 8700, database `restaurant`, path
+  `/restaurant`); catalog `platform/catalog.json` 1.0.0 (`planned`; roles Restaurant Manager,
+  Cashier, Waiter, Kitchen; `restaurant.bills.*` for payment). Branch choice ported from
+  pharmacy-app (`Branches`, `CurrentBranch`, `branch` and `branch.can` middleware, branch page and
+  switcher); the chosen branch is shared on organization-wide pages (the menu) too. `Money` and
+  `DocumentNumbers` ported. The template's records example removed.
+- T1: `MenuItem` (dish or drink), `StockLevel` and `StockMovement` (drinks per branch at average
+  cost), `DiningTable`, `Order`, `OrderLine`, `KitchenTicket`, `TillShift`, `Bill`, `BillLine`.
+  Actions: `Orders` (open, add, remove, send, void, move, bill, pay, cancel, ready, served),
+  `Bills` (price, pay, void), `Tills` (open, close, summary), `Stock` (opening, adjust, take,
+  putBack). Partial unique indexes: one open order per table, one open till per cashier per
+  branch.
+- Finance: a bill posts `finance.invoice.issued` (lines with cost) and `finance.payment.received`;
+  a void posts `finance.invoice.voided` with the refund (cash from the voider's open till); stock
+  added, counted or written off posts `finance.stock.adjusted`; a till closed over or short posts
+  `finance.cash.counted`.
+- Pages: home, branch, floor, orders (list; order screen with the menu, kitchen status, voids,
+  move, bill and payment), kitchen (refreshes every 15 s), menu, tables, bills paid, bill
+  (printable receipt, void), shifts, drinks stock.
+- Ops: `ops/nginx/products/restaurant.conf` and `ops/php-fpm/restaurant.conf` (its own pool),
+  `ops/local-dev/apache-dev.conf` proxy to :8700; `docs/runbooks/deploy.md`.
+- pharmacy-app no longer hosts the restaurant: the first, hosted version (shared engine changes
+  for items without stock, `routes/restaurant.php`, the Restaurant module, its pages and catalog)
+  was rolled back (its migration on the local `pharmacy` database first) and removed.
+
+**Tests executed:**
+- restaurant-app: Pest 37 passed (`RestaurantTest` 29: branches, access, menu, tables, orders,
+  kitchen, bills, tills, stock); PHPStan 0; Pint; `tsc`; `vp check`; `vp build`.
+- pharmacy-app after the removal: Pest 356 passed, 1 skipped (its suite before the restaurant).
+- central-app: `RepositoryCatalogsTest` and `LocalProductTest` 11 passed (they read
+  `restaurant-app/platform/catalog.json`).
+
+**Not done:** the local `restaurant` PostgreSQL database (`createdb restaurant`, `composer setup`)
+and migrating it there; registering `restaurant` with the local platform (its clients) and a live
+run in the browser; see "Open after T1" in `restaurant-roadmap.md`.

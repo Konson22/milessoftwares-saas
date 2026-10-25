@@ -3,37 +3,49 @@
         {
             "code": "pharmacy",
             "name": "Pharmacy ERP",
-            "tagline": "Medicines, batches and the counter, with the books kept for you.",
-            "description": "For retail pharmacies, medical stores and pharmaceutical wholesalers: medicine catalogue, batch and expiry tracking, purchasing and receiving, dispensing and sales at the counter, prescriptions, and accounting in Finance.",
+            "tagline": "Medicines, batches, expiry and the counter.",
+            "description": "For retail pharmacies, medical stores and pharmaceutical wholesalers: medicine catalogue, batch and expiry tracking, purchasing and receiving, dispensing and sales at the counter, and prescriptions. Finance & Accounting can be added for the books.",
             "status": "pilot",
             "sort_order": 10,
             "applications": [
                 { "code": "pharmacy", "requirement": "required" },
-                { "code": "finance", "requirement": "required" }
+                { "code": "finance", "requirement": "optional" }
             ]
         },
         {
             "code": "retail_trading",
             "name": "Retail & Trading ERP",
-            "tagline": "Retail and wholesale trading on one set of books.",
-            "description": "For retail stores, supermarkets, wholesalers and trading companies: point of sale, quotations, orders, invoices, delivery notes, purchasing, stock and accounting.",
+            "tagline": "Retail and wholesale trading, from the counter to the invoice.",
+            "description": "For retail stores, supermarkets, wholesalers and trading companies: point of sale, quotations, orders, invoices, delivery notes, purchasing and stock. Finance & Accounting can be added for the books.",
             "status": "pilot",
             "sort_order": 20,
             "applications": [
                 { "code": "retail", "requirement": "required" },
-                { "code": "finance", "requirement": "required" }
+                { "code": "finance", "requirement": "optional" }
+            ]
+        },
+        {
+            "code": "restaurant",
+            "name": "Restaurant ERP",
+            "tagline": "Tables, orders and the kitchen, with bills and tills.",
+            "description": "For restaurants, cafés, bars and hotel kitchens: the menu, table orders, kitchen tickets, bills and tills, and drinks stock. Finance & Accounting can be added for the books.",
+            "status": "planned",
+            "sort_order": 25,
+            "applications": [
+                { "code": "restaurant", "requirement": "required" },
+                { "code": "finance", "requirement": "optional" }
             ]
         },
         {
             "code": "education",
             "name": "Education ERP",
-            "tagline": "Admissions to results, fees to the general ledger.",
-            "description": "For schools, colleges and universities: admissions, classes, attendance, examinations, student fees, staff and accounting.",
+            "tagline": "Admissions to results, with student fees.",
+            "description": "For schools, colleges and universities: admissions, classes, attendance, examinations, student fees and staff. Finance & Accounting can be added for the books.",
             "status": "planned",
             "sort_order": 30,
             "applications": [
                 { "code": "school", "requirement": "required" },
-                { "code": "finance", "requirement": "required" },
+                { "code": "finance", "requirement": "optional" },
                 { "code": "hr", "requirement": "optional" }
             ]
         },
@@ -41,20 +53,20 @@
             "code": "ngo",
             "name": "NGO ERP",
             "tagline": "Programs, grants and donor reporting.",
-            "description": "For NGOs and development organizations: programs and projects, donors and grants, budgets, expenses, procurement, staff and fund accounting.",
+            "description": "For NGOs and development organizations: programs and projects, donors and grants, budgets, expenses, procurement and staff. Finance & Accounting can be added for fund accounting.",
             "status": "planned",
             "sort_order": 40,
             "applications": [
                 { "code": "ngo", "requirement": "required" },
-                { "code": "finance", "requirement": "required" },
+                { "code": "finance", "requirement": "optional" },
                 { "code": "hr", "requirement": "optional" }
             ]
         },
         {
             "code": "finance_accounting",
             "name": "Finance & Accounting",
-            "tagline": "The shared accounting module, on its own.",
-            "description": "Chart of accounts, journals, receivables, payables, banking and financial statements: the same Finance application every ERP product posts to.",
+            "tagline": "Advanced accounting, on its own or with any Miles ERP.",
+            "description": "Chart of accounts, journals, receivables, payables, banking and financial statements: the Finance application any Miles ERP can post to when it is added.",
             "status": "pilot",
             "sort_order": 50,
             "applications": [{ "code": "finance", "requirement": "required" }]

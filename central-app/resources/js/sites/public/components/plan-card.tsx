@@ -73,7 +73,7 @@ export default function PlanCard({
                     >
                         {plan.product.name}
                     </Link>
-                    {plan.product.status === 'pilot' && ' · Pilot'}
+                    {plan.product.status === 'pilot' && ' · Early access'}
                 </p>
             )}
             {plan.description && (

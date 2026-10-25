@@ -1,6 +1,7 @@
-import { HardDriveDownload, LogOut, Pill } from 'lucide-react';
+import { HardDriveDownload, LogOut } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
+import pharmacyLogo from '@/assets/pharmacy-logo.png';
 import { loadAccess, useAccess } from '@/hooks/use-page';
 import { call } from '@/lib/api';
 import { dateTime, initials, prettyDate, isoDate } from '@/lib/format';
@@ -85,9 +86,7 @@ export function Shell() {
           <div className="flex h-full w-60 flex-col bg-sidebar text-sidebar-foreground">
             {/* Same height as the top bar, so the two borders line up. */}
             <div className="flex h-13 shrink-0 items-center gap-3 border-b border-sidebar-border px-3.5">
-              <span className="grid size-7 shrink-0 place-items-center bg-sidebar-primary text-sidebar-primary-foreground">
-                <Pill className="size-4" aria-hidden />
-              </span>
+              <img src={pharmacyLogo} alt="" className="size-7 shrink-0 object-contain" />
               <span className={cn('min-w-0 leading-tight', labelClass)}>
                 <span className="block truncate text-sm font-semibold text-white">Miles Pharmacy</span>
                 <span className="block truncate text-xs text-sidebar-foreground/70">{branch?.name}</span>

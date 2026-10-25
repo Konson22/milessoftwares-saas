@@ -2,9 +2,9 @@ import { join } from 'node:path';
 
 import { app, BrowserWindow, ipcMain, net, shell } from 'electron';
 
-import type { ApiRequest, Product, SignInWith } from '../shared/ipc';
+import type { ApiRequest, PlatformRequest, Product, SignInWith } from '../shared/ipc';
 import { signedIn, signIn, signOut } from './auth';
-import { apiRequest } from './http';
+import { apiRequest, platformRequest } from './http';
 import { storeGet, storeRemove, storeSet } from './store';
 
 function createWindow() {
@@ -54,6 +54,7 @@ function print(html: string): Promise<boolean> {
 }
 
 ipcMain.handle('api', (_event, request: ApiRequest) => apiRequest(request));
+ipcMain.handle('platform', (_event, request: PlatformRequest) => platformRequest({ ...request, product: request.product === 'retail' ? 'retail' : 'pharmacy' }));
 ipcMain.handle('auth:signIn', (_event, how: SignInWith, product: Product) => signIn(how, product === 'retail' ? 'retail' : 'pharmacy'));
 ipcMain.handle('auth:signOut', () => signOut());
 ipcMain.handle('auth:signedIn', () => signedIn());

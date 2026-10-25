@@ -1,11 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { ArrowRight, Check } from 'lucide-react';
-import { CtaBand, Eyebrow } from '@/sites/public/components/blocks';
-import {
-    DeploymentOptions,
-    quoteUrl,
-    services,
-} from '@/sites/public/components/offerings';
+import { CtaBand } from '@/sites/public/components/blocks';
+import { quoteUrl, services } from '@/sites/public/components/offerings';
 import PageHero, { Accent, IconBox } from '@/sites/public/components/page-hero';
 import SectionHeading from '@/sites/public/components/section-heading';
 import Seo, { organization } from '@/sites/public/components/seo';
@@ -19,12 +15,12 @@ type Props = {
 
 const steps = [
     {
-        title: 'Talk to us',
-        body: 'Tell us what you need, by the contact form or WhatsApp. We listen first.',
+        title: 'Requirements',
+        body: 'Tell us what you need, by the contact form or WhatsApp. We assess your requirements first.',
     },
     {
-        title: 'Quote and plan',
-        body: 'You get a clear scope, timeline and price before any work starts.',
+        title: 'Quotation and plan',
+        body: 'You get a written scope, timeline and quotation before any work starts.',
     },
     {
         title: 'Build and review',
@@ -32,42 +28,70 @@ const steps = [
     },
     {
         title: 'Launch and support',
-        body: 'We set it up, train your team and stay with you after launch.',
+        body: 'We deploy it, train your team and provide the maintenance you agree with us.',
     },
 ];
 
-/** What we make, from ready-made ERPs to websites and apps built for you. */
-export default function Services({ trialDays, canonical }: Props) {
+/** Changing a Miles product versus building something new. */
+const choices = [
+    {
+        title: 'Customize a Miles product',
+        body: 'You run one of our ready-made ERPs, adapted to you: fields, documents, reports, print layouts and approval steps.',
+        points: [
+            'Product licence: subscription, or one-time where offered',
+            'Plus a setup or customization charge',
+            'The product keeps receiving its updates',
+        ],
+        href: quoteUrl('Quote: ERP customization'),
+        cta: 'Request a quotation',
+    },
+    {
+        title: 'Commission a new system',
+        body: 'We build software that does not exist yet, for your requirements: an ERP, an application or an integration.',
+        points: [
+            'Requirements assessment first',
+            'Project quotation with scope and timeline',
+            'Optional maintenance agreement',
+        ],
+        href: quoteUrl('Project: Custom software'),
+        cta: 'Discuss your project',
+    },
+];
+
+/**
+ * Custom development: new systems built for one customer, and changes to a
+ * Miles product. The ready-made products are in the catalog.
+ */
+export default function Services({ canonical }: Props) {
     const origin = new URL(canonical).origin;
     const whatsapp = socialLinks.find((link) => link.name === 'WhatsApp');
 
     return (
         <>
             <Seo
-                title="ERP, website, desktop and mobile app development"
-                description="Ready-made and custom ERP, websites, and offline-ready desktop and mobile apps, built for businesses, schools and NGOs. Request a free quote."
+                title="Custom ERP, web, desktop and mobile app development"
+                description="Custom software development: ERP systems, web, desktop and mobile applications, system integration and ERP customization. Request a quotation."
                 canonical={canonical}
                 jsonLd={{
                     '@context': 'https://schema.org',
-                    '@graph': services
-                        .filter((service) => service.id !== 'ready-made-erp')
-                        .map((service) => ({
-                            '@type': 'Service',
-                            name: service.title,
-                            description: service.body,
-                            url: `${canonical}#${service.id}`,
-                            provider: organization(origin),
-                        })),
+                    '@graph': services.map((service) => ({
+                        '@type': 'Service',
+                        name: service.title,
+                        description: service.body,
+                        url: `${canonical}#${service.id}`,
+                        provider: organization(origin),
+                    })),
                 }}
             />
 
             <PageHero
                 title={
                     <>
-                        Software built <Accent>for your business</Accent>
+                        Custom software{' '}
+                        <Accent>built around your business</Accent>
                     </>
                 }
-                intro="Ready-made and custom ERP, websites, desktop apps and mobile apps, from one team that builds and supports them."
+                intro="When ready-made software does not fit, we adapt one of our products or build a new system around your workflows, from the requirements to the support after launch."
             >
                 <nav
                     aria-label="On this page"
@@ -133,23 +157,56 @@ export default function Services({ trialDays, canonical }: Props) {
             ))}
 
             <section
-                id="ways-to-run"
-                aria-labelledby="ways-heading"
+                id="customize-or-build"
+                aria-labelledby="choice-heading"
                 className="mx-auto max-w-7xl scroll-mt-24 px-4 py-16 sm:px-6 sm:py-24"
             >
-                <Eyebrow>Every ERP</Eyebrow>
                 <SectionHeading
-                    id="ways-heading"
+                    id="choice-heading"
                     title={
                         <>
-                            Online, synced or <Accent>fully offline</Accent>
+                            Customize a product, or{' '}
+                            <Accent>commission a new system</Accent>
                         </>
                     }
-                    lead="Every ERP we make, ready-made or custom, runs in the cloud, as desktop and mobile apps that sync, or offline for a single branch."
+                    lead="Two different kinds of work, priced differently."
                     align="left"
                 />
-                <div className="mt-10">
-                    <DeploymentOptions trialDays={trialDays} />
+                <div className="mt-10 grid gap-5 md:grid-cols-2">
+                    {choices.map((option) => (
+                        <div
+                            key={option.title}
+                            className={`${panel} flex flex-col p-7 sm:p-9`}
+                        >
+                            <h3 className={`text-2xl ${display}`}>
+                                {option.title}
+                            </h3>
+                            <p className="mt-3 leading-relaxed text-slate-600">
+                                {option.body}
+                            </p>
+                            <ul className="mt-5 flex-1 space-y-2.5 text-sm text-slate-700">
+                                {option.points.map((point) => (
+                                    <li
+                                        key={point}
+                                        className="flex items-start gap-2.5"
+                                    >
+                                        <Check
+                                            className="mt-0.5 size-4 shrink-0 text-site-accent-ink"
+                                            aria-hidden
+                                        />
+                                        {point}
+                                    </li>
+                                ))}
+                            </ul>
+                            <Link
+                                href={option.href}
+                                className={`mt-7 self-start ${button.outline}`}
+                            >
+                                {option.cta}
+                                <ArrowRight className="size-4" aria-hidden />
+                            </Link>
+                        </div>
+                    ))}
                 </div>
             </section>
 
@@ -165,7 +222,7 @@ export default function Services({ trialDays, canonical }: Props) {
                                 How we <Accent>work with you</Accent>
                             </>
                         }
-                        lead="The same four steps for a website, an app or a custom ERP."
+                        lead="The same four steps for an application, an integration or a custom ERP."
                     />
                     <ol className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                         {steps.map((step, i) => (
@@ -196,14 +253,20 @@ export default function Services({ trialDays, canonical }: Props) {
                             Have a project in mind? <Accent>Let's talk.</Accent>
                         </>
                     }
-                    body="Tell us what you need and we reply within one working day with next steps and a quote."
+                    body="Tell us what you need and we reply within one working day with the next steps towards your quotation."
                 >
                     <Link
-                        href={quoteUrl('Quote: New project')}
+                        href={quoteUrl('Project: Custom software')}
                         className={button.light}
                     >
-                        Request a quote
+                        Discuss Your Project
                         <ArrowRight className="size-4" aria-hidden />
+                    </Link>
+                    <Link
+                        href={quoteUrl('Quote: Custom software')}
+                        className={button.outlineDark}
+                    >
+                        Request a Quotation
                     </Link>
                     {whatsapp && (
                         <a

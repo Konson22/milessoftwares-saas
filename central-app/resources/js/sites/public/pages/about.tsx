@@ -20,7 +20,7 @@ export default function About({ canonical }: Props) {
         <>
             <Seo
                 title="About us"
-                description="Miles Global Softwares builds ready-made and custom ERPs, websites, desktop and mobile apps for pharmacies, shops, schools and NGOs."
+                description="Miles Global Softwares develops ERP solutions, business applications and custom software for pharmacies, shops, restaurants and growing organizations."
                 canonical={canonical}
                 jsonLd={{
                     '@context': 'https://schema.org',
@@ -70,11 +70,13 @@ export default function About({ canonical }: Props) {
                         twice.
                     </p>
                     <p>
-                        Beyond our ready-made ERPs, we build custom ERPs,
-                        websites, desktop apps and mobile apps. Because power
-                        and connections are not always reliable, our desktop and
-                        mobile apps keep working offline, and a single branch
-                        can run with no internet at all.
+                        Beyond our ready-made products, we develop custom ERPs,
+                        web, desktop and mobile applications and integrations,
+                        and we customize our own ERPs. Because power and
+                        connections are not always reliable, the desktop and
+                        mobile apps of our products keep working offline where
+                        they have them, and a pharmacy can run a single branch
+                        with no internet at all.
                     </p>
                     <p>
                         Every Miles product shares one platform, so a business

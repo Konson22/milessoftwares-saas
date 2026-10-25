@@ -25,9 +25,9 @@ const copy: Record<
                 An ERP built for <Accent>your industry</Accent>
             </>
         ),
-        intro: 'Complete systems for pharmacies, shops, schools, logistics and NGOs, each with Finance & Accounting built in.',
+        intro: 'Ready-made systems for pharmacies and shops, with restaurants, schools, logistics and NGOs on the way, each working on its own, with Finance & Accounting as an optional add-on.',
         description:
-            'Industry ERP solutions from Miles Global Softwares for pharmacies, retail, schools, logistics and NGOs, on one connected platform with Finance & Accounting built in.',
+            'Industry ERP solutions from Miles Global Softwares for pharmacies, retail, restaurants, schools, logistics and NGOs, with optional Finance & Accounting.',
     },
     application: {
         title: (

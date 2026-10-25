@@ -1,6 +1,6 @@
-import type { ApiRequest, ApiResponse } from '../shared/ipc';
+import type { ApiRequest, ApiResponse, PlatformRequest } from '../shared/ipc';
 import { accessToken } from './auth';
-import { PRODUCTS, workspaceUrl } from './config';
+import { AUTH_URL, PRODUCTS, workspaceUrl } from './config';
 
 const TIMEOUT_MS = 15_000;
 
@@ -12,21 +12,47 @@ const TIMEOUT_MS = 15_000;
  * saved.
  */
 export async function apiRequest(request: ApiRequest, retried = false): Promise<ApiResponse> {
-  const headers: Record<string, string> = {
-    ...request.headers,
-    Accept: 'application/json',
-    'Content-Type': 'application/json',
-  };
+  const headers: Record<string, string> = { ...request.headers };
   const token = await accessToken(request.product, retried);
   if (token) headers.Authorization = `Bearer ${token}`;
   if (request.branchId) headers['X-Branch-Id'] = request.branchId;
 
+  const response = await send(
+    `${workspaceUrl(request.workspace)}/${PRODUCTS[request.product].path}/api/${request.path.replace(/^\//, '')}`,
+    request.method,
+    headers,
+    request.body,
+  );
+
+  if (!response.offline && response.status === 401 && !retried && response.json?.code === 'invalid_token') {
+    return apiRequest(request, true);
+  }
+  return response;
+}
+
+/** The platform as the person signed in: {auth host}/api/v1/account/<path>, refreshed and retried as above. */
+export async function platformRequest(request: PlatformRequest, retried = false): Promise<ApiResponse> {
+  const token = await accessToken(request.product, retried);
+  const response = await send(
+    `${AUTH_URL}/api/v1/account/${request.path.replace(/^\//, '')}`,
+    request.method,
+    token ? { Authorization: `Bearer ${token}` } : {},
+    request.body,
+  );
+
+  if (!response.offline && response.status === 401 && !retried && response.json?.error === 'invalid_token') {
+    return platformRequest(request, true);
+  }
+  return response;
+}
+
+async function send(url: string, method: string, headers: Record<string, string>, body: unknown): Promise<ApiResponse> {
   let response: Response;
   try {
-    response = await fetch(`${workspaceUrl(request.workspace)}/${PRODUCTS[request.product].path}/api/${request.path.replace(/^\//, '')}`, {
-      method: request.method,
-      headers,
-      body: request.body === undefined ? undefined : JSON.stringify(request.body),
+    response = await fetch(url, {
+      method,
+      headers: { ...headers, Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch {
@@ -39,10 +65,6 @@ export async function apiRequest(request: ApiRequest, retried = false): Promise<
     json = text ? JSON.parse(text) : null;
   } catch {
     json = null;
-  }
-
-  if (response.status === 401 && !retried && json?.code === 'invalid_token') {
-    return apiRequest(request, true);
   }
   return { offline: false, status: response.status, json };
 }

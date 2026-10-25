@@ -35,6 +35,26 @@ test('every page gets the hardening headers and a nonce-based script policy', fu
     expect($response->getContent())->toContain('<script nonce="'.$value.'">');
 });
 
+test('the public site allows Meta Pixel hosts in CSP', function () {
+    $public = csp((string) $this->get(PlatformHosts::url(PlatformHosts::root(), '/'))
+        ->assertOk()
+        ->headers
+        ->get('Content-Security-Policy'));
+
+    expect($public['script-src'])->toContain('https://connect.facebook.net')
+        ->and($public['img-src'])->toContain('https://www.facebook.com')
+        ->and($public['connect-src'])->toContain('https://www.facebook.com')
+        ->and($public['connect-src'])->toContain('https://connect.facebook.net');
+
+    $auth = csp((string) $this->get(PlatformHosts::url(PlatformHosts::auth(), 'login'))
+        ->assertOk()
+        ->headers
+        ->get('Content-Security-Policy'));
+
+    expect($auth['script-src'])->not->toContain('https://connect.facebook.net')
+        ->and($auth['img-src'] ?? [])->not->toContain('https://www.facebook.com');
+});
+
 test('the nonce changes on every request', function () {
     $first = $this->get(PlatformHosts::url(PlatformHosts::root(), '/'))->headers->get('Content-Security-Policy');
     $second = $this->get(PlatformHosts::url(PlatformHosts::root(), '/'))->headers->get('Content-Security-Policy');

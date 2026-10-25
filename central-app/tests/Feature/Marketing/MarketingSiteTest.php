@@ -252,6 +252,42 @@ it('serves the industries, catalog, platform, coming-soon and about pages', func
     ['services', 'public/services'],
 ]);
 
+describe('desktop downloads', function () {
+    beforeEach(function () {
+        $this->downloads = storage_path('framework/testing/downloads');
+        @mkdir($this->downloads, 0777, true);
+        file_put_contents($this->downloads.'/Miles Pharmacy Setup 1.0.0.exe', 'MZ installer');
+        config(['platform.downloads.path' => $this->downloads]);
+    });
+
+    afterEach(function () {
+        @unlink($this->downloads.'/Miles Pharmacy Setup 1.0.0.exe');
+    });
+
+    it('lists every app, with a download only for the installers on the server', function () {
+        $this->get(site('downloads'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('public/downloads')
+                ->where('canonical', site('downloads'))
+                ->where('apps.0.code', 'pharmacy')
+                ->where('apps.0.url', site('download/pharmacy'))
+                ->where('apps.0.size', 12)
+                ->where('apps.1.url', null)
+                ->where('apps.2.url', null));
+    });
+
+    it('sends the installer under its own name', function () {
+        $response = $this->get(site('download/pharmacy'))->assertOk();
+
+        expect($response->headers->get('Content-Disposition'))->toContain('Miles Pharmacy Setup 1.0.0.exe');
+    });
+
+    it('has no download for an installer that is not there or an unknown app', function (string $code) {
+        $this->get(site("download/{$code}"))->assertNotFound();
+    })->with(['restaurant', 'nothing']);
+});
+
 it('moves the old solutions page to industries', function () {
     $this->get(site('solutions'))->assertMovedPermanently()->assertRedirect(site('industries'));
 });
@@ -259,11 +295,33 @@ it('moves the old solutions page to industries', function () {
 it('lists one category per catalog page, with every product of the brief', function () {
     $this->get(site('erp'))->assertInertia(fn (AssertableInertia $page) => $page
         ->where('category', 'erp')
-        ->where('catalog', fn ($catalog) => collect($catalog)->pluck('slug')->all() === ['pharmacy', 'retail', 'school', 'logistics', 'ngo']));
+        ->where('catalog', fn ($catalog) => collect($catalog)->pluck('slug')->all() === ['pharmacy', 'retail', 'restaurant', 'school', 'logistics', 'ngo']));
 
     $this->get(site('apps'))->assertInertia(fn (AssertableInertia $page) => $page
         ->where('category', 'application')
         ->where('catalog', fn ($catalog) => collect($catalog)->pluck('slug')->all() === ['finance', 'projects', 'hr', 'procurement', 'inventory', 'crm', 'assets', 'documents']));
+});
+
+it('says how every catalog product runs and is licensed', function () {
+    $platforms = ['web', 'desktop', 'android', 'ios'];
+    $connectivity = ['online', 'offline_sync', 'offline'];
+    $licensing = ['subscription', 'one_time', 'quotation'];
+
+    $this->get(site('pricing'))->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('catalog', fn ($catalog) => collect($catalog)->every(fn ($entry) => $entry['offering']['platforms'] !== []
+            && array_diff($entry['offering']['platforms'], $platforms) === []
+            && array_diff($entry['offering']['connectivity'], $connectivity) === []
+            && array_diff($entry['offering']['licensing'], $licensing) === []
+            && is_array($entry['offering']['desktop'])
+            && is_array($entry['offering']['mobile']))));
+});
+
+it('shows the restaurant ERP as coming soon until the registry releases it', function () {
+    $this->get(site('erp/restaurant'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+        ->component('public/landing')
+        ->where('product.status', 'coming_soon')
+        ->where('product.trial', null)
+        ->where('plans', []));
 });
 
 it('shows only unreleased catalog products on the coming-soon page', function () {

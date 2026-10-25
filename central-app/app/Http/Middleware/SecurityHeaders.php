@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\Hosts\PlatformHosts;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Vite;
@@ -32,7 +33,7 @@ class SecurityHeaders
                 : 'Content-Security-Policy';
 
             if (! $headers->has($name)) {
-                $headers->set($name, $this->policy($nonce));
+                $headers->set($name, $this->policy($nonce, $request));
             }
         }
 
@@ -47,7 +48,7 @@ class SecurityHeaders
         return $response;
     }
 
-    private function policy(string $nonce): string
+    private function policy(string $nonce, Request $request): string
     {
         // While `npm run dev` is running, assets come from the Vite dev server.
         $dev = '';
@@ -58,13 +59,23 @@ class SecurityHeaders
             $devSocket = ' '.preg_replace('#^http#', 'ws', $origin);
         }
 
+        // Meta Pixel only runs on the public marketing site.
+        $fbScript = '';
+        $fbImg = '';
+        $fbConnect = '';
+        if (strtolower($request->getHost()) === PlatformHosts::root()) {
+            $fbScript = ' https://connect.facebook.net';
+            $fbImg = ' https://www.facebook.com';
+            $fbConnect = ' https://www.facebook.com https://connect.facebook.net';
+        }
+
         $directives = [
             "default-src 'self'",
-            "script-src 'self' 'nonce-{$nonce}'{$dev}",
+            "script-src 'self' 'nonce-{$nonce}'{$dev}{$fbScript}",
             "style-src 'self' 'unsafe-inline'{$dev}",
-            "img-src 'self' data: blob:{$dev}",
+            "img-src 'self' data: blob:{$dev}{$fbImg}",
             "font-src 'self' data:{$dev}",
-            "connect-src 'self'{$dev}{$devSocket}",
+            "connect-src 'self'{$dev}{$devSocket}{$fbConnect}",
             "object-src 'none'",
             "base-uri 'self'",
             "frame-ancestors 'none'",

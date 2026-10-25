@@ -25,7 +25,7 @@ export default function Solutions({ catalog, canonical }: Props) {
         <>
             <Seo
                 title="Industries"
-                description="Miles for pharmacies, wholesalers, shops, traders, multi-branch businesses, accountants, schools, NGOs and logistics: the problem, what changes, and the solution that does it."
+                description="Miles for pharmacies, wholesalers, shops, traders, restaurants, multi-branch businesses, accountants, schools, NGOs and logistics: the problem and the solution."
                 canonical={canonical}
             />
 
@@ -147,14 +147,14 @@ export default function Solutions({ catalog, canonical }: Props) {
                         Don't see <Accent>your industry?</Accent>
                     </>
                 }
-                body="Restaurants, clinics and more are on the way. Tell us what you run and we will tell you where it fits."
+                body="Clinics and more are on the way. Tell us what you run: we will tell you where our products fit, or build what you need."
             >
                 <Link href="/coming-soon" className={button.light}>
                     See what's coming
                     <ArrowRight className="size-4" aria-hidden />
                 </Link>
-                <Link href="/contact" className={button.outlineDark}>
-                    Talk to us
+                <Link href="/services" className={button.outlineDark}>
+                    Discuss a Custom Solution
                 </Link>
             </CtaBand>
         </>

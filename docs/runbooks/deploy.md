@@ -76,6 +76,12 @@ the pharmacy `.env` (register Retail & POS in admin like any application), `SESS
 session reaches both `/pharmacy` and `/retail`, and `ops/nginx/products/retail.conf` next to
 `pharmacy.conf`. Its catalog, `pharmacy-app/platform/retail.json`, is imported with pharmacy's.
 
+Restaurant is a product folder of its own (`restaurant-app`, ADR-0007), set up with the steps above
+for code `restaurant`: its database `restaurant`, `ops/php-fpm/restaurant.conf`,
+`ops/nginx/products/restaurant.conf`, and `restaurant` added to `PRODUCTS`. Register it in admin like
+any application; its catalog is `restaurant-app/platform/catalog.json`, and it sends its bills to
+Finance (`PLATFORM_FINANCE_EVENTS_URL`).
+
 Each release then installs and builds every product, migrates its database as `miles_owner` and runs
 `ops/postgres/product-grants.sql`, caches its configuration, imports its `platform/*.json` catalogs
 into the platform, and restarts its queue worker after the switch. Product migrations follow the same

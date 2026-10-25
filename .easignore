@@ -1,0 +1,30 @@
+# EAS uploads from the git monorepo root. Composer path packages install as
+# Windows junctions under **/vendor; recreating those in the upload tarball
+# fails the "Compressing project files" step. The offline mobile app does
+# not need any of the Laravel apps or PHP packages.
+**/vendor/
+
+central-app/
+pharmacy-app/
+finance-app/
+hr-app/
+restaurant-app/
+trial-app/
+templates/
+docs/
+admin-docs/
+ops/
+contracts/
+examples/
+.github/
+packages/
+pharmacy-electron-app/
+pharmacy-electron-single-app/
+pharmacy-mobile-app/
+restaurant-electron-app/
+
+**/node_modules/
+**/.expo/
+**/dist/
+**/android/
+**/ios/

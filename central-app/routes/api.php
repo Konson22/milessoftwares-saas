@@ -1,5 +1,7 @@
 <?php
 
+use App\Sites\Central\Http\Controllers\Api\AppInvitationController;
+use App\Sites\Central\Http\Controllers\Api\AppOrganizationController;
 use App\Sites\Central\Http\Controllers\Api\IntegrationController;
 use App\Sites\Central\Http\Controllers\Api\ProvisioningCallbackController;
 use App\Sites\Central\Http\Controllers\Api\SharedModulesController;
@@ -10,9 +12,10 @@ use Illuminate\Support\Facades\Route;
 | Product API (auth host, /api/v1)
 |--------------------------------------------------------------------------
 |
-| Stateless, for product backends holding a client-credentials token from
-| /oauth/token. Every answer is limited to the calling application.
-| Documented in docs/integration.md.
+| Stateless. Product backends hold a client-credentials token from
+| /oauth/token; every answer is limited to the calling application. An
+| application's own app (api.user) holds a person's token from its public
+| client. Documented in docs/integration.md.
 |
 */
 
@@ -42,6 +45,29 @@ Route::prefix('api/v1')->middleware('throttle:600,1')->name('api.')->group(funct
     Route::post('health', [SharedModulesController::class, 'health'])
         ->middleware('api.client:health.write')
         ->name('health.store');
+
+    // A person in an application's own app (desktop counter): a new business.
+    Route::middleware('api.user')->prefix('account')->name('account.')->group(function () {
+        Route::get('organizations', [AppOrganizationController::class, 'index'])->name('organizations.index');
+        Route::get('organizations/slug-availability', [AppOrganizationController::class, 'slugAvailability'])
+            ->middleware('throttle:30,1')
+            ->name('organizations.slug-availability');
+        Route::post('organizations', [AppOrganizationController::class, 'store'])
+            ->middleware('throttle:10,60')
+            ->name('organizations.store');
+
+        // Its staff, invited from the app (mobile counter).
+        Route::prefix('organizations/{organization}/invitations')
+            ->where(['organization' => '[a-z0-9-]+'])
+            ->name('invitations.')
+            ->group(function () {
+                Route::get('/', [AppInvitationController::class, 'index'])->name('index');
+                Route::post('/', [AppInvitationController::class, 'store'])->middleware('throttle:30,60')->name('store');
+                Route::post('{invitation}/resend', [AppInvitationController::class, 'resend'])
+                    ->whereUuid('invitation')->middleware('throttle:10,60')->name('resend');
+                Route::delete('{invitation}', [AppInvitationController::class, 'destroy'])->whereUuid('invitation')->name('destroy');
+            });
+    });
 
     Route::post('provisioning/steps/{step}/complete', [ProvisioningCallbackController::class, 'complete'])
         ->whereUuid('step')

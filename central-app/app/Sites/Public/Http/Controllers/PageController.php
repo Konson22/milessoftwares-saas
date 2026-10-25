@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * Public pages on the apex host. Each page gets an absolute canonical URL
@@ -96,6 +97,8 @@ class PageController extends Controller
     {
         return Inertia::render('public/pricing', [
             'plans' => $this->catalog->plans(),
+            // Which products offer each way of running them.
+            'catalog' => $this->catalog->catalog(),
             'trialDays' => $this->trialDays(),
             'canonical' => PlatformHosts::url(PlatformHosts::root(), 'pricing'),
         ]);
@@ -110,7 +113,7 @@ class PageController extends Controller
         ]);
     }
 
-    /** What we make: ready-made and custom ERP, websites, desktop and mobile apps. */
+    /** Custom Solutions: custom development and customizing a Miles product. */
     public function services(): Response
     {
         return Inertia::render('public/services', [
@@ -134,6 +137,38 @@ class PageController extends Controller
             'trialDays' => $this->trialDays(),
             'canonical' => PlatformHosts::url(PlatformHosts::root(), 'coming-soon'),
         ]);
+    }
+
+    /** The desktop installers, each with its download when the file is on the server. */
+    public function downloads(): Response
+    {
+        return Inertia::render('public/downloads', [
+            'apps' => array_map(function (array $app): array {
+                $path = $this->downloadPath($app);
+
+                return [
+                    'code' => $app['code'],
+                    'name' => $app['name'],
+                    'summary' => $app['summary'],
+                    'needs' => $app['needs'],
+                    'version' => $app['version'],
+                    'product' => $app['product'],
+                    'url' => $path === null ? null : PlatformHosts::url(PlatformHosts::root(), "download/{$app['code']}"),
+                    'size' => $path === null ? null : filesize($path),
+                ];
+            }, $this->downloadApps()),
+            'canonical' => PlatformHosts::url(PlatformHosts::root(), 'downloads'),
+        ]);
+    }
+
+    /** One installer, under its own file name. */
+    public function download(string $code): BinaryFileResponse
+    {
+        $app = collect($this->downloadApps())->firstWhere('code', $code);
+        $path = $app === null ? null : $this->downloadPath($app);
+        abort_if($path === null, 404);
+
+        return response()->download($path, $app['file'], ['Content-Type' => 'application/vnd.microsoft.portable-executable']);
     }
 
     public function about(): Response
@@ -185,6 +220,26 @@ class PageController extends Controller
         $requested = ($type === 'erp' ? 'erp/' : 'products/').$code;
 
         return $url === null || $url === $requested ? null : redirect(PlatformHosts::url(PlatformHosts::root(), $url), 301);
+    }
+
+    /**
+     * @return list<array{code: string, name: string, summary: string, needs: string, file: string, version: string, product: string}>
+     */
+    private function downloadApps(): array
+    {
+        return array_values((array) config('platform.downloads.apps'));
+    }
+
+    /**
+     * The installer on disk, or null while it is not there.
+     *
+     * @param  array{file: string}  $app
+     */
+    private function downloadPath(array $app): ?string
+    {
+        $path = rtrim((string) config('platform.downloads.path'), '/\\').DIRECTORY_SEPARATOR.basename($app['file']);
+
+        return is_file($path) ? $path : null;
     }
 
     /** Length of the free trial a workspace can start. */

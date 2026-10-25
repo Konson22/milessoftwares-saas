@@ -191,6 +191,7 @@ describe('catalog', function () {
         expect(ErpProduct::query()->orderBy('sort_order')->pluck('status', 'code')->map->value->all())->toBe([
             'pharmacy' => 'pilot',
             'retail_trading' => 'pilot',
+            'restaurant' => 'planned',
             'education' => 'planned',
             'ngo' => 'planned',
             'finance_accounting' => 'pilot',

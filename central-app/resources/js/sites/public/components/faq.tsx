@@ -7,7 +7,7 @@ export function faq(trialDays: number): Question[] {
     return [
         {
             question: 'Do I need to install anything?',
-            answer: 'Not for the cloud version: it runs in the browser on any computer, tablet or phone. Desktop and mobile apps are there too if you want them.',
+            answer: 'Not for the cloud version: it runs in the browser on any computer, tablet or phone. Pharmacy ERP and Retail ERP also have desktop apps, and Pharmacy ERP has a mobile app.',
         },
         {
             question: 'Can I try it before paying?',
@@ -27,15 +27,15 @@ export function faq(trialDays: number): Question[] {
         },
         {
             question: 'Does it work without internet?',
-            answer: 'Yes. Our desktop and mobile apps keep working offline and sync with the cloud when the connection is back. For a single branch with no internet at all, there is a fully offline version.',
+            answer: 'For the products that have them, yes. The Pharmacy and Retail desktop apps and the Pharmacy mobile app keep selling offline and sync when the connection is back. For a pharmacy with no internet at all, there is a standalone offline edition. The web versions need internet.',
         },
         {
             question: 'Can I pay once instead of every month?',
-            answer: 'Yes. The offline single-branch version, on desktop or mobile, is a one-time purchase with no subscription. Contact us for the price.',
+            answer: 'Where a standalone offline edition is offered, yes: today that is Pharmacy ERP for a single branch on one Windows computer, bought once with no subscription. Contact us for the price.',
         },
         {
             question: 'Do you build custom software?',
-            answer: 'Yes. We build custom ERPs, websites, desktop apps and mobile apps. Tell us what you need and we send a quote.',
+            answer: 'Yes. We build custom ERPs, web, desktop and mobile applications and integrations, and we customize our own ERPs. Tell us what you need and we send a quotation.',
         },
         {
             question: 'Who can see my data?',
@@ -52,16 +52,16 @@ export function pricingFaq(trialDays: number): Question[] {
             answer: `Your trial runs for ${trialDays} days. Choose a plan to keep going; everything you set up stays in place.`,
         },
         {
-            question: 'Do I pay extra for Finance?',
-            answer: 'No. Every ERP we make includes Finance & Accounting, because that is where your sales and purchases land.',
+            question: 'Is Finance included with an ERP?',
+            answer: 'Not by default. Every ERP works on its own, with its own sales, stock and till reports. Finance & Accounting is our advanced accounting application: add it when you want full books, and your sales and purchases post to it automatically.',
         },
         {
             question: 'Can I run a pharmacy and a shop together?',
-            answer: 'Yes. Both run in one workspace and share one set of books, and each reports on its own.',
+            answer: 'Yes. Both run in one workspace and each reports on its own. Add Finance & Accounting and they share one set of books.',
         },
         {
-            question: 'What does "Pilot" mean?',
-            answer: 'The product is live with selected customers while we finish it with them. Talk to us to join.',
+            question: 'What does "Early access" mean?',
+            answer: 'The product is live with selected customers while we finish it with them. You can try it, and we may still change it. Talk to us to join.',
         },
         {
             question: 'Can I add applications later?',
@@ -69,11 +69,11 @@ export function pricingFaq(trialDays: number): Question[] {
         },
         {
             question: 'Is there a one-time purchase option?',
-            answer: 'Yes. Any ERP can run offline for a single branch on one computer or device, bought once with no subscription. Contact us for the price.',
+            answer: 'For Pharmacy ERP, yes: a standalone offline edition for a single branch on one Windows computer, bought once with no subscription and without cloud sync. Contact us for the price.',
         },
         {
             question: 'Do the desktop and mobile apps cost extra?',
-            answer: 'No. The desktop and mobile apps that sync with the cloud are included with your cloud plan.',
+            answer: 'No. Where a product has desktop or mobile apps that sync with the cloud, they are included with its cloud plan.',
         },
         {
             question: 'We need something different. Can you help?',

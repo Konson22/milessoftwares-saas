@@ -20,16 +20,30 @@ export interface ApiRequest {
   headers?: Record<string, string>;
 }
 
+/**
+ * A call to the platform as the person signed in: {auth host}/api/v1/account/<path>,
+ * e.g. creating their business.
+ */
+export interface PlatformRequest {
+  method: string;
+  /** Whose client's token is sent. */
+  product: Product;
+  path: string;
+  body?: unknown;
+}
+
 /** offline: the call never reached the pharmacy. */
 export type ApiResponse = { offline: true } | { offline: false; status: number; json: any };
 
 /**
  * How the member signs in on the platform: email and password on the app's
- * own screen (then the two-factor code, when the account has it), or Google
- * or the platform's sign-in page in the system browser.
+ * own screen (then the two-factor code, when the account has it), a new
+ * account made there, or Google or the platform's sign-in page in the
+ * system browser.
  */
 export type SignInWith =
   | { with: 'password'; email: string; password: string }
+  | { with: 'register'; name: string; email: string; password: string }
   | { with: 'code'; code: string; recovery?: boolean }
   | { with: 'google' }
   | { with: 'browser' };
@@ -46,6 +60,8 @@ export type SignInResult =
 
 export interface DesktopBridge {
   api(request: ApiRequest): Promise<ApiResponse>;
+  /** The platform itself (a new business), with the same sign-in. */
+  platform(request: PlatformRequest): Promise<ApiResponse>;
   /** As a member of this product (its client); the code step continues the password's. */
   signIn(how: SignInWith, product: Product): Promise<SignInResult>;
   signOut(): Promise<void>;

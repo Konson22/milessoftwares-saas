@@ -51,6 +51,8 @@ export async function signIn(how: SignInWith, product: Product): Promise<SignInR
     switch (how.with) {
       case 'password':
         return await withPassword(how.email, how.password, product);
+      case 'register':
+        return await withNewAccount(how.name, how.email, how.password, product);
       case 'code':
         return await withCode(how.code, how.recovery ?? false);
       case 'google':
@@ -149,6 +151,26 @@ async function withPassword(email: string, password: string, product: Product): 
     pending = { auth, web };
     return { status: 'twoFactor' };
   }
+  return finish(auth, web);
+}
+
+/**
+ * A new account, made through the platform's own web registration (the same
+ * rules as the web: password strength, an address used once), then signed in
+ * as with a password. The platform emails a link to confirm the address; a
+ * business can be created once it is confirmed.
+ */
+async function withNewAccount(name: string, email: string, password: string, product: Product): Promise<SignInResult> {
+  pending = null;
+  const auth = authorization(product);
+  const web = new WebSession();
+
+  await web.get(auth.url);
+
+  const response = await web.post('/register', { name, email, password, password_confirmation: password });
+  const refused = await refusal(response);
+  if (refused) return refused;
+
   return finish(auth, web);
 }
 
