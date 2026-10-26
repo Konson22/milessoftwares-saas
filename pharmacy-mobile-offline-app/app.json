@@ -14,7 +14,7 @@
     "android": {
       "package": "com.milesoftwares.pharmacyoffline",
       "adaptiveIcon": {
-        "backgroundColor": "#0B5BD3",
+        "backgroundColor": "#0057DB",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -42,7 +42,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0A2350",
+          "backgroundColor": "#001F52",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 150
         }

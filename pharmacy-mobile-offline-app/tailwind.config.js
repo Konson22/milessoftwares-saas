@@ -5,30 +5,31 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Miles Pharmacy POS palette, sampled from the logo: its blue (600) is the main hue,
-        // 900-950 the same blue deepened; accent is the logo's teal-green.
+        // Miles Pharmacy POS palette, sampled from the app icon: its royal blue (600) is the main hue,
+        // 400 its sky-blue highlight, 900-950 the same blue deepened; accent is the icon's green pill.
         // Keep src/lib/theme.ts in sync — it carries the same values for icons and navigation.
         brand: {
-          50: '#eef5ff',
-          100: '#dbe8fe',
-          200: '#bfd6fd',
-          300: '#93bbfa',
-          400: '#5b97f3',
-          500: '#2f77e6',
-          600: '#0b5bd3',
-          700: '#0a4bb0',
-          800: '#0c3f8e',
-          900: '#0e3573',
-          950: '#0a2350',
+          50: '#eef7ff',
+          100: '#d6ecff',
+          200: '#a9d7fe',
+          300: '#62b9fe',
+          400: '#0ea0fe',
+          500: '#0a7cee',
+          600: '#0057db',
+          700: '#0046b8',
+          800: '#003a96',
+          900: '#002f78',
+          950: '#001f52',
         },
-        // The logo's teal-green (the mortar and leaf): the second brand colour, for go/money actions and highlights.
+        // The icon's green (the pill and offline badge): the second brand colour, for go/money actions and highlights.
+        // 700 is the shade for white text (buttons); DEFAULT reads on the navy backgrounds.
         accent: {
-          50: '#e7f8f3',
-          100: '#c8eee2',
-          300: '#6dd0b4',
-          DEFAULT: '#10a38a',
-          600: '#0d8a74',
-          700: '#0b6f5e',
+          50: '#e8faf3',
+          100: '#c6f3e3',
+          300: '#5fdcb3',
+          DEFAULT: '#03c08a',
+          600: '#029e72',
+          700: '#027a58',
         },
         canvas: '#f3f6fa',
         // Slate retuned toward the brand blue so every neutral in the app sits on the same hue.
