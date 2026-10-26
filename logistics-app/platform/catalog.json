@@ -1,0 +1,163 @@
+{
+    "application": {
+        "code": "logistics",
+        "name": "Logistics",
+        "category": "products",
+        "kind": "standalone",
+        "status": "beta"
+    },
+    "version": "1.0.0",
+    "roles": [
+        {
+            "key": "manager",
+            "name": "Logistics Manager",
+            "sensitivity": 3,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "logistics.shipments.view",
+                "logistics.shipments.manage",
+                "logistics.deliveries.update",
+                "logistics.fleet.view",
+                "logistics.fleet.manage",
+                "logistics.trips.view",
+                "logistics.trips.manage",
+                "logistics.billing.view",
+                "logistics.billing.manage",
+                "logistics.billing.void"
+            ]
+        },
+        {
+            "key": "dispatcher",
+            "name": "Dispatcher",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "logistics.shipments.view",
+                "logistics.shipments.manage",
+                "logistics.deliveries.update",
+                "logistics.fleet.view",
+                "logistics.trips.view",
+                "logistics.trips.manage"
+            ]
+        },
+        {
+            "key": "driver",
+            "name": "Driver",
+            "sensitivity": 1,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "logistics.shipments.view",
+                "logistics.deliveries.update",
+                "logistics.trips.view"
+            ]
+        },
+        {
+            "key": "fleet",
+            "name": "Fleet Officer",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "logistics.fleet.view",
+                "logistics.fleet.manage",
+                "logistics.trips.view"
+            ]
+        },
+        {
+            "key": "accountant",
+            "name": "Billing Clerk",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "logistics.shipments.view",
+                "logistics.trips.view",
+                "logistics.billing.view",
+                "logistics.billing.manage"
+            ]
+        }
+    ],
+    "permissions": [
+        {
+            "key": "logistics.shipments.view",
+            "name": "View shipments, customers and tracking",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "logistics.shipments.manage",
+            "name": "Book, change and cancel shipments; look after customers",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "logistics.deliveries.update",
+            "name": "Record tracking updates and proof of delivery",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "logistics.fleet.view",
+            "name": "View vehicles, drivers and maintenance",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "logistics.fleet.manage",
+            "name": "Add and change vehicles and drivers; record maintenance",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "logistics.trips.view",
+            "name": "View trips, their costs and margins",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "logistics.trips.manage",
+            "name": "Plan, dispatch and complete trips; record trip costs",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "logistics.billing.view",
+            "name": "View invoices and payments",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "logistics.billing.manage",
+            "name": "Issue invoices and record customer payments",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "logistics.billing.void",
+            "name": "Void unpaid invoices",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        }
+    ],
+    "separation_of_duties": [
+        {
+            "permissions": [
+                "logistics.billing.manage",
+                "logistics.billing.void"
+            ],
+            "mode": "warn",
+            "description": "Voiding invoices you issued yourself needs a second look."
+        },
+        {
+            "permissions": [
+                "logistics.trips.manage",
+                "logistics.billing.manage"
+            ],
+            "mode": "warn",
+            "description": "One person recording trip costs and billing customers can hide losses."
+        }
+    ]
+}
