@@ -288,8 +288,8 @@
             },
             "summary": "Admissions to results, with student fees.",
             "headline": "Run the school, from admissions to fees.",
-            "subhead": "School ERP is being built for schools, colleges and universities, with optional Finance & Accounting for the books.",
-            "audience": "Primary and secondary schools, colleges and universities.",
+            "subhead": "School ERP is being built for primary schools, institutes, colleges and universities, each run its own way, with optional Finance & Accounting for the books.",
+            "audience": "Primary schools, technical and vocational institutes, colleges and universities.",
             "seoTitle": "School ERP (coming soon)",
             "seoDescription": "School management software on the way: admissions, classes, attendance, examinations and student fees, with optional Finance & Accounting.",
             "features": [
@@ -301,12 +301,12 @@
                 {
                     "icon": "calendar-check",
                     "title": "Classes and attendance",
-                    "body": "Classes, timetables and daily attendance."
+                    "body": "Classes, programmes and daily registers, by class or by course."
                 },
                 {
                     "icon": "clipboard-check",
                     "title": "Examinations",
-                    "body": "Assessments, results and report cards."
+                    "body": "Weighted assessments, grades or GPA, and printable report cards."
                 },
                 {
                     "icon": "receipt",

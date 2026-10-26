@@ -1,0 +1,143 @@
+{
+    "application": {
+        "code": "school",
+        "name": "School",
+        "category": "products",
+        "kind": "standalone",
+        "status": "beta"
+    },
+    "version": "1.0.0",
+    "roles": [
+        {
+            "key": "head",
+            "name": "Head / Principal",
+            "sensitivity": 3,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "school.students.view",
+                "school.students.manage",
+                "school.academics.manage",
+                "school.attendance.record",
+                "school.marks.record",
+                "school.results.view",
+                "school.fees.view",
+                "school.fees.manage",
+                "school.fees.void",
+                "school.settings.manage"
+            ]
+        },
+        {
+            "key": "registrar",
+            "name": "Registrar",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "school.students.view",
+                "school.students.manage",
+                "school.academics.manage",
+                "school.results.view"
+            ]
+        },
+        {
+            "key": "teacher",
+            "name": "Teacher / Lecturer",
+            "sensitivity": 1,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "school.students.view",
+                "school.attendance.record",
+                "school.marks.record",
+                "school.results.view"
+            ]
+        },
+        {
+            "key": "bursar",
+            "name": "Bursar",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "school.students.view",
+                "school.fees.view",
+                "school.fees.manage"
+            ]
+        }
+    ],
+    "permissions": [
+        {
+            "key": "school.students.view",
+            "name": "View students, applications, classes, subjects, staff and registers",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "school.students.manage",
+            "name": "Receive and decide applications; enrol, change, promote and graduate students",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "school.academics.manage",
+            "name": "Set up departments, programmes, classes, subjects and staff",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "school.attendance.record",
+            "name": "Take registers",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "school.marks.record",
+            "name": "Enter and change marks",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "school.results.view",
+            "name": "View results and report cards",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "school.fees.view",
+            "name": "View fees, invoices and payments",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "school.fees.manage",
+            "name": "Set fees, bill students and record payments",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "school.fees.void",
+            "name": "Void unpaid fee invoices",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "school.settings.manage",
+            "name": "Set the school up; manage the calendar and assessments",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        }
+    ],
+    "separation_of_duties": [
+        {
+            "permissions": ["school.fees.manage", "school.fees.void"],
+            "mode": "warn",
+            "description": "Voiding invoices you issued yourself needs a second look."
+        },
+        {
+            "permissions": ["school.marks.record", "school.fees.manage"],
+            "mode": "warn",
+            "description": "One person entering marks and collecting fees can trade one for the other."
+        }
+    ]
+}
