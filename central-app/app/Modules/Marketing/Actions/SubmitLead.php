@@ -4,6 +4,7 @@ namespace App\Modules\Marketing\Actions;
 
 use App\Modules\Marketing\Models\ContactMessage;
 use App\Modules\Marketing\Models\DemoRequest;
+use App\Modules\Marketing\Notifications\LeadAcknowledged;
 use App\Modules\Marketing\Notifications\LeadReceived;
 use App\Modules\Marketing\Support\SpamGuard;
 use Illuminate\Http\Request;
@@ -12,8 +13,9 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
 /**
- * Stores a public form submission and emails it to support. Submissions that
- * fail the spam checks are stored as `spam` (for tuning) and notify no one.
+ * Stores a public form submission, emails it to support and tells the
+ * visitor it arrived. Submissions that fail the spam checks are stored as
+ * `spam` (for tuning) and notify no one.
  */
 final class SubmitLead
 {
@@ -69,6 +71,11 @@ final class SubmitLead
                 $lead->getAttribute('message'),
             ));
         }
+
+        Notification::route('mail', [(string) $lead->email => (string) $lead->name])->notify(new LeadAcknowledged(
+            (string) $lead->name,
+            is_string($recipient) && $recipient !== '' ? $recipient : null,
+        ));
 
         return $lead;
     }

@@ -3,6 +3,7 @@
 use App\Modules\Applications\Models\Application;
 use App\Modules\Marketing\Models\ContactMessage;
 use App\Modules\Marketing\Models\DemoRequest;
+use App\Modules\Marketing\Notifications\LeadAcknowledged;
 use App\Modules\Marketing\Notifications\LeadReceived;
 use App\Modules\Marketing\Support\SpamGuard;
 use App\Modules\Subscriptions\Models\Plan;
@@ -161,6 +162,27 @@ it('puts the message in the email and replies to the visitor', function () {
         ->and($mail->introLines)->toContain('Hello,')
         ->and($mail->introLines)->toContain('we would like to talk.');
 });
+
+it('tells the visitor their message arrived', function () {
+    $this->post(site('contact'), humanSubmission(['subject' => 'Partnership']))->assertRedirect(site('thanks'));
+
+    Notification::assertSentTo(new AnonymousNotifiable, LeadAcknowledged::class, fn ($mail, $channels, $notifiable) => array_key_exists('amina@example.test', (array) $notifiable->routes['mail']));
+});
+
+it('confirms without repeating what the visitor typed', function (string $name, string $greeting) {
+    $mail = (new LeadAcknowledged($name, 'support@milesoftwares.test'))->toMail(new AnonymousNotifiable);
+    $html = (string) $mail->render();
+
+    expect($html)->toContain($greeting)
+        ->and($html)->toContain('We received your message')
+        ->and($html)->toContain('images/logo-with-text.png')
+        ->and($html)->toContain('mailto:support@milesoftwares.test')
+        ->and($mail->replyTo)->toBe([['support@milesoftwares.test', 'Miles Global Softwares']])
+        ->and($html)->not->toContain('spam.example');
+})->with([
+    'a plain name' => ['Amina Deng', 'Hello Amina,'],
+    'a link for a name' => ['http://spam.example win', 'Hello,'],
+]);
 
 it('quietly files bot submissions as spam', function (Closure $tamper) {
     $response = $this->post(site('contact'), $tamper(humanSubmission()));

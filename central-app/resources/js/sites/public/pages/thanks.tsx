@@ -17,7 +17,7 @@ export default function Thanks() {
                     </span>
                 }
                 title="Thank you"
-                intro="We have your message and will be in touch within one working day."
+                intro="We have your message and will be in touch within one working day. A confirmation is on its way to your inbox."
             >
                 <Link href="/" className={button.light}>
                     Back to the home page
