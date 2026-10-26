@@ -32,7 +32,7 @@ export default function AuthSplitLayout({
 
     return (
         <div className="site-public grid min-h-svh font-public text-site-ink lg:grid-cols-[3fr_2fr]">
-            <aside className="site-dark site-hero-bg relative isolate hidden min-h-svh flex-col justify-between overflow-hidden p-10 text-slate-300 lg:flex xl:p-14">
+            <aside className="site-dark relative isolate hidden min-h-svh flex-col justify-between overflow-hidden bg-site-navy p-10 text-slate-300 lg:flex xl:p-14">
                 <HeroBackdrop />
 
                 <BrandLink inverted className="relative z-10" />
@@ -55,14 +55,6 @@ export default function AuthSplitLayout({
             </aside>
 
             <div className="relative flex flex-col justify-center bg-site-soft px-6 py-8 sm:px-10">
-                <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 overflow-hidden"
-                >
-                    <div className="absolute -top-24 -right-16 size-72 rounded-full bg-site-wash blur-3xl" />
-                    <div className="absolute -bottom-28 -left-20 size-80 rounded-full bg-brand-cyan/10 blur-3xl" />
-                </div>
-
                 <div className="reveal-up relative z-10 mx-auto flex w-full max-w-[400px] flex-col gap-6">
                     <BrandLink className="lg:hidden" />
 

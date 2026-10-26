@@ -47,12 +47,12 @@ export default function PlanCard({
 
     return (
         <li
-            className={`${card} relative flex flex-col overflow-hidden p-8 ${featured ? 'site-dark site-hero-bg isolate border-transparent text-slate-300 lg:-my-4 lg:py-12' : ''}`}
+            className={`${card} relative flex flex-col overflow-hidden p-8 ${featured ? 'site-dark isolate border-transparent bg-site-navy text-slate-300 lg:-my-4 lg:py-12' : ''}`}
         >
             {featured && (
                 <span
                     aria-hidden
-                    className="site-gradient absolute inset-x-0 top-0 h-1.5"
+                    className="absolute inset-x-0 top-0 h-1.5 bg-site-accent"
                 />
             )}
             <div className="flex items-start justify-between gap-4">
@@ -69,7 +69,7 @@ export default function PlanCard({
                 <p className="mt-2 text-sm font-semibold">
                     <Link
                         href={`/erp/${plan.product.code}`}
-                        className="text-site-accent-ink hover:underline in-[.site-dark]:text-site-accent-glow"
+                        className="text-site-accent-ink hover:underline in-[.site-dark]:text-white in-[.site-dark]:underline"
                     >
                         {plan.product.name}
                     </Link>
@@ -117,7 +117,7 @@ export default function PlanCard({
                 <ul className="mt-4 space-y-3 text-sm">
                     {plan.applications.map((application) => (
                         <li key={application} className="flex gap-2.5">
-                            <span className="site-gradient mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full text-white">
+                            <span className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-site-accent-ink text-white">
                                 <Check className="size-3" aria-hidden />
                             </span>
                             {application}

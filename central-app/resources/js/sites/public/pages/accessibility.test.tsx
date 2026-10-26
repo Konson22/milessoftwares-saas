@@ -7,15 +7,16 @@ import MarketingLayout from '@/sites/public/layouts/marketing-layout';
 import About from './about';
 import ComingSoon from './coming-soon';
 import Contact from './contact';
-import CatalogIndex from './catalog';
 import MarketingHome from './home';
 import LandingPage from './landing';
 import Platform from './platform';
 import Pricing from './pricing';
+import Privacy from './privacy';
 import Services from './services';
 import ProductPage from './product';
-import Solutions from './solutions';
+import Products from './products';
 import Start from './start';
+import Terms from './terms';
 import Thanks from './thanks';
 
 // Inertia's components need a running app; for checking markup they are
@@ -220,23 +221,12 @@ const pages: [string, ReactNode][] = [
         />,
     ],
     [
-        'erp solutions',
-        <CatalogIndex
-            key="erp"
-            category="erp"
-            catalog={catalog.filter((item) => item.category === 'erp')}
+        'products',
+        <Products
+            key="products"
+            catalog={catalog}
             trialDays={60}
-            canonical="https://example.test/erp"
-        />,
-    ],
-    [
-        'business applications',
-        <CatalogIndex
-            key="apps"
-            category="application"
-            catalog={catalog.filter((item) => item.category === 'application')}
-            trialDays={60}
-            canonical="https://example.test/apps"
+            canonical="https://example.test/products"
         />,
     ],
     [
@@ -276,14 +266,6 @@ const pages: [string, ReactNode][] = [
         />,
     ],
     [
-        'industries',
-        <Solutions
-            key="industries"
-            catalog={catalog}
-            canonical="https://example.test/industries"
-        />,
-    ],
-    [
         'platform',
         <Platform key="platform" canonical="https://example.test/platform" />,
     ],
@@ -305,6 +287,18 @@ const pages: [string, ReactNode][] = [
         />,
     ],
     ['about', <About key="about" canonical="https://example.test/about" />],
+    [
+        'privacy',
+        <Privacy key="privacy" canonical="https://example.test/privacy" />,
+    ],
+    [
+        'terms',
+        <Terms
+            key="terms"
+            trialDays={60}
+            canonical="https://example.test/terms"
+        />,
+    ],
     ['thanks', <Thanks key="thanks" />],
 ];
 

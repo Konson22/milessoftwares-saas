@@ -61,7 +61,7 @@ export default function Downloads({ apps, canonical }: Props) {
                         <Accent>Download for Windows.</Accent>
                     </>
                 }
-                intro="The counter apps run on a Windows PC beside your workspace in the browser, with barcode scanners, receipt printers and keyboard shortcuts."
+                intro="Windows counter apps, with barcode scanners, receipt printers and keyboard shortcuts."
             />
 
             <section
@@ -136,7 +136,7 @@ export default function Downloads({ apps, canonical }: Props) {
 
             <section
                 aria-labelledby="install-heading"
-                className="border-y border-site-line bg-site-soft"
+                className="border-y border-site-line bg-white"
             >
                 <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
                     <SectionHeading
@@ -154,7 +154,7 @@ export default function Downloads({ apps, canonical }: Props) {
                                 key={step.title}
                                 className={`${panel} p-6 sm:p-7`}
                             >
-                                <span className="site-gradient inline-flex size-11 items-center justify-center rounded-full font-public-display text-sm font-bold text-white">
+                                <span className="inline-flex size-11 items-center justify-center rounded-full bg-site-accent-ink font-public-display text-sm font-bold text-white">
                                     {String(i + 1).padStart(2, '0')}
                                 </span>
                                 <h3 className="mt-5 text-lg font-semibold">

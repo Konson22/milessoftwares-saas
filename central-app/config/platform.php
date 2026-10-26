@@ -97,14 +97,13 @@ return [
     | Public site
     |--------------------------------------------------------------------------
     |
-    | Contact messages notify this address (falls back to the mail
-    | from-address). A new workspace may start a free trial of one
+    | Contact messages and demo requests are emailed to support_email. A new workspace may start a free trial of one
     | application for trial_days.
     |
     */
 
     'marketing' => [
-        'sales_email' => env('PLATFORM_SALES_EMAIL'),
+        'support_email' => env('PLATFORM_SUPPORT_EMAIL', 'support@milesoftwares.com'),
         'trial_days' => (int) env('PLATFORM_TRIAL_DAYS', 60),
     ],
 

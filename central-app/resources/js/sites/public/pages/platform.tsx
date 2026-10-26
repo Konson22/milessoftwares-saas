@@ -1,78 +1,46 @@
-import { Link } from "@inertiajs/react";
-import { ArrowRight } from "lucide-react";
+import { Link } from '@inertiajs/react';
+import { ArrowRight } from 'lucide-react';
 import {
     CtaBand,
     Eyebrow,
     FeatureGrid,
-} from "@/sites/public/components/blocks";
+} from '@/sites/public/components/blocks';
 import {
     cloudPillars,
     cloudSteps,
     platformGroups,
-} from "@/sites/public/components/content";
-import PageHero, { Accent } from "@/sites/public/components/page-hero";
-import SectionHeading from "@/sites/public/components/section-heading";
-import Seo from "@/sites/public/components/seo";
-import { button, panel } from "@/sites/public/components/styles";
-import { login } from "@/routes";
+} from '@/sites/public/components/content';
+import PageHero, { Accent } from '@/sites/public/components/page-hero';
+import SectionHeading from '@/sites/public/components/section-heading';
+import Seo from '@/sites/public/components/seo';
+import { button, panel } from '@/sites/public/components/styles';
 
 type Props = {
     canonical: string;
 };
 
-/** The page's sections, for the links under the hero. */
-const sections = [
-    { id: "how-it-works", title: "How it works" },
-    { id: "subscriptions", title: "Subscriptions" },
-    ...platformGroups.map((group) => ({ id: group.id, title: group.title })),
-];
-
 /**
- * Miles Cloud: the platform every Miles product runs on (workspace,
- * sign-in, application access, subscriptions, roles), then its security.
+ * Miles Workspace: what every Miles product shares (sign-in, the
+ * organization, application access, subscriptions, roles), then its security.
  */
 export default function Platform({ canonical }: Props) {
     return (
         <>
             <Seo
-                title="Miles Cloud: one connected workspace"
-                description="Miles Cloud gives your organization one account for every Miles application, application access and subscriptions for only the apps you need, roles per branch and an audit log."
+                title="Miles Workspace: one place for every application"
+                description="Miles Workspace gives your organization one account for every Miles application, subscriptions for only the apps you need, roles per branch and an audit log."
                 canonical={canonical}
             />
 
             <PageHero
                 title={
                     <>
-                        Your business applications.{" "}
+                        Your business applications.{' '}
                         <Accent>One connected workspace.</Accent>
                     </>
                 }
-                intro="Miles Cloud is the platform every Miles product runs on. Your organization gets one account, one workspace and one set of permissions, and subscribes only to the applications it needs."
-            >
-                <div className="mt-9 flex flex-wrap justify-center gap-3">
-                    <Link href="/start" className={button.light}>
-                        Get Started
-                        <ArrowRight className="size-4" aria-hidden />
-                    </Link>
-                    <a href={login.url()} className={button.outlineDark}>
-                        Sign in
-                    </a>
-                </div>
-                <nav
-                    aria-label="On this page"
-                    className="mt-8 flex flex-wrap justify-center gap-2.5"
-                >
-                    {sections.map((section) => (
-                        <a
-                            key={section.id}
-                            href={`#${section.id}`}
-                            className="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/25 transition-colors hover:bg-white/20"
-                        >
-                            {section.title}
-                        </a>
-                    ))}
-                </nav>
-            </PageHero>
+                intro="One account, one team and one set of permissions for every Miles application you use."
+            />
 
             <section
                 id="how-it-works"
@@ -80,11 +48,11 @@ export default function Platform({ canonical }: Props) {
                 className="scroll-mt-24"
             >
                 <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
-                    <Eyebrow>How Miles Cloud works</Eyebrow>
+                    <Eyebrow>How Miles Workspace works</Eyebrow>
                     <SectionHeading
                         id="how-it-works-heading"
                         title="Everything your applications share, set up once"
-                        lead="Each Miles product does its own job. Miles Cloud holds what they have in common, so adding an application never means a new account, a new staff list or a new set of books."
+                        lead="Each Miles product does its own job. Your workspace holds what they have in common, so adding an application never means a new account, a new staff list or a new set of books."
                         align="left"
                     />
                     <div className="mt-10">
@@ -96,7 +64,7 @@ export default function Platform({ canonical }: Props) {
             <section
                 id="subscriptions"
                 aria-labelledby="subscriptions-heading"
-                className="scroll-mt-24 border-y border-site-line bg-site-soft"
+                className="scroll-mt-24 border-y border-site-line bg-white"
             >
                 <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
                     <Eyebrow>Subscriptions</Eyebrow>
@@ -104,7 +72,7 @@ export default function Platform({ canonical }: Props) {
                         id="subscriptions-heading"
                         title={
                             <>
-                                Pay for the applications{" "}
+                                Pay for the applications{' '}
                                 <Accent>you actually use.</Accent>
                             </>
                         }
@@ -117,8 +85,8 @@ export default function Platform({ canonical }: Props) {
                                 key={step.title}
                                 className={`${panel} p-6 sm:p-7`}
                             >
-                                <span className="site-gradient inline-flex size-11 items-center justify-center rounded-full font-public-display text-sm font-bold text-white">
-                                    {String(i + 1).padStart(2, "0")}
+                                <span className="inline-flex size-11 items-center justify-center rounded-full bg-site-accent-ink font-public-display text-sm font-bold text-white">
+                                    {String(i + 1).padStart(2, '0')}
                                 </span>
                                 <h3 className="mt-5 text-lg font-semibold">
                                     {step.title}
@@ -145,7 +113,7 @@ export default function Platform({ canonical }: Props) {
                     key={group.id}
                     id={group.id}
                     aria-labelledby={`${group.id}-heading`}
-                    className={`scroll-mt-24 ${i % 2 === 1 ? "border-y border-site-line bg-site-soft" : ""}`}
+                    className={`scroll-mt-24 ${i % 2 === 1 ? 'border-y border-site-line bg-white' : ''}`}
                 >
                     <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
                         <Eyebrow>Security and control</Eyebrow>
@@ -167,11 +135,11 @@ export default function Platform({ canonical }: Props) {
                     id="platform-cta-heading"
                     title={
                         <>
-                            Start with one application.{" "}
+                            Start with one application.{' '}
                             <Accent>Add the rest when you are ready.</Accent>
                         </>
                     }
-                    body="Create your workspace with a free trial, or ask us how Miles Cloud would fit your organization."
+                    body="Create your workspace with a free trial, or ask us how it would fit your organization."
                 >
                     <Link href="/start" className={button.light}>
                         Get Started

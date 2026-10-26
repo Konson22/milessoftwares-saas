@@ -91,30 +91,15 @@ export default function Services({ canonical }: Props) {
                         <Accent>built around your business</Accent>
                     </>
                 }
-                intro="When ready-made software does not fit, we adapt one of our products or build a new system around your workflows, from the requirements to the support after launch."
-            >
-                <nav
-                    aria-label="On this page"
-                    className="mt-9 flex flex-wrap justify-center gap-2.5"
-                >
-                    {services.map((service) => (
-                        <a
-                            key={service.id}
-                            href={`#${service.id}`}
-                            className="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/25 transition-colors hover:bg-white/20"
-                        >
-                            {service.title}
-                        </a>
-                    ))}
-                </nav>
-            </PageHero>
+                intro="We adapt a Miles product or build a new system around how you work."
+            />
 
             {services.map((service, i) => (
                 <section
                     key={service.id}
                     id={service.id}
                     aria-labelledby={`${service.id}-heading`}
-                    className={`scroll-mt-24 ${i % 2 === 1 ? 'border-y border-site-line bg-site-soft' : ''}`}
+                    className={`scroll-mt-24 ${i % 2 === 1 ? 'border-y border-site-line bg-white' : ''}`}
                 >
                     <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.2fr_1fr] lg:gap-16">
                         <div>
@@ -142,7 +127,7 @@ export default function Services({ canonical }: Props) {
                                     key={point}
                                     className="flex items-start gap-3 font-semibold text-site-ink"
                                 >
-                                    <span className="site-gradient mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-full text-white">
+                                    <span className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-site-accent-ink text-white">
                                         <Check
                                             className="size-3.5"
                                             aria-hidden
@@ -212,7 +197,7 @@ export default function Services({ canonical }: Props) {
 
             <section
                 aria-labelledby="process-heading"
-                className="border-y border-site-line bg-site-soft"
+                className="border-y border-site-line bg-white"
             >
                 <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
                     <SectionHeading
@@ -230,7 +215,7 @@ export default function Services({ canonical }: Props) {
                                 key={step.title}
                                 className={`${panel} p-6 sm:p-7`}
                             >
-                                <span className="site-gradient inline-flex size-11 items-center justify-center rounded-full font-public-display text-sm font-bold text-white">
+                                <span className="inline-flex size-11 items-center justify-center rounded-full bg-site-accent-ink font-public-display text-sm font-bold text-white">
                                     {String(i + 1).padStart(2, '0')}
                                 </span>
                                 <h3 className="mt-5 text-lg font-semibold">

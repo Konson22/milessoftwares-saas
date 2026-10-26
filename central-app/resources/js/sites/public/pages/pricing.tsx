@@ -95,7 +95,7 @@ export default function Pricing({
                         <Accent>Add more as you grow.</Accent>
                     </>
                 }
-                intro={`Finance & Accounting is an optional add-on to any ERP. Subscribe to a ready-made product, buy a standalone offline edition once where one is offered, or ask us for a quotation. Products open for trial can be tried free for ${trialDuration(trialDays)}, no payment details needed.`}
+                intro={`Subscribe, buy once where offered, or ask for a quotation. Try free for ${trialDuration(trialDays)}, no payment details needed.`}
             />
 
             <section
@@ -166,7 +166,7 @@ export default function Pricing({
             <section
                 id="ways-to-buy"
                 aria-labelledby="buy-heading"
-                className="scroll-mt-24 border-y border-site-line bg-site-soft"
+                className="scroll-mt-24 border-y border-site-line bg-white"
             >
                 <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
                     <SectionHeading

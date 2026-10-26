@@ -29,14 +29,14 @@ class PageController extends Controller
         ]);
     }
 
-    public function erpSolutions(): Response
+    /** Every catalog product on one page, ERP solutions then applications. */
+    public function products(): Response
     {
-        return $this->catalogIndex('erp');
-    }
-
-    public function applications(): Response
-    {
-        return $this->catalogIndex('application');
+        return Inertia::render('public/products', [
+            'catalog' => $this->catalog->catalog(),
+            'trialDays' => $this->trialDays(),
+            'canonical' => PlatformHosts::url(PlatformHosts::root(), 'products'),
+        ]);
     }
 
     /**
@@ -101,15 +101,6 @@ class PageController extends Controller
             'catalog' => $this->catalog->catalog(),
             'trialDays' => $this->trialDays(),
             'canonical' => PlatformHosts::url(PlatformHosts::root(), 'pricing'),
-        ]);
-    }
-
-    /** Industries, each pointing to the solution that serves it. */
-    public function industries(): Response
-    {
-        return Inertia::render('public/solutions', [
-            'catalog' => $this->catalog->catalog(),
-            'canonical' => PlatformHosts::url(PlatformHosts::root(), 'industries'),
         ]);
     }
 
@@ -178,13 +169,18 @@ class PageController extends Controller
         ]);
     }
 
-    private function catalogIndex(string $category): Response
+    public function privacy(): Response
     {
-        return Inertia::render('public/catalog', [
-            'category' => $category,
-            'catalog' => array_values(array_filter($this->catalog->catalog(), fn (array $entry) => $entry['category'] === $category)),
+        return Inertia::render('public/privacy', [
+            'canonical' => PlatformHosts::url(PlatformHosts::root(), 'privacy'),
+        ]);
+    }
+
+    public function terms(): Response
+    {
+        return Inertia::render('public/terms', [
             'trialDays' => $this->trialDays(),
-            'canonical' => PlatformHosts::url(PlatformHosts::root(), $category === 'erp' ? 'erp' : 'apps'),
+            'canonical' => PlatformHosts::url(PlatformHosts::root(), 'terms'),
         ]);
     }
 

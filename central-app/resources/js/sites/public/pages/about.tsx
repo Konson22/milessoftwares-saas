@@ -88,7 +88,7 @@ export default function About({ canonical }: Props) {
 
             <section
                 aria-labelledby="values-heading"
-                className="border-y border-site-line bg-site-soft"
+                className="border-y border-site-line bg-white"
             >
                 <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
                     <SectionHeading
@@ -119,8 +119,8 @@ export default function About({ canonical }: Props) {
                         Contact us
                         <ArrowRight className="size-4" aria-hidden />
                     </Link>
-                    <Link href="/industries" className={button.outlineDark}>
-                        See industries
+                    <Link href="/products" className={button.outlineDark}>
+                        See our products
                     </Link>
                 </CtaBand>
             </div>

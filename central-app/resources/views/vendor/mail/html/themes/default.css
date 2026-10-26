@@ -103,7 +103,7 @@ img {
 }
 
 .header a {
-    color: #031d52;
+    color: #042853;
     font-size: 19px;
     font-weight: bold;
     text-decoration: none;
@@ -111,7 +111,7 @@ img {
 
 /* Logo */
 
-/* The wide Miles Global Softwares logo (870 × 240). */
+/* The wide Miles Global Softwares logo (960 × 200). */
 .logo {
     height: auto;
     margin-top: 15px;
@@ -240,11 +240,11 @@ img {
 
 .button-blue,
 .button-primary {
-    background-color: #0060e0;
-    border-bottom: 8px solid #0060e0;
-    border-left: 18px solid #0060e0;
-    border-right: 18px solid #0060e0;
-    border-top: 8px solid #0060e0;
+    background-color: #0069d0;
+    border-bottom: 8px solid #0069d0;
+    border-left: 18px solid #0069d0;
+    border-right: 18px solid #0069d0;
+    border-top: 8px solid #0069d0;
 }
 
 .button-green,
@@ -268,7 +268,7 @@ img {
 /* Panels */
 
 .panel {
-    border-left: #00c2fd solid 4px;
+    border-left: #4fb0ff solid 4px;
     margin: 21px 0;
 }
 

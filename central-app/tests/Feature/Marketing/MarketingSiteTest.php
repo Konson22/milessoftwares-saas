@@ -16,7 +16,7 @@ uses(AdminFixtures::class);
 
 beforeEach(function () {
     Notification::fake();
-    config(['platform.marketing.sales_email' => 'sales@milesoftwares.test']);
+    config(['platform.marketing.support_email' => 'support@milesoftwares.test']);
 
     $this->retail = Application::query()->forceCreate([
         'code' => 'retail', 'name' => 'Retail', 'category' => 'operations', 'kind' => 'standalone', 'status' => 'available',
@@ -140,7 +140,7 @@ it('sends old demo links to the free trial', function () {
     expect(DemoRequest::query()->count())->toBe(0);
 });
 
-it('stores a contact message and tells sales', function () {
+it('stores a contact message and emails it to support', function () {
     $this->post(site('contact'), humanSubmission(['subject' => 'Partnership']))->assertRedirect(site('thanks'));
 
     $lead = ContactMessage::query()->sole();
@@ -148,7 +148,18 @@ it('stores a contact message and tells sales', function () {
         ->and($lead->status)->toBe('new')
         ->and($lead->email)->toBe('amina@example.test');
 
-    Notification::assertSentTo(new AnonymousNotifiable, LeadReceived::class, fn (LeadReceived $mail, $channels, $notifiable) => $notifiable->routes['mail'] === 'sales@milesoftwares.test' && $mail->leadId === $lead->id);
+    Notification::assertSentTo(new AnonymousNotifiable, LeadReceived::class, fn (LeadReceived $mail, $channels, $notifiable) => $notifiable->routes['mail'] === 'support@milesoftwares.test' && $mail->leadId === $lead->id);
+});
+
+it('puts the message in the email and replies to the visitor', function () {
+    $mail = (new LeadReceived('contact message', 'lead-1', 'Amina', 'amina@example.test', 'Amina Pharmacy', null, 'Partnership', "Hello,\n\nwe would like to talk."))
+        ->toMail(new AnonymousNotifiable);
+
+    expect($mail->subject)->toBe('Partnership · Amina')
+        ->and($mail->replyTo)->toBe([['amina@example.test', 'Amina']])
+        ->and($mail->introLines)->toContain('Subject: Partnership')
+        ->and($mail->introLines)->toContain('Hello,')
+        ->and($mail->introLines)->toContain('we would like to talk.');
 });
 
 it('quietly files bot submissions as spam', function (Closure $tamper) {
@@ -236,20 +247,20 @@ it('publishes marketing copy edited in the registry', function () {
         ->where('product.features', ['Stock transfers', 'Daily cash-up', 'Loyalty points']));
 });
 
-it('serves the industries, catalog, platform, coming-soon and about pages', function (string $path, string $component) {
+it('serves the products, platform, coming-soon, about, services and legal pages', function (string $path, string $component) {
     $this->get(site($path))
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component($component)
             ->where('canonical', site($path)));
 })->with([
-    ['industries', 'public/solutions'],
-    ['erp', 'public/catalog'],
-    ['apps', 'public/catalog'],
+    ['products', 'public/products'],
     ['platform', 'public/platform'],
     ['coming-soon', 'public/coming-soon'],
     ['about', 'public/about'],
     ['services', 'public/services'],
+    ['privacy', 'public/privacy'],
+    ['terms', 'public/terms'],
 ]);
 
 describe('desktop downloads', function () {
@@ -288,19 +299,26 @@ describe('desktop downloads', function () {
     })->with(['restaurant', 'nothing']);
 });
 
-it('moves the old solutions page to industries', function () {
-    $this->get(site('solutions'))->assertMovedPermanently()->assertRedirect(site('industries'));
+it('moves the old industries and solutions pages to the products page', function (string $path) {
+    $this->get(site($path))->assertMovedPermanently()->assertRedirect(site('products'));
+})->with(['industries', 'solutions']);
+
+it('lists every product of the brief on the products page', function () {
+    $this->get(site('products'))->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('catalog', function ($catalog) {
+            $slugs = fn (string $category) => collect($catalog)->where('category', $category)->pluck('slug')->values()->all();
+
+            return $slugs('erp') === ['pharmacy', 'retail', 'restaurant', 'school', 'logistics', 'ngo']
+                && $slugs('application') === ['finance', 'projects', 'hr', 'procurement', 'inventory', 'crm', 'assets', 'documents'];
+        }));
 });
 
-it('lists one category per catalog page, with every product of the brief', function () {
-    $this->get(site('erp'))->assertInertia(fn (AssertableInertia $page) => $page
-        ->where('category', 'erp')
-        ->where('catalog', fn ($catalog) => collect($catalog)->pluck('slug')->all() === ['pharmacy', 'retail', 'restaurant', 'school', 'logistics', 'ngo']));
-
-    $this->get(site('apps'))->assertInertia(fn (AssertableInertia $page) => $page
-        ->where('category', 'application')
-        ->where('catalog', fn ($catalog) => collect($catalog)->pluck('slug')->all() === ['finance', 'projects', 'hr', 'procurement', 'inventory', 'crm', 'assets', 'documents']));
-});
+it('moves the old category pages to their section of the products page', function (string $path, string $section) {
+    $this->get(site($path))->assertMovedPermanently()->assertRedirect(site('products').'#'.$section);
+})->with([
+    ['erp', 'erp'],
+    ['apps', 'apps'],
+]);
 
 it('says how every catalog product runs and is licensed', function () {
     $platforms = ['web', 'desktop', 'android', 'ios'];
@@ -343,16 +361,17 @@ it('gives each catalog product its own page, and 404s anything else', function (
 
 it('lists the new pages in the sitemap', function () {
     $this->get(site('sitemap.xml'))
-        ->assertSee(site('industries'), false)
-        ->assertSee(site('erp'), false)
-        ->assertSee(site('apps'), false)
+        ->assertSee(site('products'), false)
         ->assertSee(site('erp/pharmacy'), false)
         ->assertSee(site('apps/documents'), false)
         ->assertSee(site('platform'), false)
         ->assertSee(site('coming-soon'), false)
         ->assertSee(site('about'), false)
         ->assertSee(site('services'), false)
-        ->assertDontSee(site('solutions'), false);
+        ->assertSee(site('privacy'), false)
+        ->assertSee(site('terms'), false)
+        ->assertDontSee(site('solutions'), false)
+        ->assertDontSee(site('industries'), false);
 });
 
 it('fills in the contact subject from the link, trimmed and capped', function () {

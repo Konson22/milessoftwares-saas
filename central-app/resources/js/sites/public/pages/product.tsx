@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import PageHero, { Accent } from '@/sites/public/components/page-hero';
 import PlanCard from '@/sites/public/components/plan-card';
 import type { Plan } from '@/sites/public/components/plan-card';
-import { ProductTile, statusLabel } from '@/sites/public/components/product';
+import { statusLabel } from '@/sites/public/components/product';
 import type { Product } from '@/sites/public/components/product';
 import SectionHeading from '@/sites/public/components/section-heading';
 import Seo, { organization } from '@/sites/public/components/seo';
@@ -56,54 +56,36 @@ export default function ProductPage({
 
             <PageHero
                 above={
-                    <>
+                    <div className="flex flex-wrap items-center gap-3">
                         <Link
-                            href="/#products"
+                            href="/products"
                             className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-300 transition-colors hover:text-white"
                         >
                             <ArrowLeft className="size-4" aria-hidden />
-                            All applications
+                            All products
                         </Link>
-                        <div className="mt-8 mb-6 flex items-center gap-3">
-                            <ProductTile code={product.code} size="lg" />
-                            {statusLabel[product.status] && (
-                                <span
-                                    className={`rounded-full px-3 py-1 text-xs font-semibold ${product.status === 'beta' ? 'site-gradient text-white' : 'bg-white text-slate-700 ring-1 ring-site-line'}`}
-                                >
-                                    {statusLabel[product.status]}
-                                </span>
-                            )}
-                        </div>
-                    </>
+                        {statusLabel[product.status] && (
+                            <span
+                                className={`rounded-full px-3 py-1 text-xs font-semibold ${product.status === 'beta' ? 'bg-site-accent-ink text-white' : 'bg-white text-slate-700 ring-1 ring-site-line'}`}
+                            >
+                                {statusLabel[product.status]}
+                            </span>
+                        )}
+                    </div>
                 }
                 title={<Accent>{product.name}</Accent>}
                 intro={product.tagline}
             >
-                {product.description && (
-                    <p className="mt-3 max-w-2xl text-slate-300">
-                        {product.description}
-                    </p>
+                {trialable ? (
+                    <a href={trialUrl(product.code)} className={button.light}>
+                        Start {trialLength(trialDays)} free trial
+                        <ArrowRight className="size-4" aria-hidden />
+                    </a>
+                ) : (
+                    <Link href="/contact" className={button.light}>
+                        Tell me when it launches
+                    </Link>
                 )}
-                <div className="mt-9 flex flex-wrap justify-center gap-3">
-                    {trialable ? (
-                        <a
-                            href={trialUrl(product.code)}
-                            className={button.light}
-                        >
-                            Start {trialLength(trialDays)} free trial
-                            <ArrowRight className="size-4" aria-hidden />
-                        </a>
-                    ) : (
-                        <Link href="/contact" className={button.light}>
-                            Tell me when it launches
-                        </Link>
-                    )}
-                    {trialable && plans.length > 0 && (
-                        <a href="#plans" className={button.outlineDark}>
-                            See plans
-                        </a>
-                    )}
-                </div>
             </PageHero>
 
             {product.features.length > 0 && (
@@ -118,6 +100,7 @@ export default function ProductPage({
                                 What <Accent>{product.name}</Accent> does
                             </>
                         }
+                        lead={product.description || undefined}
                     />
                     <ul className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                         {product.features.map((feature, i) => (
@@ -143,7 +126,7 @@ export default function ProductPage({
                 <section
                     id="plans"
                     aria-labelledby="plans-heading"
-                    className="scroll-mt-20 border-y border-site-line bg-site-soft"
+                    className="scroll-mt-20 border-y border-site-line bg-white"
                 >
                     <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6">
                         <SectionHeading

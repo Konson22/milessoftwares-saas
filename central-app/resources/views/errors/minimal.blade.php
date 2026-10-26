@@ -47,26 +47,25 @@
         <link rel="icon" href="/favicon.ico" sizes="any">
         <style>
             :root {
-                --bg: #f5f7fa;
+                --bg: #f2f9ff;
                 --card: #ffffff;
-                --ink: #0b1220;
-                --muted: #5b6474;
-                --line: #e4e8ee;
-                --accent: #0b5bd6;
-                --accent-hover: #0a47a8;
-                --glow: #06c8ea;
+                --ink: #042853;
+                --muted: #46597a;
+                --line: #dbe8f5;
+                --accent: #0069d0;
+                --accent-hover: #042853;
                 color-scheme: light;
             }
 
             @media (prefers-color-scheme: dark) {
                 :root {
-                    --bg: #050f2b;
-                    --card: #0a1f4e;
-                    --ink: #f1f5f9;
-                    --muted: #a3b0c6;
-                    --line: #1c3466;
-                    --accent: #3b82f6;
-                    --accent-hover: #2563eb;
+                    --bg: #021d3e;
+                    --card: #042853;
+                    --ink: #f4f7fb;
+                    --muted: #c5d0df;
+                    --line: #1a2f52;
+                    --accent: #0069d0;
+                    --accent-hover: #005ab3;
                     color-scheme: dark;
                 }
             }
@@ -79,10 +78,7 @@
                 display: grid;
                 place-items: center;
                 padding: 24px 16px;
-                background:
-                    radial-gradient(40rem 24rem at 85% -10%, rgb(11 91 214 / 0.12), transparent 70%),
-                    radial-gradient(36rem 22rem at -10% 110%, rgb(6 200 234 / 0.12), transparent 70%),
-                    var(--bg);
+                background: var(--bg);
                 color: var(--ink);
                 font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
                 line-height: 1.5;
@@ -112,10 +108,7 @@
                 font-weight: 800;
                 line-height: 1;
                 letter-spacing: -0.04em;
-                background: linear-gradient(135deg, var(--accent), var(--glow));
-                -webkit-background-clip: text;
-                background-clip: text;
-                color: transparent;
+                color: var(--accent);
             }
 
             h1 {

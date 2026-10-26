@@ -57,8 +57,6 @@ export default function HeroShowcase({ products }: { products: Product[] }) {
                         className={`hero-slide absolute inset-0 size-full object-cover transition-opacity duration-1000 ease-in-out ${i === active ? 'is-active opacity-100' : 'opacity-0'}`}
                     />
                 ))}
-                {/* Navy wash so the caption reads on any photo. */}
-                <span className="absolute inset-0 bg-linear-to-t from-site-night/85 via-site-night/10 to-transparent" />
             </div>
 
             <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5 sm:p-7">

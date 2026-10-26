@@ -20,38 +20,33 @@
  * public site's palette and font.
  */
 @theme {
-    /* Brand colours, with the logo's navy (public/images/logo-*.png) and
-       the globe blue, azure and cyan accents that go with it. teal is the
-       cyan darkened for text; green is kept for success notes only. */
-    --color-brand-ink: #011c40;
-    --color-brand-navy: #031d52;
+    /* Brand colours, from the logo (public/images/logo-*.png): its navy
+       and bright blue, with lighter and darker blues that go with them.
+       cyan is the light blue, teal the same blue darkened for text; green
+       is kept for success notes only. */
+    --color-brand-ink: #021d3e;
+    --color-brand-navy: #042853;
     --color-brand-navy-light: #005eae;
-    --color-brand-blue: #0069f8;
-    --color-brand-blue-dark: #0060e0;
-    --color-brand-cyan: #00c1fd;
-    --color-brand-teal: #00658a;
+    --color-brand-blue: #0185fd;
+    --color-brand-blue-dark: #0069d0;
+    --color-brand-cyan: #2b9bff;
+    --color-brand-teal: #0059ad;
     --color-brand-green: #03d5cd;
 
-    /* Public site, in the emblem's colours only: its navy, globe blue,
-       azure and cyan, on white and soft blue. accent (azure) for shapes
-       and lines; accent-ink for blue text and buttons on light (5.6:1). sky and aqua
-       (the orbit's cyans) appear in gradients and decoration; their -ink
-       forms are for text and icons on light (6:1 or more). site-black is
-       the app sidebar in product art. */
-    --color-site-ink: #031d52;
+    /* Public site, in the logo's colours only and all solid (no
+       gradients): its navy and blue, on white and soft blue. accent (the
+       logo blue) for shapes, lines and large text on navy; accent-ink for
+       blue text and buttons on light (5.3:1). site-black is the app
+       sidebar in product art. */
+    --color-site-ink: #042853;
     --color-site-wash: #e3f3ff;
     --color-site-soft: #f2f9ff;
     --color-site-line: #dbe8f5;
     --color-site-black: #070707;
-    --color-site-navy: #031d52;
-    --color-site-night: #011c40;
-    --color-site-accent: #0069f8;
-    --color-site-accent-ink: #0060e0;
-    --color-site-accent-glow: #7fe3ff;
-    --color-site-sky: #00c1fd;
-    --color-site-sky-ink: #00658a;
-    --color-site-aqua: #03f7fc;
-    --color-site-aqua-ink: #006a80;
+    --color-site-navy: #042853;
+    --color-site-night: #021d3e;
+    --color-site-accent: #0185fd;
+    --color-site-accent-ink: #0069d0;
     --color-site-slate: #515f6d;
     --font-public:
         'Nunito Variable', 'Nunito', ui-sans-serif, system-ui, sans-serif;
@@ -91,68 +86,25 @@
     --text-xs--line-height: 1rem;
     --text-sm: 0.875rem;
     --text-sm--line-height: 1.25rem;
+
+    /* Greys drawn from the logo's navy, so body text sits in the brand
+       too. Same contrast steps as Tailwind's slate: 500 and darker keep
+       4.5:1 on white, 300 on navy. */
+    --color-slate-50: #f4f7fb;
+    --color-slate-100: #e8eef6;
+    --color-slate-200: #d3dce9;
+    --color-slate-300: #c5d0df;
+    --color-slate-400: #8b9bb4;
+    --color-slate-500: #5f7391;
+    --color-slate-600: #46597a;
+    --color-slate-700: #2f4366;
+    --color-slate-800: #1a2f52;
+    --color-slate-900: #0b2147;
 }
 
 /* Headings in the display face; everything else in the text face. */
 .site-public :is(h1, h2, h3, h4) {
     font-family: var(--font-public-display);
-}
-
-/* The logo's navy → blue: icon chips, bands and highlights (buttons are solid). White text keeps 4.5:1. */
-.site-public .site-gradient {
-    background-image: linear-gradient(
-        120deg,
-        #031d52 0%,
-        #0050c8 50%,
-        #0069f8 100%
-    );
-}
-
-.site-public .site-gradient-text {
-    background-image: linear-gradient(
-        100deg,
-        #0060e0 0%,
-        #0066e8 55%,
-        #00658a 100%
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-}
-
-/* On a dark band the highlight lightens so it keeps its contrast. */
-.site-public .site-dark .site-gradient-text {
-    background-image: linear-gradient(
-        100deg,
-        #7fe3ff 0%,
-        #00c2fd 55%,
-        #00ebfe 100%
-    );
-}
-
-/*
- * The emblem's deep navy → globe blue for heroes and closing bands, lit
- * by two soft cyan glows. White text keeps at least 4.5:1 across it.
- */
-.site-public .site-hero-bg {
-    background-color: #011c40;
-    background-image:
-        radial-gradient(
-            60rem 30rem at 85% 10%,
-            rgb(0 194 253 / 0.28),
-            transparent 60%
-        ),
-        radial-gradient(
-            40rem 24rem at 5% 90%,
-            rgb(0 235 254 / 0.12),
-            transparent 60%
-        ),
-        linear-gradient(135deg, #01142f 0%, #031d52 55%, #0048a8 100%);
-}
-
-/* A slanted gradient slab behind images and bands. Decorative. */
-.site-public .site-skew {
-    transform: rotate(-12deg) skewX(-6deg);
 }
 
 /* The hero dashboard, turned slightly towards the copy on wide screens. */
@@ -269,7 +221,7 @@
 /* Card rails: a slim scrollbar while they scroll sideways. */
 .site-public .site-rail {
     scrollbar-width: thin;
-    scrollbar-color: rgb(37 117 252 / 0.35) transparent;
+    scrollbar-color: rgb(1 133 253 / 0.35) transparent;
 }
 
 /*

@@ -1,11 +1,12 @@
 import { Link } from '@inertiajs/react';
-import { ArrowRight, Clock, Rocket } from 'lucide-react';
+import { ArrowRight, Clock, Mail, Rocket } from 'lucide-react';
 import LeadForm, { Field } from '@/sites/public/components/lead-form';
 import PageHero, { Accent } from '@/sites/public/components/page-hero';
 import Seo from '@/sites/public/components/seo';
 import {
     SocialIcon,
     socialLinks,
+    supportEmail,
     whatsappNumber,
 } from '@/sites/public/components/social';
 import { button, panel, iconChip } from '@/sites/public/components/styles';
@@ -32,7 +33,7 @@ export default function Contact({ formToken, subject, canonical }: Props) {
                         Get in <Accent>touch</Accent>
                     </>
                 }
-                intro="Questions about an application, pricing or a partnership? Send us a message and we reply within one working day."
+                intro="Questions about a product, pricing or a partnership? We reply within one working day."
             />
 
             <section
@@ -50,6 +51,22 @@ export default function Contact({ formToken, subject, canonical }: Props) {
                         <p className="mt-1 text-sm text-slate-600">
                             Every message reaches our team, and we reply within
                             one working day.
+                        </p>
+                    </div>
+                    <div className="border-t border-site-line pt-6">
+                        <span className={`${iconChip} size-12`}>
+                            <Mail className="size-5" aria-hidden />
+                        </span>
+                        <p className="mt-4 text-lg font-semibold">Email us</p>
+                        <p className="mt-1 text-sm text-slate-600">
+                            Write to{' '}
+                            <a
+                                href={`mailto:${supportEmail}`}
+                                className="font-semibold text-site-accent-ink underline-offset-2 hover:underline"
+                            >
+                                {supportEmail}
+                            </a>
+                            . Messages sent with the form arrive there too.
                         </p>
                     </div>
                     <div className="border-t border-site-line pt-6">

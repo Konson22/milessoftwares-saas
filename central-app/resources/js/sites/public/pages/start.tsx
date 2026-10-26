@@ -161,7 +161,7 @@ export default function Start({
 /** Where the visitor is in getting started: here, then the app host. */
 function Stepper({ current }: { current: number }) {
     return (
-        <ol className="mb-10 flex flex-wrap items-center justify-center gap-2 text-sm">
+        <ol className="flex flex-wrap items-center gap-2 text-sm">
             {steps.map((step, i) => (
                 <li
                     key={step}

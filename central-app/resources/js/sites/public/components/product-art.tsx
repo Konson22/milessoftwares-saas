@@ -39,8 +39,6 @@ export default function ProductArt({ code }: { code: string }) {
                 decoding="async"
                 className="size-full object-cover"
             />
-            {/* A navy wash at the foot ties the photos to the site. */}
-            <span className="absolute inset-0 bg-linear-to-t from-site-night/40 to-transparent to-60%" />
         </div>
     );
 }

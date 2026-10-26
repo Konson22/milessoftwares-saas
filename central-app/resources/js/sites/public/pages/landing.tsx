@@ -8,7 +8,6 @@ import {
 } from '@/sites/public/components/blocks';
 import {
     CatalogStatus,
-    CatalogTile,
     catalogIcon,
     categoryLabels,
     categoryPaths,
@@ -114,8 +113,8 @@ export default function LandingPage({
                                 {
                                     '@type': 'ListItem',
                                     position: 2,
-                                    name: categoryLabels[product.category],
-                                    item: `${origin}${categoryPaths[product.category]}`,
+                                    name: 'Products',
+                                    item: `${origin}/products`,
                                 },
                                 {
                                     '@type': 'ListItem',
@@ -148,7 +147,7 @@ export default function LandingPage({
             {/* Hero */}
             <PageHero
                 above={
-                    <>
+                    <div className="flex flex-wrap items-center gap-3">
                         <Link
                             href={categoryPaths[product.category]}
                             className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-300 transition-colors hover:text-white"
@@ -156,39 +155,19 @@ export default function LandingPage({
                             <ArrowLeft className="size-4" aria-hidden />
                             {categoryLabels[product.category]}
                         </Link>
-                        <div className="mt-8 mb-6 flex items-center gap-3">
-                            <CatalogTile icon={product.icon} size="lg" />
-                            <span className="flex flex-col items-start gap-1.5 text-left">
-                                <span className="font-semibold text-white">
-                                    {product.name}
-                                </span>
-                                <CatalogStatus status={product.status} />
-                            </span>
-                        </div>
-                    </>
+                        <CatalogStatus status={product.status} />
+                    </div>
                 }
                 title={product.headline}
                 intro={product.subhead}
             >
-                <div className="mt-9 flex flex-wrap justify-center gap-3">
-                    {primary}
-                    {product.trial && (
-                        <Link href={demoUrl} className={button.outlineDark}>
-                            Request a Demo
-                        </Link>
-                    )}
-                    {plans.length > 0 && (
-                        <a href="#plans" className={button.outlineDark}>
-                            See plans
-                        </a>
-                    )}
-                </div>
+                {primary}
             </PageHero>
 
             {/* Overview and audience */}
             <section
                 aria-labelledby="audience-heading"
-                className="relative z-10 -mt-12 px-4 sm:-mt-16 sm:px-6"
+                className="px-4 pt-12 sm:px-6 sm:pt-16"
             >
                 <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 rounded-3xl bg-white px-6 py-6 text-center shadow-xl ring-1 shadow-site-night/5 ring-site-line sm:flex-row sm:px-10 sm:text-left">
                     <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-site-accent/10 text-site-accent-ink">
@@ -238,7 +217,7 @@ export default function LandingPage({
             {product.workflow.length > 0 && (
                 <section
                     aria-labelledby="workflow-heading"
-                    className="border-y border-site-line bg-site-soft"
+                    className="border-y border-site-line bg-white"
                 >
                     <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
                         <SectionHeading
@@ -255,7 +234,7 @@ export default function LandingPage({
                                     key={step.title}
                                     className={`${panel} p-6 sm:p-7`}
                                 >
-                                    <span className="site-gradient inline-flex size-10 items-center justify-center rounded-full font-public-display text-sm font-bold text-white">
+                                    <span className="inline-flex size-10 items-center justify-center rounded-full bg-site-accent-ink font-public-display text-sm font-bold text-white">
                                         {String(i + 1).padStart(2, '0')}
                                     </span>
                                     <h3 className="mt-5 text-lg font-semibold">
@@ -465,7 +444,7 @@ export default function LandingPage({
             <section
                 id="plans"
                 aria-labelledby="plans-heading"
-                className="scroll-mt-20 border-y border-site-line bg-site-soft"
+                className="scroll-mt-20 border-y border-site-line bg-white"
             >
                 <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
                     <SectionHeading

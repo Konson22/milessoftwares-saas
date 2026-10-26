@@ -3,72 +3,67 @@ import type { ReactNode } from 'react';
 import { darkBand, display, tints } from '@/sites/public/components/styles';
 
 /**
- * The band public pages open with: deep indigo → violet under the
- * header, a faint constellation, centred title and intro, ending on
- * a straight edge. The top padding clears the fixed header.
+ * The short band every page but home opens with: solid navy under the
+ * header, a faint constellation, and a left-aligned title with one line
+ * of intro. About 35–40% of the screen tall; the top padding clears the
+ * fixed header. `above` is a small line over the title (a back link or a
+ * step); `children`, at most one action.
  */
 export default function PageHero({
     above,
     title,
     intro,
     children,
-    padding = 'pt-32 pb-20 sm:pt-40 sm:pb-24',
 }: {
     above?: ReactNode;
     title: ReactNode;
     intro?: ReactNode;
     children?: ReactNode;
-    padding?: string;
 }) {
     return (
         <section className={darkBand}>
             <HeroBackdrop />
-            <div
-                className={`site-rise mx-auto flex max-w-7xl flex-col items-center px-4 text-center sm:px-6 ${padding}`}
-            >
-                {above}
+            <div className="site-rise mx-auto flex min-h-[35svh] max-w-7xl flex-col justify-center px-4 pt-24 pb-10 sm:px-6 sm:pt-28 sm:pb-12 lg:min-h-[40svh]">
+                {above && <div className="mb-4">{above}</div>}
                 <h1
-                    className={`mt-0 max-w-4xl text-[1.75rem] leading-[1.15] sm:text-6xl ${display}`}
+                    className={`max-w-3xl text-[1.75rem] leading-[1.15] sm:text-4xl lg:text-5xl ${display}`}
                 >
                     {title}
                 </h1>
                 {intro && (
-                    <p className="mt-5 max-w-2xl text-base text-pretty text-slate-300 sm:mt-6 sm:text-lg">
+                    <p className="mt-4 max-w-2xl text-base text-pretty text-slate-300 sm:text-lg">
                         {intro}
                     </p>
                 )}
-                {children}
+                {children && <div className="mt-6">{children}</div>}
             </div>
         </section>
     );
 }
 
 /**
- * Soft gradient blobs, rings and a dotted patch behind a light section.
- * Decorative only.
+ * A ring, two dots and a dotted patch behind a light section, in the
+ * logo's blue and navy. Decorative only.
  */
 export function LightBackdrop() {
     return (
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-            <div className="site-float-slow absolute -top-32 -left-24 size-[28rem] rounded-full bg-site-accent/10 blur-3xl" />
-            <div className="site-float absolute -right-24 -bottom-40 size-[30rem] rounded-full bg-site-sky/10 blur-3xl" />
             <div className="absolute top-16 right-[7%] hidden size-28 rounded-full border-2 border-dashed border-site-accent/25 md:block" />
-            <div className="site-float absolute top-[22%] left-[6%] hidden size-4 rounded-full bg-site-aqua/70 md:block" />
-            <div className="site-float-slow absolute right-[16%] bottom-[18%] hidden size-3 rounded-full bg-site-sky/70 md:block" />
+            <div className="site-float absolute top-[22%] left-[6%] hidden size-4 rounded-full bg-site-accent/60 md:block" />
+            <div className="site-float-slow absolute right-[16%] bottom-[18%] hidden size-3 rounded-full bg-site-navy/40 md:block" />
             <div className="site-dots absolute bottom-6 left-[12%] hidden h-24 w-40 text-site-accent/20 md:block" />
         </div>
     );
 }
 
 /**
- * Behind a dark band: a constellation of points joined by faint lines,
- * a slanted slab and a ring. Decorative only.
+ * Behind a dark band: a constellation of points joined by faint lines
+ * and a ring. Decorative only.
  */
 export function HeroBackdrop() {
     return (
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
             <Constellation />
-            <div className="site-skew absolute -top-40 right-[-12rem] h-[34rem] w-[38rem] rounded-[4rem] bg-linear-to-br from-white/[0.07] to-transparent" />
             <div className="absolute top-28 left-[6%] hidden size-40 rounded-full border border-white/10 md:block" />
             <div className="site-dots absolute bottom-16 left-[10%] h-24 w-40 text-white/15" />
         </div>
@@ -151,9 +146,16 @@ function Constellation() {
     );
 }
 
-/** The highlighted phrase of a heading: the blue → violet gradient. */
+/**
+ * The highlighted phrase of a heading, in the logo blue: its darker form on
+ * light, the logo blue itself on a dark band (4:1, headings are large text).
+ */
 export function Accent({ children }: { children: ReactNode }) {
-    return <span className="site-gradient-text">{children}</span>;
+    return (
+        <span className="text-site-accent-ink in-[.site-dark]:text-site-accent">
+            {children}
+        </span>
+    );
 }
 
 /**

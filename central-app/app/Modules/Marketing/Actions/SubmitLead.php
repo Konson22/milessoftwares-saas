@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
 /**
- * Stores a public form submission and tells the sales team. Submissions that
+ * Stores a public form submission and emails it to support. Submissions that
  * fail the spam checks are stored as `spam` (for tuning) and notify no one.
  */
 final class SubmitLead
@@ -55,10 +55,19 @@ final class SubmitLead
             return $lead;
         }
 
-        $recipient = config('platform.marketing.sales_email') ?: config('mail.from.address');
+        $recipient = config('platform.marketing.support_email') ?: config('mail.from.address');
 
         if (is_string($recipient) && $recipient !== '') {
-            Notification::route('mail', $recipient)->notify(new LeadReceived($kind, $lead->id, (string) $lead->name, (string) $lead->email, $lead->getAttribute('company')));
+            Notification::route('mail', $recipient)->notify(new LeadReceived(
+                $kind,
+                $lead->id,
+                (string) $lead->name,
+                (string) $lead->email,
+                $lead->getAttribute('company'),
+                $lead->getAttribute('phone'),
+                $lead->getAttribute('subject'),
+                $lead->getAttribute('message'),
+            ));
         }
 
         return $lead;

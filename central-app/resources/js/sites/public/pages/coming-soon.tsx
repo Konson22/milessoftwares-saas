@@ -39,7 +39,7 @@ export default function ComingSoon({ catalog, trialDays, canonical }: Props) {
                         <Accent>on the same books</Accent>
                     </>
                 }
-                intro="Every new Miles product joins the workspace, sign-in and accounts you already use. Join the waitlist and we will tell you first."
+                intro="New Miles products on the way. Join the waitlist and we will tell you first."
             />
 
             <Group
@@ -72,7 +72,7 @@ export default function ComingSoon({ catalog, trialDays, canonical }: Props) {
                         Talk to us
                         <ArrowRight className="size-4" aria-hidden />
                     </Link>
-                    <Link href="/apps" className={button.outlineDark}>
+                    <Link href="/products#apps" className={button.outlineDark}>
                         See what's available
                     </Link>
                 </CtaBand>
@@ -104,7 +104,7 @@ function Group({
         <section
             id={id}
             aria-labelledby={`${id}-heading`}
-            className={shaded ? 'border-y border-site-line bg-site-soft' : ''}
+            className={shaded ? 'border-y border-site-line bg-white' : ''}
         >
             <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
                 <Eyebrow>{eyebrow}</Eyebrow>

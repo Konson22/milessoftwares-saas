@@ -23,20 +23,25 @@ Route::domain(PlatformHosts::root())->group(function () {
     Route::get('/', [PageController::class, 'home'])->name('home');
 
     Route::name('marketing.')->group(function () {
-        // The product catalog: ERP solutions and business applications.
-        Route::get('erp', [PageController::class, 'erpSolutions'])->name('erp');
+        // The product catalog on one page: ERP solutions and business
+        // applications. The old category pages move to their section of it.
+        Route::get('products', [PageController::class, 'products'])->name('products');
+        Route::get('erp', fn () => redirect()->to(route('marketing.products').'#erp', 301));
         Route::get('erp/{slug}', [PageController::class, 'erpProduct'])->where('slug', '[a-z][a-z0-9_-]*')->name('erp-product');
-        Route::get('apps', [PageController::class, 'applications'])->name('apps');
+        Route::get('apps', fn () => redirect()->to(route('marketing.products').'#apps', 301));
         Route::get('apps/{slug}', [PageController::class, 'application'])->where('slug', '[a-z][a-z0-9_-]*')->name('app');
         // Registry applications by code; ones the catalog covers redirect to it.
         Route::get('products/{code}', [PageController::class, 'product'])->where('code', '[a-z][a-z0-9_]*')->name('product');
         Route::get('pricing', [PageController::class, 'pricing'])->name('pricing');
-        Route::get('industries', [PageController::class, 'industries'])->name('industries');
-        Route::get('solutions', fn () => redirect()->route('marketing.industries', status: 301));
+        // The industries page (and the solutions page before it) is gone; the products page covers it.
+        Route::get('industries', fn () => redirect()->route('marketing.products', status: 301));
+        Route::get('solutions', fn () => redirect()->route('marketing.products', status: 301));
         Route::get('services', [PageController::class, 'services'])->name('services');
         Route::get('platform', [PageController::class, 'platform'])->name('platform');
         Route::get('coming-soon', [PageController::class, 'comingSoon'])->name('coming-soon');
         Route::get('about', [PageController::class, 'about'])->name('about');
+        Route::get('privacy', [PageController::class, 'privacy'])->name('privacy');
+        Route::get('terms', [PageController::class, 'terms'])->name('terms');
 
         // Desktop installers; a file not on the server yet is a 404.
         Route::get('downloads', [PageController::class, 'downloads'])->name('downloads');

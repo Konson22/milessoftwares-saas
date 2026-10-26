@@ -99,7 +99,7 @@ export default function Login({
                             <Button
                                 type="submit"
                                 size="lg"
-                                className="h-10 w-full bg-linear-to-r from-brand-blue to-brand-blue-dark text-base font-semibold text-white shadow-lg shadow-site-accent/25 hover:from-brand-blue-dark hover:to-brand-navy-light hover:shadow-xl hover:shadow-site-accent/30"
+                                className="h-10 w-full bg-site-accent-ink text-base font-semibold text-white hover:bg-site-navy"
                                 tabIndex={4}
                                 disabled={processing}
                                 data-test="login-button"

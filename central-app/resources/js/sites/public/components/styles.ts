@@ -4,9 +4,9 @@ import { trial } from '@/routes';
  * Pill buttons shared by links across the public site. Links, not
  * <Button>, because most of them navigate (some to another host).
  *
- * Light-first surfaces with a solid blue main action and the logo's navy → blue
- * gradient for highlights; deep navy for the footer and closing bands (see the
- * site-* colours and .site-gradient in resources/css/app.css).
+ * In the logo's colours only, all solid (no gradients): white surfaces, the
+ * logo blue for the main action and highlights, deep navy for the footer
+ * and closing bands (see the site-* colours in resources/css/app.css).
  */
 const base =
     'inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-sm font-bold tracking-wide transition-[color,background-color,border-color,transform] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 active:scale-[0.98]';
@@ -55,22 +55,18 @@ export const railItem =
 
 /** Gradient square behind a white icon. */
 export const iconChip =
-    'site-gradient inline-flex shrink-0 items-center justify-center rounded-2xl text-white';
+    'bg-site-accent-ink inline-flex shrink-0 items-center justify-center rounded-2xl text-white';
 
-/** A deep navy → globe blue band: headings, labels and links inside switch to their light forms. */
+/** A solid navy band: headings, labels and links inside switch to their light forms. */
 export const darkBand =
-    'site-dark site-hero-bg relative isolate overflow-hidden text-slate-300';
+    'site-dark relative isolate overflow-hidden bg-site-navy text-slate-300';
 
 /**
- * Soft colour pairs for icon boxes, taken in turn so a row of features
- * reads as a set. Icon colours keep 3:1 on their tint.
+ * Colour pairs for icon boxes, taken in turn by a row of features. One
+ * for now, the logo blue on its own tint (a navy tint read as grey);
+ * the icon keeps 3:1 on it.
  */
-export const tints = [
-    'bg-site-accent/10 text-site-accent-ink',
-    'bg-site-sky/10 text-site-sky-ink',
-    'bg-site-aqua/20 text-site-aqua-ink',
-    'bg-site-navy/10 text-site-navy',
-] as const;
+export const tints = ['bg-site-accent/10 text-site-accent-ink'] as const;
 
 /** "2-month" for 60 days, "14-day" otherwise. */
 export function trialLength(days: number): string {

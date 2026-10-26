@@ -121,9 +121,10 @@ export const categoryLabels: Record<CatalogEntry["category"], string> = {
     application: "Business Applications",
 };
 
+/** Each category's section of the products page. */
 export const categoryPaths: Record<CatalogEntry["category"], string> = {
-    erp: "/erp",
-    application: "/apps",
+    erp: "/products#erp",
+    application: "/products#apps",
 };
 
 const icons: Record<string, LucideIcon> = {
@@ -185,9 +186,12 @@ export const statusLabels: Record<CatalogEntry["status"], string | null> = {
 
 export function CatalogStatus({ status }: { status: CatalogEntry["status"] }) {
     const tone = {
-        available: "bg-site-aqua/20 text-site-aqua-ink",
-        early_access: "bg-site-accent/10 text-site-accent-ink",
-        coming_soon: "bg-site-soft text-slate-700 ring-1 ring-site-line",
+        available:
+            "bg-site-navy/10 text-site-navy in-[.site-dark]:bg-white/15 in-[.site-dark]:text-white",
+        early_access:
+            "bg-site-accent/10 text-site-accent-ink in-[.site-dark]:bg-white/15 in-[.site-dark]:text-white",
+        coming_soon:
+            "bg-site-soft text-slate-700 ring-1 ring-site-line in-[.site-dark]:bg-white/15 in-[.site-dark]:text-white in-[.site-dark]:ring-white/20",
     }[status];
 
     return (
@@ -252,7 +256,7 @@ export function ProductCard({
         >
             <span
                 aria-hidden
-                className="site-gradient absolute inset-x-0 top-0 h-1 origin-left scale-x-0 transition-transform duration-300 group-hover:scale-x-100"
+                className="bg-site-accent absolute inset-x-0 top-0 h-1 origin-left scale-x-0 transition-transform duration-300 group-hover:scale-x-100"
             />
             <div className="flex items-start justify-between gap-3">
                 <CatalogTile icon={product.icon} />

@@ -27,11 +27,11 @@ export function FeatureGrid({
             {features.map(({ icon, title, body }, i) => (
                 <li
                     key={title}
-                    className={`${card} group relative flex items-start gap-5 overflow-hidden p-6 sm:flex-col sm:gap-0 sm:p-8`}
+                    className={`${card} group relative flex items-start gap-5 overflow-hidden p-6 text-site-ink in-[.site-dark]:border-transparent sm:flex-col sm:gap-0 sm:p-8`}
                 >
                     <span
                         aria-hidden
-                        className="site-gradient absolute inset-x-0 bottom-0 h-1 origin-left scale-x-0 transition-transform duration-300 group-hover:scale-x-100"
+                        className="absolute inset-x-0 bottom-0 h-1 origin-left scale-x-0 bg-site-accent transition-transform duration-300 group-hover:scale-x-100"
                     />
                     <IconBox icon={icon} index={i} />
                     <div>
@@ -69,10 +69,6 @@ export function CtaBand({
                 className={`${darkBand} mx-auto grid max-w-7xl items-center gap-8 rounded-[2rem] px-6 py-14 sm:px-14 sm:py-20 lg:grid-cols-[1fr_auto]`}
             >
                 <HeroBackdrop />
-                <div
-                    aria-hidden
-                    className="site-gradient site-skew absolute -bottom-32 -left-20 -z-10 h-64 w-[28rem] rounded-[3rem] opacity-60"
-                />
                 <div className="text-center lg:text-left">
                     <h2
                         id={id}
