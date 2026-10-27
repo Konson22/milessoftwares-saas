@@ -98,7 +98,7 @@ function Brand({ inverted = false }: { inverted?: boolean }) {
                 alt="Miles Global Softwares"
                 width={1200}
                 height={250}
-                className="h-10 w-auto sm:h-12"
+                className="h-10 w-auto sm:h-12 lg:h-10 xl:h-12"
             />
         </Link>
     );
@@ -171,7 +171,7 @@ function NavMenu({
                 aria-expanded={open}
                 aria-controls={`${id}-menu`}
                 onClick={() => setOpen((value) => !value)}
-                className={`inline-flex items-center gap-1 px-3 py-2 font-semibold transition-colors hover:text-site-accent-ink 2xl:px-4 ${current ? 'text-site-accent-ink' : ''}`}
+                className={`inline-flex items-center gap-1 px-2.5 py-2 font-semibold transition-colors hover:text-site-accent-ink xl:px-3 2xl:px-4 ${current ? 'text-site-accent-ink' : ''}`}
             >
                 {title}
                 <ChevronDown
@@ -262,11 +262,11 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
             >
                 <nav
                     aria-label="Main"
-                    className={`mx-auto flex max-w-7xl items-center gap-6 px-4 transition-[height] duration-300 sm:px-6 ${scrolled ? 'h-14 sm:h-16' : 'h-16 sm:h-[4.5rem]'}`}
+                    className={`mx-auto flex max-w-7xl items-center gap-4 px-4 transition-[height] duration-300 sm:px-6 xl:gap-6 ${scrolled ? 'h-14 sm:h-16' : 'h-16 sm:h-[4.5rem]'}`}
                 >
                     <Brand />
                     <ul
-                        className={`mx-auto hidden items-center gap-1 text-[15px] font-semibold whitespace-nowrap text-slate-700 xl:flex`}
+                        className={`mx-auto hidden items-center text-sm font-semibold whitespace-nowrap text-slate-700 lg:flex xl:gap-1 xl:text-[15px]`}
                     >
                         {nav.map((item) =>
                             'items' in item ? (
@@ -282,7 +282,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                                     <Link
                                         href={item.href}
                                         aria-current={currentOf(item, path)}
-                                        className={`relative block px-3 py-2 transition-colors after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:origin-left after:scale-x-0 after:rounded-full after:bg-site-accent after:transition-transform hover:text-site-accent-ink hover:after:scale-x-100 aria-[current=page]:text-site-accent-ink aria-[current=page]:after:scale-x-100 aria-[current=true]:text-site-accent-ink aria-[current=true]:after:scale-x-100 2xl:px-4 2xl:after:inset-x-4`}
+                                        className={`relative block px-2.5 py-2 transition-colors after:absolute after:inset-x-2.5 after:bottom-0 after:h-0.5 after:origin-left after:scale-x-0 after:rounded-full after:bg-site-accent after:transition-transform hover:text-site-accent-ink hover:after:scale-x-100 aria-[current=page]:text-site-accent-ink aria-[current=page]:after:scale-x-100 aria-[current=true]:text-site-accent-ink aria-[current=true]:after:scale-x-100 xl:px-3 xl:after:inset-x-3 2xl:px-4 2xl:after:inset-x-4`}
                                     >
                                         {item.title}
                                     </Link>
@@ -290,16 +290,16 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                             ),
                         )}
                     </ul>
-                    <div className="ml-auto hidden items-center gap-5 whitespace-nowrap lg:flex xl:ml-0">
+                    <div className="ml-auto hidden items-center gap-4 whitespace-nowrap lg:ml-0 lg:flex xl:gap-5">
                         <a
                             href={login.url()}
-                            className={`text-[15px] font-semibold text-slate-700 transition-colors hover:text-site-accent-ink`}
+                            className={`text-sm font-semibold text-slate-700 transition-colors hover:text-site-accent-ink xl:text-[15px]`}
                         >
                             Sign in
                         </a>
                         <Link
                             href="/start"
-                            className={`${button.primary} py-3`}
+                            className={`${button.primary} py-3 lg:px-5 xl:px-7`}
                         >
                             Get Started
                             <ArrowRight className="size-4" aria-hidden />
@@ -307,7 +307,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                     </div>
                     <button
                         type="button"
-                        className={`ml-auto inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-site-line text-site-ink hover:bg-site-soft lg:ml-0 xl:hidden`}
+                        className={`ml-auto inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-site-line text-site-ink hover:bg-site-soft lg:hidden`}
                         aria-expanded={menuOpen}
                         aria-controls="mobile-menu"
                         onClick={() => setMenuOpen((open) => !open)}
@@ -323,7 +323,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                 <div
                     id="mobile-menu"
                     hidden={!menuOpen}
-                    className="max-h-[calc(100svh-3.5rem)] overflow-y-auto border-t border-site-line bg-white xl:hidden"
+                    className="max-h-[calc(100svh-3.5rem)] overflow-y-auto border-t border-site-line bg-white lg:hidden"
                 >
                     <ul className="mx-auto max-w-7xl space-y-1 px-4 py-3 sm:px-6">
                         {nav.map((item) =>
