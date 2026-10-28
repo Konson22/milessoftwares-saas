@@ -73,7 +73,8 @@ class Bill extends Model
         return match (true) {
             $this->paid_minor >= $this->total_minor => 'paid',
             $this->paid_minor > 0 => 'partly_paid',
-            $this->due_on !== null && $this->due_on->isPast() => 'overdue',
+            // Overdue the day after it is due, as the lists and the home page count it.
+            $this->due_on !== null && $this->due_on->lessThan(CarbonImmutable::today()) => 'overdue',
             default => 'open',
         };
     }

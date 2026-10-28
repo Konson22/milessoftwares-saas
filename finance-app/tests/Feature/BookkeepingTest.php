@@ -167,6 +167,40 @@ it('raises an invoice, receives payment, and voids only unpaid invoices raised h
         ->and($this->asTenant('acme', fn () => $unpaid->refresh()->status()))->toBe('void');
 });
 
+it('counts a document overdue only from the day after it is due', function () {
+    $this->travelTo('2026-10-20 15:00');
+    $this->actingAsMember('acme', ACCOUNTANT);
+    $other = $this->asTenant('acme', fn () => Account::query()->where('code', '4900')->sole());
+
+    foreach (['2026-10-20', '2026-10-19'] as $due) {
+        $this->post(acme('invoices'), [
+            'customer_name' => "Due {$due}", 'issued_on' => '2026-10-01', 'due_on' => $due,
+            'lines' => [['account_id' => $other->id, 'description' => 'Training', 'amount' => '200']],
+        ])->assertRedirect();
+    }
+
+    $statuses = $this->asTenant('acme', fn () => Invoice::query()->get()->mapWithKeys(fn (Invoice $invoice) => [$invoice->due_on->toDateString() => $invoice->status()])->all());
+    expect($statuses)->toBe(['2026-10-20' => 'open', '2026-10-19' => 'overdue']);
+});
+
+it('searches journals, invoices and bills whatever the case', function () {
+    $this->actingAsMember('acme', ACCOUNTANT);
+    $rent = $this->asTenant('acme', fn () => Account::query()->where('code', '6000')->sole());
+    $this->post(acme('journals'), [
+        'entry_date' => '2026-10-01', 'memo' => 'October Rent',
+        'lines' => [['account_id' => $rent->id, 'debit' => '300'], ['account_id' => account(Account::CASH)->id, 'credit' => '300']],
+    ])->assertRedirect();
+    $this->post(acme('invoices'), [
+        'customer_name' => 'Juba Clinic', 'issued_on' => '2026-10-01',
+        'lines' => [['account_id' => $this->asTenant('acme', fn () => Account::query()->where('code', '4900')->sole()->id), 'description' => 'Sublet', 'amount' => '50']],
+    ])->assertSessionHasNoErrors();
+
+    $this->get(acme('journals?from=2026-10-01&to=2026-10-31&search=rent'))
+        ->assertInertia(fn (Assert $page) => $page->has('journals', 1));
+    $this->get(acme('invoices?status=all&search=JUBA'))
+        ->assertInertia(fn (Assert $page) => $page->has('invoices', 1));
+});
+
 it('moves money in, out and between accounts', function () {
     $this->actingAsMember('acme', ACCOUNTANT);
     $charges = $this->asTenant('acme', fn () => Account::query()->where('code', '6300')->sole());

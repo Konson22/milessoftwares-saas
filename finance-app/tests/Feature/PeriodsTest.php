@@ -1,6 +1,7 @@
 <?php
 
 use App\Finance\Statements;
+use App\Finance\Tax;
 use App\Models\Account;
 use App\Models\FiscalPeriod;
 use App\Models\FiscalYear;
@@ -220,8 +221,25 @@ it('posts opening balances against opening balance equity, and replaces them', f
             ->and($trial['1010']['debitMinor'])->toBe(120000)
             ->and($trial['2500']['creditMinor'])->toBe(60000)
             ->and($trial['3900']['creditMinor'])->toBe(60000)
-            ->and(Journal::query()->where('source_type', Journal::OPENING_BALANCES)->whereNull('reversed_by_id')->count())->toBe(1)
-            ->and(Journal::query()->whereNotNull('reversal_of_id')->sole()->entry_date->toDateString())->toBe('2026-01-01');
+            ->and(Journal::query()->where('source_type', Journal::OPENING_BALANCES)->whereNull('reversed_by_id')->whereNull('reversal_of_id')->count())->toBe(1)
+            ->and(Journal::query()->whereNotNull('reversal_of_id')->sole()->entry_date->toDateString())->toBe('2026-01-01')
+            // The replaced figures' reversal is an opening-balance journal too.
+            ->and(Journal::query()->whereNotNull('reversal_of_id')->sole()->source_type)->toBe(Journal::OPENING_BALANCES);
+    });
+
+    // Replacing opening balances that include tax owed leaves no tax on the return.
+    $this->put(books('opening-balances'), ['balances' => [
+        ['account_id' => ledgerAccount('1010')->id, 'debit' => '1200'],
+        ['account_id' => ledgerAccount('2200')->id, 'credit' => '300'],
+    ]])->assertSessionHasNoErrors();
+    $this->put(books('opening-balances'), ['balances' => [
+        ['account_id' => ledgerAccount('1010')->id, 'debit' => '1200'],
+        ['account_id' => ledgerAccount('2200')->id, 'credit' => '200'],
+    ]])->assertSessionHasNoErrors();
+    $this->asTenant('acme', function () {
+        $report = app(Tax::class)->report(CarbonImmutable::parse('2026-01-01'), CarbonImmutable::parse('2026-01-31'));
+
+        expect($report['net_minor'])->toBe(0)->and($report['rows'])->toBe([]);
     });
 
     // Not once the first month is locked.

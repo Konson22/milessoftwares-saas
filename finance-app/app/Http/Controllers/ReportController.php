@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Finance\Balances;
+use App\Finance\Ratios;
 use App\Finance\Reports;
 use App\Finance\Statements;
 use App\Models\Account;
@@ -153,6 +154,33 @@ class ReportController extends Controller
             'from' => $from->toDateString(),
             'to' => $to->toDateString(),
         ] + $report);
+    }
+
+    /**
+     * Ratios for the period, next to the same ratios for the period before.
+     */
+    public function ratios(Request $request, Ratios $ratios): Response|StreamedResponse
+    {
+        [$from, $to] = $this->period($request, CarbonImmutable::today()->startOfYear());
+        $previous = $this->previousPeriod($from, $to);
+        $report = $ratios->for($from, $to);
+        $compare = $ratios->for($previous[0], $previous[1]);
+
+        if ($this->export($request, ['ratios'])) {
+            $rows = [];
+            foreach ($report['ratios'] as $key => $value) {
+                $rows[] = ['ratio' => Ratios::LABELS[$key] ?? $key, 'value' => $value, 'previous' => $compare['ratios'][$key]];
+            }
+
+            return CsvExport::download("ratios-{$from->toDateString()}-{$to->toDateString()}", ['Ratio' => 'ratio', $report['to'] => 'value', $compare['to'] => 'previous'], $rows);
+        }
+
+        return Inertia::render('reports/ratios', [
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'report' => $report,
+            'compare' => $compare,
+        ]);
     }
 
     public function generalLedger(Request $request, Reports $reports): Response|StreamedResponse

@@ -1508,3 +1508,124 @@ connection.
 **Not done:** the local `restaurant` PostgreSQL database (`createdb restaurant`, `composer setup`)
 and migrating it there; registering `restaurant` with the local platform (its clients) and a live
 run in the browser; see "Open after T1" in `restaurant-roadmap.md`.
+
+## Finance F9 — review fixes, recurring journals, ratios — 2026-10-28 (local, Windows)
+
+A review of `finance-app` ([roadmap](finance-roadmap.md)), then two features from the roadmap's
+"Later" list and common accounting packages (recurring journals; ratio analysis).
+
+**Fixed:**
+- Opening balances replaced: the reversal of the previous journal was posted as a plain
+  `reversal`, so the tax return counted it as an adjustment (the original opening journal is
+  left out of tax). It is now an `opening_balances` journal too.
+- Search on journals, invoices, bills and suppliers used `LIKE`, which is case-sensitive on
+  PostgreSQL ("rent" did not find "Rent"). It is `whereLike` now (`ILIKE` there).
+- Bank reconciliation offered a reversed journal, or its reversal, as a match, and their
+  presence stopped "Match automatically" (two candidates). They cancel out and are no longer
+  offered.
+- An invoice or bill due today showed "Overdue" on its page while the lists and the home page
+  (correctly) did not count it. Overdue is from the day after the due date everywhere.
+
+**Implemented** (`finance-app`, no catalog change):
+- Migration `2026_10_28_100000_create_recurring_journals` (additive): `recurring_journals`
+  (name unique per organization, memo, frequency, first and last date, next date, how many
+  posted, reversing, active, lines as JSON, last journal, last error);
+  `journals.recurring_journal_id` and `recurring_occurrence` (unique together).
+- `App\Finance\RecurringJournals`:
+  - weekly, monthly, quarterly, six-monthly or yearly; occurrence n is the first date plus n
+    intervals, so a month-end start stays on month ends (31 Jan, 28 Feb, 31 Mar);
+  - lines checked by `Ledger::check` (now public) when saved; posted like a manual journal
+    (locked periods refuse, required cost centres and projects apply), each occurrence once,
+    in order, in its own transaction;
+  - a refused occurrence stops its template with the reason shown; other templates go on, and it
+    catches up once fixed (or resumed after a pause);
+  - reversing templates (accruals): each journal reversed the next day
+    (`recurring_reversal`);
+  - after the first posting, the first date and frequency are fixed; lines, memo and last date
+    can change.
+- `php artisan finance:recurring`, scheduled daily at 01:00: every organization with active
+  templates, each under its own tenant.
+- `App\Finance\Ratios` and Reports → Financial ratios: current, quick and cash ratios; gross and
+  net margin, return on assets and on equity; debt to equity and debt ratio; days sales,
+  payables and inventory outstanding. Next to the previous period, with the figures used; CSV
+  and print. Current or not follows the account's cash flow classification (banks and
+  operating accounts are current). Cost of sales is cost of goods sold plus stock losses. A ratio
+  dividing by zero is blank.
+- Pages: `recurring-journals` (Accounting → Recurring journals: status, next date, last journal,
+  the reason it stopped, Post due, pause/resume), `recurring-journals/create` and `…/edit`
+  (lines editor pre-filled; recent journals; remove), `reports/ratios`.
+- Permissions: viewing needs `finance.journals.view`, managing `finance.journals.post`; ratios
+  need `finance.reports.view`.
+
+**Tests executed:**
+- finance-app: Pest 114 passed, 1 skipped (`RecurringJournalsTest` 7 new; 4 new for the fixes in
+  `BookkeepingTest`, `PeriodsTest`, `ReconciliationTest`; 1 in `ReportsTest` for the ratios,
+  each checked by hand).
+- `RecurringJournalsTest`, `ReportsTest`, `BookkeepingTest`, `PeriodsTest`,
+  `ReconciliationTest` and `TaxTest` also run on a throwaway PostgreSQL database (66 passed,
+  the PostgreSQL-only ledger test included); the database was then dropped.
+- Mutation: undoing the fixes fails the overdue, opening-balance and reconciliation tests (the
+  search test only fails on PostgreSQL).
+- PHPStan 0; Pint; `vp check`; `tsc`; Vitest 4; build.
+- Local PostgreSQL: `migrate`, `migrate:rollback --step=1`, `migrate` (on the throwaway
+  database; `migrate` on the local `finance` database).
+
+**Known limitations:**
+- Approval of manual and recurring journals came in F10.
+- Recurring journals are in the books' currency and cannot post to accounts held in another
+  currency.
+- Ratios use balances on the period's last day, not averages, and returns are not annualised.
+- Not yet checked in a browser.
+
+## Finance F10 — journal approvals (maker-checker) — 2026-10-28 (local, Windows)
+
+Segregation of duties for manual journals ([roadmap](finance-roadmap.md)).
+
+**Implemented** (`finance-app`, catalog 1.8.0):
+- Permission `finance.journals.approve` (sensitivity 3) on Accountant only. Bookkeeper and Auditor
+  are unchanged (neither posts manual journals).
+- Migration `2026_10_28_120000_create_journal_approvals` (additive): `workspaces.journal_approval`
+  and `journal_approval_threshold_minor`; `journal_drafts` (number JD-00001, date, memo, lines,
+  total, status, submitter, reviewer, note, the posted journal); `journals.approved_by`,
+  `approved_at`; `recurring_journals.updated_by`, `approved_by`, `approved_at`.
+- `App\Finance\JournalApprovals`:
+  - off by default; on for every manual journal or from an amount up (Journal approvals page,
+    `finance.journals.approve`);
+  - a manual journal that needs approval is checked as if posted (balanced, open accounts,
+    required dimensions, open period) and waits as a draft outside the ledger;
+  - approve posts it, dated as entered, the preparer as creator, the approver recorded; a month
+    locked meanwhile refuses it and it stays waiting; reject (with a reason) or withdraw (the
+    preparer's own) end it; decisions are final;
+  - nobody approves or rejects their own entry, owners included;
+  - recurring journals: saving one clears its approval; while its amount needs approval it does
+    not post (nightly or "Post due") until someone other than the person who last saved it
+    approves it. Turning approval on holds existing templates that were never approved.
+- `StoredLines` (shared by drafts and recurring journals) and `Controller::storedLines`.
+- Pages: `journal-approvals` (Accounting → Journal approvals: the setting, drafts waiting with
+  their lines, approve, reject with a reason, withdraw, recent decisions, recurring journals
+  waiting); the new journal page says when it will wait; the journal page shows who approved it;
+  recurring journals show "Awaiting approval" with Approve.
+- Not held: journals from invoices, bills, payments, banking, reconciliation, tax, assets,
+  periods, and products' events (the documents and their own permissions are the control).
+
+**Tests executed:**
+- finance-app: Pest 121 passed, 1 skipped (`JournalApprovalsTest` 7 new): off by default;
+  held until approved by someone else (creator and approver recorded, once only, approver's own
+  entry held too); threshold; reject and withdraw by the right person only, final; invalid
+  drafts refused, a locked month keeps it waiting; recurring approval and re-approval after a
+  change; only approvers change the setting.
+- `JournalApprovalsTest`, `RecurringJournalsTest`, `BookkeepingTest` and `PeriodsTest` on a
+  throwaway PostgreSQL database (49 passed), then dropped; `migrate`, `migrate:rollback --step=1`,
+  `migrate` there.
+- Mutation: allowing self-approval fails a test; posting unapproved recurring journals fails a test.
+- central-app: `CatalogImportTest`, `RepositoryCatalogsTest`, `LocalProductTest` 25 passed.
+- PHPStan 0; Pint; `vp check`; `tsc`; Vitest 4; build.
+
+**Not done:** importing catalog 1.8.0 into the local platform
+(`cd central-app && php artisan platform:local-product finance-app --url=http://127.0.0.1:8500`,
+which also rewrites `finance-app/.env`); not yet checked in a browser.
+
+**Known limitations:**
+- One approval level (no multi-step or amount-based routing to particular people).
+- Reversals of manual journals post without approval; they only undo an entry already approved.
+- A draft is not edited: reject or withdraw it and enter it again.

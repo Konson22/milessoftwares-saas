@@ -2,6 +2,7 @@
 
 use App\Finance\Currencies;
 use App\Finance\FixedAssets;
+use App\Finance\JournalApprovals;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AssetCategoryController;
 use App\Http\Controllers\BankingController;
@@ -16,9 +17,11 @@ use App\Http\Controllers\DimensionController;
 use App\Http\Controllers\FixedAssetController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\JournalApprovalController;
 use App\Http\Controllers\JournalController;
 use App\Http\Controllers\OpeningBalanceController;
 use App\Http\Controllers\PeriodController;
+use App\Http\Controllers\RecurringJournalController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\SupplierPaymentController;
@@ -80,6 +83,34 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::get('journals/create', [JournalController::class, 'create'])->name('journals.create');
             Route::post('journals', [JournalController::class, 'store'])->name('journals.store');
             Route::post('journals/{journal}/reverse', [JournalController::class, 'reverse'])->whereUuid('journal')->name('journals.reverse');
+        });
+
+        // Journal approvals (maker-checker): drafts wait for a second person.
+        Route::middleware('can:finance.journals.view')->group(function () {
+            Route::get('journal-approvals', [JournalApprovalController::class, 'index'])->name('journal-approvals.index');
+        });
+        Route::middleware('can:finance.journals.post')->group(function () {
+            Route::post('journal-approvals/{draft}/withdraw', [JournalApprovalController::class, 'withdraw'])->whereUuid('draft')->name('journal-approvals.withdraw');
+        });
+        Route::middleware('can:'.JournalApprovals::PERMISSION)->group(function () {
+            Route::post('journal-approvals/{draft}/approve', [JournalApprovalController::class, 'approve'])->whereUuid('draft')->name('journal-approvals.approve');
+            Route::post('journal-approvals/{draft}/reject', [JournalApprovalController::class, 'reject'])->whereUuid('draft')->name('journal-approvals.reject');
+            Route::put('journal-approvals/settings', [JournalApprovalController::class, 'settings'])->name('journal-approvals.settings');
+            Route::post('recurring-journals/{recurringJournal}/approve', [RecurringJournalController::class, 'approve'])->whereUuid('recurringJournal')->name('recurring-journals.approve');
+        });
+
+        // Recurring journals: posted on a schedule (finance:recurring), or now.
+        Route::middleware('can:finance.journals.view')->group(function () {
+            Route::get('recurring-journals', [RecurringJournalController::class, 'index'])->name('recurring-journals.index');
+        });
+        Route::middleware('can:finance.journals.post')->group(function () {
+            Route::get('recurring-journals/create', [RecurringJournalController::class, 'create'])->name('recurring-journals.create');
+            Route::post('recurring-journals', [RecurringJournalController::class, 'store'])->name('recurring-journals.store');
+            Route::get('recurring-journals/{recurringJournal}/edit', [RecurringJournalController::class, 'edit'])->whereUuid('recurringJournal')->name('recurring-journals.edit');
+            Route::put('recurring-journals/{recurringJournal}', [RecurringJournalController::class, 'update'])->whereUuid('recurringJournal')->name('recurring-journals.update');
+            Route::post('recurring-journals/{recurringJournal}/toggle', [RecurringJournalController::class, 'toggle'])->whereUuid('recurringJournal')->name('recurring-journals.toggle');
+            Route::post('recurring-journals/{recurringJournal}/run', [RecurringJournalController::class, 'run'])->whereUuid('recurringJournal')->name('recurring-journals.run');
+            Route::delete('recurring-journals/{recurringJournal}', [RecurringJournalController::class, 'destroy'])->whereUuid('recurringJournal')->name('recurring-journals.destroy');
         });
 
         // Financial years, month locks, year-end close and opening balances.
@@ -214,6 +245,7 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::get('reports/profit-and-loss-by-dimension', [ReportController::class, 'profitAndLossByDimension'])->name('reports.profit-and-loss-by-dimension');
             Route::get('reports/balance-sheet', [ReportController::class, 'balanceSheet'])->name('reports.balance-sheet');
             Route::get('reports/cash-flow', [ReportController::class, 'cashFlow'])->name('reports.cash-flow');
+            Route::get('reports/ratios', [ReportController::class, 'ratios'])->name('reports.ratios');
             Route::get('reports/general-ledger', [ReportController::class, 'generalLedger'])->name('reports.general-ledger');
             Route::get('reports/aged-receivables', [ReportController::class, 'agedReceivables'])->name('reports.aged-receivables');
             Route::get('reports/aged-payables', [ReportController::class, 'agedPayables'])->name('reports.aged-payables');

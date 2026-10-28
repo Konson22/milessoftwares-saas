@@ -17,8 +17,11 @@ import {
     ListTree,
     NotebookPen,
     Percent,
+    Activity,
     TrendingDown,
+    Repeat,
     Rows3,
+    ShieldCheck,
     Shapes,
     Scale,
     Target,
@@ -40,9 +43,11 @@ import { index as depreciation } from '@/routes/depreciation';
 import { index as dimensions } from '@/routes/dimensions';
 import { index as fixedAssets } from '@/routes/fixed-assets';
 import { index as invoices } from '@/routes/invoices';
+import { index as journalApprovals } from '@/routes/journal-approvals';
 import { index as journals } from '@/routes/journals';
 import { index as periods } from '@/routes/periods';
 import { index as reconciliation } from '@/routes/reconciliation';
+import { index as recurringJournals } from '@/routes/recurring-journals';
 import {
     agedPayables,
     agedReceivables,
@@ -52,6 +57,7 @@ import {
     generalLedger,
     profitAndLoss,
     profitAndLossByDimension,
+    ratios,
     trialBalance,
 } from '@/routes/reports';
 import { index as supplierPayments } from '@/routes/supplier-payments';
@@ -99,6 +105,18 @@ export const navigation: NavGroup[] = [
                 title: 'Journals',
                 href: journals(),
                 icon: NotebookPen,
+                permission: 'finance.journals.view',
+            },
+            {
+                title: 'Journal approvals',
+                href: journalApprovals(),
+                icon: ShieldCheck,
+                permission: 'finance.journals.view',
+            },
+            {
+                title: 'Recurring journals',
+                href: recurringJournals(),
+                icon: Repeat,
                 permission: 'finance.journals.view',
             },
             {
@@ -259,6 +277,12 @@ export const navigation: NavGroup[] = [
                 title: 'Cash flow',
                 href: cashFlow(),
                 icon: Waves,
+                permission: 'finance.reports.view',
+            },
+            {
+                title: 'Financial ratios',
+                href: ratios(),
+                icon: Activity,
                 permission: 'finance.reports.view',
             },
             {

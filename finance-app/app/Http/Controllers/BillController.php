@@ -58,9 +58,9 @@ class BillController extends Controller
             ->when($status === 'overdue', fn ($query) => $query->whereColumn('paid_minor', '<', 'total_minor')->whereDate('due_on', '<', CarbonImmutable::today()))
             ->when($status === 'paid', fn ($query) => $query->whereColumn('paid_minor', '>=', 'total_minor'))
             ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
-                ->where('number', 'like', "%{$search}%")
-                ->orWhere('supplier_reference', 'like', "%{$search}%")
-                ->orWhereHas('supplier', fn ($query) => $query->where('name', 'like', "%{$search}%"))))
+                ->whereLike('number', "%{$search}%")
+                ->orWhereLike('supplier_reference', "%{$search}%")
+                ->orWhereHas('supplier', fn ($query) => $query->whereLike('name', "%{$search}%"))))
             ->orderByDesc('bill_date')
             ->orderByDesc('number')
             ->limit(500)

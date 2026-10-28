@@ -147,9 +147,14 @@ class Ledger
     }
 
     /**
+     * Whether the lines make a valid journal, without posting it (also used
+     * to check a recurring journal when it is saved).
+     *
      * @param  list<array{account: Account, debit?: int, credit?: int, description?: string|null, tax?: array<string, mixed>|null, cost_centre?: DimensionValue|null, project?: DimensionValue|null, currency?: array{code: string, amount: int}|null}>  $lines
+     *
+     * @throws ValidationException
      */
-    private function check(array $lines, bool $closing = false, bool $requireDimensions = false): void
+    public function check(array $lines, bool $closing = false, bool $requireDimensions = false): void
     {
         if (count($lines) < 2) {
             throw ValidationException::withMessages(['lines' => 'A journal needs at least two lines.']);

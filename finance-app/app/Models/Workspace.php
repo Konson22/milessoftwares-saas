@@ -15,6 +15,8 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property string $display_name
  * @property string $currency
  * @property string $timezone
+ * @property bool $journal_approval manual journals need a second person's approval
+ * @property int|null $journal_approval_threshold_minor only from this total up (null: all)
  */
 class Workspace extends Model
 {
@@ -22,6 +24,14 @@ class Workspace extends Model
     use HasUuids;
 
     protected $fillable = ['slug', 'display_name', 'currency', 'timezone'];
+
+    protected function casts(): array
+    {
+        return [
+            'journal_approval' => 'boolean',
+            'journal_approval_threshold_minor' => 'integer',
+        ];
+    }
 
     /**
      * The current tenant's row (null until the platform has provisioned it).

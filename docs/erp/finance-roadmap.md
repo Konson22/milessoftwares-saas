@@ -20,7 +20,9 @@ money out, transfers), trial balance, profit and loss, balance sheet, product ev
 | F6 Multicurrency ✅ | currencies and daily rates, foreign-currency bank accounts, invoices, bills and payments in a foreign currency, realised gains and losses, period-end revaluation (reversed next day); plan feature `finance.multicurrency` | ledger always balances in the books' currency; revaluation reverses exactly |
 | F7 Budgets ✅ | budgets per year, per account per month (optionally per cost centre), copy from last year's actuals, budget vs actual report | budget vs actual's actual column equals the P&L |
 | F8 Fixed assets ✅ | asset categories (accounts, method, life), register, acquisition from a bill or journal, depreciation (straight line, declining balance) run monthly into the ledger, disposal with gain or loss; plan feature `finance.fixed_assets` | a run never depreciates below residual value or twice for a month; register net book value equals the asset accounts |
-| Later | recurring journals, approvals for manual journals (SoD), consolidation across organizations, bank feeds, e-invoicing | — |
+| F9 Review fixes, recurring journals, ratios ✅ | four review fixes (tax on replaced opening balances, case-insensitive search, reversed journals in reconciliation, overdue on the due day); recurring journals (weekly to yearly, month ends kept, reversing accruals, daily `finance:recurring`); financial ratios with the previous period | each occurrence posts once and in order; a locked period stops a template without failing others; ratios computed from the same balances as the statements |
+| F10 Journal approvals ✅ | maker-checker for manual and recurring journals, on per organization for all or from an amount; drafts outside the ledger; approve, reject, withdraw; catalog 1.8.0 `finance.journals.approve` | nobody approves their own entry; a draft moves no balance until approved; an unapproved recurring journal never posts |
+| Later | multi-level approval routing, consolidation across organizations, bank feeds, e-invoicing, customer statements | — |
 
 ## Permissions
 
@@ -29,6 +31,7 @@ money out, transfers), trial balance, profit and loss, balance sheet, product ev
 | `finance.periods.manage`: lock and unlock months, close and reopen years, opening balances | 3 | F1 (catalog 1.1.0) |
 | `finance.banking.reconcile`: import statements, match, reconcile, bank rules | 3 | F3 (catalog 1.2.0) |
 | `finance.tax.manage`: tax codes, file, settle and unfile tax returns | 3 | F4 (catalog 1.3.0) |
+| `finance.journals.approve`: approve or reject other people's manual and recurring journals, set when approval is needed | 3 | F10 (catalog 1.8.0) |
 
 Viewing the periods page needs `finance.journals.view`. The Accountant role gets every new
 permission; Bookkeeper and Auditor do not get `finance.periods.manage`. Bookkeeper gets

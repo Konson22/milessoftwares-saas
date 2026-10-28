@@ -6,7 +6,7 @@
         "kind": "shared_module",
         "status": "beta"
     },
-    "version": "1.7.0",
+    "version": "1.8.0",
     "permissions": [
         {
             "key": "finance.accounts.view",
@@ -29,6 +29,12 @@
         {
             "key": "finance.journals.post",
             "name": "Post and reverse manual journals",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.journals.approve",
+            "name": "Approve other people's manual and recurring journals, and set when approval is needed",
             "sensitivity": 3,
             "scopes": ["organization"]
         },
@@ -135,6 +141,7 @@
                 "finance.accounts.manage",
                 "finance.journals.view",
                 "finance.journals.post",
+                "finance.journals.approve",
                 "finance.payables.view",
                 "finance.payables.manage",
                 "finance.receivables.view",

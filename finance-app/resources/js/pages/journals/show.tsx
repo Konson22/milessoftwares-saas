@@ -33,6 +33,8 @@ type Props = {
         sourceReference: string | null;
         createdBy: string | null;
         createdAt: string;
+        approvedBy: string | null;
+        approvedAt: string | null;
         reversalOf: { id: string; number: string } | null;
         reversedBy: { id: string; number: string } | null;
         reversible: boolean;
@@ -248,6 +250,19 @@ export default function ShowJournal({ journal }: Props) {
                                 ? ` by ${journal.createdBy}`
                                 : ' automatically'}
                         </dd>
+                        {journal.approvedBy && journal.approvedAt && (
+                            <>
+                                <dt className="text-muted-foreground">
+                                    Approved
+                                </dt>
+                                <dd>
+                                    {new Date(
+                                        journal.approvedAt,
+                                    ).toLocaleString()}{' '}
+                                    by {journal.approvedBy}
+                                </dd>
+                            </>
+                        )}
                         {journal.reversalOf && (
                             <>
                                 <dt className="text-muted-foreground">

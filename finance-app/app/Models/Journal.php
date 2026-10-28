@@ -25,9 +25,14 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property string|null $reversal_of_id
  * @property string|null $reversed_by_id
  * @property string|null $created_by
+ * @property string|null $recurring_journal_id the recurring journal that posted it
+ * @property int|null $recurring_occurrence which of its occurrences (from 0)
+ * @property string|null $approved_by who approved it, when it needed approval
+ * @property CarbonImmutable|null $approved_at
  * @property CarbonImmutable $created_at
  * @property-read Collection<int, JournalLine> $lines
  * @property-read User|null $creator
+ * @property-read User|null $approver
  * @property-read Journal|null $reversalOf
  * @property-read Journal|null $reversedBy
  */
@@ -60,6 +65,12 @@ class Journal extends Model
     /** A fixed asset sold or written off. */
     public const ASSET_DISPOSAL = 'asset_disposal';
 
+    /** Posted by a recurring journal (App\Finance\RecurringJournals). */
+    public const RECURRING = 'recurring';
+
+    /** Reverses a reversing recurring journal the next day. */
+    public const RECURRING_REVERSAL = 'recurring_reversal';
+
     protected $guarded = ['organization_id'];
 
     protected function casts(): array
@@ -67,6 +78,7 @@ class Journal extends Model
         return [
             'entry_date' => 'immutable_date',
             'created_at' => 'immutable_datetime',
+            'approved_at' => 'immutable_datetime',
         ];
     }
 
@@ -89,6 +101,14 @@ class Journal extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
     /**

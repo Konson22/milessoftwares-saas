@@ -101,7 +101,9 @@ class Reconciliation
 
     /**
      * Ledger lines on the line's bank account for the same signed amount,
-     * not cleared by any statement line, closest in date first.
+     * not cleared by any statement line, closest in date first. A reversed
+     * journal and its reversal cancel out, so neither is offered: the money
+     * never moved.
      *
      * @return Collection<int, JournalLine>
      */
@@ -109,6 +111,8 @@ class Reconciliation
     {
         return $this->uncleared($line->account_id)
             ->where($line->amount_minor > 0 ? 'journal_lines.debit_minor' : 'journal_lines.credit_minor', abs($line->amount_minor))
+            ->whereNull('journals.reversed_by_id')
+            ->whereNull('journals.reversal_of_id')
             ->whereDate('journals.entry_date', '>=', $line->line_date->subDays($days))
             ->whereDate('journals.entry_date', '<=', $line->line_date->addDays($days))
             ->get()

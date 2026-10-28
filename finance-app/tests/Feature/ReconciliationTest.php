@@ -177,6 +177,18 @@ it('matches single candidates automatically and enters the rest by rules', funct
     });
 });
 
+it('does not offer a reversed journal or its reversal as a match', function () {
+    $wrong = bankEntry('2026-10-05', '120', memo: 'Deposit to the wrong account');
+    $this->post(bankUrl('journals/'.$wrong->journal_id.'/reverse'), ['entry_date' => '2026-10-05', 'reason' => 'Wrong account'])->assertSessionHasNoErrors();
+    $right = bankEntry('2026-10-05', '120', '4000', 'Deposit');
+
+    importStatement('2026-10-31', '120', [['2026-10-06', 'Deposit', '120']])->assertSessionHasNoErrors();
+
+    // Only the entry that stands is a candidate, so it is matched automatically.
+    $this->post(bankUrl('reconciliation/'.statement()->id.'/auto'))->assertSessionHas('success', '1 matched, 0 entered by rules.');
+    expect(statementLine('Deposit')->journal_line_id)->toBe($right->id);
+});
+
 it('reconciles a statement once every line is matched and it adds up, in order, and undoes it', function () {
     $a = bankEntry('2026-10-02', '150', memo: 'In');
     $b = bankEntry('2026-11-02', '40', memo: 'In again');

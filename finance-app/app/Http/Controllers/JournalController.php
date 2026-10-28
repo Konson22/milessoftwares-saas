@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Finance\JournalApprovals;
 use App\Finance\Ledger;
 use App\Finance\Money;
+use App\Finance\StoredLines;
 use App\Models\Account;
 use App\Models\Journal;
 use App\Models\JournalLine;
+use App\Models\Workspace;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,9 +34,9 @@ class JournalController extends Controller
             ->whereDate('entry_date', '>=', $from)
             ->whereDate('entry_date', '<=', $to)
             ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
-                ->where('number', 'like', "%{$search}%")
-                ->orWhere('memo', 'like', "%{$search}%")
-                ->orWhere('source_reference', 'like', "%{$search}%")))
+                ->whereLike('number', "%{$search}%")
+                ->orWhereLike('memo', "%{$search}%")
+                ->orWhereLike('source_reference', "%{$search}%")))
             ->withSum('lines', 'debit_minor')
             ->orderByDesc('entry_date')
             ->orderByDesc('number')
@@ -61,7 +64,7 @@ class JournalController extends Controller
 
     public function show(Journal $journal): Response
     {
-        $journal->load(['lines.account', 'lines.costCentre', 'lines.project', 'creator', 'reversalOf', 'reversedBy']);
+        $journal->load(['lines.account', 'lines.costCentre', 'lines.project', 'creator', 'approver', 'reversalOf', 'reversedBy']);
 
         return Inertia::render('journals/show', [
             'journal' => [
@@ -74,6 +77,8 @@ class JournalController extends Controller
                 'sourceReference' => $journal->source_reference,
                 'createdBy' => $journal->creator?->name,
                 'createdAt' => $journal->created_at->toIso8601String(),
+                'approvedBy' => $journal->approver?->name,
+                'approvedAt' => $journal->approved_at?->toIso8601String(),
                 'reversalOf' => $journal->reversalOf === null ? null : ['id' => $journal->reversalOf->id, 'number' => $journal->reversalOf->number],
                 'reversedBy' => $journal->reversedBy === null ? null : ['id' => $journal->reversedBy->id, 'number' => $journal->reversedBy->number],
                 'reversible' => $journal->reversed_by_id === null && $journal->reversal_of_id === null && in_array($journal->source_type, self::REVERSIBLE, true),
@@ -94,14 +99,18 @@ class JournalController extends Controller
 
     public function create(): Response
     {
+        $workspace = Workspace::current();
+
         return Inertia::render('journals/create', [
+            // Whether it will wait for approval (the server decides again).
+            'approval' => $workspace?->journal_approval === true ? ['thresholdMinor' => $workspace->journal_approval_threshold_minor] : null,
             'accounts' => $this->accountOptions(),
             'dimensions' => $this->dimensionOptions(),
             'today' => CarbonImmutable::today()->toDateString(),
         ]);
     }
 
-    public function store(Request $request, Ledger $ledger): RedirectResponse
+    public function store(Request $request, Ledger $ledger, JournalApprovals $approvals): RedirectResponse
     {
         $data = $request->validate([
             'entry_date' => ['required', 'date_format:Y-m-d'],
@@ -113,6 +122,14 @@ class JournalController extends Controller
             'lines.*.credit' => ['nullable', 'string', Money::rule()],
             ...$this->lineDimensionRules(),
         ]);
+
+        // A second person approves it first (when the organization says so).
+        $stored = $this->storedLines($data['lines']);
+        if ($approvals->required(StoredLines::total($stored))) {
+            $draft = $approvals->submit(CarbonImmutable::parse($data['entry_date']), $data['memo'], $stored, $this->user($request));
+
+            return redirect()->route('journal-approvals.index')->with('success', "{$draft->number} is waiting for approval; it posts once someone else approves it.");
+        }
 
         $accounts = Account::query()->whereIn('id', array_column($data['lines'], 'account_id'))->get()->keyBy('id');
         $dimensions = $this->chosenDimensions($data['lines']);

@@ -58,8 +58,8 @@ class InvoiceController extends Controller
             ->when($status === 'paid', fn ($query) => $query->whereNull('voided_at')->whereRaw('paid_minor + credited_minor >= total_minor'))
             ->when($status === 'void', fn ($query) => $query->whereNotNull('voided_at'))
             ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
-                ->where('number', 'like', "%{$search}%")
-                ->orWhere('customer_name', 'like', "%{$search}%")))
+                ->whereLike('number', "%{$search}%")
+                ->orWhereLike('customer_name', "%{$search}%")))
             ->orderByDesc('issued_on')
             ->orderByDesc('number')
             ->limit(500)

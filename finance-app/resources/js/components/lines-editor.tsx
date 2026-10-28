@@ -97,6 +97,7 @@ export function LinesEditor({
     taxCodes = [],
     dimensions = { costCentres: [], projects: [] },
     currency = null,
+    initial = [],
 }: {
     accounts: AccountOption[];
     mode: 'amount' | 'journal';
@@ -105,6 +106,8 @@ export function LinesEditor({
     taxCodes?: TaxCodeOption[];
     dimensions?: DimensionOptions;
     currency?: string | null;
+    /** Lines to start from (editing a saved entry). */
+    initial?: Partial<Omit<Row, 'key'>>[];
 }) {
     const taxed = mode === 'amount' && taxCodes.length > 0;
     const dimensioned =
@@ -112,10 +115,12 @@ export function LinesEditor({
     const money = useMoney(currency);
     const step = useAmountStep(currency);
     const [rows, setRows] = useState<Row[]>(() =>
-        Array.from(
-            { length: Math.max(minRows, mode === 'journal' ? 2 : 1) },
-            () => emptyRow(),
-        ),
+        initial.length > 0
+            ? initial.map((line) => ({ ...emptyRow(), ...line }))
+            : Array.from(
+                  { length: Math.max(minRows, mode === 'journal' ? 2 : 1) },
+                  () => emptyRow(),
+              ),
     );
 
     const change = (key: number, field: keyof Row, value: string) =>

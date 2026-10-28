@@ -21,7 +21,7 @@ class SupplierController extends Controller
         $search = trim((string) $request->query('search', ''));
 
         $suppliers = Supplier::query()
-            ->when($search !== '', fn ($query) => $query->where('name', 'like', "%{$search}%"))
+            ->when($search !== '', fn ($query) => $query->whereLike('name', "%{$search}%"))
             ->withSum('bills', 'total_minor')
             ->withSum('bills', 'paid_minor')
             ->withCount('bills')

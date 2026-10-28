@@ -234,3 +234,46 @@ it('downloads the trial balance, and keeps reports from members without the perm
         $this->get(reportUrl("reports/{$report}"))->assertForbidden();
     }
 });
+
+it('works out financial ratios from the statements, next to the period before', function () {
+    entry('2026-10-01', '1010', '3000', '10000', 'Capital');
+    entry('2026-10-02', '1010', '2500', '5000', 'Loan');
+    entry('2026-10-03', '1500', '1010', '4000', 'Equipment');
+    entry('2026-10-04', '1400', '2000', '3000', 'Stock on credit');
+    entry('2026-10-10', '1200', '4000', '6000', 'Sale on credit');
+    entry('2026-10-10', '5000', '1400', '2000', 'Cost of the sale');
+    entry('2026-10-15', '6000', '1010', '1000', 'Rent');
+
+    $this->get(reportUrl('reports/ratios?from=2026-10-01&to=2026-10-31'))->assertInertia(fn (Assert $page) => $page
+        ->component('reports/ratios')
+        ->where('report.days', 31)
+        // Bank 10,000 + receivable 6,000 + inventory 1,000 current; equipment 4,000 not.
+        ->where('report.figures.currentAssetsMinor', 1700000)
+        ->where('report.figures.assetsMinor', 2100000)
+        // Payable 3,000 current; the loan not.
+        ->where('report.figures.currentLiabilitiesMinor', 300000)
+        ->where('report.figures.liabilitiesMinor', 800000)
+        // Capital and the month's profit, not yet closed.
+        ->where('report.figures.equityMinor', 1300000)
+        ->where('report.figures.costOfSalesMinor', 200000)
+        ->where('report.ratios.current', 5.67)
+        ->where('report.ratios.quick', 5.33)
+        ->where('report.ratios.cash', 3.33)
+        ->where('report.ratios.grossMargin', 66.7)
+        ->where('report.ratios.netMargin', 50)
+        ->where('report.ratios.returnOnAssets', 14.3)
+        ->where('report.ratios.returnOnEquity', 23.1)
+        ->where('report.ratios.debtToEquity', 0.62)
+        ->where('report.ratios.debtRatio', 38.1)
+        ->where('report.ratios.receivableDays', 31)
+        ->where('report.ratios.payableDays', 46.5)
+        ->where('report.ratios.inventoryDays', 15.5)
+        // September had nothing: no ratio divides by zero.
+        ->where('compare.from', '2026-09-01')
+        ->where('compare.ratios.current', null)
+        ->where('compare.ratios.grossMargin', null));
+
+    $csv = $this->get(reportUrl('reports/ratios?from=2026-10-01&to=2026-10-31&export=ratios'))->assertOk()->streamedContent();
+    expect($csv)->toContain('"Current ratio (×)",5.67,')
+        ->and($csv)->toContain('"Days payables outstanding",46.5,');
+});

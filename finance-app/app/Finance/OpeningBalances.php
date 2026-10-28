@@ -112,7 +112,8 @@ class OpeningBalances
             $previous = $this->journal();
 
             if ($previous !== null) {
-                $this->ledger->reverse($previous, $start, "Opening balances replaced ({$previous->number})", $by);
+                // Still opening balances, so reports that leave those out (tax) leave this out too.
+                $this->ledger->reverse($previous, $start, "Opening balances replaced ({$previous->number})", $by, Journal::OPENING_BALANCES);
             }
 
             return $lines === [] ? null : $this->ledger->post($start, 'Opening balances', $lines, ['source_type' => Journal::OPENING_BALANCES], $by);

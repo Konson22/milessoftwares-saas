@@ -194,6 +194,25 @@ abstract class Controller
     }
 
     /**
+     * Validated journal lines (debit or credit typed in the books' currency)
+     * as kept for later posting (App\Finance\StoredLines).
+     *
+     * @param  array<int, array<string, mixed>>  $lines
+     * @return list<array{account_id: string, debit_minor: int, credit_minor: int, description: string|null, cost_centre_id: string|null, project_id: string|null}>
+     */
+    protected function storedLines(array $lines): array
+    {
+        return array_values(array_map(fn (array $line) => [
+            'account_id' => (string) $line['account_id'],
+            'debit_minor' => ($line['debit'] ?? '') === '' ? 0 : Money::toMinor((string) $line['debit']),
+            'credit_minor' => ($line['credit'] ?? '') === '' ? 0 : Money::toMinor((string) $line['credit']),
+            'description' => isset($line['description']) ? (string) $line['description'] : null,
+            'cost_centre_id' => isset($line['cost_centre_id']) ? (string) $line['cost_centre_id'] : null,
+            'project_id' => isset($line['project_id']) ? (string) $line['project_id'] : null,
+        ], $lines));
+    }
+
+    /**
      * The cost centres and projects chosen on validated lines, by id.
      *
      * @param  array<int, array<string, mixed>>  $lines

@@ -71,6 +71,8 @@ const SOURCE_TYPES: Record<string, string> = {
     fx_revaluation_reversal: 'Revaluation reversed',
     depreciation: 'Depreciation',
     asset_disposal: 'Asset disposal',
+    recurring: 'Recurring journal',
+    recurring_reversal: 'Recurring reversed',
 };
 
 export function sourceTypeLabel(type: string): string {
