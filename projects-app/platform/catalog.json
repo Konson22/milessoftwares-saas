@@ -1,0 +1,111 @@
+{
+    "application": {
+        "code": "projects",
+        "name": "Projects",
+        "category": "products",
+        "kind": "standalone",
+        "status": "beta"
+    },
+    "version": "1.0.0",
+    "roles": [
+        {
+            "key": "manager",
+            "name": "Project Manager",
+            "sensitivity": 3,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "projects.view",
+                "projects.manage",
+                "projects.tasks.manage",
+                "projects.time.log",
+                "projects.time.manage",
+                "projects.finance.view",
+                "projects.people.manage"
+            ]
+        },
+        {
+            "key": "member",
+            "name": "Team Member",
+            "sensitivity": 1,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "projects.view",
+                "projects.tasks.manage",
+                "projects.time.log"
+            ]
+        },
+        {
+            "key": "viewer",
+            "name": "Viewer",
+            "sensitivity": 1,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": ["projects.view"]
+        },
+        {
+            "key": "controller",
+            "name": "Finance Controller",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "projects.view",
+                "projects.finance.view",
+                "projects.people.manage"
+            ]
+        }
+    ],
+    "permissions": [
+        {
+            "key": "projects.view",
+            "name": "View projects, tasks, timelines, risks and the team",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.manage",
+            "name": "Set up and change projects, their team, milestones, risks and budget",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.tasks.manage",
+            "name": "Add and change tasks, move them on the board, comment",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.time.log",
+            "name": "Log your own time",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.time.manage",
+            "name": "Log and remove anyone's time",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.finance.view",
+            "name": "See budgets, costs and hourly rates",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.people.manage",
+            "name": "Add people and set what their time costs",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        }
+    ],
+    "separation_of_duties": [
+        {
+            "permissions": ["projects.time.manage", "projects.people.manage"],
+            "mode": "warn",
+            "description": "One person setting rates and logging anyone's time can inflate costs."
+        }
+    ]
+}

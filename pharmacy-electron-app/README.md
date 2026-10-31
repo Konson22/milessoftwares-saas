@@ -1,15 +1,36 @@
 # Miles Pharmacy (desktop)
 
-The counter of the Miles Softwares pharmacy (`../pharmacy-app`) on a Windows,
-macOS or Linux PC, built to keep selling when the internet stops. Electron +
-React + Tailwind (the shared theme from `../packages/ui`). It talks to the same
-Pharmacy API as the mobile app (`../pharmacy-mobile-app`).
+The Miles Softwares pharmacy on a Windows, macOS or Linux PC. Electron +
+React + Tailwind (the shared theme from `../packages/ui`). One app, two ways
+of running the pharmacy, chosen on the first opening (`src/main/mode.ts`):
+
+| | Offline: on this PC only | Hybrid: with a Miles workspace |
+|-|-|-|
+| The pharmacy | `pharmacy.db` (SQLite) on this PC, no internet, no account. One PC, one branch | The workspace's pharmacy (`../pharmacy-app`) or shop: branches, the web back office, every device in step |
+| Signing in | A username and password; the first manager is made at set-up and adds staff under Users | The platform (below) |
+| Calls | `window.desktop.call` → `src/main/handlers.ts` → `src/main/db` | `window.desktop.api` → `src/main/http.ts` → `{workspace}/pharmacy/api` |
+| Back office | Its own pages and screens (`src/main/db/pages.ts`, `screens/local`) | The web's pages, read from the workspace (`screens/`) |
+| No connection | Not needed | Sales and cash moves wait in the outbox and sync (`src/renderer/src/offline`) |
+| Keeping it safe | Daily backups, to a USB stick, restore | The workspace |
+
+The counter's screens (sell, sales, shift, cart, checkout) are the same for
+both: `api` (`lib/api/index.ts`) and `getPage`/`act` (`lib/pages.ts`) send
+each call to the chosen side, as in the mobile app (`../pharmacy-mobile-app`).
+The choice is kept by the main process, which answers `call` only in offline
+mode; it changes from the sign-in screen, and each mode keeps its own data.
+Installs from before the choice existed open where they were.
+
+Until 1.1 the offline side was a separate app, Miles Pharmacy Offline
+(`pharmacy-electron-single-app`, since removed; it is in git history). On the
+first opening after the update, its pharmacy is copied from `%APPDATA%\Miles Pharmacy Offline` (database,
+backups, the cart in progress) and the app opens offline. The old folder is
+left as it was (`src/main/legacy.ts`).
 
 ## Run
 
 ```bash
 npm install
-cp .env.example .env     # VITE_API_MODE=mock runs the demo pharmacy
+cp .env.example .env     # hybrid: VITE_API_MODE=mock runs the demo pharmacy
 npm run dev              # the app, with hot reload
 npm run typecheck
 npm run dist:win         # installer in dist/ (dist for this OS)
@@ -18,10 +39,48 @@ npm run dist:win         # installer in dist/ (dist for this OS)
 If `npm run dev` says Electron failed to install, fetch its binary:
 `node node_modules/electron/install.js`.
 
-Keys: F1 Sell, F2 Sales, F3 Shift, F4 Sync, `/` to search. A barcode scanner
-types into the search and presses Enter: the medicine goes into the cart.
+Keys: F1 Sell, F2 Sales, F3 Shift, F4 Sync (hybrid) or Prescriptions
+(offline), `/` to search. A barcode scanner types into the search and
+presses Enter: the medicine goes into the cart.
 
-## Working offline
+## Offline: the pharmacy on this PC
+
+On set-up the app asks for the pharmacy (its name, address and currency) and
+its first manager, and can add sample medicines with stock to try it.
+
+| | |
+|---|---|
+| Counter | sell (FEFO: soonest-to-expire batch first), packs, discounts, held carts, receipts, void and return |
+| Shifts | open with a float, cash in and out, close with a count (blind for cashiers if set); expenses paid from the till |
+| Prescriptions | record, verify (pharmacist), reject, dispense in part or whole; prescription-only medicines sell only this way |
+| Inventory, batches | stock per medicine and every batch with its cost, selling price and margin; add, adjust, dispose, hold back, release, reprice |
+| Receive stock | deliveries by the unit or the box, in the pharmacy's currency or the second one |
+| Pricing | each batch sells at its own price, soonest to expire first (`src/shared/pricing.ts`, used by both the cart and the sale) |
+| Expenses | by category: operating, recurring (due and overdue) or one-off; paid from the safe, the bank, mobile money or the till |
+| Reports | net sales, cost, gross profit, expenses, net profit, by day, payment and person, best sellers, shifts, stock value, low and expiring |
+| Users, settings | manager, pharmacist or cashier; the second currency and its rate, the receipt, payment methods, discount limit, shifts |
+| Backups | daily automatic copy (last 14 kept), back up now, save to a USB stick, restore |
+
+Roles: a cashier sells, records prescriptions and sees stock. A pharmacist
+also discounts, verifies prescriptions, and manages medicines, stock,
+suppliers and deliveries. A manager can do everything, including voids,
+returns, expenses, reports, users, settings and backups.
+
+- **The database** is `pharmacy.db` (WAL) in the app's user-data folder
+  (`%APPDATA%\Miles Pharmacy`), opened by the main process only, through
+  `node:sqlite` (built into Electron: no native module). It is opened on the
+  first call, so a PC that works with a workspace never makes one.
+- **Schema** changes are migrations in `src/main/db/schema.ts`, applied by
+  `PRAGMA user_version`. The app refuses a database made by a newer version,
+  and says so. The mobile app's offline side uses the same tables, so a
+  backup from one opens in the other: keep their migrations in step.
+- **Backups** are under `backups/`, each a whole database made by
+  `VACUUM INTO`. Restoring first keeps what is there as a "before a restore"
+  copy, then signs everyone out.
+- **Amounts** are integers in the currency's minor unit; the number of
+  decimals is set at setup.
+
+## Hybrid: working offline
 
 | | Online | Offline |
 |---|---|---|
@@ -53,7 +112,7 @@ types into the search and presses Enter: the medicine goes into the cart.
   the demo pharmacy off, so you can try the outbox. The demo pharmacy resets
   when the app restarts.
 
-## Live mode and sign-in
+## Hybrid: sign-in, live and demo
 
 The main process (`src/main`) holds the tokens and makes every API call, so the
 page never sees a token and no call is held up by CORS. Every way of signing
@@ -139,7 +198,7 @@ The demo (mock) mode is a pharmacy only.
 | `VITE_RETAIL_CLIENT_ID` | The shop's mobile client; empty: pharmacy only |
 | `VITE_RETAIL_PATH` | `retail` |
 
-## The back office
+## Hybrid: the back office
 
 Everything else the web does, the desktop does through the same pages: the
 pharmacy mirrors each web page at `{workspace}/pharmacy/api/v1/app/<web path>`
@@ -164,20 +223,32 @@ next (`redirect: null` means stay and reload). Validation comes back per field.
 ## Layout
 
 ```
-src/main/          window, IPC, sign-in (auth.ts), API calls (http.ts), data on disk (store.ts), printing
+src/main/
+  index.ts         window, IPC, printing; daily backups (offline)
+  mode.ts          offline or hybrid, kept in userData/mode.json
+  legacy.ts        the copy from Miles Pharmacy Offline; the mode of installs from before the choice
+  handlers.ts      offline: what the window may call, by name (refused in hybrid)
+  db/              offline: the database (schema, counter, catalog, expenses, pages, session, settings)
+  backup.ts        offline: backups
+  auth.ts, http.ts hybrid: sign-in and API calls
+  store.ts         small things the window keeps (userData/data)
 src/preload/       window.desktop, the bridge (types in src/shared/ipc.ts)
+src/shared/        types (both sides), pricing, currencies
 src/renderer/src/
-  lib/api/         PosApi: live and mock (as in the mobile app)
-  offline/         connectivity, cache, catalog, outbox, sync
-  store/           session, cart (held carts), ui
-  pages/           login, branch, sell, sales, shift, sync (the counter, offline)
-  screens/         back-office pages (registry.tsx), via lib/pages.ts and hooks/use-page.ts
+  lib/mode.ts      the mode, for calls and pages
+  lib/api/         api: localApi (offline) or onlineApi (live and mock), by mode
+  offline/         hybrid: connectivity, cache, catalog, outbox, sync (they stand aside offline)
+  store/           session (auth.ts, both modes), cart (held carts), ui
+  pages/           choose-mode, login, branch, sell, sales, shift, sync; local/: sign-in, set-up, prescriptions
+  screens/         back-office pages: the workspace's (registry.tsx), local/ this PC's
   components/      shell, cart, checkout, ui kit
 ```
 
 ## Not yet
 
-- Native screens for prescriptions, orders, shifts, customers, counter
+- Trial and licence activation for offline mode (docs/erp/desktop-pharmacy-unification.md, phase 2).
+- Offline: purchase orders, supplier returns, the controlled-drugs register and stock counts.
+- Hybrid: native screens for prescriptions, orders, shifts, customers, counter
   settings, locations, transfers, disposals, the controlled register,
   purchasing and reports. Until then they show as generic pages.
 - A full catalog download: the API returns at most 50 items a search, so the

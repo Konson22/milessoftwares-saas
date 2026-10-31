@@ -37,7 +37,11 @@ final class OidcRelyingParty
 
     private const PENDING_TTL_SECONDS = 600;
 
-    public function authorizationUrl(FirstPartyClient $client, Request $request): string
+    /**
+     * With $register, a visitor who is not signed in is shown the sign-up
+     * page rather than sign-in (OIDC prompt=create).
+     */
+    public function authorizationUrl(FirstPartyClient $client, Request $request, bool $register = false): string
     {
         $pending = [
             'state' => Str::random(40),
@@ -59,6 +63,7 @@ final class OidcRelyingParty
             'code_challenge_method' => 'S256',
             // Staff prove their credentials and MFA again for every admin session.
             ...($client->key === 'admin' ? ['prompt' => 'login'] : []),
+            ...($register && $client->key !== 'admin' ? ['prompt' => 'create'] : []),
         ]);
     }
 

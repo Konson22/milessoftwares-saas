@@ -1,10 +1,12 @@
 import { isOffline } from '@/lib/api';
+import { isLocal } from '@/lib/mode';
 import { disk } from '@/lib/storage';
 
 /**
  * What the pharmacy last said, kept on this PC so the counter still shows it
  * offline: the branch's rules, the shift, the day's sales, a receipt. Kept
  * per person and branch (the owner), as the pharmacy answers per person.
+ * Offline mode needs none of it: the pharmacy is on this PC.
  */
 
 export interface Cached<T> {
@@ -19,6 +21,7 @@ const keyOf = (owner: string, key: string) => `cache.${owner}.${key}`.replace(/[
 
 /** Asks the pharmacy and saves the answer; offline, the saved answer (if any). */
 export async function cached<T>(owner: string, key: string, fetch: () => Promise<T>): Promise<Cached<T>> {
+  if (isLocal()) return { data: await fetch(), fresh: true, savedAt: new Date().toISOString() };
   const k = keyOf(owner, key);
   try {
     const data = await fetch();
@@ -44,6 +47,7 @@ export async function peek<T>(owner: string, key: string): Promise<{ data: T; sa
 
 /** Replaces the saved answer (after a change made here, say). */
 export function remember<T>(owner: string, key: string, data: T) {
+  if (isLocal()) return;
   const k = keyOf(owner, key);
   const entry = { data, savedAt: new Date().toISOString() };
   memory.set(k, entry);

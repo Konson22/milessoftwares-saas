@@ -1,5 +1,6 @@
 import {
   ArrowLeftRight,
+  Banknote,
   Boxes,
   ChartColumn,
   ClipboardCheck,
@@ -7,11 +8,13 @@ import {
   CloudUpload,
   FileText,
   Gift,
+  Layers,
   LayoutDashboard,
   ListOrdered,
   MapPin,
   Package,
   PackageCheck,
+  PackagePlus,
   Percent,
   Pill,
   ReceiptText,
@@ -23,6 +26,7 @@ import {
   Trash2,
   Truck,
   Undo2,
+  UserCog,
   Users,
   Wallet,
   type LucideIcon,
@@ -36,7 +40,8 @@ import type { Page } from '@/store/ui';
  * The pharmacy's sections, in the web's menu order (pharmacy-app
  * resources/js/lib/navigation.ts, and retail-navigation.ts for a shop), with
  * the counter's own screens that work offline in place of the web counter,
- * its sales and the member's shift.
+ * its sales and the member's shift. Offline, the pharmacy on this PC has
+ * its own menu (`here`): its pages are src/main/db/pages.ts.
  */
 export interface NavItem {
   title: string;
@@ -157,14 +162,72 @@ const retail: NavGroup[] = [
   thisPc,
 ];
 
-export const navigation: Record<Product, NavGroup[]> = { pharmacy, retail };
+/** Offline: the pharmacy on this PC, one branch, permissions by role (src/main/db/session.ts). */
+const here: NavGroup[] = [
+  {
+    title: 'Overview',
+    items: [{ title: 'Dashboard', page: 'app:', icon: LayoutDashboard, permission: null, scope: 'org' }],
+  },
+  {
+    title: 'Counter',
+    items: [
+      { title: 'Sell', page: 'sell', icon: ShoppingCart, permission: 'pharmacy.sales.create', scope: 'org', key: 'F1' },
+      { title: 'Sales', page: 'sales', icon: ReceiptText, permission: null, scope: 'org', key: 'F2' },
+      { title: 'My shift', page: 'shift', icon: Wallet, permission: 'pharmacy.sales.create', scope: 'org', key: 'F3' },
+      { title: 'Prescriptions', page: 'prescriptions', icon: FileText, permission: 'pharmacy.prescriptions.view', scope: 'org', key: 'F4' },
+    ],
+  },
+  {
+    title: 'Inventory',
+    items: [
+      { title: 'Inventory', page: 'app:stock', icon: Boxes, permission: 'pharmacy.stock.view', scope: 'org' },
+      { title: 'Batches', page: 'app:batches', icon: Layers, permission: 'pharmacy.stock.view', scope: 'org' },
+      { title: 'Receive stock', page: 'app:receipts/create', icon: PackagePlus, permission: 'pharmacy.purchasing.receive', scope: 'org' },
+      { title: 'Medicines', page: 'app:medicines', icon: Pill, permission: 'pharmacy.medicines.view', scope: 'org' },
+      { title: 'Goods received', page: 'app:receipts', icon: PackageCheck, permission: 'pharmacy.purchasing.view', scope: 'org' },
+      { title: 'Suppliers', page: 'app:suppliers', icon: Truck, permission: 'pharmacy.purchasing.view', scope: 'org' },
+    ],
+  },
+  {
+    title: 'Finance',
+    items: [
+      { title: 'Expenses', page: 'app:expenses', icon: Banknote, permission: 'pharmacy.expenses.manage', scope: 'org' },
+      { title: 'Reports', page: 'app:reports', icon: ChartColumn, permission: 'pharmacy.reports.view', scope: 'org' },
+    ],
+  },
+  {
+    title: 'Admin',
+    items: [
+      { title: 'Users', page: 'app:users', icon: UserCog, permission: 'pharmacy.users.manage', scope: 'org' },
+      { title: 'Settings', page: 'app:settings', icon: Settings2, permission: 'pharmacy.settings.manage', scope: 'org' },
+    ],
+  },
+];
 
-/** The sections this member may use here, without empty groups. */
+export const navigation: Record<Product | 'here', NavGroup[]> = { pharmacy, retail, here };
+
+/**
+ * The sections this member may use here, without empty groups. Until the
+ * permissions load: the counter only.
+ */
 export function visibleNavigation(
   product: Product,
   access: Pick<SharedProps, 'access' | 'branchPermissions'> | null,
   pagesAvailable: boolean,
+  local = false,
 ): NavGroup[] {
+  if (local) {
+    const permissions = access?.access?.permissions ?? null;
+    return navigation.here
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => {
+          if (permissions === null) return !item.page.startsWith('app:');
+          return item.permission === null || permissions.includes(item.permission);
+        }),
+      }))
+      .filter((group) => group.items.length > 0);
+  }
   const owner = access?.access?.isOwner ?? false;
   const can = (p: string) => owner || (access?.access?.permissions.includes(p) ?? false);
   const canHere = (p: string) => owner || (access?.branchPermissions.includes(p) ?? false);

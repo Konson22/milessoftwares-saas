@@ -115,7 +115,10 @@ function ApplicationGrid({ applications }: { applications: Application[] }) {
                             >
                                 <Link
                                     href={trial({
-                                        query: { app: application.code },
+                                        query: {
+                                            app: application.code,
+                                            chosen: 1,
+                                        },
                                     })}
                                 >
                                     Start free trial <ArrowRight />

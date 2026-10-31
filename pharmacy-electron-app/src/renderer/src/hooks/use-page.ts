@@ -3,6 +3,7 @@ import { create } from 'zustand';
 
 import { ApiError, errorMessage, isOffline } from '@/lib/api';
 import { place } from '@/lib/config';
+import { isLocal } from '@/lib/mode';
 import { act, getPage, type AppPage, type SharedProps } from '@/lib/pages';
 import { cached, peek } from '@/offline/cache';
 import { useConnectivity } from '@/offline/connectivity';
@@ -59,7 +60,11 @@ export function usePage<P = Record<string, any>>(path: string) {
       setState({
         page: null,
         staleSince: null,
-        error: isOffline(e) ? 'This page has not been opened on this PC yet: connect once and it is kept for reading offline.' : errorMessage(e),
+        error: isOffline(e)
+          ? 'This page has not been opened on this PC yet: connect once and it is kept for reading offline.'
+          : e instanceof ApiError && e.status === 403
+            ? 'You may not open this page.'
+            : errorMessage(e),
         loading: false,
       });
     }
@@ -86,7 +91,7 @@ export function useAction(from: string, reload: () => Promise<void> | void) {
 
   const run = useCallback(
     async (method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, data: unknown = {}): Promise<boolean> => {
-      if (!useConnectivity.getState().online) {
+      if (!isLocal() && !useConnectivity.getState().online) {
         toast(`This needs the connection to the ${place()}.`, 'amber');
         return false;
       }

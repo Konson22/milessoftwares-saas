@@ -2,6 +2,8 @@
 
 namespace App\Modules\Products\Console;
 
+use App\Modules\Applications\Models\Application;
+use App\Modules\Products\Enums\ProductStatus;
 use App\Modules\Products\Support\ProductCatalog;
 use Illuminate\Console\Command;
 use Illuminate\Validation\ValidationException;
@@ -31,6 +33,14 @@ class SyncProducts extends Command
         foreach ($products as $index => $definition) {
             $label = is_array($definition) && is_string($definition['code'] ?? null) ? $definition['code'] : "#{$index}";
 
+            // A released product whose applications this deployment does not
+            // run (yet) stays coming soon here instead of failing the sync.
+            $missing = is_array($definition) ? $this->unregistered($definition) : [];
+            if ($missing !== [] && ($definition['status'] ?? null) !== ProductStatus::Planned->value) {
+                $this->line("  {$label}: ".implode(', ', $missing).' not registered here, kept planned.');
+                $definition['status'] = ProductStatus::Planned->value;
+            }
+
             try {
                 $result = $catalog->sync(is_array($definition) ? $definition : []);
                 $this->components->info("{$label}: {$result['product']->status->value}.");
@@ -48,5 +58,16 @@ class SyncProducts extends Command
         }
 
         return $failed ? self::FAILURE : self::SUCCESS;
+    }
+
+    /**
+     * @param  array<mixed>  $definition
+     * @return list<string>
+     */
+    private function unregistered(array $definition): array
+    {
+        $codes = array_values(array_filter(array_column(is_array($definition['applications'] ?? null) ? $definition['applications'] : [], 'code'), 'is_string'));
+
+        return array_values(array_diff($codes, Application::query()->whereIn('code', $codes)->pluck('code')->all()));
     }
 }

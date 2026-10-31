@@ -79,6 +79,14 @@ test('every product API route requires a client token with a scope, or a person\
     expect($api)->not->toBeEmpty();
 
     foreach ($api as $route) {
+        // The offline desktop pharmacy activating: no account or token, the
+        // licence key is the proof. Rate limited, and reads nothing else.
+        if ($route->uri() === 'api/v1/licences/activate') {
+            expect(middlewareOf($route))->toContain('throttle:10,1');
+
+            continue;
+        }
+
         // A person in an application's own app: api/v1/account only.
         if (in_array('api.user', middlewareOf($route), true)) {
             expect($route->uri())->toStartWith('api/v1/account/');

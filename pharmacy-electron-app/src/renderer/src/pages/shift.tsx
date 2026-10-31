@@ -1,19 +1,25 @@
 import { ArrowDownLeft, ArrowUpRight, CloudOff, Loader2 } from 'lucide-react';
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 
 import { Badge, Button, Field, Input, Notice, PageHeader, Panel, Select } from '@/components/ui';
 import { useCounter } from '@/hooks/use-counter';
-import { api, errorMessage, isOffline } from '@/lib/api';
+import { api, errorMessage, isOffline, localApi } from '@/lib/api';
 import { place } from '@/lib/config';
 import { currencyCode, dateTime, money, time, toMajorInput, toMinor } from '@/lib/format';
 import type { CashCounterpart, CashDirection, Till } from '@/lib/types';
 import { useConnectivity } from '@/offline/connectivity';
 import { queuedFor, useOutbox, type QueuedCash } from '@/offline/outbox';
-import { useAuth, useOwner } from '@/store/auth';
+import { useAuth, useLocal, useOwner } from '@/store/auth';
 import { toast } from '@/store/ui';
 
 export function ShiftPage() {
   const { counter, till, tillLoaded, staleSince, error } = useCounter();
+  const local = useLocal();
+
+  // Offline: the figures as they are now (sales were made since they last loaded).
+  useEffect(() => {
+    if (local) void useAuth.getState().refreshTill().catch(() => {});
+  }, [local]);
 
   if (!counter || !tillLoaded) {
     return error ? <Notice>{error}</Notice> : <Loader2 className="mx-auto mt-20 animate-spin text-muted-foreground" />;
@@ -23,6 +29,7 @@ export function ShiftPage() {
     <div className="space-y-4">
       <PageHeader title="Shift" description={till ? `${till.number} · opened ${dateTime(till.opened_at)}` : 'No shift open'} />
       {staleSince ? <Notice>Offline: the shift as the {place()} showed it at {dateTime(staleSince)}.</Notice> : null}
+      {local && !counter.counter.shifts_required && !till ? <Notice tone="blue">Shifts are optional here (Settings): open one to count the drawer.</Notice> : null}
       {till ? <OpenShift till={till} /> : <OpenForm defaultFloat={counter.counter.default_float_minor} />}
     </div>
   );
@@ -153,9 +160,14 @@ const COUNTERPARTS: { value: CashCounterpart; label: string; directions: CashDir
   { value: 'expense', label: 'An expense', directions: ['out'] },
 ];
 
-/** Cash into or out of the drawer: sent now, or kept and sent when the connection is back. */
+/**
+ * Cash into or out of the drawer: sent now, or kept and sent when the
+ * connection is back. Offline, an expense paid from the drawer names its
+ * category (Expenses, Categories, "Paid from the till").
+ */
 function CashForm() {
   const owner = useOwner();
+  const local = useLocal();
   const online = useConnectivity((s) => s.online);
   const setTill = useAuth((s) => s.setTill);
   const [direction, setDirection] = useState<CashDirection>('in');
@@ -164,20 +176,33 @@ function CashForm() {
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [categoryId, setCategoryId] = useState('');
+  const expense = counterpart === 'expense';
+  const withCategory = local && expense;
+
+  useEffect(() => {
+    if (!local) return;
+    localApi
+      .expenseCategories()
+      .then(setCategories)
+      .catch(() => {});
+  }, [local]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     const minor = toMinor(amount);
     if (!minor) return setError('Enter an amount above zero.');
-    if (!reason.trim()) return setError('Say why the cash goes in or comes out.');
+    if (withCategory && !categoryId) return setError('Choose what the expense was for.');
+    if (!reason.trim()) return setError(withCategory ? 'Say what was bought or paid for.' : 'Say why the cash goes in or comes out.');
     const id = crypto.randomUUID();
     setBusy(true);
     setError(null);
     try {
       if (online) {
         try {
-          setTill(await api.moveCash(direction, counterpart, minor, reason.trim(), id));
-          toast('Recorded.');
+          setTill(await api.moveCash(direction, counterpart, minor, reason.trim(), id, withCategory ? categoryId : null));
+          toast(withCategory ? 'Expense recorded against this shift.' : 'Recorded.');
           setAmount('');
           setReason('');
           return;
@@ -222,11 +247,23 @@ function CashForm() {
             ))}
           </Select>
         </Field>
+        {withCategory ? (
+          <Field label="Expense for" hint={categories.length ? undefined : 'No category is paid from the till: a manager sets one under Expenses, Categories.'}>
+            <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+              <option value="">Choose…</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        ) : null}
         <Field label={`Amount (${currencyCode()})`}>
           <Input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" />
         </Field>
-        <Field label="Why">
-          <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Change from the safe" />
+        <Field label={withCategory ? 'What for' : 'Why'}>
+          <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={withCategory ? 'Boda boda to the supplier' : 'Change from the safe'} />
         </Field>
         <Button type="submit" disabled={busy}>
           {online ? 'Record' : 'Record offline'}

@@ -1,6 +1,7 @@
 import type { QueuedSale } from '@/offline/outbox';
 import { packOf, linePrice } from '@/store/cart';
 
+import { RECEIPT_COLUMNS, type PrintLine } from '../../../shared/ipc';
 import { dateTime, money } from './format';
 import type { Counter, Sale } from './types';
 
@@ -112,6 +113,69 @@ export function queuedSaleAsSale(entry: QueuedSale, currency: string): Sale {
 
 export const OFFLINE_NOTE = 'Recorded offline. This sale gets its receipt number when the connection is back.';
 
+/** Words wrapped to the width; a word longer than a line is cut. */
+function wrap(text: string, width: number): string[] {
+  const out: string[] = [];
+  let line = '';
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    if (!line) line = word;
+    else if (line.length + 1 + word.length <= width) line += ` ${word}`;
+    else {
+      out.push(line);
+      line = word;
+    }
+    while (line.length > width) {
+      out.push(line.slice(0, width));
+      line = line.slice(width);
+    }
+  }
+  if (line) out.push(line);
+  return out;
+}
+
+/** Left and right on one line ("TOTAL ....... 1,250.00"); the left is cut to make room. */
+const pair = (left: string, right: string, width: number) => {
+  const room = Math.max(0, width - right.length - 1);
+  const l = left.length > room ? left.slice(0, room) : left;
+  return `${l}${' '.repeat(width - l.length - right.length)}${right}`;
+};
+
+/** The same receipt as lines of text, for a thermal printer spoken to directly. */
+export function receiptLines(sale: Sale, settings: ReceiptSettings, copy: number | null = null, note: string | null = null): PrintLine[] {
+  const width = RECEIPT_COLUMNS[settings.paper_size === '58mm' ? '58mm' : '80mm'];
+  const rule: PrintLine = { text: '-'.repeat(width) };
+  const centered = (text: string | null | undefined, extra: Partial<PrintLine> = {}) =>
+    wrap(text ?? '', width).map((t): PrintLine => ({ text: t, align: 'center', ...extra }));
+  const out: PrintLine[] = [];
+
+  out.push(...centered(settings.business_name, { bold: true, big: true }), ...centered(settings.address), ...centered(settings.contact), ...centered(settings.header));
+  out.push(rule);
+  if (copy !== null && copy > 1) out.push({ text: `COPY ${copy}`, align: 'center', bold: true });
+  if (sale.status === 'voided') out.push({ text: 'VOIDED', align: 'center', bold: true, big: true });
+  out.push({ text: `Receipt: ${sale.number}` }, { text: `Date: ${dateTime(sale.sold_at)}` });
+  if (settings.show_staff) out.push({ text: `Served by: ${sale.sold_by}` });
+  if (settings.show_customer && sale.customer_name) out.push({ text: `Customer: ${sale.customer_name}` });
+  if (sale.prescription) out.push({ text: `Prescription: ${sale.prescription.number}` });
+  out.push(rule);
+
+  for (const l of sale.receipt_lines) {
+    out.push(...wrap(`${l.name}${l.pack ? ` (${l.pack})` : ''}`, width).map((text) => ({ text })));
+    const each = `  ${l.quantity} x ${money(l.unit_price_minor, false)}${l.discount_minor ? ` -${money(l.discount_minor, false)}` : ''}`;
+    out.push({ text: pair(each, money(l.line_total_minor, false), width) });
+  }
+  out.push(rule);
+  if (sale.discount_minor) out.push({ text: pair('Discount', `-${money(sale.discount_minor)}`, width) });
+  out.push({ text: pair('TOTAL', money(sale.total_minor), width), bold: true, big: true });
+  out.push(rule);
+  out.push({ text: pair('Paid by', sale.payment_method_label, width) });
+  if (sale.amount_tendered_minor != null) out.push({ text: pair('Cash given', money(sale.amount_tendered_minor), width) });
+  if (sale.change_minor != null) out.push({ text: pair('Change', money(sale.change_minor), width) });
+  if (sale.payment_reference) out.push({ text: pair('Reference', sale.payment_reference, width) });
+  if (note) out.push(rule, ...centered(note));
+  if (settings.footer) out.push(rule, ...centered(settings.footer));
+  return out;
+}
+
 export function printReceipt(sale: Sale, settings: ReceiptSettings, copy: number | null = null, note: string | null = null) {
-  return window.desktop.print(receiptHtml(sale, settings, copy, note));
+  return window.desktop.print(receiptHtml(sale, settings, copy, note), receiptLines(sale, settings, copy, note));
 }

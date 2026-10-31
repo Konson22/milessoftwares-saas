@@ -7,7 +7,15 @@
             "name": "Pharmacy ERP",
             "icon": "pill",
             "registry": { "type": "erp", "code": "pharmacy" },
-            "highlights": ["Medicine inventory", "Batch and expiry tracking", "Sales and dispensing", "Purchasing", "Prescriptions and controlled drugs", "Desktop application", "Mobile application"],
+            "highlights": [
+                "Medicine inventory",
+                "Batch and expiry tracking",
+                "Sales and dispensing",
+                "Purchasing",
+                "Prescriptions and controlled drugs",
+                "Desktop application",
+                "Mobile application"
+            ],
             "offering": {
                 "platforms": ["web", "desktop", "android", "ios"],
                 "connectivity": ["online", "offline_sync", "offline"],
@@ -109,12 +117,21 @@
             "name": "Retail ERP",
             "icon": "shopping-cart",
             "registry": { "type": "erp", "code": "retail_trading" },
-            "highlights": ["Point of sale", "Product and inventory management", "Purchasing", "Sales reporting", "Desktop application"],
+            "highlights": [
+                "Point of sale",
+                "Product and inventory management",
+                "Purchasing",
+                "Sales reporting",
+                "Desktop application"
+            ],
             "offering": {
                 "platforms": ["web", "desktop"],
                 "connectivity": ["online", "offline_sync"],
                 "licensing": ["subscription"],
-                "desktop": ["The shop counter on a Windows PC, with barcode scanning", "Keeps selling when the internet stops and sends the sales when the connection is back"],
+                "desktop": [
+                    "The shop counter on a Windows PC, with barcode scanning",
+                    "Keeps selling when the internet stops and sends the sales when the connection is back"
+                ],
                 "mobile": []
             },
             "summary": "Shop counter, credit customers and wholesale invoices, with optional Finance & Accounting.",
@@ -200,15 +217,9 @@
                 "Drinks inventory"
             ],
             "offering": {
-                "platforms": [
-                    "web"
-                ],
-                "connectivity": [
-                    "online"
-                ],
-                "licensing": [
-                    "subscription"
-                ],
+                "platforms": ["web"],
+                "connectivity": ["online"],
+                "licensing": ["subscription"],
                 "desktop": [],
                 "mobile": []
             },
@@ -288,10 +299,10 @@
             },
             "summary": "Admissions to results, with student fees.",
             "headline": "Run the school, from admissions to fees.",
-            "subhead": "School ERP is being built for primary schools, institutes, colleges and universities, each run its own way, with optional Finance & Accounting for the books.",
+            "subhead": "School ERP for primary schools, institutes, colleges and universities, each run its own way, with optional Finance & Accounting for the books.",
             "audience": "Primary schools, technical and vocational institutes, colleges and universities.",
-            "seoTitle": "School ERP (coming soon)",
-            "seoDescription": "School management software on the way: admissions, classes, attendance, examinations and student fees, with optional Finance & Accounting.",
+            "seoTitle": "School ERP",
+            "seoDescription": "School management software: admissions, classes, attendance, examinations and student fees, with optional Finance & Accounting.",
             "features": [
                 {
                     "icon": "user-plus",
@@ -330,8 +341,8 @@
             ],
             "faqs": [
                 {
-                    "question": "When will School ERP be available?",
-                    "answer": "It is in development. Join the waitlist and we will tell you as soon as it opens."
+                    "question": "Can I try School ERP?",
+                    "answer": "Yes. It is in early access: start a free trial, set your school up as a primary school, institute, college or university, and enrol your first students."
                 }
             ]
         },
@@ -341,7 +352,12 @@
             "name": "Logistics ERP",
             "icon": "truck",
             "registry": null,
-            "highlights": ["Shipments and proof of delivery", "Fleet, drivers and trips", "Delivery tracking", "Trip costs and billing"],
+            "highlights": [
+                "Shipments and proof of delivery",
+                "Fleet, drivers and trips",
+                "Delivery tracking",
+                "Trip costs and billing"
+            ],
             "offering": {
                 "platforms": ["web"],
                 "connectivity": ["online"],
@@ -463,7 +479,13 @@
             "name": "Finance & Accounting",
             "icon": "landmark",
             "registry": { "type": "application", "code": "finance" },
-            "highlights": ["Double-entry ledger", "Invoices, bills and payments", "Bank reconciliation", "Tax, budgets and fixed assets", "Financial reports"],
+            "highlights": [
+                "Double-entry ledger",
+                "Invoices, bills and payments",
+                "Bank reconciliation",
+                "Tax, budgets and fixed assets",
+                "Financial reports"
+            ],
             "offering": {
                 "platforms": ["web"],
                 "connectivity": ["online"],
@@ -607,7 +629,12 @@
             "name": "HR",
             "icon": "users",
             "registry": { "type": "application", "code": "hr" },
-            "highlights": ["Staff records and employment history", "Contracts", "Documents with expiry reminders", "Private details kept encrypted"],
+            "highlights": [
+                "Staff records and employment history",
+                "Contracts",
+                "Documents with expiry reminders",
+                "Private details kept encrypted"
+            ],
             "offering": {
                 "platforms": ["web"],
                 "connectivity": ["online"],

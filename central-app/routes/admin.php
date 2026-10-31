@@ -120,6 +120,15 @@ Route::domain(PlatformHosts::admin())
             });
         });
 
+        // Desktop licence keys: made by hand, activated for customers with no internet, moved or cancelled.
+        Route::middleware('staff.can:licences.manage')->prefix('licences')->name('licences.')->group(function () {
+            Route::get('/', [Admin\LicenceController::class, 'index'])->name('index');
+            Route::post('/', [Admin\LicenceController::class, 'store'])->name('store');
+            Route::post('activate', [Admin\LicenceController::class, 'activate'])->middleware('throttle:30,1')->name('activate');
+            Route::post('{licenceKey}/release', [Admin\LicenceController::class, 'release'])->whereUuid('licenceKey')->name('release');
+            Route::post('{licenceKey}/revoke', [Admin\LicenceController::class, 'revoke'])->whereUuid('licenceKey')->name('revoke');
+        });
+
         Route::middleware('staff.can:security.view')->group(function () {
             Route::get('security', [Admin\SecurityController::class, 'index'])->name('security.index');
             Route::post('security/verify-chain', [Admin\SecurityController::class, 'verifyChain'])->middleware('throttle:6,1')->name('security.verify-chain');

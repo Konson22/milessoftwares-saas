@@ -1,7 +1,7 @@
 import type { Counter, Item, Me, Prescription, PrescriptionSummary, Sale, SaleSummary, Till } from '../types';
 import { place } from '../config';
 import { ApiError, request, setRequestContext } from './client';
-import type { PosApi, SignedIn } from './types';
+import type { OnlineApi, SignedIn } from './types';
 
 type Data<T> = { data: T };
 
@@ -16,7 +16,7 @@ const q = (params: Record<string, string | null | undefined>) =>
  * in with the platform: the sign-in yields the tokens, then `session` tells
  * the pharmacy (or shop) who this is.
  */
-export const liveApi: PosApi = {
+export const liveApi: OnlineApi = {
   async signIn(workspace, idToken) {
     setRequestContext({ workspace, branchId: null });
     try {

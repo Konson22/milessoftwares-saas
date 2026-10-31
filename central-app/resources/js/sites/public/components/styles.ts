@@ -82,8 +82,8 @@ export function trialDuration(days: number): string {
 
 /**
  * Where "Start free trial" leads: the trial page on the app host, with the
- * application preselected. Signing in or registering happens on the way
- * if needed and brings the visitor back; someone without a business is
+ * application preselected. A visitor who is not signed in is sent to
+ * register first (sign-in is a link away) and brought back; someone without a business is
  * sent on to create one with the same trial chosen.
  */
 export function trialUrl(code?: string): string {

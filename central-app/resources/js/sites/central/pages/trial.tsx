@@ -61,7 +61,19 @@ export default function Trial({
 
             <PageHeader
                 title={`Start your ${trialDays}-day free trial`}
-                description={`For ${organization.displayName}. No payment details are needed, and nothing is charged unless you choose a plan.`}
+                description={
+                    <>
+                        For {organization.displayName} (
+                        <Link
+                            href={`/trial${initial ? `?app=${encodeURIComponent(initial)}` : ''}`}
+                            className="underline"
+                        >
+                            change workspace
+                        </Link>
+                        ). No payment details are needed, and nothing is charged
+                        unless you choose a plan.
+                    </>
+                }
             />
 
             {!isOwner ? (

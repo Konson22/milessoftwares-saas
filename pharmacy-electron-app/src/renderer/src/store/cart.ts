@@ -6,6 +6,8 @@ import { percentOf } from '@/lib/format';
 import { diskStorage } from '@/lib/storage';
 import type { CartLine, HeldCart, Item, Pack } from '@/lib/types';
 
+import { lineGross } from '../../../shared/pricing';
+
 interface CartState {
   lines: CartLine[];
   customerName: string;
@@ -51,9 +53,13 @@ export function percentOff(line: CartLine) {
   return Math.max(line.discount_percent, line.item.promotion?.percent_off ?? 0);
 }
 
-/** As the pharmacy (or shop) prices it: the pack's price (or the unit's) less what is taken off. */
+/**
+ * As the pharmacy (or shop) prices it, less what is taken off: the pack's
+ * price (or the unit's), or offline each batch's price as it leaves the shelf.
+ */
 export function linePrice(line: CartLine) {
-  const gross = line.quantity * (packOf(line)?.price_minor ?? line.item.price_minor);
+  const tiers = line.item.price_tiers;
+  const gross = tiers ? lineGross(tiers, line.item.price_minor, packOf(line), line.quantity) : line.quantity * (packOf(line)?.price_minor ?? line.item.price_minor);
   const discount = percentOf(gross, percentOff(line));
   return { gross, discount, total: gross - discount };
 }
@@ -189,16 +195,16 @@ export const useCart = create<CartState>()(
     }),
     {
       name: 'cart',
-      version: 2,
+      version: 3,
       storage: diskStorage,
-      // Carts saved by older versions of the app do not fit this one.
-      migrate: () => ({ ...emptyCart(), held: [] }),
+      // Version 2 is the online counter's, 3 the offline app's: both fit. Older carts do not.
+      migrate: (saved, version) => (version === 2 ? (saved as CartState) : { ...emptyCart(), held: [] }),
     },
   ),
 );
 
-/** Who parks carts: a person at a branch. */
 /**
+ * Who parks carts and queues sales: a person at a branch (offline, "main").
  * Whose, at which branch, for which product: a branch can be both a pharmacy
  * and a shop, and what was queued for one is never sent to the other. The
  * pharmacy's keeps the key it had before there was a shop.

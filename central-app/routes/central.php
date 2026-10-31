@@ -20,6 +20,7 @@ use App\Sites\Central\Http\Controllers\Workspace\MemberAccountController;
 use App\Sites\Central\Http\Controllers\Workspace\MemberController;
 use App\Sites\Central\Http\Controllers\Workspace\StructureController;
 use App\Sites\Central\Http\Controllers\Workspace\WorkspaceHomeController;
+use App\Sites\Central\Http\Middleware\RememberTrialChoice;
 use App\Sites\Public\Http\Controllers\SeoController;
 use App\Support\Hosts\PlatformHosts;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -88,7 +89,7 @@ Route::domain(PlatformHosts::app())->middleware(['auth', 'verified', 'current.or
     Route::get('explore', ExploreController::class)->name('explore');
 
     // Free trials for a business that already exists (owner only).
-    Route::get('trial', [TrialController::class, 'show'])->name('trial');
+    Route::get('trial', [TrialController::class, 'show'])->middleware(RememberTrialChoice::class)->name('trial');
     Route::post('trial', [TrialController::class, 'store'])->middleware('throttle:10,60')->name('trial.store');
 
     Route::get('organizations/create', [OrganizationController::class, 'create'])->name('organizations.create');

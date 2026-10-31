@@ -289,12 +289,12 @@ describe('desktop downloads', function () {
     beforeEach(function () {
         $this->downloads = storage_path('framework/testing/downloads');
         @mkdir($this->downloads, 0777, true);
-        file_put_contents($this->downloads.'/Miles Pharmacy Setup 1.0.0.exe', 'MZ installer');
+        file_put_contents($this->downloads.'/Miles Pharmacy Setup 1.1.0.exe', 'MZ installer');
         config(['platform.downloads.path' => $this->downloads]);
     });
 
     afterEach(function () {
-        @unlink($this->downloads.'/Miles Pharmacy Setup 1.0.0.exe');
+        @unlink($this->downloads.'/Miles Pharmacy Setup 1.1.0.exe');
     });
 
     it('lists every app, with a download only for the installers on the server', function () {
@@ -306,14 +306,14 @@ describe('desktop downloads', function () {
                 ->where('apps.0.code', 'pharmacy')
                 ->where('apps.0.url', site('download/pharmacy'))
                 ->where('apps.0.size', 12)
-                ->where('apps.1.url', null)
-                ->where('apps.2.url', null));
+                ->has('apps', 2)
+                ->where('apps.1.url', null));
     });
 
     it('sends the installer under its own name', function () {
         $response = $this->get(site('download/pharmacy'))->assertOk();
 
-        expect($response->headers->get('Content-Disposition'))->toContain('Miles Pharmacy Setup 1.0.0.exe');
+        expect($response->headers->get('Content-Disposition'))->toContain('Miles Pharmacy Setup 1.1.0.exe');
     });
 
     it('has no download for an installer that is not there or an unknown app', function (string $code) {

@@ -1,32 +1,43 @@
-import { Building2, CloudOff, LogOut, RefreshCw, Store, Wifi } from 'lucide-react';
-import { useEffect, useMemo } from 'react';
+import { Building2, ChevronDown, CloudOff, HardDriveDownload, LogOut, RefreshCw, Store, Wifi } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import pharmacyLogo from '@/assets/pharmacy-logo.png';
 import { loadAccess, useAccess } from '@/hooks/use-page';
-import { API_MODE } from '@/lib/api';
+import { API_MODE, call } from '@/lib/api';
 import { PRODUCTS } from '@/lib/config';
-import { initials, time } from '@/lib/format';
+import { dateTime, initials, isoDate, prettyDate, time } from '@/lib/format';
 import { visibleNavigation, type NavItem } from '@/lib/navigation';
 import { pagesAvailable } from '@/lib/pages';
 import { useConnectivity } from '@/offline/connectivity';
 import { queuedFor, useOutbox } from '@/offline/outbox';
 import { syncNow, useSync, useSyncEngine } from '@/offline/sync';
+import { PrescriptionsPage } from '@/pages/local/prescriptions';
 import { SalesPage } from '@/pages/sales';
 import { SellPage } from '@/pages/sell';
 import { ShiftPage } from '@/pages/shift';
 import { SyncPage } from '@/pages/sync';
-import { useAuth, useBranch, useOwner } from '@/store/auth';
+import { useAuth, useBranch, useLocal, useOwner } from '@/store/auth';
 import { PageView } from '@/screens/page-view';
 import { appPath, useUi, type Page } from '@/store/ui';
 
+import { LicenceBanner } from './licence-banner';
 import { Badge, cn } from './ui';
 
 /** The menu item a page belongs to: its own, or the section it sits under ("stock/<id>" under Stock). */
-function isCurrent(item: NavItem, page: Page) {
-  if (item.page === page) return true;
+function currentItem(items: NavItem[], page: Page): NavItem | null {
+  const exact = items.find((item) => item.page === page);
+  if (exact) return exact;
   const path = appPath(page);
-  const section = appPath(item.page);
-  return path !== null && section !== null && section !== '' && (path.startsWith(`${section}/`) || path.startsWith(`${section}?`));
+  if (path === null) return null;
+  // The longest section the page sits under: "receipts/<id>" under Goods received.
+  return (
+    items
+      .filter((item) => {
+        const section = appPath(item.page);
+        return section !== null && section !== '' && (path.startsWith(`${section}/`) || path.startsWith(`${section}?`));
+      })
+      .sort((a, b) => b.page.length - a.page.length)[0] ?? null
+  );
 }
 
 // As in packages/ui/shell/sidebar.tsx.
@@ -49,11 +60,20 @@ export function Shell() {
   const chooseBranch = useAuth((s) => s.chooseBranch);
   const shared = useAccess((s) => s.shared);
   const product = useAuth((s) => s.product);
-  const groups = useMemo(() => visibleNavigation(product, shared, pagesAvailable()), [product, shared]);
+  const local = useLocal();
+  const groups = useMemo(() => visibleNavigation(product, shared, pagesAvailable(), local), [product, shared, local]);
   const keyed = useMemo(() => groups.flatMap((g) => g.items).filter((i) => i.key), [groups]);
+  const current = useMemo(
+    () =>
+      currentItem(
+        groups.flatMap((g) => g.items),
+        page,
+      ),
+    [groups, page],
+  );
   const path = appPath(page);
 
-  // The menu as the pharmacy (or shop) allows it for this member, in this branch.
+  // The menu as the pharmacy (or shop) allows it for this member, in this branch (offline: as their role does).
   useEffect(() => {
     useAccess.setState({ shared: null });
     if (pagesAvailable()) void loadAccess(owner);
@@ -99,7 +119,7 @@ export function Shell() {
               </span>
             </div>
 
-            <nav aria-label={PRODUCTS[product].label} className="flex-1 overflow-x-hidden overflow-y-auto py-2">
+            <nav aria-label={PRODUCTS[product].label} className="sidebar-scroll flex-1 overflow-x-hidden overflow-y-auto py-2">
               {groups.map((group) => (
                 <div key={group.title} className="pb-2">
                   {groups.length > 1 ? (
@@ -107,7 +127,7 @@ export function Shell() {
                   ) : null}
                   <ul>
                     {group.items.map((item) => {
-                      const current = isCurrent(item, page);
+                      const here = item === current;
                       const count = item.page === 'sync' ? queue.all.length : 0;
                       const Icon = item.icon;
                       return (
@@ -115,16 +135,16 @@ export function Shell() {
                           <button
                             type="button"
                             onClick={() => go(item.page)}
-                            aria-current={current ? 'page' : undefined}
+                            aria-current={here ? 'page' : undefined}
                             title={item.title}
                             className={cn(
                               itemClass,
-                              current
+                              here
                                 ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-cyan-400'
                                 : 'text-sidebar-foreground hover:bg-white/5 hover:text-white',
                             )}
                           >
-                            <span className={cn('relative shrink-0', current ? 'text-cyan-300' : 'text-sidebar-foreground/70')}>
+                            <span className={cn('relative shrink-0', here ? 'text-cyan-300' : 'text-sidebar-foreground/70')}>
                               <Icon className="size-4" aria-hidden />
                               {/* Seen while the rail is collapsed. */}
                               {count > 0 ? (
@@ -154,49 +174,54 @@ export function Shell() {
               ))}
             </nav>
 
-            <div className="space-y-1 border-t border-sidebar-border p-2">
-              <div className="flex items-center gap-3 px-1.5 py-1">
-                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
-                  {initials(me?.user.name ?? '')}
-                </span>
-                <span className={cn('min-w-0 leading-tight', labelClass)}>
-                  <span className="block truncate text-sm font-medium text-white">{me?.user.name}</span>
-                  <span className="block truncate text-xs text-sidebar-foreground/70">{me?.organization.name}</span>
-                </span>
+            {/* Offline, who is signed in and signing out are in the top bar, where people at a shared counter look. */}
+            {local ? null : (
+              <div className="space-y-1 border-t border-sidebar-border p-2">
+                <div className="flex items-center gap-3 px-1.5 py-1">
+                  <span className="grid size-7 shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
+                    {initials(me?.user.name ?? '')}
+                  </span>
+                  <span className={cn('min-w-0 leading-tight', labelClass)}>
+                    <span className="block truncate text-sm font-medium text-white">{me?.user.name}</span>
+                    <span className="block truncate text-xs text-sidebar-foreground/70">{me?.organization.name}</span>
+                  </span>
+                </div>
+                {me && me.branches.length > 1 ? (
+                  <label className="flex h-8 items-center gap-3 px-3">
+                    <Building2 className="size-4 shrink-0 text-sidebar-foreground/70" aria-hidden />
+                    <select
+                      value={branch?.id ?? ''}
+                      onChange={(e) => void chooseBranch(e.target.value)}
+                      aria-label="Branch"
+                      className={cn('min-w-0 flex-1 border border-sidebar-border bg-transparent px-2 py-1 text-xs text-sidebar-foreground', labelClass)}
+                    >
+                      {me.branches.map((b) => (
+                        <option key={b.id} value={b.id} className="text-black">
+                          {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+                <button type="button" onClick={leave} className={cn(itemClass, 'px-3 text-sidebar-foreground hover:bg-white/5 hover:text-white')}>
+                  <LogOut className="size-4 shrink-0 text-sidebar-foreground/70" aria-hidden />
+                  <span className={labelClass}>Sign out</span>
+                </button>
               </div>
-              {me && me.branches.length > 1 ? (
-                <label className="flex h-8 items-center gap-3 px-3">
-                  <Building2 className="size-4 shrink-0 text-sidebar-foreground/70" aria-hidden />
-                  <select
-                    value={branch?.id ?? ''}
-                    onChange={(e) => void chooseBranch(e.target.value)}
-                    aria-label="Branch"
-                    className={cn('min-w-0 flex-1 border border-sidebar-border bg-transparent px-2 py-1 text-xs text-sidebar-foreground', labelClass)}
-                  >
-                    {me.branches.map((b) => (
-                      <option key={b.id} value={b.id} className="text-black">
-                        {b.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : null}
-              <button type="button" onClick={leave} className={cn(itemClass, 'px-3 text-sidebar-foreground hover:bg-white/5 hover:text-white')}>
-                <LogOut className="size-4 shrink-0 text-sidebar-foreground/70" aria-hidden />
-                <span className={labelClass}>Sign out</span>
-              </button>
-            </div>
+            )}
           </div>
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar />
+        {local ? <LocalTopBar /> : <TopBar />}
+        {local ? <LicenceBanner /> : null}
         <main className="min-h-0 flex-1 overflow-y-auto p-5">
           {page === 'sell' && <SellPage />}
           {page === 'sales' && <SalesPage />}
           {page === 'shift' && <ShiftPage />}
-          {page === 'sync' && <SyncPage />}
+          {page === 'sync' && !local && <SyncPage />}
+          {page === 'prescriptions' && local && <PrescriptionsPage />}
           {path !== null && <PageView key={path} path={path} />}
         </main>
       </div>
@@ -251,6 +276,88 @@ function TopBar() {
         </button>
       </div>
     </header>
+  );
+}
+
+/** The pharmacy and the day; who is signed in; for a manager, when the data was last copied. */
+function LocalTopBar() {
+  const me = useAuth((s) => s.me);
+  const signOut = useAuth((s) => s.signOut);
+  const page = useUi((s) => s.page);
+  const open = useUi((s) => s.open);
+  const manager = me?.user.role === 'manager';
+  const [lastBackupAt, setLastBackupAt] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!manager) return;
+    call<{ lastBackupAt: string | null }>('backup.list')
+      .then((r) => setLastBackupAt(r.lastBackupAt))
+      .catch(() => {});
+  }, [manager, page]);
+
+  return (
+    <header className="flex h-13 shrink-0 items-center gap-3 border-b border-border bg-card px-5">
+      <span className="text-sm font-medium">{me?.organization.name}</span>
+      <span className="text-xs text-muted-foreground">{prettyDate(isoDate())}</span>
+      <div className="ml-auto flex items-center gap-4">
+        {manager ? (
+          <button type="button" onClick={() => open('settings')} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:underline">
+            <HardDriveDownload size={13} /> {lastBackupAt ? `Backed up ${dateTime(lastBackupAt)}` : 'Not backed up yet'}
+          </button>
+        ) : null}
+        <div className="border-l border-border pl-4">
+          <ProfileMenu name={me?.user.name ?? ''} role={me?.user.role ?? ''} onSignOut={() => void signOut()} />
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/** Who is signed in; opens to sign out. Closes on a click elsewhere or Escape. */
+function ProfileMenu({ name, role, onSignOut }: { name: string; role: string; onSignOut: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="flex items-center gap-2 px-1.5 py-1 text-left hover:bg-accent"
+      >
+        <span className="grid size-7 shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">{initials(name)}</span>
+        <span className="leading-tight">
+          <span className="block text-sm font-medium">{name}</span>
+          <span className="block text-xs text-muted-foreground capitalize">{role}</span>
+        </span>
+        <ChevronDown size={14} className={cn('text-muted-foreground transition-transform', open && 'rotate-180')} />
+      </button>
+      {open ? (
+        <div role="menu" className="absolute right-0 z-40 mt-1 w-44 border border-border bg-card py-1 shadow-lg">
+          <button type="button" role="menuitem" onClick={onSignOut} className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent">
+            <LogOut size={15} /> Sign out
+          </button>
+        </div>
+      ) : null}
+    </div>
   );
 }
 

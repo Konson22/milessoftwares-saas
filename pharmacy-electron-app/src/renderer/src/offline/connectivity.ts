@@ -1,11 +1,13 @@
 import { create } from 'zustand';
 
 import { API_MODE, setSimulatedOffline } from '@/lib/api';
+import { isLocal } from '@/lib/mode';
 
 /**
  * Whether the pharmacy can be reached right now. Every call says so (it got
  * an answer, or it never did), and the OS says when the network is gone
- * altogether. Going from offline to online is what starts a sync.
+ * altogether. Going from offline to online is what starts a sync. In
+ * offline mode the pharmacy is on this PC: always there.
  */
 interface ConnectivityState {
   online: boolean;
@@ -32,6 +34,7 @@ export const useConnectivity = create<ConnectivityState>((set, get) => ({
   simulated: false,
 
   setReachable(reachable) {
+    if (isLocal()) reachable = true;
     const was = get().online;
     set({ online: reachable, ...(reachable ? { lastSeenAt: new Date().toISOString() } : {}) });
     if (reachable && !was) backOnline.forEach((listener) => listener());

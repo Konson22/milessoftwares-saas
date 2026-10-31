@@ -1,7 +1,7 @@
 import { Minus, PauseCircle, Percent, Plus, ShoppingCart, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-import { money } from '@/lib/format';
+import { inSecond, money } from '@/lib/format';
 import type { Counter } from '@/lib/types';
 import { useAuth, useOwner } from '@/store/auth';
 import { cartTotals, linePrice, maxQuantity, needsSerials, serialsOf, useCart } from '@/store/cart';
@@ -155,7 +155,10 @@ export function CartPanel({ counter }: { counter: Counter }) {
         ) : null}
         <div className="flex items-baseline justify-between">
           <span className="text-sm text-muted-foreground">{totals.count} item(s)</span>
-          <span className="text-2xl font-semibold tabular">{money(totals.total)}</span>
+          <span className="text-right">
+            <span className="block text-2xl font-semibold tabular">{money(totals.total)}</span>
+            {inSecond(totals.total) ? <span className="block text-xs text-muted-foreground tabular">{inSecond(totals.total)}</span> : null}
+          </span>
         </div>
         {missingSerials.length ? (
           <p className="text-xs text-amber-700">Enter the serial number of each unit of {missingSerials.map((l) => l.item.name).join(', ')}.</p>

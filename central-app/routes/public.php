@@ -1,5 +1,6 @@
 <?php
 
+use App\Sites\Public\Http\Controllers\ActivationController;
 use App\Sites\Public\Http\Controllers\LeadController;
 use App\Sites\Public\Http\Controllers\PageController;
 use App\Sites\Public\Http\Controllers\SeoController;
@@ -56,6 +57,10 @@ Route::domain(PlatformHosts::root())->group(function () {
         Route::get('contact', [LeadController::class, 'contactForm'])->name('contact');
         Route::post('contact', [LeadController::class, 'storeContact'])->middleware('throttle:5,60')->name('contact.store');
         Route::inertia('thanks', 'public/thanks')->name('thanks');
+
+        // Activating the offline desktop pharmacy from a phone (the app's QR code opens it).
+        Route::get('activate', [ActivationController::class, 'show'])->name('activate');
+        Route::post('activate', [ActivationController::class, 'store'])->middleware('throttle:20,60')->name('activate.store');
 
         Route::get('sitemap.xml', [SeoController::class, 'sitemap'])->name('sitemap');
         Route::get('robots.txt', [SeoController::class, 'robots'])->name('robots');

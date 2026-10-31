@@ -82,6 +82,20 @@ describe('the trial page', function () {
         expect(trialRows($this->organization, $this->retail))->toHaveCount(0);
     });
 
+    it('remembers the product chosen as a guest until the dashboard, after signing up', function () {
+        $this->get(trialAppUrl('trial?app=retail'))->assertRedirect();
+
+        // Verifying the email address ends on the dashboard, not the trial.
+        $user = OrganizationMembership::factory()->make()->user;
+        $this->actingAs($user)->get(route('dashboard'))
+            ->assertRedirect(route('trial', ['app' => 'retail']));
+
+        // Once only, and not for products that cannot be tried.
+        $this->get(route('dashboard'))->assertOk();
+        $this->get(trialAppUrl('trial?app=nothing_here'));
+        $this->get(route('dashboard'))->assertOk();
+    });
+
     it('sends someone without a business to create one, keeping the product', function () {
         $user = OrganizationMembership::factory()->make()->user;
 
@@ -114,14 +128,41 @@ describe('the trial page', function () {
         trialWorkAs($this->owner);
 
         $this->get(trialAppUrl('explore'))->assertOk();
-        $this->get(trialAppUrl('trial?app=retail'))->assertOk()
+        $this->get(trialAppUrl('trial?app=retail&chosen=1'))->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page->component('central/trial')->where('selected', 'retail'));
+    });
+
+    it('asks someone with workspaces which one the trial is for, or a new one', function () {
+        [$other, $otherOwner] = trialOrganization();
+        $otherOwner->forceFill(['user_id' => $this->owner->user_id])->save();
+        trialWorkAs($this->owner);
+
+        $this->get(trialAppUrl('trial?app=retail'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('central/trial-workspace')
+            ->where('application', 'Retail')
+            ->where('selected', 'retail')
+            ->has('workspaces', 2)
+            ->where('workspaces.0.isCurrent', true));
+
+        // An existing one: it becomes current and the trial page follows.
+        $this->post(trialAppUrl("organizations/{$other->id}/switch"), ['trial' => 'retail'])
+            ->assertRedirect(route('trial', ['app' => 'retail', 'chosen' => 1]));
+        $this->get(trialAppUrl('trial?app=retail&chosen=1'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('central/trial')
+            ->where('organization.displayName', $other->display_name));
+
+        // A new one: the create form, not back to the trial.
+        $this->get(trialAppUrl('organizations/create?app=retail&new=1'))->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('central/organizations/create')
+                ->where('trial.selected', 'retail'));
+        expect(trialRows($other, $this->retail))->toHaveCount(0);
     });
 
     it('shows the owner what the business may try, and starts nothing on a GET', function () {
         trialWorkAs($this->owner);
 
-        $this->get(trialAppUrl('trial?app=retail'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+        $this->get(trialAppUrl('trial?app=retail&chosen=1'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
             ->component('central/trial')
             ->where('isOwner', true)
             ->where('trialDays', 60)
@@ -135,7 +176,7 @@ describe('the trial page', function () {
         $member = OrganizationMembership::factory()->create(['organization_id' => $this->organization->id]);
         trialWorkAs($member);
 
-        $this->get(trialAppUrl('trial'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+        $this->get(trialAppUrl('trial?chosen=1'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
             ->where('isOwner', false)
             ->where('applications', []));
     });

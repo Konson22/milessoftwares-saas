@@ -1,8 +1,10 @@
 import { API_MODE } from '../config';
+import { isLocal } from '../mode';
 import { ApiError, reportReachable } from './client';
 import { liveApi } from './live';
+import { localApi } from './local';
 import { mockApi } from './mock';
-import type { PosApi } from './types';
+import type { OnlineApi, PosApi } from './types';
 
 let simulatedOffline = false;
 
@@ -13,7 +15,7 @@ export function setSimulatedOffline(offline: boolean) {
 
 /** The demo pharmacy, cut off while "Simulate offline" is on (signing in and out still work). */
 const demoApi = new Proxy(mockApi, {
-  get(target, key: keyof PosApi) {
+  get(target, key: keyof OnlineApi) {
     const method = target[key] as (...args: unknown[]) => Promise<unknown>;
     if (key === 'signIn' || key === 'signOut') return method;
     return async (...args: unknown[]) => {
@@ -28,7 +30,14 @@ const demoApi = new Proxy(mockApi, {
   },
 });
 
-export const api: PosApi = API_MODE === 'live' ? liveApi : demoApi;
+/** Hybrid: the workspace's pharmacy (or the demo one). */
+export const onlineApi: OnlineApi = API_MODE === 'live' ? liveApi : demoApi;
+
+/** The counter's calls, to the pharmacy this PC works with (src/lib/mode.ts). */
+export const api = new Proxy({} as PosApi, {
+  get: (_target, key: keyof PosApi) => (isLocal() ? localApi : onlineApi)[key],
+});
 
 export { API_MODE };
-export { ApiError, errorMessage, isOffline, setRequestContext } from './client';
+export { ApiError, call, errorMessage, isOffline, setRequestContext } from './client';
+export { localApi } from './local';

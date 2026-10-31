@@ -1,5 +1,6 @@
 import { API_MODE, ApiError } from './api';
-import { request } from './api/client';
+import { call, request } from './api/client';
+import { isLocal } from './mode';
 
 /**
  * The pharmacy's web pages as data (pharmacy-app App\Support\AppPages):
@@ -7,6 +8,10 @@ import { request } from './api/client';
  * would render, its component and props; an action answers its message and
  * the page to go to next. Same controllers, same permissions as the web.
  * Paths are the web's ("stock", "purchase-orders/<id>").
+ *
+ * Offline, the database on this PC answers them (src/main/db/pages.ts), in
+ * the same shapes, with its own pages ("medicines/<id>/edit",
+ * "receipts/create").
  */
 
 export interface AppPage<P = Record<string, any>> {
@@ -34,16 +39,18 @@ export interface ActionResult {
 const base = (path: string) => `v1/app/${path.replace(/^\//, '')}`;
 
 export function pagesAvailable() {
-  return API_MODE === 'live';
+  return isLocal() || API_MODE === 'live';
 }
 
 export function getPage<P>(path: string): Promise<AppPage<P>> {
+  if (isLocal()) return call<AppPage<P>>('page', path.replace(/^\//, ''));
   if (!pagesAvailable()) return Promise.reject(new ApiError('Back-office pages work with a workspace (live mode), not the demo.', 404));
   return request<AppPage<P>>('GET', base(path));
 }
 
-/** An action of the page at `from` (POST, PUT, DELETE), as its form on the web would send it. */
-export function act(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, data: unknown, from: string): Promise<ActionResult> {
+/** An action of the page at `from` (POST, PUT, DELETE), as its form would send it. */
+export function act(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, data: unknown, from = path): Promise<ActionResult> {
+  if (isLocal()) return call<ActionResult>('act', method, path.replace(/^\//, ''), data);
   return request<ActionResult>(method, base(path), data, { 'X-App-Page': from.split('?')[0] });
 }
 

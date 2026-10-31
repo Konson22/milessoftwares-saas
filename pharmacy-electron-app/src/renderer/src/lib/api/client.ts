@@ -32,7 +32,7 @@ export function errorMessage(error: unknown): string {
 interface RequestContext {
   workspace: string | null;
   branchId: string | null;
-  /** The platform no longer accepts this sign-in. */
+  /** The platform (or, offline, this PC) no longer has this person signed in. */
   onSignedOut: () => void;
   /** Every call tells whether the pharmacy (or shop) could be reached. */
   onReachable: (reachable: boolean) => void;
@@ -54,7 +54,21 @@ export function reportReachable(reachable: boolean) {
 }
 
 /**
- * A call to the workspace's pharmacy or shop: {workspace}/<its path>/api/<path>.
+ * Offline: asks the pharmacy's database on this PC (src/main/handlers.ts) by
+ * name. Its errors come back as ApiError, with the fields a form shows them
+ * against.
+ */
+export async function call<T>(name: string, ...args: unknown[]): Promise<T> {
+  const result = await window.desktop.call(name, ...args);
+  if (result.ok) return result.value as T;
+  const { message, status, errors, code } = result.error;
+  // No one signed in any more (after a restore, say).
+  if (status === 401 && code === 'session_required') context.onSignedOut();
+  throw new ApiError(message, status, errors, false, code);
+}
+
+/**
+ * Hybrid: a call to the workspace's pharmacy or shop: {workspace}/<its path>/api/<path>.
  * The main process adds the token and makes the call (src/main/http.ts).
  */
 export async function request<T>(method: string, path: string, body?: unknown, headers?: Record<string, string>): Promise<T> {

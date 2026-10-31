@@ -100,6 +100,19 @@ it('sends guests on the app host into the OIDC sign-in', function () {
     $this->get(route('dashboard'))->assertRedirect(PlatformHosts::url(PlatformHosts::app(), 'auth/login'));
 });
 
+it('sends guests starting a free trial to sign up, then back to the trial', function () {
+    $this->get(PlatformHosts::url(PlatformHosts::app(), 'trial?app=retail'))
+        ->assertRedirect(PlatformHosts::url(PlatformHosts::app(), 'auth/login?register=1'));
+
+    $location = (string) $this->get(PlatformHosts::url(PlatformHosts::app(), 'auth/login?register=1'))->headers->get('Location');
+    parse_str((string) parse_url($location, PHP_URL_QUERY), $query);
+
+    expect($query['prompt'] ?? null)->toBe('create');
+
+    $this->get(route('passport.authorizations.authorize').'?'.http_build_query($query))
+        ->assertRedirect(route('register'));
+});
+
 it('builds an authorization request the provider accepts', function () {
     $query = startSignIn();
 
@@ -107,7 +120,8 @@ it('builds an authorization request the provider accepts', function () {
         ->client_id->toBe($this->client->getKey())
         ->redirect_uri->toBe(PlatformHosts::url(PlatformHosts::app(), 'auth/callback'))
         ->code_challenge_method->toBe('S256')
-        ->scope->toBe('openid profile email');
+        ->scope->toBe('openid profile email')
+        ->not->toHaveKey('prompt');
 
     $location = $this->actingAs(User::factory()->create())
         ->get(route('passport.authorizations.authorize').'?'.http_build_query($query))

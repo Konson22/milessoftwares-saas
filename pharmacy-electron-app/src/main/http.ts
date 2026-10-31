@@ -46,7 +46,7 @@ export async function platformRequest(request: PlatformRequest, retried = false)
   return response;
 }
 
-async function send(url: string, method: string, headers: Record<string, string>, body: unknown): Promise<ApiResponse> {
+export async function send(url: string, method: string, headers: Record<string, string>, body: unknown): Promise<ApiResponse> {
   let response: Response;
   try {
     response = await fetch(url, {

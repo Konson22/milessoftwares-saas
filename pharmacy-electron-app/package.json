@@ -1,8 +1,8 @@
 {
   "name": "miles-pharmacy-desktop",
   "productName": "Miles Pharmacy",
-  "version": "1.0.0",
-  "description": "The Miles Softwares pharmacy counter on a Windows, macOS or Linux PC, working offline.",
+  "version": "1.1.0",
+  "description": "The Miles Softwares pharmacy on a Windows, macOS or Linux PC: on its own with its own database (offline), or as the counter of a Miles workspace that keeps selling when the internet drops (hybrid).",
   "main": "./out/main/index.js",
   "private": true,
   "scripts": {
@@ -10,6 +10,8 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "test": "vitest run",
+    "licence": "node scripts/licence.mjs",
     "dist": "electron-vite build && electron-builder",
     "dist:win": "electron-vite build && electron-builder --win"
   },
@@ -19,6 +21,7 @@
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^22.13.5",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
@@ -27,11 +30,13 @@
     "electron-builder": "^26.15.3",
     "electron-vite": "^6.0.0",
     "lucide-react": "^1.61.0",
+    "qrcode": "^1.5.4",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "tailwind-merge": "^3.0.1",
     "tailwindcss": "^4.3.3",
     "typescript": "~5.9.3",
-    "vite": "^8.3.5"
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
   }
 }

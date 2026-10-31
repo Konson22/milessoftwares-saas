@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { create } from 'zustand';
 
 import { api } from '@/lib/api';
+import { isLocal } from '@/lib/mode';
 import { useAuth } from '@/store/auth';
 import { holdOwner } from '@/store/cart';
 
@@ -31,7 +32,7 @@ let running: Promise<void> | null = null;
 export function syncNow(options: { catalog?: boolean } = {}): Promise<void> {
   running ??= (async () => {
     const { status, me, branchId, product } = useAuth.getState();
-    if (status !== 'ready' || !branchId) return;
+    if (status !== 'ready' || !branchId || isLocal()) return;
     useSync.setState({ running: true });
     try {
       const owner = holdOwner(me?.user.id, branchId, product);
@@ -58,10 +59,11 @@ export function syncNow(options: { catalog?: boolean } = {}): Promise<void> {
  * Keeps the counter in step while it runs: syncs on opening, when the
  * connection comes back, every 20 seconds while anything waits to be sent,
  * and refreshes the catalog every ten minutes. Offline, it asks the pharmacy
- * every 15 seconds whether it can be reached again.
+ * every 15 seconds whether it can be reached again. Offline mode has nothing
+ * to sync.
  */
 export function useSyncEngine() {
-  const ready = useAuth((s) => s.status === 'ready' && !!s.branchId);
+  const ready = useAuth((s) => s.status === 'ready' && !!s.branchId && s.mode === 'hybrid');
   const branchId = useAuth((s) => s.branchId);
   const product = useAuth((s) => s.product);
   const owner = useAuth((s) => holdOwner(s.me?.user.id, s.branchId, s.product));

@@ -870,7 +870,7 @@ function RecommendationsPanel({
                                         <Link
                                             href={
                                                 module.state === 'trialable'
-                                                    ? `/trial?app=${module.code}`
+                                                    ? `/trial?app=${module.code}&chosen=1`
                                                     : organizationPlans()
                                             }
                                             className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"

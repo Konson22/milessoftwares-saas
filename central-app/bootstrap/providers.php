@@ -6,6 +6,7 @@ use App\Modules\Audit\Providers\AuditServiceProvider;
 use App\Modules\Entitlements\Providers\EntitlementsServiceProvider;
 use App\Modules\Identity\Providers\IdentityServiceProvider;
 use App\Modules\Integration\Providers\IntegrationServiceProvider;
+use App\Modules\Licences\Providers\LicencesServiceProvider;
 use App\Modules\Memberships\Providers\MembershipsServiceProvider;
 use App\Modules\Operations\Providers\OperationsServiceProvider;
 use App\Modules\Products\Providers\ProductsServiceProvider;
@@ -25,6 +26,7 @@ return [
     EntitlementsServiceProvider::class,
     OperationsServiceProvider::class,
     ProductsServiceProvider::class,
+    LicencesServiceProvider::class,
     // Passport with OpenID Connect (id_token, nonce); Passport itself is not auto-discovered.
     PassportServiceProvider::class,
 ];

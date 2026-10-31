@@ -9,8 +9,11 @@ use App\Modules\Entitlements\Models\Entitlement;
 use App\Modules\Entitlements\Support\TrialRefused;
 use App\Modules\Marketing\Support\MarketingCatalog;
 use App\Modules\Memberships\Models\OrganizationMembership;
+use App\Modules\Memberships\Support\MembershipLookup;
 use App\Modules\Organizations\Models\Organization;
 use App\Sites\Central\Http\Controllers\Dashboard\Concerns\ResolvesOwnedOrganization;
+use App\Sites\Central\Http\Middleware\RememberTrialChoice;
+use App\Support\Hosts\PlatformHosts;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,10 +22,11 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * "Start your free trial" for a business that already exists: the owner
- * sees which applications the current organization may try and confirms
- * one (a POST; nothing starts from a link). Someone without a business is
- * sent to create one, where the same trial is preselected.
+ * "Start your free trial" for a business that already exists: someone with
+ * workspaces first chooses one (or a new one), then the owner sees which
+ * applications it may try and confirms one (a POST; nothing starts from a
+ * link). Someone without a business is sent to create one, where the same
+ * trial is preselected.
  */
 class TrialController extends Controller
 {
@@ -33,14 +37,37 @@ class TrialController extends Controller
         private readonly MarketingCatalog $catalog,
     ) {}
 
-    public function show(Request $request): Response|RedirectResponse
+    public function show(Request $request, MembershipLookup $memberships): Response|RedirectResponse
     {
         $selected = $request->string('app')->toString();
+        // Reached the trial: the choice no longer needs remembering.
+        $request->session()->forget(RememberTrialChoice::SESSION_KEY);
         $membership = $request->attributes->get('membership');
         $organization = $this->tenant->organization();
 
         if (! $membership instanceof OrganizationMembership || $organization === null) {
             return redirect()->route('organizations.create', $selected === '' ? [] : ['app' => $selected]);
+        }
+
+        // Someone who already has workspaces first says which one the trial
+        // is for, or that it is for a new one.
+        if (! $request->boolean('chosen')) {
+            return Inertia::render('central/trial-workspace', [
+                'trialDays' => (int) config('platform.marketing.trial_days'),
+                'application' => collect($this->catalog->trialable())->firstWhere('code', $selected)['name'] ?? null,
+                'selected' => $selected === '' ? null : $selected,
+                'workspaces' => $memberships->activeFor($request->user())
+                    ->load('organization.primarySlug')
+                    ->map(fn (OrganizationMembership $own) => [
+                        'id' => $own->organization_id,
+                        'name' => $own->organization->display_name,
+                        'address' => $own->organization->primarySlug === null ? null : PlatformHosts::workspace($own->organization->primarySlug->slug),
+                        'isOwner' => $own->organization->owner_membership_id === $own->id,
+                        'isCurrent' => $own->organization_id === $organization->getKey(),
+                    ])
+                    ->values()
+                    ->all(),
+            ]);
         }
 
         $isOwner = $organization->owner_membership_id === $membership->id;

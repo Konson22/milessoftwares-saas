@@ -5,7 +5,8 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'electron-vite';
 
 export default defineConfig({
-  main: {},
+  // node:sqlite is built into Electron's Node; it is never bundled.
+  main: { build: { rollupOptions: { external: ['node:sqlite'] } } },
   preload: {},
   renderer: {
     resolve: {

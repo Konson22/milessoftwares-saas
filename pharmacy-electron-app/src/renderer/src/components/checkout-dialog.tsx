@@ -3,7 +3,7 @@ import { useMemo, useState, type FormEvent } from 'react';
 
 import { api, errorMessage, isOffline } from '@/lib/api';
 import { place } from '@/lib/config';
-import { currencyCode, money, toMinor } from '@/lib/format';
+import { currencyCode, inSecond, money, toMinor } from '@/lib/format';
 import { OFFLINE_NOTE, printReceipt, queuedSaleAsSale } from '@/lib/receipt';
 import type { Counter, PaymentMethod, Sale, SalePayload } from '@/lib/types';
 import { useConnectivity } from '@/offline/connectivity';
@@ -14,13 +14,19 @@ import { toast } from '@/store/ui';
 
 import { Button, Field, Input, Modal, Notice, Select } from './ui';
 
-type Done = { kind: 'sent'; sale: Sale } | { kind: 'queued'; entry: QueuedSale };
+/** A sale recorded: in full, or as a dispensing answers it (its receipt is fetched to print). */
+type SaleRef = Pick<Sale, 'id' | 'number' | 'total_minor' | 'change_minor'>;
+
+export type Done = { kind: 'sent'; sale: Sale | SaleRef } | { kind: 'queued'; entry: QueuedSale };
+
+const inFull = (sale: Sale | SaleRef): sale is Sale => 'receipt_lines' in sale;
 
 /**
  * Payment and the sale. Online, the sale goes to the pharmacy; when the
  * pharmacy cannot be reached (or the call never gets an answer) it is kept
  * in the outbox with the same submission id and sent when the connection is
  * back, so the customer is never kept waiting and never charged twice.
+ * Offline mode records it in the database on this PC, which is always there.
  */
 export function CheckoutDialog({ counter, onClose }: { counter: Counter; onClose: () => void }) {
   const cart = useCart();
@@ -118,7 +124,10 @@ export function CheckoutDialog({ counter, onClose }: { counter: Counter; onClose
       <form id="checkout" onSubmit={submit} className="space-y-4">
         <div className="flex items-baseline justify-between border-b border-border pb-3">
           <span className="text-muted-foreground">Total</span>
-          <span className="text-3xl font-semibold tabular">{money(totals.total)}</span>
+          <span className="text-right">
+            <span className="block text-3xl font-semibold tabular">{money(totals.total)}</span>
+            {inSecond(totals.total) ? <span className="block text-sm text-muted-foreground tabular">{inSecond(totals.total)}</span> : null}
+          </span>
         </div>
         {!online ? (
           <Notice>
@@ -153,16 +162,18 @@ export function CheckoutDialog({ counter, onClose }: { counter: Counter; onClose
   );
 }
 
-function SaleDone({ done, counter, onClose }: { done: Done; counter: Counter; onClose: () => void }) {
+export function SaleDone({ done, counter, onClose }: { done: Done; counter: Counter; onClose: () => void }) {
   const sale = done.kind === 'sent' ? done.sale : queuedSaleAsSale(done.entry, currencyCode());
+  const paidBy = inFull(sale) ? sale.payment_method_label : null;
   const [printing, setPrinting] = useState(false);
 
   const print = async () => {
     setPrinting(true);
     try {
       let copy: number | null = null;
+      const full = inFull(sale) ? sale : await api.sale(sale.id);
       if (done.kind === 'sent') copy = (await api.printed(sale.id).catch(() => ({ copy: null }))).copy;
-      await printReceipt(sale, counter.receipt, copy, done.kind === 'queued' ? OFFLINE_NOTE : null);
+      await printReceipt(full, counter.receipt, copy, done.kind === 'queued' ? OFFLINE_NOTE : null);
     } catch (e) {
       toast(errorMessage(e), 'red');
     } finally {
@@ -195,7 +206,7 @@ function SaleDone({ done, counter, onClose }: { done: Done; counter: Counter; on
         {sale.change_minor ? <div className="text-lg">Change: {money(sale.change_minor)}</div> : null}
         <p className="text-sm text-muted-foreground">
           {done.kind === 'sent'
-            ? `Recorded by the ${place()}, paid by ${sale.payment_method_label.toLowerCase()}.`
+            ? `Recorded by the ${place()}${paidBy ? `, paid by ${paidBy.toLowerCase()}` : ''}.`
             : `Saved on this PC. It is sent to the ${place()} on its own when the connection is back, and gets its receipt number then.`}
         </p>
       </div>

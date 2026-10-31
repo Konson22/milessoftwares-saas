@@ -19,7 +19,6 @@ examples/
 .github/
 packages/
 pharmacy-electron-app/
-pharmacy-electron-single-app/
 pharmacy-mobile-app/
 restaurant-electron-app/
 

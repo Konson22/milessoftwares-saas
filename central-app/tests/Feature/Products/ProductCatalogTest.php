@@ -198,8 +198,25 @@ describe('catalog', function () {
         ]);
     });
 
+    it('keeps a released product planned where its applications are not registered', function () {
+        registerApplication('retail');
+
+        $this->artisan('platform:erp-products')
+            ->expectsOutputToContain('education: school, hr not registered here, kept planned.')
+            ->assertSuccessful();
+
+        expect(ErpProduct::query()->where('code', 'education')->value('status')->value)->toBe('planned');
+
+        registerApplication('school');
+        registerApplication('hr', ApplicationStatus::Planned);
+
+        $this->artisan('platform:erp-products')->assertSuccessful();
+
+        expect(ErpProduct::query()->where('code', 'education')->value('status')->value)->toBe('pilot');
+    });
+
     it('reports a product it cannot write and still writes the others', function () {
-        $this->pharmacy->delete();
+        $this->pharmacy->forceFill(['status' => ApplicationStatus::Planned])->save();
 
         $this->artisan('platform:erp-products')
             ->expectsOutputToContain('pharmacy is invalid')

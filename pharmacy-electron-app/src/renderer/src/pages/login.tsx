@@ -2,6 +2,7 @@ import { ArrowLeft, Eye, EyeOff, Loader2, Pill, Store } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 
 import type { Product, SignInWith } from '../../../shared/ipc';
+import { ChangeMode } from '@/components/change-mode';
 import { Button, Field, Input, Notice } from '@/components/ui';
 import { API_MODE, errorMessage } from '@/lib/api';
 import { DEMO_ACCOUNTS } from '@/lib/api/mock';
@@ -305,6 +306,7 @@ export function LoginPage() {
               </button>
             </p>
           ) : null}
+          {!creating && !code ? <ChangeMode /> : null}
         </div>
       </main>
     </div>

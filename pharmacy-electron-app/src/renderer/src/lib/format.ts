@@ -1,11 +1,22 @@
-// The workspace's currency, set from GET me. Amounts travel in minor units.
+import { decimalsFor } from '../../../shared/currencies';
+import { fromBase, type Money } from '../../../shared/pricing';
+import type { Organization } from '../../../shared/types';
+
+// The pharmacy's currency, set at sign-in (GET me online). Amounts travel in minor units.
 let currency = 'SSP';
 let decimals = 2;
 
-export function setCurrency(code: string | undefined, digits: number | undefined) {
-  if (code) currency = code;
-  if (digits !== undefined) decimals = digits;
+let second: NonNullable<Organization['second_currency']> | null = null;
+
+export function setCurrency(org: Pick<Organization, 'currency' | 'decimals' | 'second_currency'>) {
+  currency = org.currency;
+  decimals = org.decimals;
+  second = org.second_currency ?? null;
 }
+
+/** The pharmacy's currency and the second one at its rate, for converting. */
+export const moneyConfig = (): Money => ({ base: { code: currency, decimals }, foreign: second });
+export const secondCurrency = () => second;
 
 export const currencyCode = () => currency;
 export const currencyDecimals = () => decimals;
@@ -17,6 +28,26 @@ export function money(minor: number | null | undefined, withCode = true): string
     maximumFractionDigits: decimals,
   });
   return withCode ? `${currency} ${value}` : value;
+}
+
+/** An amount in minor units of `code` ("USD 12.50"); fractions are rounded. */
+export function moneyIn(minor: number, code: string): string {
+  const digits = decimalsFor(code);
+  const value = (Math.round(minor) / 10 ** digits).toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  return `${code} ${value}`;
+}
+
+/** An amount in the pharmacy's currency, in the second one ("≈ USD 0.77"); null without a rate. */
+export function inSecond(minor: number | null | undefined): string | null {
+  if (!second || minor === null || minor === undefined) return null;
+  return `≈ ${moneyIn(fromBase(moneyConfig(), minor, second.code), second.code)}`;
+}
+
+/** What someone typed, as minor units of a currency with so many decimals; null when it is not an amount. */
+export function toMinorIn(text: string, digits: number): number | null {
+  const clean = text.replace(/[,\s]/g, '');
+  if (!/^\d{1,12}(\.\d*)?$/.test(clean)) return null;
+  return Math.round(Number(clean) * 10 ** digits);
 }
 
 /** What someone typed ("12.5") → minor units (1250); null when it is not an amount. */

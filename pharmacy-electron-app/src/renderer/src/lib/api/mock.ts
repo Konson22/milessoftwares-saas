@@ -14,7 +14,7 @@ import type {
   Till,
 } from '../types';
 import { ApiError } from './client';
-import type { PosApi } from './types';
+import type { OnlineApi } from './types';
 
 /**
  * On-device demo pharmacy. Runs the counter's rules as the pharmacy does
@@ -510,7 +510,7 @@ function seedPrescription() {
 }
 seedPrescription();
 
-export const mockApi: PosApi = {
+export const mockApi: OnlineApi = {
   async signIn(_workspace, demoUser) {
     await wait(400);
     const user = DEMO_USERS.find((u) => u.id === demoUser);

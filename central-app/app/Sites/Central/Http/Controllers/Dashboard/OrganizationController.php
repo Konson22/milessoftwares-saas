@@ -28,7 +28,9 @@ class OrganizationController extends Controller
     public function create(Request $request, MarketingCatalog $catalog, TenantContext $tenant): Response|RedirectResponse
     {
         $membership = $request->attributes->get('membership');
+        // ?new=1: the trial's workspace choice asked for a new one.
         if ($request->filled('app')
+            && ! $request->boolean('new')
             && $membership instanceof OrganizationMembership
             && $tenant->organization()?->owner_membership_id === $membership->id) {
             return redirect()->route('trial', ['app' => $request->string('app')->toString()]);
@@ -75,6 +77,11 @@ class OrganizationController extends Controller
     {
         // Same response for "not a member" and "no such organization".
         abort_if($current->switchTo($request, $request->user(), $organization) === null, 404);
+
+        // Chosen for a free trial: carry on to it.
+        if ($request->has('trial')) {
+            return redirect()->route('trial', array_filter(['app' => $request->string('trial')->toString(), 'chosen' => 1]));
+        }
 
         return redirect()->route('dashboard');
     }

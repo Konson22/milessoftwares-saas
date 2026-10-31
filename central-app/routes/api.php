@@ -3,6 +3,7 @@
 use App\Sites\Central\Http\Controllers\Api\AppInvitationController;
 use App\Sites\Central\Http\Controllers\Api\AppOrganizationController;
 use App\Sites\Central\Http\Controllers\Api\IntegrationController;
+use App\Sites\Central\Http\Controllers\Api\LicenceActivationController;
 use App\Sites\Central\Http\Controllers\Api\ProvisioningCallbackController;
 use App\Sites\Central\Http\Controllers\Api\SharedModulesController;
 use Illuminate\Support\Facades\Route;
@@ -68,6 +69,11 @@ Route::prefix('api/v1')->middleware('throttle:600,1')->name('api.')->group(funct
                 Route::delete('{invitation}', [AppInvitationController::class, 'destroy'])->whereUuid('invitation')->name('destroy');
             });
     });
+
+    // The offline desktop pharmacy activating with a licence key (no sign-in; the key is the proof).
+    Route::post('licences/activate', [LicenceActivationController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('licences.activate');
 
     Route::post('provisioning/steps/{step}/complete', [ProvisioningCallbackController::class, 'complete'])
         ->whereUuid('step')

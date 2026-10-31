@@ -22,6 +22,7 @@ use App\Modules\Subscriptions\Models\Plan;
 use App\Modules\Subscriptions\Models\PlanRequest;
 use App\Modules\Subscriptions\Models\Subscription;
 use App\Modules\Subscriptions\Models\SubscriptionItem;
+use App\Sites\Central\Http\Middleware\RememberTrialChoice;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,6 +39,13 @@ class DashboardController extends Controller
 {
     public function __invoke(Request $request, MembershipLookup $memberships, Launcher $launcher, AccessResolver $access, AccountStanding $standing, MarketingCatalog $catalog, TenantContext $tenant): Response|RedirectResponse
     {
+        // Signed up from "Start free trial" on the public site (verifying the
+        // email address lands here): carry on to that application's trial.
+        $chosen = $request->session()->pull(RememberTrialChoice::SESSION_KEY);
+        if (is_string($chosen) && in_array($chosen, array_column($catalog->trialable(), 'code'), true)) {
+            return redirect()->route('trial', ['app' => $chosen]);
+        }
+
         if ($request->session()->get(FirstPartySignInController::JUST_SIGNED_IN) === true) {
             $only = $this->onlyApplication($memberships->activeFor($request->user()), $launcher, $access, $tenant);
             if ($only !== null) {

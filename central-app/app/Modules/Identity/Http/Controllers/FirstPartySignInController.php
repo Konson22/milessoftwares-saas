@@ -38,7 +38,7 @@ class FirstPartySignInController
             return redirect()->intended('/');
         }
 
-        return redirect()->away($this->relyingParty->authorizationUrl($this->clientFor($client, $request), $request));
+        return redirect()->away($this->relyingParty->authorizationUrl($this->clientFor($client, $request), $request, $request->boolean('register')));
     }
 
     public function callback(Request $request, string $client): HttpResponse

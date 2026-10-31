@@ -1,7 +1,10 @@
 import { create } from 'zustand';
 
-/** The counter's own screens (work offline), or a back-office page by its web path. */
-export type Screen = 'sell' | 'sales' | 'shift' | 'sync';
+/**
+ * The counter's own screens (they work without a connection; sync is
+ * hybrid's, prescriptions offline's), or a back-office page by its path.
+ */
+export type Screen = 'sell' | 'sales' | 'shift' | 'sync' | 'prescriptions';
 export type Page = Screen | `app:${string}`;
 
 interface Toast {
@@ -19,6 +22,8 @@ interface UiState {
   /** A back-office page by its web path ("stock/<id>"). */
   open(path: string): void;
   back(): void;
+  /** On signing out: the next person starts at the counter. */
+  reset(): void;
   toast(message: string, tone?: Toast['tone']): void;
   dismiss(id: number): void;
 }
@@ -42,6 +47,7 @@ export const useUi = create<UiState>((set, get) => ({
     if (history.length === 0) return;
     set({ page: history[history.length - 1], history: history.slice(0, -1) });
   },
+  reset: () => set({ page: 'sell', history: [] }),
   toast(message, tone = 'green') {
     const id = ++seq;
     set((s) => ({ toasts: [...s.toasts, { id, tone, message }] }));

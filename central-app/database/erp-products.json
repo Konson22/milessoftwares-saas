@@ -41,7 +41,7 @@
             "name": "Education ERP",
             "tagline": "Admissions to results, with student fees.",
             "description": "For schools, colleges and universities: admissions, classes, attendance, examinations, student fees and staff. Finance & Accounting can be added for the books.",
-            "status": "planned",
+            "status": "pilot",
             "sort_order": 30,
             "applications": [
                 { "code": "school", "requirement": "required" },

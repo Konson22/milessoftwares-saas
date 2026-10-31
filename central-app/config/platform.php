@@ -125,19 +125,10 @@ return [
             [
                 'code' => 'pharmacy',
                 'name' => 'Miles Pharmacy',
-                'summary' => 'The counter of your workspace pharmacy on a Windows PC: sell, take payment and run your shift. Keeps selling when the internet drops and sends the sales once it is back. Shops sign in to Miles Retail with the same app.',
-                'needs' => 'A Miles workspace with Pharmacy or Retail',
-                'file' => 'Miles Pharmacy Setup 1.0.0.exe',
-                'version' => '1.0.0',
-                'product' => 'erp/pharmacy',
-            ],
-            [
-                'code' => 'pharmacy-offline',
-                'name' => 'Miles Pharmacy Offline',
-                'summary' => 'A standalone pharmacy for one shop on one PC, with its own database. No internet, server or Miles account needed.',
-                'needs' => 'A one-time licence: talk to us',
-                'file' => 'Miles Pharmacy Offline Setup 1.0.0.exe',
-                'version' => '1.0.0',
+                'summary' => 'Your pharmacy on a Windows PC, two ways. On its own: the whole pharmacy on one PC with its own database, no internet or account needed, free for 90 days and then activated with a licence key. Or as the counter of your Miles workspace: keeps selling when the internet drops and sends the sales once it is back (shops sign in to Miles Retail with the same app).',
+                'needs' => 'Nothing to start: a 90-day trial on one PC, or a Miles workspace with Pharmacy or Retail',
+                'file' => 'Miles Pharmacy Setup 1.1.0.exe',
+                'version' => '1.1.0',
                 'product' => 'erp/pharmacy',
             ],
             [
@@ -257,5 +248,21 @@ return [
     */
 
     'queue_monitor_max' => (int) env('QUEUE_MONITOR_MAX', 500),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Desktop licences
+    |--------------------------------------------------------------------------
+    |
+    | Activation codes for the offline desktop pharmacy are Ed25519-signed
+    | here and checked in the app with the public half. signing_key is the
+    | 32-byte seed, base64 (php artisan licences:keygen makes one). Never in
+    | git: anyone holding it can make codes.
+    |
+    */
+
+    'licences' => [
+        'signing_key' => env('PLATFORM_LICENCE_SIGNING_KEY'),
+    ],
 
 ];

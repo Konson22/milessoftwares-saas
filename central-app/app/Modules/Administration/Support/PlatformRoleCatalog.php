@@ -30,13 +30,13 @@ final class PlatformRoleCatalog
             ],
             'support_manager' => [
                 'name' => 'Support manager',
-                'description' => "Approves other staff members' support access and can suspend organizations.",
-                'permissions' => [P::OrganizationsView, P::SupportRequest, P::SupportApprove, P::OrganizationsSuspend],
+                'description' => "Approves other staff members' support access, can suspend organizations, and moves desktop licences between PCs.",
+                'permissions' => [P::OrganizationsView, P::SupportRequest, P::SupportApprove, P::OrganizationsSuspend, P::LicencesManage],
             ],
             'billing_admin' => [
                 'name' => 'Billing admin',
-                'description' => 'Manages plans, subscriptions, entitlements, invoices and payments.',
-                'permissions' => [P::OrganizationsView, P::PlansManage, P::EntitlementsManage, P::BillingManage],
+                'description' => 'Manages plans, subscriptions, entitlements, invoices, payments and desktop licence keys.',
+                'permissions' => [P::OrganizationsView, P::PlansManage, P::EntitlementsManage, P::BillingManage, P::LicencesManage],
             ],
             'catalog_admin' => [
                 'name' => 'Catalog admin',
