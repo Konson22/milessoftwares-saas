@@ -25,7 +25,8 @@ class IntegrationController extends Controller
 {
     /**
      * Resolve the tenant behind a workspace host: products know the slug from
-     * the request host and need the immutable organization id.
+     * the request host and need the immutable organization id. A renamed
+     * address answers during its redirect window, with the current slug.
      */
     public function organization(Request $request, string $organization): JsonResponse
     {
@@ -136,11 +137,22 @@ class IntegrationController extends Controller
         return $application;
     }
 
+    /**
+     * The current address, or a retired one still in its redirect window: the
+     * answer names the current slug, and the product sends the request there.
+     */
+    private function bySlug(string $slug): ?Organization
+    {
+        $record = OrganizationSlug::query()->with('organization')->where('slug', strtolower($slug))->first();
+
+        return $record !== null && ($record->is_primary || $record->redirectsToPrimary()) ? $record->organization : null;
+    }
+
     private function visibleOrganization(Application $application, string $key, bool $allowSlug): Organization
     {
         $organization = match (true) {
             Str::isUuid($key) => Organization::query()->find($key),
-            $allowSlug => OrganizationSlug::query()->where('slug', strtolower($key))->where('is_primary', true)->first()?->organization,
+            $allowSlug => $this->bySlug($key),
             default => null,
         };
 

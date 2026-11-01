@@ -26,7 +26,7 @@ beforeEach(function () {
     config(['platform-client.modules.finance' => 'https://finance.internal/events']);
     $this->travelTo(CarbonImmutable::parse('2026-10-19 10:00'));
     $this->juba = $this->platform()->branch('acme', 'Juba');
-    $this->asTenant('acme', fn () => Workspace::query()->create(['slug' => 'acme', 'display_name' => 'Acme', 'currency' => 'SSP', 'timezone' => 'Africa/Juba']));
+    $this->asTenant('acme', fn () => Workspace::query()->create(['display_name' => 'Acme', 'currency' => 'SSP', 'timezone' => 'Africa/Juba']));
 
     $this->soap = $this->asTenant('acme', fn () => Product::factory()->create(['name' => 'Soap', 'barcode' => '6001234500017', 'sell_price_minor' => 300]));
     $keeper = User::factory()->create();

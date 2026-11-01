@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { call } from '@/lib/api';
 
 /** Why a code does not open this PC (src/main/licence/codes.ts). */
-export type CodeProblem = 'format' | 'signature' | 'device' | 'branch' | 'expired';
+export type CodeProblem = 'format' | 'signature' | 'product' | 'device' | 'branch' | 'expired';
 
 /** Offline: whether this PC may sell (src/main/licence/index.ts). */
 export type LicenceState = { deviceCode: string; pharmacyId: string; activateUrl: string } & (

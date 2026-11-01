@@ -130,15 +130,16 @@ class PageController extends Controller
         ]);
     }
 
-    /** The desktop installers, each with its download when the file is on the server. */
+    /** The Windows and Android apps, each with its download when the file is on the server. */
     public function downloads(): Response
     {
         return Inertia::render('public/downloads', [
             'apps' => array_map(function (array $app): array {
-                $path = $this->downloadPath($app);
+                $path = $this->downloadPath($app['file']);
 
                 return [
                     'code' => $app['code'],
+                    'platform' => $app['platform'],
                     'name' => $app['name'],
                     'summary' => $app['summary'],
                     'needs' => $app['needs'],
@@ -146,20 +147,40 @@ class PageController extends Controller
                     'product' => $app['product'],
                     'url' => $path === null ? null : PlatformHosts::url(PlatformHosts::root(), "download/{$app['code']}"),
                     'size' => $path === null ? null : filesize($path),
+                    'store' => $app['store'] ?? null,
+                    'releases' => array_map(function (array $release) use ($app): array {
+                        // The current version is the download above; an older one only by its own file.
+                        $file = $release['version'] === $app['version'] ? null : ($release['file'] ?? null);
+                        $path = $file === null ? null : $this->downloadPath($file);
+
+                        return [
+                            'version' => $release['version'],
+                            'date' => $release['date'] ?? null,
+                            'changes' => $release['changes'],
+                            'url' => $path === null ? null : PlatformHosts::url(PlatformHosts::root(), "download/{$app['code']}/{$release['version']}"),
+                        ];
+                    }, $app['releases'] ?? []),
                 ];
             }, $this->downloadApps()),
             'canonical' => PlatformHosts::url(PlatformHosts::root(), 'downloads'),
         ]);
     }
 
-    /** One installer, under its own file name. */
-    public function download(string $code): BinaryFileResponse
+    /** One installer, under its own file name: the current version, or an older one still on the server. */
+    public function download(string $code, ?string $version = null): BinaryFileResponse
     {
         $app = collect($this->downloadApps())->firstWhere('code', $code);
-        $path = $app === null ? null : $this->downloadPath($app);
+        abort_if($app === null, 404);
+
+        $file = $version === null || $version === $app['version']
+            ? $app['file']
+            : (collect($app['releases'] ?? [])->firstWhere('version', $version)['file'] ?? null);
+        $path = $file === null ? null : $this->downloadPath($file);
         abort_if($path === null, 404);
 
-        return response()->download($path, $app['file'], ['Content-Type' => 'application/vnd.microsoft.portable-executable']);
+        $type = $app['platform'] === 'android' ? 'application/vnd.android.package-archive' : 'application/vnd.microsoft.portable-executable';
+
+        return response()->download($path, basename($file), ['Content-Type' => $type]);
     }
 
     public function about(): Response
@@ -173,6 +194,14 @@ class PageController extends Controller
     {
         return Inertia::render('public/privacy', [
             'canonical' => PlatformHosts::url(PlatformHosts::root(), 'privacy'),
+        ]);
+    }
+
+    /** The Mataem Plus restaurant app's privacy policy, the URL on its Play Store listing. */
+    public function privacyMataemPlus(): Response
+    {
+        return Inertia::render('public/privacy-mataem-plus', [
+            'canonical' => PlatformHosts::url(PlatformHosts::root(), 'privacy/mataem-plus'),
         ]);
     }
 
@@ -219,21 +248,17 @@ class PageController extends Controller
     }
 
     /**
-     * @return list<array{code: string, name: string, summary: string, needs: string, file: string, version: string, product: string}>
+     * @return list<array{code: string, platform: string, name: string, summary: string, needs: string, file: string, version: string, product: string, store?: string|null, releases?: list<array{version: string, date?: string|null, file?: string, changes: list<string>}>}>
      */
     private function downloadApps(): array
     {
         return array_values((array) config('platform.downloads.apps'));
     }
 
-    /**
-     * The installer on disk, or null while it is not there.
-     *
-     * @param  array{file: string}  $app
-     */
-    private function downloadPath(array $app): ?string
+    /** The installer on disk, or null while it is not there. */
+    private function downloadPath(string $file): ?string
     {
-        $path = rtrim((string) config('platform.downloads.path'), '/\\').DIRECTORY_SEPARATOR.basename($app['file']);
+        $path = rtrim((string) config('platform.downloads.path'), '/\\').DIRECTORY_SEPARATOR.basename($file);
 
         return is_file($path) ? $path : null;
     }

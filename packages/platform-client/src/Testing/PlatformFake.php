@@ -26,6 +26,9 @@ final class PlatformFake
     /** @var array<string, array<string, mixed>> keyed by "application:orgId:subject" */
     public array $access = [];
 
+    /** @var array<string, string> a renamed workspace's old slug => its key (see renameWorkspace) */
+    public array $formerSlugs = [];
+
     /** @var array<string, list<string>> slugs an application may not see (not entitled), by application */
     public array $hiddenFrom = [];
 
@@ -83,6 +86,9 @@ final class PlatformFake
             }
 
             if (preg_match('#^/api/v1/organizations/([^/]+)$#', $path, $m) === 1) {
+                if (isset($this->formerSlugs[$m[1]]) && $this->visible($request, $this->formerSlugs[$m[1]])) {
+                    return Http::response($this->organizations[$this->formerSlugs[$m[1]]]);
+                }
                 foreach ($this->organizations as $slug => $organization) {
                     if (($organization['slug'] === $m[1] || $organization['id'] === $m[1]) && $this->visible($request, $slug)) {
                         return Http::response($organization);
@@ -140,6 +146,17 @@ final class PlatformFake
             'default_currency' => 'SSP',
             'timezone' => 'Africa/Juba',
         ]);
+    }
+
+    /**
+     * The workspace moves to a new address; the old one still finds it (the
+     * platform's redirect window). Helpers keep naming it by its first slug.
+     */
+    public function renameWorkspace(string $slug, string $to): void
+    {
+        $this->organization($slug);
+        $this->organizations[$slug]['slug'] = $to;
+        $this->formerSlugs[$slug] = $slug;
     }
 
     /**

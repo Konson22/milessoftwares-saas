@@ -22,7 +22,7 @@ use Miles\PlatformClient\PlatformConfig;
 beforeEach(function () {
     $this->travelTo(CarbonImmutable::parse('2026-10-24 09:00'));
     $this->juba = $this->platform()->branch('acme', 'Juba');
-    $this->asTenant('acme', fn () => Workspace::query()->create(['slug' => 'acme', 'display_name' => 'Acme', 'currency' => 'SSP', 'timezone' => 'Africa/Juba']));
+    $this->asTenant('acme', fn () => Workspace::query()->create(['display_name' => 'Acme', 'currency' => 'SSP', 'timezone' => 'Africa/Juba']));
 
     $keeper = User::factory()->create();
     $this->asTenant('acme', function () use ($keeper) {

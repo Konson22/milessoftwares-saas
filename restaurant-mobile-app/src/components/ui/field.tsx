@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { forwardRef, useState, type ComponentRef, type ReactNode } from 'react';
 import { Text, TextInput, View, type TextInputProps } from 'react-native';
 
+import { useRevealOnFocus } from '@/components/keyboard-scroll';
 import { colors, webNoOutline } from '@/lib/theme';
 
 import type { IconName } from './button';
@@ -25,6 +26,7 @@ export const Field = forwardRef<ComponentRef<typeof TextInput>, Props>(function 
   ref,
 ) {
   const [focused, setFocused] = useState(false);
+  const reveal = useRevealOnFocus();
 
   const box = dark
     ? `bg-white/10 ${error ? 'border-red-300' : focused ? 'border-white' : 'border-white/20'}`
@@ -33,7 +35,7 @@ export const Field = forwardRef<ComponentRef<typeof TextInput>, Props>(function 
   return (
     <View className={`gap-1.5 ${className}`}>
       {label && <Text className={`text-sm font-medium ${dark ? 'text-brand-100' : 'text-slate-700'}`}>{label}</Text>}
-      <View className={`min-h-12 flex-row items-center rounded-2xl border px-3 ${trailing ? 'pr-1' : ''} ${box}`}>
+      <View className={`min-h-12 flex-row items-center border px-3 ${trailing ? 'pr-1' : ''} ${box}`}>
         {icon && <Ionicons name={icon} size={20} color={dark ? colors.brand[200] : colors.muted} style={{ marginRight: 8 }} />}
         {prefix && <Text className={`mr-2 text-base ${dark ? 'text-brand-100' : 'text-slate-500'}`}>{prefix}</Text>}
         <TextInput
@@ -45,6 +47,7 @@ export const Field = forwardRef<ComponentRef<typeof TextInput>, Props>(function 
           style={webNoOutline}
           onFocus={(e) => {
             setFocused(true);
+            reveal?.();
             onFocus?.(e);
           }}
           onBlur={(e) => {

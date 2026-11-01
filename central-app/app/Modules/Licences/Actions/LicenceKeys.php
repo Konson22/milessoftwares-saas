@@ -17,7 +17,7 @@ final class LicenceKeys
     public function __construct(private readonly AuditLogger $audit) {}
 
     /**
-     * @param  array{customer_name?: string|null, customer_email?: string|null, customer_phone?: string|null, duration_months?: int|null, note?: string|null}  $details
+     * @param  array{product?: string|null, customer_name?: string|null, customer_email?: string|null, customer_phone?: string|null, duration_months?: int|null, note?: string|null}  $details
      * @return list<array{key: string, model: LicenceKey}> Each key in full: shown once, then only its hash is kept.
      */
     public function issue(int $count, array $details, ?PlatformStaff $staff): array
@@ -30,7 +30,7 @@ final class LicenceKeys
                 $model->forceFill([
                     'key_hash' => LicenceCodes::hashKey($key),
                     'key_hint' => substr(LicenceCodes::keyBody($key) ?? '', -4),
-                    'product' => 'pharmacy',
+                    'product' => $details['product'] ?? 'pharmacy',
                     'type' => 'single',
                     'duration_months' => $details['duration_months'] ?? null,
                     'customer_name' => $details['customer_name'] ?? null,

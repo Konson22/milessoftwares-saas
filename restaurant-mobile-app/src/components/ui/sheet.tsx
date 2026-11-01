@@ -23,10 +23,10 @@ export function Sheet({
       <KeyboardAvoidingView behavior={Platform.OS === 'web' ? undefined : 'padding'} className="flex-1 justify-end">
         <Pressable className="absolute inset-0 bg-brand-950/60" onPress={onClose} accessibilityLabel="Close" />
         <View
-          className="max-h-[85%] w-full max-w-xl self-center rounded-t-[32px] bg-white"
+          className="max-h-[85%] w-full max-w-xl self-center bg-white"
           style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
           <View className="items-center pt-2.5">
-            <View className="h-1 w-10 rounded-full bg-slate-300" />
+            <View className="h-1 w-10 bg-slate-300" />
           </View>
           <View className="flex-row items-center justify-between border-b border-slate-100 py-1.5 pl-5 pr-2">
             <Text accessibilityRole="header" className="text-lg font-bold text-slate-900">

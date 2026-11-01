@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\User;
 use App\Modules\Applications\Catalog\CatalogImporter;
 use App\Modules\Applications\Models\Application;
 use App\Modules\Authorization\Actions\RevokeRole;
@@ -7,6 +8,7 @@ use App\Modules\Authorization\Support\Scope;
 use App\Modules\Integration\Actions\ManageIntegration;
 use App\Modules\Integration\Support\IntegrationEvents;
 use App\Modules\Memberships\Enums\MembershipStatus;
+use App\Modules\Organizations\Actions\RenameOrganizationSlug;
 use App\Modules\Organizations\Models\Organization;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
@@ -76,6 +78,22 @@ it('resolves a workspace slug to the organization', function () {
         ->assertOk()
         ->assertJsonPath('id', $this->organization->id)
         ->assertJsonPath('status', 'active');
+});
+
+it('resolves a renamed workspace address during its redirect window, naming the current slug', function () {
+    $old = $this->organization->primarySlug->slug;
+    $owner = User::factory()->create();
+    app(RenameOrganizationSlug::class)->handle($this->organization, 'renamed-workspace', $owner);
+
+    $this->withToken($this->serviceToken())
+        ->getJson($this->apiUrl('organizations/'.$old))
+        ->assertOk()
+        ->assertJsonPath('id', $this->organization->id)
+        ->assertJsonPath('slug', 'renamed-workspace');
+
+    $this->travel((int) config('platform.slug.redirect_grace_days', 180) + 1)->days();
+    $this->withToken($this->serviceToken())->getJson($this->apiUrl('organizations/'.$old))->assertNotFound();
+    $this->withToken($this->serviceToken())->getJson($this->apiUrl('organizations/renamed-workspace'))->assertOk();
 });
 
 it('hides organizations that never used the calling application', function () {

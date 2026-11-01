@@ -9,9 +9,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * The offline desktop pharmacy activating with a licence key: the app sends
- * the key with its device code and pharmacy ID, and keeps the signed code it
- * gets back. No sign-in: the key is the proof of purchase.
+ * The offline desktop pharmacy (or restaurant phone) activating with a
+ * licence key: the app sends the key with its device code and pharmacy (or
+ * restaurant) ID, and keeps the signed code it gets back. Apps that name no
+ * product are the pharmacy. No sign-in: the key is the proof of purchase.
  */
 class LicenceActivationController extends Controller
 {
@@ -19,6 +20,7 @@ class LicenceActivationController extends Controller
     {
         $data = $request->validate([
             'key' => ['required', 'string', 'max:64'],
+            'product' => ['nullable', 'string', 'in:pharmacy,restaurant'],
             'device' => ['required', 'string', 'max:32'],
             'pharmacy' => ['required', 'string', 'max:32'],
             'name' => ['nullable', 'string', 'max:255'],
@@ -33,6 +35,7 @@ class LicenceActivationController extends Controller
                 $data['name'] ?? null,
                 'app',
                 ['ip' => $request->ip(), 'app_version' => $data['app_version'] ?? null],
+                product: $data['product'] ?? 'pharmacy',
             );
         } catch (LicenceDenied $denied) {
             return response()->json([

@@ -14,7 +14,7 @@ use Miles\SharedModuleKit\Envelope;
 beforeEach(function () {
     $this->travelTo(CarbonImmutable::parse('2026-10-18 08:00'));
     $this->juba = $this->platform()->branch('acme', 'Juba');
-    $this->asTenant('acme', fn () => Workspace::query()->create(['slug' => 'acme', 'display_name' => 'Acme', 'currency' => 'SSP', 'timezone' => 'Africa/Juba']));
+    $this->asTenant('acme', fn () => Workspace::query()->create(['display_name' => 'Acme', 'currency' => 'SSP', 'timezone' => 'Africa/Juba']));
     $this->para = $this->asTenant('acme', fn () => Medicine::factory()->create(['name' => 'Paracetamol', 'sell_price_minor' => 250]));
 });
 

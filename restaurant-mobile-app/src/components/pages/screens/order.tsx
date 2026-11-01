@@ -415,7 +415,7 @@ export function OrderScreen({ page, path, reload }: ScreenProps<Props>) {
               {can.pay && !tillOpen && bill.lines.length > 0 ? (
                 <View className="gap-2 p-4">
                   <Banner tone="warning">Start your shift to take the bill.</Banner>
-                  <Button title="Go to my shift" icon="wallet-outline" variant="secondary" onPress={() => router.navigate('/tills')} />
+                  <Button title="Go to my shift" icon="wallet-outline" variant="secondary" onPress={() => router.navigate({ pathname: '/p/[section]', params: { section: 'tills' } })} />
                 </View>
               ) : null}
             </Panel>

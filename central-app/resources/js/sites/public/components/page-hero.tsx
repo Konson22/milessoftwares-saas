@@ -1,13 +1,13 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { darkBand, display, tints } from '@/sites/public/components/styles';
+import { container, display, tints } from '@/sites/public/components/styles';
 
 /**
- * The short band every page but home opens with: solid navy under the
- * header, a faint constellation, and a left-aligned title with one line
- * of intro. About 35–40% of the screen tall; the top padding clears the
- * fixed header. `above` is a small line over the title (a back link or a
- * step); `children`, at most one action.
+ * The short band every page but home opens with: a soft blue wash under
+ * the header with a faint dot grid, a hairline below, and a left-aligned
+ * title with one line of intro. The top padding clears the fixed header.
+ * `above` is a small line over the title (a back link or a step);
+ * `children`, at most one or two actions.
  */
 export default function PageHero({
     above,
@@ -21,35 +21,54 @@ export default function PageHero({
     children?: ReactNode;
 }) {
     return (
-        <section className={darkBand}>
-            <HeroBackdrop />
-            <div className="site-rise mx-auto flex min-h-[35svh] max-w-7xl flex-col justify-center px-4 pt-24 pb-10 sm:px-6 sm:pt-28 sm:pb-12 lg:min-h-[40svh]">
-                {above && <div className="mb-4">{above}</div>}
+        <section className="relative isolate overflow-hidden border-b border-site-line bg-site-soft">
+            <GridBackdrop />
+            <div
+                className={`site-rise ${container} flex flex-col justify-center pt-28 pb-14 sm:pt-36 sm:pb-20`}
+            >
+                {above && <div className="mb-5">{above}</div>}
+                <SpeedMark className="mb-5" />
                 <h1
-                    className={`max-w-3xl text-[1.75rem] leading-[1.15] sm:text-4xl lg:text-5xl ${display}`}
+                    className={`max-w-3xl text-[2rem] leading-[1.1] sm:text-5xl lg:text-[3.5rem] ${display}`}
                 >
                     {title}
                 </h1>
                 {intro && (
-                    <p className="mt-4 max-w-2xl text-base text-pretty text-slate-300 sm:text-lg">
+                    <p className="mt-5 max-w-2xl text-base leading-relaxed text-pretty text-slate-600 sm:text-lg">
                         {intro}
                     </p>
                 )}
-                {children && <div className="mt-6">{children}</div>}
+                {children && (
+                    <div className="mt-8 flex flex-wrap items-center gap-3">
+                        {children}
+                    </div>
+                )}
             </div>
         </section>
     );
 }
 
 /**
+ * A faint dot grid that fades out towards the copy, behind a light hero.
+ * Decorative only.
+ */
+export function GridBackdrop() {
+    return (
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+            <div className="site-dots absolute inset-y-0 right-0 w-full [mask-image:linear-gradient(to_left,black,transparent_75%)] text-site-accent/15 lg:w-2/3" />
+        </div>
+    );
+}
+
+/**
  * A ring, two dots and a dotted patch behind a light section, in the
- * logo's blue and navy. Decorative only.
+ * logo's blue, orange and navy. Decorative only.
  */
 export function LightBackdrop() {
     return (
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-            <div className="absolute top-16 right-[7%] hidden size-28 rounded-full border-2 border-dashed border-site-accent/25 md:block" />
-            <div className="site-float absolute top-[22%] left-[6%] hidden size-4 rounded-full bg-site-accent/60 md:block" />
+            <div className="absolute top-16 right-[7%] hidden size-28 rounded-full border-2 border-dashed border-site-orange/30 md:block" />
+            <div className="site-float absolute top-[22%] left-[6%] hidden size-4 rounded-full bg-site-orange/70 md:block" />
             <div className="site-float-slow absolute right-[16%] bottom-[18%] hidden size-3 rounded-full bg-site-navy/40 md:block" />
             <div className="site-dots absolute bottom-6 left-[12%] hidden h-24 w-40 text-site-accent/20 md:block" />
         </div>
@@ -64,7 +83,7 @@ export function HeroBackdrop() {
     return (
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
             <Constellation />
-            <div className="absolute top-28 left-[6%] hidden size-40 rounded-full border border-white/10 md:block" />
+            <div className="absolute top-28 left-[6%] hidden size-40 rounded-full border border-site-orange/25 md:block" />
             <div className="site-dots absolute bottom-16 left-[10%] h-24 w-40 text-white/15" />
         </div>
     );
@@ -147,20 +166,20 @@ function Constellation() {
 }
 
 /**
- * The highlighted phrase of a heading, in the logo blue: its darker form on
- * light, the logo blue itself on a dark band (4:1, headings are large text).
+ * The highlighted phrase of a heading, in the logo orange: its darker form
+ * on light (4.9:1), the logo orange itself on a dark band (4.7:1).
  */
 export function Accent({ children }: { children: ReactNode }) {
     return (
-        <span className="text-site-accent-ink in-[.site-dark]:text-site-accent">
+        <span className="text-site-orange-ink in-[.site-dark]:text-site-orange">
             {children}
         </span>
     );
 }
 
 /**
- * An icon on a soft tinted square with a slanted twin behind it, coloured
- * by its place in a set (see tints).
+ * An icon on a soft tinted square, coloured by its place in a set (see
+ * tints).
  */
 export function IconBox({
     icon: Icon,
@@ -172,16 +191,24 @@ export function IconBox({
     const tint = tints[index % tints.length];
 
     return (
-        <span className="relative inline-flex size-16 shrink-0 items-center justify-center">
-            <span
-                aria-hidden
-                className={`absolute inset-0 rotate-12 rounded-2xl opacity-60 transition-transform duration-300 group-hover:rotate-45 ${tint}`}
-            />
-            <span
-                className={`relative inline-flex size-14 items-center justify-center rounded-2xl ${tint}`}
-            >
-                <Icon className="size-6" aria-hidden />
-            </span>
+        <span
+            className={`inline-flex size-11 shrink-0 items-center justify-center rounded-xl ${tint}`}
+        >
+            <Icon className="size-5" aria-hidden />
+        </span>
+    );
+}
+
+/**
+ * The logo's speed lines, as a small rule over a heading: two blue dashes
+ * and an orange one. Decorative only.
+ */
+export function SpeedMark({ className = '' }: { className?: string }) {
+    return (
+        <span aria-hidden className={`flex items-center gap-1.5 ${className}`}>
+            <span className="h-1.5 w-3 rounded-full bg-site-accent" />
+            <span className="h-1.5 w-6 rounded-full bg-site-accent-ink in-[.site-dark]:bg-site-accent" />
+            <span className="h-1.5 w-10 rounded-full bg-site-orange" />
         </span>
     );
 }

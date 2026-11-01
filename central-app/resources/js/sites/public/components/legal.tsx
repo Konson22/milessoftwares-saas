@@ -50,7 +50,7 @@ export default function LegalPage({
                     aria-label="On this page"
                     className="lg:sticky lg:top-28 lg:self-start"
                 >
-                    <p className="text-sm font-bold tracking-wider text-site-accent-ink uppercase">
+                    <p className="text-sm font-bold tracking-wider text-site-orange-ink uppercase">
                         On this page
                     </p>
                     <ol className="mt-4 space-y-2 border-l border-site-line text-sm">

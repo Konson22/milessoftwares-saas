@@ -97,6 +97,45 @@ it('gives the same PC its licence again, and refuses another PC', function () {
         ->assertJsonValidationErrors('key');
 });
 
+it('activates a restaurant key on a phone, and keeps keys to their own app', function () {
+    $restaurantKey = makeKey(['product' => 'restaurant']);
+    $pharmacyKey = makeKey();
+
+    $response = $this->postJson(activateUrl(), ['key' => $restaurantKey, 'product' => 'restaurant', 'device' => DEVICE, 'pharmacy' => PHARMACY, 'name' => 'Juba Grill'])
+        ->assertOk();
+    expect(verifiedLicence($response->json('code'), $this->seed))->toMatchArray(['product' => 'restaurant', 'name' => 'Juba Grill']);
+
+    // A pharmacy key in the restaurant app, and a restaurant key in the pharmacy app (which names no product): refused, and left free.
+    $this->postJson(activateUrl(), ['key' => $pharmacyKey, 'product' => 'restaurant', 'device' => DEVICE, 'pharmacy' => PHARMACY])
+        ->assertStatus(422)
+        ->assertJsonPath('reason', 'wrong_product')
+        ->assertJsonValidationErrors('key');
+    $other = makeKey(['product' => 'restaurant']);
+    $this->postJson(activateUrl(), ['key' => $other, 'device' => DEVICE, 'pharmacy' => PHARMACY])
+        ->assertStatus(422)
+        ->assertJsonPath('reason', 'wrong_product');
+    expect(LicenceKey::query()->where('key_hash', LicenceCodes::hashKey($pharmacyKey))->sole()->activation)->toBeNull();
+
+    $pharmacy = $this->postJson(activateUrl(), ['key' => $pharmacyKey, 'device' => 'ZZZZ-ZZZZ-ZZZZ', 'pharmacy' => PHARMACY])->assertOk();
+    expect(verifiedLicence($pharmacy->json('code'), $this->seed)['product'])->toBe('pharmacy');
+});
+
+it('opens the public page for the restaurant app and emails its code', function () {
+    Notification::fake();
+    $key = makeKey(['product' => 'restaurant']);
+
+    $this->get(PlatformHosts::url(PlatformHosts::root(), '/activate?product=restaurant&device=7kq2m9xd4fta&pharmacy=AB12CD34'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('product', 'restaurant')->where('device', DEVICE));
+
+    $this->post(PlatformHosts::url(PlatformHosts::root(), '/activate'), [
+        'key' => $key, 'product' => 'restaurant', 'device' => DEVICE, 'pharmacy' => PHARMACY, 'email' => 'owner@example.com',
+    ])->assertRedirect()->assertSessionHas('activation.code');
+
+    Notification::assertSentOnDemand(ActivationCodeSent::class, fn ($n) => $n->product === 'restaurant'
+        && str_contains($n->toMail(new stdClass)->subject, 'Mataem Plus'));
+});
+
 it('moves a freed key to a new PC', function () {
     $key = makeKey();
     $this->postJson(activateUrl(), ['key' => $key, 'device' => DEVICE, 'pharmacy' => PHARMACY])->assertOk();
@@ -180,6 +219,10 @@ it('lets licence staff make keys, activate for a customer, free and cancel them'
 
     $this->actingAs($staff->user)->get($this->adminUrl('/licences?search='.substr($key, -4)))
         ->assertInertia(fn ($page) => $page->has('keys', 1));
+
+    $this->actingAs($staff->user)->post($this->adminUrl('/licences'), ['count' => 1, 'product' => 'restaurant'])
+        ->assertSessionHas('issued_keys.product', 'restaurant');
+    expect(LicenceKey::query()->where('product', 'restaurant')->count())->toBe(1);
 });
 
 it('keeps licences from staff without the permission', function () {

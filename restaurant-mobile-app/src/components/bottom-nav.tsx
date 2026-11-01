@@ -49,7 +49,7 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
               onPress={onPress}
               onLongPress={() => navigation.emit({ type: 'tabLongPress', target: route.key })}
               className="min-h-14 flex-1 items-center justify-center gap-1 py-1">
-              <View className={`h-8 w-14 items-center justify-center rounded-full ${focused ? 'bg-brand-100' : ''}`}>
+              <View className={`h-8 w-14 items-center justify-center ${focused ? 'bg-brand-100' : ''}`}>
                 {options.tabBarIcon?.({ focused, color, size: 22 })}
                 {badge !== undefined && (
                   <View className="absolute -top-1 right-1.5 h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-red-600 px-1">

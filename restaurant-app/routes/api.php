@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\MeController;
+use App\Http\Controllers\Api\OutboxController;
 use Illuminate\Support\Facades\Route;
 use Miles\PlatformClient\PlatformConfig;
 
@@ -28,4 +29,10 @@ Route::prefix(app(PlatformConfig::class)->path().'/api/v1')
     ->name('api.')
     ->group(function () {
         Route::get('me', MeController::class)->name('me');
+
+        // The mobile app: what it did offline, sent when it can, and what it needs to work offline.
+        Route::middleware('branch.api')->group(function () {
+            Route::post('outbox', [OutboxController::class, 'store'])->name('outbox.store');
+            Route::get('outbox/kit', [OutboxController::class, 'kit'])->name('outbox.kit');
+        });
     });

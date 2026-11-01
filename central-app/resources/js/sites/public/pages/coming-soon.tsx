@@ -1,7 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { ArrowRight } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { CtaBand, Eyebrow } from '@/sites/public/components/blocks';
+import { CtaBand } from '@/sites/public/components/blocks';
 import { ProductCard } from '@/sites/public/components/catalog';
 import type { CatalogEntry } from '@/sites/public/components/catalog';
 import PageHero, { Accent } from '@/sites/public/components/page-hero';
@@ -44,14 +44,12 @@ export default function ComingSoon({ catalog, trialDays, canonical }: Props) {
 
             <Group
                 id="apps"
-                eyebrow="Business Applications"
                 title="Applications on the way"
                 entries={apps}
                 trialDays={trialDays}
             />
             <Group
                 id="industries"
-                eyebrow="ERP Solutions"
                 title="ERPs for more industries"
                 entries={erp}
                 trialDays={trialDays}
@@ -83,14 +81,12 @@ export default function ComingSoon({ catalog, trialDays, canonical }: Props) {
 
 function Group({
     id,
-    eyebrow,
     title,
     entries,
     trialDays,
     shaded = false,
 }: {
     id: string;
-    eyebrow: string;
     title: ReactNode;
     entries: CatalogEntry[];
     trialDays: number;
@@ -107,7 +103,6 @@ function Group({
             className={shaded ? 'border-y border-site-line bg-white' : ''}
         >
             <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
-                <Eyebrow>{eyebrow}</Eyebrow>
                 <SectionHeading
                     id={`${id}-heading`}
                     title={title}

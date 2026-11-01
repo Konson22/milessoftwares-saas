@@ -1,6 +1,6 @@
 /**
  * Where the app finds the platform. Set in .env (EXPO_PUBLIC_*), baked in
- * at build time. Only online mode uses them.
+ * at build time.
  */
 
 /** The platform's auth host (OpenID provider): sign-in and tokens. */

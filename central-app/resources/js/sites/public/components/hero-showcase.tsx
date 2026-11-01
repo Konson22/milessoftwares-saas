@@ -94,7 +94,7 @@ export default function HeroShowcase({ products }: { products: Product[] }) {
                                 {i === active && (
                                     <span
                                         key={paused ? 'paused' : 'running'}
-                                        className={`hero-progress absolute inset-0 origin-left rounded-full bg-site-accent ${paused ? 'is-paused' : ''}`}
+                                        className={`hero-progress absolute inset-0 origin-left rounded-full bg-site-orange ${paused ? 'is-paused' : ''}`}
                                         style={{
                                             animationDuration: `${interval}ms`,
                                         }}

@@ -8,7 +8,6 @@ import { errorMessage } from '@/lib/api/client';
 import { minutesSince, since, time } from '@/lib/format';
 import { printKitchenTicket } from '@/lib/receipt';
 import { colors } from '@/lib/theme';
-import { useAuth } from '@/store/auth';
 import { toast } from '@/store/toast';
 
 import { Scroll } from '../kit';
@@ -27,14 +26,13 @@ interface Ticket {
 
 /**
  * The kitchen screen: tickets oldest first, cooking then ready. The kitchen
- * marks a ticket ready; the waiter marks it served when it is out. Online it
- * is loaded again every few seconds.
+ * marks a ticket ready; the waiter marks it served when it is out. It is
+ * loaded again every few seconds.
  */
 export function KitchenScreen({ page, path, reload }: ScreenProps<{ tickets: Ticket[] }>) {
   const { tickets } = page.props;
   const { run, busy } = useAction(path, reload);
   const canOpenOrders = (page.props.branchPermissions ?? []).includes('restaurant.orders.take') || page.props.access?.isOwner;
-  const online = useAuth((s) => s.mode === 'online');
   const cooking = tickets.filter((t) => t.status === 'preparing').length;
   const ready = tickets.length - cooking;
 
@@ -44,7 +42,7 @@ export function KitchenScreen({ page, path, reload }: ScreenProps<{ tickets: Tic
         <Text className="text-base font-semibold text-slate-700">
           {cooking} cooking · {ready} ready to take out
         </Text>
-        {online ? <Text className="text-xs text-slate-400">Updates every 10 s</Text> : null}
+        <Text className="text-xs text-slate-400">Updates every 10 s</Text>
       </View>
 
       {tickets.length === 0 ? (

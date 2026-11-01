@@ -30,6 +30,13 @@ final class LicenceDenied extends RuntimeException
         return new self('in_use', 'key', 'This licence key is already in use on another PC. To move it to this one, contact Miles Softwares.');
     }
 
+    public static function wrongProduct(string $product): self
+    {
+        $app = $product === 'restaurant' ? 'Mataem Plus' : 'Miles Pharmacy';
+
+        return new self('wrong_product', 'key', "This licence key is for {$app}, not this app.");
+    }
+
     public static function badDevice(): self
     {
         return new self('bad_device', 'device', 'That is not a device code. It reads like 7KQ2-M9XD-4FTA, under Settings, Activation.');

@@ -38,7 +38,7 @@ beforeEach(function () {
         'platform-client.modules.hr' => 'https://hr.internal/events',
     ]);
     $this->travelTo(CarbonImmutable::parse('2026-03-02 09:00'));
-    $this->asTenant('acme', fn () => Workspace::query()->create(['slug' => 'acme', 'display_name' => 'Acme Academy', 'currency' => 'SSP', 'timezone' => 'Africa/Juba']));
+    $this->asTenant('acme', fn () => Workspace::query()->create(['display_name' => 'Acme Academy', 'currency' => 'SSP', 'timezone' => 'Africa/Juba']));
 });
 
 /**

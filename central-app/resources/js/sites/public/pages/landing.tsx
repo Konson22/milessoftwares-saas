@@ -2,7 +2,6 @@ import { Link } from '@inertiajs/react';
 import { ArrowLeft, ArrowRight, Check, Plus, Users } from 'lucide-react';
 import {
     CtaBand,
-    Eyebrow,
     FeatureGrid,
     waitlistUrl,
 } from '@/sites/public/components/blocks';
@@ -64,22 +63,23 @@ export default function LandingPage({
         icon: catalogIcon(feature.icon),
     }));
 
-    const primary = product.trial ? (
-        <a href={trialUrl(product.trial)} className={button.light}>
-            Start Your {trialDays}-Day Free Trial
-            <ArrowRight className="size-4" aria-hidden />
-        </a>
-    ) : comingSoon ? (
-        <Link href={waitlistUrl(product.name)} className={button.light}>
-            Join the waitlist
-            <ArrowRight className="size-4" aria-hidden />
-        </Link>
-    ) : (
-        <Link href={demoUrl} className={button.light}>
-            Request a Demo
-            <ArrowRight className="size-4" aria-hidden />
-        </Link>
-    );
+    const primary = (style: string) =>
+        product.trial ? (
+            <a href={trialUrl(product.trial)} className={style}>
+                Start Your {trialDays}-Day Free Trial
+                <ArrowRight className="size-4" aria-hidden />
+            </a>
+        ) : comingSoon ? (
+            <Link href={waitlistUrl(product.name)} className={style}>
+                Join the waitlist
+                <ArrowRight className="size-4" aria-hidden />
+            </Link>
+        ) : (
+            <Link href={demoUrl} className={style}>
+                Request a Demo
+                <ArrowRight className="size-4" aria-hidden />
+            </Link>
+        );
 
     return (
         <>
@@ -150,7 +150,7 @@ export default function LandingPage({
                     <div className="flex flex-wrap items-center gap-3">
                         <Link
                             href={categoryPaths[product.category]}
-                            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-300 transition-colors hover:text-white"
+                            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 transition-colors hover:text-site-accent-ink"
                         >
                             <ArrowLeft className="size-4" aria-hidden />
                             {categoryLabels[product.category]}
@@ -161,7 +161,7 @@ export default function LandingPage({
                 title={product.headline}
                 intro={product.subhead}
             >
-                {primary}
+                {primary(button.primary)}
             </PageHero>
 
             {/* Overview and audience */}
@@ -234,7 +234,7 @@ export default function LandingPage({
                                     key={step.title}
                                     className={`${panel} p-6 sm:p-7`}
                                 >
-                                    <span className="inline-flex size-10 items-center justify-center rounded-full bg-site-accent-ink font-public-display text-sm font-bold text-white">
+                                    <span className="inline-flex size-10 items-center justify-center rounded-full bg-site-orange-ink font-public-display text-sm font-bold text-white">
                                         {String(i + 1).padStart(2, '0')}
                                     </span>
                                     <h3 className="mt-5 text-lg font-semibold">
@@ -378,7 +378,6 @@ export default function LandingPage({
                     aria-labelledby="included-heading"
                     className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24"
                 >
-                    <Eyebrow>What's included</Eyebrow>
                     <SectionHeading
                         id="included-heading"
                         title={
@@ -515,7 +514,7 @@ export default function LandingPage({
                               : `Tell us about your business and we will walk you through ${product.name}.`
                     }
                 >
-                    {primary}
+                    {primary(button.light)}
                     <Link href="/pricing" className={button.outlineDark}>
                         See pricing
                     </Link>

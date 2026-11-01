@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Miles Restaurant",
-    "slug": "miles-restaurant",
+    "name": "Mataem Plus",
+    "slug": "mataem-plus",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
@@ -14,7 +14,7 @@
     "android": {
       "package": "com.milesoftwares.restaurant",
       "adaptiveIcon": {
-        "backgroundColor": "#8A1602",
+        "backgroundColor": "#8F0101",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png"
       },
@@ -31,20 +31,22 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#6E0E01",
+          "backgroundColor": "#3A0701",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 150
         }
-      ],
-      "expo-sharing",
-      "expo-sqlite"
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
     },
     "extra": {
-      "router": {}
-    }
+      "router": {},
+      "eas": {
+        "projectId": "944e4ec8-20ae-48d2-813a-ec279483edb9"
+      }
+    },
+    "owner": "konsonaks-team"
   }
 }

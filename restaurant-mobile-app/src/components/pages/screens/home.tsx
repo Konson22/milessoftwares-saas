@@ -11,6 +11,7 @@ import { colors } from '@/lib/theme';
 import { useAuth, useBranch } from '@/store/auth';
 
 import { Scroll, Stat } from '../kit';
+import { NewOrderButton } from '../new-order';
 import type { ScreenProps } from '../types';
 
 interface Props {
@@ -34,16 +35,16 @@ export function goTo(path: string) {
 }
 
 /** Today at this branch, for what the member may see, and the way in to the rest. */
-export function HomeScreen({ page, reload }: ScreenProps<Props>) {
+export function HomeScreen({ page, path, reload }: ScreenProps<Props>) {
   const { openOrders, takings, lowStock } = page.props;
   const user = useAuth((s) => s.me?.user);
   const organization = useAuth((s) => s.me?.organization.name);
-  const mode = useAuth((s) => s.mode);
+  const reachable = useAuth((s) => s.reachable);
   const branch = useBranch();
   const shared = useAccess((s) => s.shared);
   const shortcuts = SHORTCUTS.filter((s) => {
     const item = navItem(s.path);
-    return item !== null && allowed(item, shared, mode);
+    return item !== null && allowed(item, shared);
   });
 
   return (
@@ -54,15 +55,17 @@ export function HomeScreen({ page, reload }: ScreenProps<Props>) {
           {[organization, branch && branch.name !== organization ? branch.name : null].filter(Boolean).join(' · ')}
         </Text>
         <View className="mt-3 flex-row items-center gap-1.5">
-          <Ionicons name={mode === 'offline' ? 'phone-portrait-outline' : 'cloud-done-outline'} size={14} color={colors.brand[100]} />
+          <Ionicons name={reachable ? 'cloud-done-outline' : 'cloud-offline-outline'} size={14} color={colors.brand[100]} />
           <Text className="text-xs font-semibold uppercase tracking-wider text-brand-100">
-            {mode === 'offline' ? 'Offline · on this phone' : 'Online'}
+            {reachable ? 'Online' : 'No connection'}
           </Text>
         </View>
       </Hero>
 
+      <NewOrderButton from={path} reload={reload} />
+
       <View className="flex-row flex-wrap gap-3">
-        {openOrders !== null ? <Stat icon="list-outline" label="Open orders" value={String(openOrders)} onPress={() => goTo('floor')} /> : null}
+        {openOrders !== null ? <Stat icon="list-outline" label="Open orders" value={String(openOrders)} onPress={() => goTo('orders')} /> : null}
         {takings !== null ? (
           <Stat icon="receipt-outline" label={`Takings today · ${plural(takings.count, 'bill')}`} value={money(takings.totalMinor)} onPress={() => goTo('bills')} />
         ) : null}

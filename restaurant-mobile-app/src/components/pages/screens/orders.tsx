@@ -6,6 +6,7 @@ import { money, plural, time } from '@/lib/format';
 import { withQuery } from '@/lib/pages';
 
 import { DayPicker, ListRow, Panel, Scroll } from '../kit';
+import { NewOrderButton } from '../new-order';
 import type { ScreenProps } from '../types';
 
 interface Props {
@@ -26,11 +27,12 @@ interface Props {
 const TONE = { open: 'blue', paid: 'green', cancelled: 'red' } as const;
 
 /** The branch's orders of a day: open, paid and cancelled. */
-export function OrdersScreen({ page, reload, go }: ScreenProps<Props>) {
+export function OrdersScreen({ page, path, reload, go }: ScreenProps<Props>) {
   const { day, orders } = page.props;
 
   return (
     <Scroll onRefresh={reload}>
+      <NewOrderButton from={path} reload={reload} />
       <Panel title={plural(orders.length, 'order')} right={<DayPicker day={day} onChange={(next) => go(withQuery('orders', { day: next }))} />}>
         {orders.length === 0 ? (
           <EmptyState icon="list-outline" title="No orders this day" />

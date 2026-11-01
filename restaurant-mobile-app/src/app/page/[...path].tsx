@@ -3,6 +3,7 @@ import { View } from 'react-native';
 
 import { PageView } from '@/components/pages/page-view';
 import { ScreenHeader } from '@/components/screen-header';
+import { SyncBar } from '@/components/sync-bar';
 import { sectionTitle } from '@/lib/navigation';
 
 const RECORD_TITLES: Record<string, string> = {
@@ -24,6 +25,7 @@ export default function RecordScreen() {
   return (
     <View className="flex-1 bg-canvas">
       <ScreenHeader title={title} icon="arrow-back" iconLabel="Back" onIcon={() => (router.canGoBack() ? router.back() : router.navigate('/home'))} />
+      <SyncBar />
       <PageView key={joined} path={joined} />
     </View>
   );

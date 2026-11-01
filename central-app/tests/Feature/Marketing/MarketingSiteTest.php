@@ -282,6 +282,7 @@ it('serves the products, platform, coming-soon, about, services and legal pages'
     ['about', 'public/about'],
     ['services', 'public/services'],
     ['privacy', 'public/privacy'],
+    ['privacy/mataem-plus', 'public/privacy-mataem-plus'],
     ['terms', 'public/terms'],
 ]);
 
@@ -289,12 +290,17 @@ describe('desktop downloads', function () {
     beforeEach(function () {
         $this->downloads = storage_path('framework/testing/downloads');
         @mkdir($this->downloads, 0777, true);
-        file_put_contents($this->downloads.'/Miles Pharmacy Setup 1.1.0.exe', 'MZ installer');
+        $this->files = ['Miles Pharmacy Setup 1.1.0.exe', 'Miles Pharmacy Setup 1.0.0.exe', 'Miles Retail 1.0.0.apk'];
+        foreach ($this->files as $file) {
+            file_put_contents("{$this->downloads}/{$file}", 'MZ installer');
+        }
         config(['platform.downloads.path' => $this->downloads]);
     });
 
     afterEach(function () {
-        @unlink($this->downloads.'/Miles Pharmacy Setup 1.1.0.exe');
+        foreach ($this->files as $file) {
+            @unlink("{$this->downloads}/{$file}");
+        }
     });
 
     it('lists every app, with a download only for the installers on the server', function () {
@@ -303,22 +309,42 @@ describe('desktop downloads', function () {
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('public/downloads')
                 ->where('canonical', site('downloads'))
+                ->has('apps', 5)
                 ->where('apps.0.code', 'pharmacy')
+                ->where('apps.0.platform', 'windows')
                 ->where('apps.0.url', site('download/pharmacy'))
                 ->where('apps.0.size', 12)
-                ->has('apps', 2)
-                ->where('apps.1.url', null));
+                ->where('apps.1.url', null)
+                ->where('apps.3.code', 'retail-android')
+                ->where('apps.3.platform', 'android')
+                ->where('apps.3.url', site('download/retail-android'))
+                ->where('apps.2.url', null));
     });
 
-    it('sends the installer under its own name', function () {
-        $response = $this->get(site('download/pharmacy'))->assertOk();
-
-        expect($response->headers->get('Content-Disposition'))->toContain('Miles Pharmacy Setup 1.1.0.exe');
+    it('lists the release notes, with older versions still on the server', function () {
+        $this->get(site('downloads'))->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('apps.0.releases.0.version', '1.1.0')
+            ->where('apps.0.releases.0.url', null)
+            ->where('apps.0.releases.1.version', '1.0.0')
+            ->where('apps.0.releases.1.url', site('download/pharmacy/1.0.0'))
+            ->has('apps.0.releases.1.changes'));
     });
 
-    it('has no download for an installer that is not there or an unknown app', function (string $code) {
-        $this->get(site("download/{$code}"))->assertNotFound();
-    })->with(['restaurant', 'nothing']);
+    it('sends the installer under its own name', function (string $path, string $file, string $type) {
+        $response = $this->get(site($path))->assertOk();
+
+        expect($response->headers->get('Content-Disposition'))->toContain($file)
+            ->and($response->headers->get('Content-Type'))->toBe($type);
+    })->with([
+        ['download/pharmacy', 'Miles Pharmacy Setup 1.1.0.exe', 'application/vnd.microsoft.portable-executable'],
+        ['download/pharmacy/1.1.0', 'Miles Pharmacy Setup 1.1.0.exe', 'application/vnd.microsoft.portable-executable'],
+        ['download/pharmacy/1.0.0', 'Miles Pharmacy Setup 1.0.0.exe', 'application/vnd.microsoft.portable-executable'],
+        ['download/retail-android', 'Miles Retail 1.0.0.apk', 'application/vnd.android.package-archive'],
+    ]);
+
+    it('has no download for an installer that is not there or an unknown app', function (string $path) {
+        $this->get(site($path))->assertNotFound();
+    })->with(['download/restaurant', 'download/nothing', 'download/pharmacy/0.9.0', 'download/pharmacy-android']);
 });
 
 it('moves the old industries and solutions pages to the products page', function (string $path) {

@@ -1,10 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { ArrowRight, Layers, MapPin, Store, WifiOff } from 'lucide-react';
-import {
-    CtaBand,
-    Eyebrow,
-    FeatureGrid,
-} from '@/sites/public/components/blocks';
+import { CtaBand, FeatureGrid } from '@/sites/public/components/blocks';
 import { aboutValues } from '@/sites/public/components/content';
 import PageHero, { Accent } from '@/sites/public/components/page-hero';
 import SectionHeading from '@/sites/public/components/section-heading';
@@ -70,7 +66,6 @@ export default function About({ canonical }: Props) {
             >
                 <div className="grid gap-8 lg:grid-cols-2 lg:gap-16">
                     <div>
-                        <Eyebrow>Our story</Eyebrow>
                         <SectionHeading
                             id="story-heading"
                             title={

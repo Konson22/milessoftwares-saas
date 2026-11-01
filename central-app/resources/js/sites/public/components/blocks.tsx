@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 import type { Feature } from '@/sites/public/components/content';
 import { HeroBackdrop, IconBox } from '@/sites/public/components/page-hero';
-import { card, darkBand } from '@/sites/public/components/styles';
+import { darkBand } from '@/sites/public/components/styles';
 
 /**
- * Icon cards in a grid, as feature lists across the site read: icon,
- * title and a sentence or two. Two columns from sm, `columns` from lg.
+ * Features in a grid, as feature lists across the site read: icon, title
+ * and a sentence or two under a hairline, no boxes. Two columns from sm,
+ * `columns` from lg.
  */
 export function FeatureGrid({
     features,
@@ -23,22 +24,18 @@ export function FeatureGrid({
     }[columns];
 
     return (
-        <ul className={`grid gap-4 sm:grid-cols-2 sm:gap-6 ${lg}`}>
+        <ul className={`grid gap-x-10 gap-y-10 sm:grid-cols-2 ${lg}`}>
             {features.map(({ icon, title, body }, i) => (
                 <li
                     key={title}
-                    className={`${card} group relative flex items-start gap-5 overflow-hidden p-6 text-site-ink in-[.site-dark]:border-transparent sm:flex-col sm:gap-0 sm:p-8`}
+                    className="flex items-start gap-4 border-t border-site-line pt-6 text-site-ink in-[.site-dark]:border-white/15 in-[.site-dark]:text-white sm:flex-col sm:gap-0"
                 >
-                    <span
-                        aria-hidden
-                        className="absolute inset-x-0 bottom-0 h-1 origin-left scale-x-0 bg-site-accent transition-transform duration-300 group-hover:scale-x-100"
-                    />
                     <IconBox icon={icon} index={i} />
                     <div>
-                        <Heading className="text-lg font-semibold sm:mt-6">
+                        <Heading className="text-base font-semibold sm:mt-5 sm:text-lg">
                             {title}
                         </Heading>
-                        <p className="mt-1.5 text-sm leading-relaxed text-slate-600 sm:mt-2">
+                        <p className="mt-1.5 text-sm leading-relaxed text-slate-600 in-[.site-dark]:text-slate-300 sm:mt-2">
                             {body}
                         </p>
                     </div>
@@ -64,15 +61,18 @@ export function CtaBand({
     children: ReactNode;
 }) {
     return (
-        <section aria-labelledby={id} className="px-4 pb-16 sm:px-6 sm:pb-28">
+        <section
+            aria-labelledby={id}
+            className="px-4 pb-16 sm:px-6 sm:pb-24 lg:px-8"
+        >
             <div
-                className={`${darkBand} mx-auto grid max-w-7xl items-center gap-8 rounded-[2rem] px-6 py-14 sm:px-14 sm:py-20 lg:grid-cols-[1fr_auto]`}
+                className={`${darkBand} mx-auto grid max-w-7xl items-center gap-8 rounded-2xl px-6 py-12 sm:px-12 sm:py-16 lg:grid-cols-[1fr_auto]`}
             >
                 <HeroBackdrop />
                 <div className="text-center lg:text-left">
                     <h2
                         id={id}
-                        className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-[2.6rem] sm:leading-tight"
+                        className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl sm:leading-tight"
                     >
                         {title}
                     </h2>
@@ -85,15 +85,6 @@ export function CtaBand({
                 </div>
             </div>
         </section>
-    );
-}
-
-/** A small label over a section heading. */
-export function Eyebrow({ children }: { children: ReactNode }) {
-    return (
-        <p className="mb-3 text-sm font-bold tracking-wider text-site-accent-ink uppercase in-[.site-dark]:text-white/80">
-            {children}
-        </p>
     );
 }
 

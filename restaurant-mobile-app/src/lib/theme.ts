@@ -17,9 +17,10 @@ export const colors = {
       800: '#6e0e01',
       900: '#580b01',
       950: '#3a0701',
+      logo: '#8f0101',
   },
-  accent: '#1d3a66',
-  accentDark: '#06172d',
+  accent: '#ffa000',
+  accentDark: '#d97a00',
   canvas: '#f3f6fa',
   white: '#ffffff',
 

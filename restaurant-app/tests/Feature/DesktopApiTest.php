@@ -24,7 +24,7 @@ beforeEach(function () {
     $this->travelTo(CarbonImmutable::parse('2026-10-25 12:00'));
     $this->juba = $this->platform()->branch('acme', 'Juba');
     $this->wau = $this->platform()->branch('acme', 'Wau');
-    $this->asTenant('acme', fn () => Workspace::query()->create(['slug' => 'acme', 'display_name' => 'Acme Grill', 'currency' => 'SSP', 'timezone' => 'Africa/Juba']));
+    $this->asTenant('acme', fn () => Workspace::query()->create(['display_name' => 'Acme Grill', 'currency' => 'SSP', 'timezone' => 'Africa/Juba']));
 
     $this->beans = $this->asTenant('acme', fn () => MenuItem::factory()->create(['name' => 'Rice and beans', 'section' => 'Mains', 'price_minor' => 1500]));
     $this->soda = $this->asTenant('acme', fn () => MenuItem::factory()->drink()->create(['name' => 'Soda', 'section' => 'Drinks', 'price_minor' => 300]));

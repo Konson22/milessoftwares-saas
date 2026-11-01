@@ -49,23 +49,23 @@
             :root {
                 --bg: #f2f9ff;
                 --card: #ffffff;
-                --ink: #042853;
+                --ink: #042356;
                 --muted: #46597a;
                 --line: #dbe8f5;
-                --accent: #0069d0;
-                --accent-hover: #042853;
+                --accent: #c74405;
+                --accent-hover: #a33703;
                 color-scheme: light;
             }
 
             @media (prefers-color-scheme: dark) {
                 :root {
-                    --bg: #021d3e;
-                    --card: #042853;
+                    --bg: #021a40;
+                    --card: #042356;
                     --ink: #f4f7fb;
                     --muted: #c5d0df;
                     --line: #1a2f52;
-                    --accent: #0069d0;
-                    --accent-hover: #005ab3;
+                    --accent: #c74405;
+                    --accent-hover: #a33703;
                     color-scheme: dark;
                 }
             }

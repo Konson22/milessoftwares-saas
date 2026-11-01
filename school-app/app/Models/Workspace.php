@@ -14,7 +14,6 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  *
  * @property string $id
  * @property string $organization_id
- * @property string $slug
  * @property string $display_name
  * @property string $currency
  * @property string $timezone
@@ -27,7 +26,7 @@ class Workspace extends Model
     use BelongsToTenant;
     use HasUuids;
 
-    protected $fillable = ['slug', 'display_name', 'currency', 'timezone'];
+    protected $fillable = ['display_name', 'currency', 'timezone'];
 
     protected function casts(): array
     {

@@ -1,10 +1,11 @@
-import { ArrowLeft, Eye, EyeOff, Loader2, UtensilsCrossed } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Eye, EyeOff, Loader2, UtensilsCrossed } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 
 import type { SignInWith } from '../../../shared/ipc';
 import { Button, Field, Input, Notice } from '@/components/ui';
-import { errorMessage } from '@/lib/api';
-import { normalizeWorkspace } from '@/lib/config';
+import { errorMessage, platform as account } from '@/lib/api';
+import { workspaceUrl } from '@/lib/config';
+import { disk } from '@/lib/storage';
 import { useAuth } from '@/store/auth';
 
 import { CreateBusiness } from './create-business';
@@ -12,7 +13,6 @@ import { CreateBusiness } from './create-business';
 export function LoginPage() {
   const savedWorkspace = useAuth((s) => s.workspace);
   const signIn = useAuth((s) => s.signIn);
-  const [workspace, setWorkspace] = useState(savedWorkspace ?? '');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -28,6 +28,8 @@ export function LoginPage() {
   /** Signed in to create a business: its form, with the ID token to open it after. */
   const [creating, setCreating] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  /** Signed in with more than one restaurant: which to open, with the sign-in's ID token. */
+  const [choosing, setChoosing] = useState<{ idToken: string; restaurants: RestaurantChoice[] } | null>(null);
   const creatingNow = intent === 'create';
 
   const run = async (key: string, task: () => Promise<void>) => {
@@ -42,10 +44,12 @@ export function LoginPage() {
     }
   };
 
-  /** Signs in on the platform, then opens the session at the workspace (or the new business's form). */
+  /**
+   * Signs in on the platform, then opens the person's restaurant: the only
+   * one, or the one they choose (or the new business's form). No workspace
+   * address to type.
+   */
   const platform = (key: string, how: SignInWith) => {
-    const slug = normalizeWorkspace(workspace);
-    if (!slug && !creatingNow) return setError({ message: 'Enter your workspace address.' });
     setNotice(null);
     void run(key, async () => {
       const result = await window.desktop.signIn(how);
@@ -57,7 +61,18 @@ export function LoginPage() {
         setCode(null);
         setCreating(result.idToken);
       } else {
-        await signIn(slug, result.idToken);
+        const restaurants = (await account<{ data: RestaurantChoice[] }>('GET', 'organizations')).data;
+        if (restaurants.length === 0) {
+          await window.desktop.signOut().catch(() => {});
+          setError({ message: 'Your account is not in a restaurant yet. Create one, or ask the owner to invite you.' });
+        } else if (restaurants.length === 1) {
+          await signIn(restaurants[0].slug, result.idToken);
+        } else {
+          // The last one opened here first.
+          const last = savedWorkspace ?? (await disk.get<string>('workspace'));
+          setCode(null);
+          setChoosing({ idToken: result.idToken, restaurants: [...restaurants].sort((a, b) => Number(b.slug === last) - Number(a.slug === last)) });
+        }
       }
     });
   };
@@ -66,6 +81,7 @@ export function LoginPage() {
     setIntent(next);
     setNewAccount(true);
     setCreating(null);
+    setChoosing(null);
     setCode(null);
     setError(null);
     setNotice(null);
@@ -135,13 +151,22 @@ export function LoginPage() {
             </Notice>
           ) : null}
 
-          {creating ? (
+          {choosing ? (
+            <ChooseRestaurant
+              restaurants={choosing.restaurants}
+              busy={busy}
+              onChoose={(slug) => void run(slug, () => signIn(slug, choosing.idToken))}
+              onBack={() => {
+                setChoosing(null);
+                void window.desktop.signOut().catch(() => {});
+              }}
+            />
+          ) : creating ? (
             <CreateBusiness
               idToken={creating}
               onBack={() => switchIntent('open')}
-              onCreated={(slug, message) => {
+              onCreated={(_slug, message) => {
                 switchIntent('open');
-                setWorkspace(slug);
                 setNotice(message);
               }}
             />
@@ -180,15 +205,11 @@ export function LoginPage() {
                       <Input autoFocus autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} required />
                     </Field>
                   ) : null
-                ) : (
-                  <Field label="Workspace" hint="As in yourrestaurant.milesoftwares.com">
-                    <Input autoFocus={!savedWorkspace} value={workspace} onChange={(e) => setWorkspace(e.target.value)} placeholder="yourrestaurant" required />
-                  </Field>
-                )}
+                ) : null}
                 <Field label="Email">
                   <Input
                     type="email"
-                    autoFocus={!!savedWorkspace || (creatingNow && !newAccount)}
+                    autoFocus={!creatingNow || !newAccount}
                     autoComplete="username"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -250,7 +271,7 @@ export function LoginPage() {
             </div>
           )}
 
-          {!creating && !code ? (
+          {!creating && !code && !choosing ? (
             <p className="border-t border-border pt-4 text-center text-sm text-muted-foreground">
               {creatingNow ? 'Your restaurant is already on Miles? ' : 'New to Miles? '}
               <button
@@ -265,6 +286,58 @@ export function LoginPage() {
           ) : null}
         </div>
       </main>
+    </div>
+  );
+}
+
+/** A business the person is in that uses the restaurant (the platform answers for this app). */
+interface RestaurantChoice {
+  id: string;
+  slug: string;
+  name: string;
+  status: 'active' | 'suspended';
+  is_owner: boolean;
+}
+
+/** Signed in with more than one restaurant: which to open. */
+function ChooseRestaurant({
+  restaurants,
+  busy,
+  onChoose,
+  onBack,
+}: {
+  restaurants: RestaurantChoice[];
+  busy: string | null;
+  onChoose: (slug: string) => void;
+  onBack: () => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <p className="text-sm font-medium">You are in more than one restaurant. Which one?</p>
+      <ul className="divide-y divide-border rounded-lg border border-border">
+        {restaurants.map((r) => (
+          <li key={r.id}>
+            <button
+              type="button"
+              disabled={busy !== null || r.status !== 'active'}
+              onClick={() => onChoose(r.slug)}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted disabled:opacity-60"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-medium">{r.name}</span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {workspaceUrl(r.slug).replace(/^https?:\/\//, '')}
+                  {r.status !== 'active' ? ' · suspended' : r.is_owner ? ' · owner' : ''}
+                </span>
+              </span>
+              {busy === r.slug ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} className="text-muted-foreground" />}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <button type="button" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground" onClick={onBack}>
+        <ArrowLeft size={14} /> Sign in with another account
+      </button>
     </div>
   );
 }

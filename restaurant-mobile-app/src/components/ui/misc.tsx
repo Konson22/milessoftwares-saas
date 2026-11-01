@@ -20,7 +20,7 @@ const badgeTone: Record<Tone, [string, string]> = {
 export function Badge({ label, tone = 'neutral', a11y }: { label: string; tone?: Tone; a11y?: string }) {
   const [bg, fg] = badgeTone[tone];
   return (
-    <View className={`rounded-md px-1.5 py-0.5 ${bg}`} accessible accessibilityLabel={a11y ?? label}>
+    <View className={`px-1.5 py-0.5 ${bg}`} accessible accessibilityLabel={a11y ?? label}>
       <Text className={`text-xs font-bold ${fg}`}>{label}</Text>
     </View>
   );
@@ -34,9 +34,9 @@ export function Card({ children, className = '' }: { children: ReactNode; classN
   );
 }
 
-/** Summary panel in the icon's red, edged in its navy. Children set their own text colors (white / brand-200 read well on it). */
+/** Summary panel in the icon's red. Children set their own text colors (white / brand-200 read well on it). */
 export function Hero({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <View className={`border-l-4 border-accent bg-brand-600 p-5 ${className}`}>{children}</View>;
+  return <View className={`bg-brand-600 p-5 ${className}`}>{children}</View>;
 }
 
 /** A small figure on a Hero: label above, value below. */
@@ -69,10 +69,7 @@ export function ScreenTitle({ title, subtitle, right }: { title: string; subtitl
 export function SectionTitle({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (
     <View className="mb-2 flex-row items-center justify-between">
-      <View className="flex-row items-center gap-2">
-        <View className="h-3.5 w-1 bg-accent" />
-        <Text className="text-xs font-bold uppercase tracking-wider text-slate-600">{children}</Text>
-      </View>
+      <Text className="text-xs font-bold uppercase tracking-wider text-slate-600">{children}</Text>
       {right}
     </View>
   );

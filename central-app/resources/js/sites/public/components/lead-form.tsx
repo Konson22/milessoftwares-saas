@@ -103,7 +103,7 @@ export default function LeadForm({
                     <Button
                         type="submit"
                         disabled={processing}
-                        className="h-12 rounded-full bg-site-accent-ink px-7 font-bold text-white transition-colors hover:bg-site-navy"
+                        className="h-12 rounded-full bg-site-orange-ink px-7 font-bold text-white transition-colors hover:bg-site-orange-deep"
                     >
                         {submitLabel}
                     </Button>

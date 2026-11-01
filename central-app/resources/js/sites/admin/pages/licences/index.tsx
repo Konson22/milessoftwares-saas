@@ -9,6 +9,7 @@ import { Label } from '@/shared/components/ui/label';
 type LicenceKey = {
     id: string;
     hint: string;
+    product: Product;
     status: 'available' | 'active' | 'revoked';
     durationMonths: number | null;
     customerName: string | null;
@@ -28,12 +29,23 @@ type LicenceKey = {
     } | null;
 };
 
+type Product = 'pharmacy' | 'restaurant';
+
+const productLabel: Record<Product, string> = {
+    pharmacy: 'Pharmacy (PC)',
+    restaurant: 'Restaurant (phone)',
+};
+
+const selectClass =
+    'h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm';
+
 type Props = {
     search: string;
     status: 'all' | 'available' | 'active' | 'revoked';
     keys: LicenceKey[];
     issuedKeys: {
         customer: string | null;
+        product: Product;
         durationMonths: number | null;
         keys: string[];
     } | null;
@@ -67,11 +79,11 @@ export default function Licences({
         <>
             <Head title="Licences" />
 
-            <h1 className="text-2xl font-semibold">Desktop licences</h1>
+            <h1 className="text-2xl font-semibold">Offline licences</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-                Licence keys for Miles Pharmacy on one PC (offline). A key is
-                tied to a PC when it is first activated; free it here to move it
-                to another.
+                Licence keys for offline Miles Pharmacy on one PC and Miles
+                Restaurant on one phone. A key is tied to its device when it is
+                first activated; free it here to move it to another.
             </p>
 
             {issuedKeys && (
@@ -84,6 +96,7 @@ export default function Licences({
                             ? 'New licence key'
                             : `${issuedKeys.keys.length} new licence keys`}
                         {issuedKeys.customer && ` for ${issuedKeys.customer}`} (
+                        {productLabel[issuedKeys.product]},{' '}
                         {term(issuedKeys.durationMonths)}): copy or print them
                         now, they will not be shown again.
                     </p>
@@ -103,9 +116,9 @@ export default function Licences({
                     className="mt-4 space-y-2 rounded-lg border border-emerald-300 bg-emerald-50 p-4 text-sm dark:border-emerald-500/40 dark:bg-emerald-500/10"
                 >
                     <p className="font-medium">
-                        Activation code for PC {signedCode.device}, pharmacy{' '}
-                        {signedCode.pharmacy}. Send it to the customer to paste
-                        under Settings, Activation.
+                        Activation code for device {signedCode.device}, pharmacy
+                        or restaurant {signedCode.pharmacy}. Send it to the
+                        customer to paste under Activation in the app.
                     </p>
                     <p className="font-mono text-xs break-all select-all">
                         {signedCode.code}
@@ -134,6 +147,20 @@ export default function Licences({
                                         defaultValue={1}
                                         required
                                     />
+                                </Field>
+                                <Field label="For" error={errors.product}>
+                                    <select
+                                        name="product"
+                                        defaultValue="pharmacy"
+                                        className={selectClass}
+                                    >
+                                        <option value="pharmacy">
+                                            {productLabel.pharmacy}
+                                        </option>
+                                        <option value="restaurant">
+                                            {productLabel.restaurant}
+                                        </option>
+                                    </select>
                                 </Field>
                                 <Field
                                     label="Runs for (months)"
@@ -296,6 +323,9 @@ export default function Licences({
                                 <span className="font-mono font-medium">
                                     MILES-…-{key.hint}
                                 </span>
+                                <Badge variant="outline">
+                                    {productLabel[key.product] ?? key.product}
+                                </Badge>
                                 <Badge
                                     variant={
                                         key.status === 'revoked'

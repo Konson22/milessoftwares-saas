@@ -1,10 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { ArrowRight } from 'lucide-react';
-import {
-    CtaBand,
-    Eyebrow,
-    FeatureGrid,
-} from '@/sites/public/components/blocks';
+import { CtaBand, FeatureGrid } from '@/sites/public/components/blocks';
 import {
     cloudPillars,
     cloudSteps,
@@ -48,7 +44,6 @@ export default function Platform({ canonical }: Props) {
                 className="scroll-mt-24"
             >
                 <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
-                    <Eyebrow>How Miles Workspace works</Eyebrow>
                     <SectionHeading
                         id="how-it-works-heading"
                         title="Everything your applications share, set up once"
@@ -67,7 +62,6 @@ export default function Platform({ canonical }: Props) {
                 className="scroll-mt-24 border-y border-site-line bg-white"
             >
                 <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
-                    <Eyebrow>Subscriptions</Eyebrow>
                     <SectionHeading
                         id="subscriptions-heading"
                         title={
@@ -85,7 +79,7 @@ export default function Platform({ canonical }: Props) {
                                 key={step.title}
                                 className={`${panel} p-6 sm:p-7`}
                             >
-                                <span className="inline-flex size-11 items-center justify-center rounded-full bg-site-accent-ink font-public-display text-sm font-bold text-white">
+                                <span className="inline-flex size-11 items-center justify-center rounded-full bg-site-orange-ink font-public-display text-sm font-bold text-white">
                                     {String(i + 1).padStart(2, '0')}
                                 </span>
                                 <h3 className="mt-5 text-lg font-semibold">
@@ -116,7 +110,6 @@ export default function Platform({ canonical }: Props) {
                     className={`scroll-mt-24 ${i % 2 === 1 ? 'border-y border-site-line bg-white' : ''}`}
                 >
                     <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
-                        <Eyebrow>Security and control</Eyebrow>
                         <SectionHeading
                             id={`${group.id}-heading`}
                             title={group.title}

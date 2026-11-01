@@ -38,6 +38,8 @@ interface RequestContext {
   onSignedOut: () => void;
   /** Whether the restaurant answered: every call says. */
   onReachable: (reachable: boolean) => void;
+  /** The workspace changed its address (the owner renamed it); calls go to the new one from now on. */
+  onMoved: (from: string, to: string) => Promise<void>;
 }
 
 let context: RequestContext = {
@@ -46,16 +48,25 @@ let context: RequestContext = {
   token: async () => null,
   onSignedOut: () => {},
   onReachable: () => {},
+  onMoved: async () => {},
 };
 
 export function setRequestContext(next: Partial<RequestContext>) {
   context = { ...context, ...next };
 }
 
+/** The workspace calls go to (it may have moved since it was chosen). */
+export const currentWorkspace = () => context.workspace;
+
+/** The restaurant's answer at a workspace's old address: where it is now. */
+const MOVED = 'workspace_moved';
+const SLUG = /^[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+
 /**
- * Online mode: a call to the workspace's restaurant,
- * {workspace}/restaurant/api/<path>, with the app's access token and the
- * branch worked in. A rejected token is refreshed once and the call retried.
+ * A call to the workspace's restaurant, {workspace}/restaurant/api/<path>,
+ * with the app's access token and the branch worked in. A rejected token is
+ * refreshed once and the call retried; so is a call to a workspace's old
+ * address, at its new one.
  */
 export async function request<T>(
   method: string,
@@ -63,6 +74,7 @@ export async function request<T>(
   body?: unknown,
   extraHeaders: Record<string, string> = {},
   retried = false,
+  moved = false,
 ): Promise<T> {
   if (!context.workspace) throw new ApiError('Sign in again.', 401);
 
@@ -94,7 +106,15 @@ export async function request<T>(
   const json = text ? safeJson(text) : null;
 
   if (response.status === 401 && !retried && json?.code === 'invalid_token') {
-    return request<T>(method, path, body, extraHeaders, true);
+    return request<T>(method, path, body, extraHeaders, true, moved);
+  }
+
+  if (response.status === 421 && !moved && json?.code === MOVED && typeof json.slug === 'string' && SLUG.test(json.slug)) {
+    const from = context.workspace;
+    if (from && from !== json.slug) {
+      await context.onMoved(from, json.slug);
+      return request<T>(method, path, body, extraHeaders, retried, true);
+    }
   }
 
   if (!response.ok) {

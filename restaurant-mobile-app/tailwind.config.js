@@ -5,7 +5,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Miles Restaurant palette, sampled from the app icon: its red (600) is the main hue, 500 its bright
+        // Mataem Plus palette, sampled from the app icon: its red (600) is the main hue, 500 its bright
         // highlight, 700-800 the maroon shadows, 900-950 the same red deepened for the dark backdrops.
         // Keep src/lib/theme.ts in sync — it carries the same values for icons and navigation.
         brand: {
@@ -20,16 +20,18 @@ module.exports = {
           800: '#6e0e01',
           900: '#580b01',
           950: '#3a0701',
+          // The red behind the chef's hat in the app icon, exactly: the app bars.
+          logo: '#8f0101',
         },
-        // The icon's navy (the chef's cuff): the second brand colour, for payment actions and markers.
-        // 700 is the shade for white text (buttons); DEFAULT for borders and ticks on white or red.
+        // The icon's orange (the arc round the plate): the second brand colour, for payment actions and
+        // markers. Dark text on it (brand-950); DEFAULT for buttons, bars and borders on white or red.
         accent: {
-          50: '#eef2f8',
-          100: '#d5deeb',
-          300: '#7f93b3',
-          DEFAULT: '#1d3a66',
-          600: '#1a2f50',
-          700: '#06172d',
+          50: '#fff7e6',
+          100: '#ffebc2',
+          300: '#ffc95c',
+          DEFAULT: '#ffa000',
+          600: '#f08f00',
+          700: '#d97a00',
         },
         canvas: '#f3f6fa',
         // Slate tuned toward the icon's navy, so the neutrals sit on the accent's hue.

@@ -16,7 +16,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Licence keys for the offline desktop pharmacy: made by hand (a sale on the
+ * Licence keys for the offline desktop pharmacy and restaurant phone app: made by hand (a sale on the
  * phone, a printed card), found by their last four characters, the customer
  * or the PC; cancelled; or freed to move to another PC. A customer with no
  * internet reads out their key and codes, and staff activate it here.
@@ -56,6 +56,7 @@ class LicenceController extends Controller
             'keys' => $query->limit(100)->get()->map(fn (LicenceKey $key) => [
                 'id' => $key->id,
                 'hint' => $key->key_hint,
+                'product' => $key->product,
                 'status' => $key->status(),
                 'durationMonths' => $key->duration_months,
                 'customerName' => $key->customer_name,
@@ -83,6 +84,7 @@ class LicenceController extends Controller
     {
         $data = $request->validate([
             'count' => ['required', 'integer', 'min:1', 'max:50'],
+            'product' => ['nullable', 'string', 'in:pharmacy,restaurant'],
             'customer_name' => ['nullable', 'string', 'max:255'],
             'customer_email' => ['nullable', 'email', 'max:255'],
             'customer_phone' => ['nullable', 'string', 'max:32'],
@@ -94,6 +96,7 @@ class LicenceController extends Controller
 
         return back()->with('issued_keys', [
             'customer' => $data['customer_name'] ?? null,
+            'product' => $data['product'] ?? 'pharmacy',
             'durationMonths' => $data['duration_months'] ?? null,
             'keys' => array_map(fn ($m) => $m['key'], $made),
         ]);

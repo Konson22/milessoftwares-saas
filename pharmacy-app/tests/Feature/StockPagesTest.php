@@ -12,7 +12,7 @@ beforeEach(function () {
     $this->travelTo(CarbonImmutable::parse('2026-10-12 09:00'));
     $this->juba = $this->platform()->branch('acme', 'Juba');
     $this->wau = $this->platform()->branch('acme', 'Wau');
-    $this->asTenant('acme', fn () => Workspace::query()->create(['slug' => 'acme', 'display_name' => 'Acme', 'currency' => 'SSP', 'timezone' => 'Africa/Juba']));
+    $this->asTenant('acme', fn () => Workspace::query()->create(['display_name' => 'Acme', 'currency' => 'SSP', 'timezone' => 'Africa/Juba']));
     $this->medicine = $this->asTenant('acme', fn () => Medicine::factory()->create(['reorder_level' => 20]));
 });
 

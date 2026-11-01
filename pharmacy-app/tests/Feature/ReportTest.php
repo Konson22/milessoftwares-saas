@@ -14,7 +14,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 beforeEach(function () {
     $this->juba = $this->platform()->branch('acme', 'Juba');
     $this->malakal = $this->platform()->branch('acme', 'Malakal');
-    $this->asTenant('acme', fn () => Workspace::query()->create(['slug' => 'acme', 'display_name' => 'Acme', 'currency' => 'SSP', 'timezone' => 'Africa/Juba']));
+    $this->asTenant('acme', fn () => Workspace::query()->create(['display_name' => 'Acme', 'currency' => 'SSP', 'timezone' => 'Africa/Juba']));
 
     $this->asTenant('acme', function () {
         $keeper = User::factory()->create();

@@ -125,6 +125,7 @@ export function licenceState(now = new Date()): LicenceState {
 const PROBLEMS: Record<CodeProblem, string> = {
   format: 'This is not an activation code. Paste the whole code, as it was sent.',
   signature: 'This code was not issued by Miles Softwares, or it was changed.',
+  product: 'This code is for another Miles Softwares app, not the pharmacy.',
   device: 'This code is for another PC. Send this PC’s device code to get one for it.',
   branch: 'This code is for another pharmacy. Send this pharmacy’s ID to get one for it.',
   expired: 'This code has expired.',
@@ -156,6 +157,7 @@ export async function activateKey(key: unknown): Promise<LicenceState> {
 
   const response = await send(`${AUTH_URL}/api/v1/licences/activate`, 'POST', {}, {
     key: typed,
+    product: 'pharmacy',
     device: deviceCode(),
     pharmacy: installation().branch,
     name: settings().name,

@@ -19,6 +19,9 @@ final class FakePlatform
     /** @var array<string, array<string, mixed>> keyed by slug */
     public array $organizations = [];
 
+    /** @var array<string, string> a renamed workspace's old slug => its organizations key (still in its redirect window) */
+    public array $formerSlugs = [];
+
     /** @var array<string, array<string, mixed>> keyed by "orgId:sub" */
     public array $access = [];
 
@@ -126,6 +129,10 @@ final class FakePlatform
 
     private function organization(string $key)
     {
+        if (isset($this->formerSlugs[$key])) {
+            return Http::response($this->organizations[$this->formerSlugs[$key]]);
+        }
+
         foreach ($this->organizations as $organization) {
             if ($organization['slug'] === $key || $organization['id'] === $key) {
                 return Http::response($organization);

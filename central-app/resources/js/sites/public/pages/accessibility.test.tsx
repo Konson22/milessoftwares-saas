@@ -7,11 +7,13 @@ import MarketingLayout from '@/sites/public/layouts/marketing-layout';
 import About from './about';
 import ComingSoon from './coming-soon';
 import Contact from './contact';
+import Downloads from './downloads';
 import MarketingHome from './home';
 import LandingPage from './landing';
 import Platform from './platform';
 import Pricing from './pricing';
 import Privacy from './privacy';
+import PrivacyMataemPlus from './privacy-mataem-plus';
 import Services from './services';
 import ProductPage from './product';
 import Products from './products';
@@ -292,6 +294,13 @@ const pages: [string, ReactNode][] = [
         <Privacy key="privacy" canonical="https://example.test/privacy" />,
     ],
     [
+        'Mataem Plus privacy',
+        <PrivacyMataemPlus
+            key="privacy-mataem-plus"
+            canonical="https://example.test/privacy/mataem-plus"
+        />,
+    ],
+    [
         'terms',
         <Terms
             key="terms"
@@ -300,6 +309,54 @@ const pages: [string, ReactNode][] = [
         />,
     ],
     ['thanks', <Thanks key="thanks" />],
+    [
+        'downloads',
+        <Downloads
+            key="downloads"
+            apps={[
+                {
+                    code: 'pharmacy',
+                    platform: 'windows',
+                    name: 'Miles Pharmacy',
+                    summary: 'The pharmacy on a PC.',
+                    needs: 'Nothing to start',
+                    version: '1.1.0',
+                    product: 'erp/pharmacy',
+                    url: 'https://example.test/download/pharmacy',
+                    size: 113_000_000,
+                    store: null,
+                    releases: [
+                        {
+                            version: '1.1.0',
+                            date: '2026-10-31',
+                            changes: ['Licence keys.'],
+                            url: null,
+                        },
+                        {
+                            version: '1.0.0',
+                            date: '2026-10-25',
+                            changes: ['First release.'],
+                            url: 'https://example.test/download/pharmacy/1.0.0',
+                        },
+                    ],
+                },
+                {
+                    code: 'retail-android',
+                    platform: 'android',
+                    name: 'Miles Retail',
+                    summary: 'The shop counter on a phone.',
+                    needs: 'A Miles workspace',
+                    version: '1.0.0',
+                    product: 'erp/retail',
+                    url: null,
+                    size: null,
+                    store: 'https://play.google.com/store/apps/details?id=com.milesoftwares.retail',
+                    releases: [],
+                },
+            ]}
+            canonical="https://example.test/downloads"
+        />,
+    ],
 ];
 
 afterEach(() => cleanup());

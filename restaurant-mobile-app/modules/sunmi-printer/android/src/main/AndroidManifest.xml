@@ -1,0 +1,10 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!--
+    Package visibility for the SUNMI printer service (required on V2s / V2s Plus, Android 11+).
+    Declared in the library manifest so it is merged into the app manifest on every prebuild,
+    without a config plugin. No permissions are needed to bind to the service.
+  -->
+  <queries>
+    <package android:name="woyou.aidlservice.jiuiv5" />
+  </queries>
+</manifest>

@@ -36,16 +36,19 @@ class Orders
     ) {}
 
     /**
+     * $id: the order's id when the mobile app made it offline (OutboxController).
+     * A table already being served still gives its order, with its own id.
+     *
      * @throws ValidationException
      */
-    public function open(User $by, string $branchId, string $service, ?string $tableId = null, ?int $guests = null, ?string $customerName = null): Order
+    public function open(User $by, string $branchId, string $service, ?string $tableId = null, ?int $guests = null, ?string $customerName = null, ?string $id = null): Order
     {
         if ($service === Order::DINE_IN && $tableId === null) {
             throw ValidationException::withMessages(['dining_table_id' => 'Choose the table.']);
         }
 
         try {
-            return DB::transaction(function () use ($by, $branchId, $service, $tableId, $guests, $customerName) {
+            return DB::transaction(function () use ($by, $branchId, $service, $tableId, $guests, $customerName, $id) {
                 $table = null;
                 if ($service === Order::DINE_IN) {
                     $table = DiningTable::query()->whereKey($tableId)->where('branch_id', $branchId)->where('active', true)->lockForUpdate()->first()
@@ -56,7 +59,12 @@ class Orders
                     }
                 }
 
+                if ($id !== null && Order::query()->withoutGlobalScopes()->whereKey($id)->exists()) {
+                    throw ValidationException::withMessages(['order' => 'This order id is already taken.']);
+                }
+
                 return Order::query()->create([
+                    ...($id === null ? [] : ['id' => $id]),
                     'branch_id' => $branchId,
                     'number' => $this->numbers->next('order', 'ORD', 6),
                     'service' => $service,
@@ -82,7 +90,7 @@ class Orders
      * Adds dishes and drinks, not yet sent to the kitchen: only what is on
      * the menu now.
      *
-     * @param  list<array{item_id: string, quantity: int, note?: string|null}>  $lines
+     * @param  list<array{item_id: string, quantity: int, note?: string|null, id?: string}>  $lines  (id: made offline by the mobile app)
      *
      * @throws ValidationException
      */
@@ -98,11 +106,17 @@ class Orders
             throw ValidationException::withMessages(['lines' => 'Something chosen is no longer on the menu.']);
         }
 
+        $given = array_values(array_filter(array_column($lines, 'id')));
+        if ($given !== [] && OrderLine::query()->whereKey($given)->exists()) {
+            throw ValidationException::withMessages(['lines' => 'These lines are already on an order.']);
+        }
+
         return DB::transaction(function () use ($order, $by, $lines) {
             $locked = $this->lockOpen($order, 'lines');
 
             foreach ($lines as $line) {
                 $locked->lines()->create([
+                    ...(isset($line['id']) ? ['id' => $line['id']] : []),
                     'menu_item_id' => $line['item_id'],
                     'quantity' => $line['quantity'],
                     'note' => ($note = trim((string) ($line['note'] ?? ''))) === '' ? null : $note,

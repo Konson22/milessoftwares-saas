@@ -8,7 +8,8 @@ use RuntimeException;
  * Signs a licence into an activation code the desktop app checks offline
  * with the public half of the key: MP1.<licence>.<signature>, both
  * base64url, the licence as JSON (pharmacy-electron-app
- * src/main/licence/codes.ts reads it).
+ * src/main/licence/codes.ts and restaurant-mobile-app src/local/licence/codes.ts
+ * read it).
  */
 final class LicenceSigner
 {
@@ -30,7 +31,7 @@ final class LicenceSigner
     }
 
     /**
-     * @param  array{id: string, type: string, device: string, branch: string, name: string, issued: string, expires: string|null, max_devices: int, max_branches: int}  $licence
+     * @param  array{id: string, product: string, type: string, device: string, branch: string, name: string, issued: string, expires: string|null, max_devices: int, max_branches: int}  $licence
      */
     public function sign(array $licence): string
     {

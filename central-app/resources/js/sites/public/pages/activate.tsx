@@ -7,8 +7,32 @@ import Seo from '@/sites/public/components/seo';
 import { supportEmail } from '@/sites/public/components/social';
 import { button, iconChip, panel } from '@/sites/public/components/styles';
 
+type Product = 'pharmacy' | 'restaurant';
+
+/** What the page says for each app: the device it runs on, and where its codes are. */
+const apps: Record<
+    Product,
+    { name: string; device: string; place: string; where: string; file: string }
+> = {
+    pharmacy: {
+        name: 'Miles Pharmacy',
+        device: 'PC',
+        place: 'Pharmacy',
+        where: 'On the PC, open Settings, Activation. Scanning its QR code with your phone fills them in here.',
+        file: 'miles-pharmacy-licence.lic',
+    },
+    restaurant: {
+        name: 'Mataem Plus',
+        device: 'phone',
+        place: 'Restaurant',
+        where: 'On the phone, open Account, Activation (or the app asks for it when the trial has ended). Its Share button sends a link that fills them in here.',
+        file: 'miles-restaurant-licence.txt',
+    },
+};
+
 type Props = {
-    /** Filled in from the app's QR code. */
+    product: Product;
+    /** Filled in from the app's QR code or link. */
     device: string | null;
     pharmacy: string | null;
     name: string | null;
@@ -23,32 +47,36 @@ type Props = {
 };
 
 /**
- * Activating Miles Pharmacy on a PC with no internet, from a phone: the
- * licence key, and the PC's codes (filled in by the app's QR code), give the
- * activation code to carry to the PC.
+ * Activating Miles Pharmacy on a PC, or Mataem Plus on a phone, with no
+ * internet, from another device: the licence key, and the device's codes
+ * (filled in by the app's QR code or link), give the activation code to
+ * carry back.
  */
 export default function Activate({
+    product,
     device,
     pharmacy,
     name,
     result,
     canonical,
 }: Props) {
+    const app = apps[product] ?? apps.pharmacy;
+
     return (
         <>
             <Seo
-                title="Activate Miles Pharmacy"
-                description="Activate Miles Pharmacy on a PC with no internet, using your licence key."
+                title={`Activate ${app.name}`}
+                description={`Activate ${app.name} on a ${app.device} with no internet, using your licence key.`}
                 canonical={canonical}
             />
 
             <PageHero
                 title={
                     <>
-                        Activate <Accent>Miles Pharmacy</Accent>
+                        Activate <Accent>{app.name}</Accent>
                     </>
                 }
-                intro="For a PC with no internet. Your licence key and the PC's codes give you an activation code to enter on the PC."
+                intro={`For a ${app.device} with no internet. Your licence key and the ${app.device}'s codes give you an activation code to enter on the ${app.device}.`}
             />
 
             <section
@@ -62,10 +90,7 @@ export default function Activate({
                     <p className="text-lg font-semibold text-site-ink">
                         Where to find the codes
                     </p>
-                    <p>
-                        On the PC, open <b>Settings, Activation</b>. Scanning
-                        its QR code with your phone fills them in here.
-                    </p>
+                    <p>{app.where}</p>
                     <p>
                         The licence key (MILES-…) is on your card or in the
                         email you received when you bought it.
@@ -84,7 +109,7 @@ export default function Activate({
 
                 <div className={`${panel} p-6 sm:p-10`}>
                     {result ? (
-                        <Done result={result} />
+                        <Done result={result} app={app} />
                     ) : (
                         <Form
                             action="/activate"
@@ -93,6 +118,11 @@ export default function Activate({
                         >
                             {({ errors, processing }) => (
                                 <>
+                                    <input
+                                        type="hidden"
+                                        name="product"
+                                        value={product}
+                                    />
                                     <Field
                                         name="key"
                                         label="Licence key"
@@ -110,7 +140,7 @@ export default function Activate({
                                         />
                                         <Field
                                             name="pharmacy"
-                                            label="Pharmacy ID"
+                                            label={`${app.place} ID`}
                                             required
                                             defaultValue={pharmacy ?? ''}
                                             error={errors.pharmacy}
@@ -118,7 +148,7 @@ export default function Activate({
                                     </div>
                                     <Field
                                         name="name"
-                                        label="Pharmacy name"
+                                        label={`${app.place} name`}
                                         defaultValue={name ?? ''}
                                         error={errors.name}
                                     />
@@ -132,7 +162,7 @@ export default function Activate({
                                     <button
                                         type="submit"
                                         disabled={processing}
-                                        className="h-12 rounded-full bg-site-accent-ink px-7 font-bold text-white transition-colors hover:bg-site-navy disabled:opacity-60"
+                                        className="h-12 rounded-full bg-site-orange-ink px-7 font-bold text-white transition-colors hover:bg-site-orange-deep disabled:opacity-60"
                                     >
                                         Get the activation code
                                     </button>
@@ -146,7 +176,13 @@ export default function Activate({
     );
 }
 
-function Done({ result }: { result: NonNullable<Props['result']> }) {
+function Done({
+    result,
+    app,
+}: {
+    result: NonNullable<Props['result']>;
+    app: (typeof apps)[Product];
+}) {
     const [copied, setCopied] = useState(false);
 
     const copy = () =>
@@ -161,7 +197,7 @@ function Done({ result }: { result: NonNullable<Props['result']> }) {
         );
         const link = document.createElement('a');
         link.href = url;
-        link.download = 'miles-pharmacy-licence.lic';
+        link.download = app.file;
         link.click();
         URL.revokeObjectURL(url);
     };
@@ -170,12 +206,12 @@ function Done({ result }: { result: NonNullable<Props['result']> }) {
         <div className="space-y-5">
             <p className="flex items-center gap-2 text-lg font-semibold text-site-ink">
                 <CheckCircle2 className="size-5 text-emerald-600" aria-hidden />
-                Activated for PC {result.device}
+                Activated for {app.device} {result.device}
             </p>
             <p className="text-sm text-slate-600">
-                On that PC, open <b>Settings, Activation</b> and paste this code
-                under Activation code, or save the file and open it there
-                (copied over on a USB stick).
+                {app.device === 'PC'
+                    ? 'On that PC, open Settings, Activation and paste this code under Activation code, or save the file and open it there (copied over on a USB stick).'
+                    : 'Send this code to that phone (WhatsApp, SMS or email), copy it there, and tap Paste under Activation code.'}
                 {result.emailedTo &&
                     ` We also emailed it to ${result.emailedTo}.`}
                 {result.expiresAt &&

@@ -8,8 +8,8 @@ type Variant = 'primary' | 'accent' | 'secondary' | 'outline' | 'danger' | 'ghos
 
 const container: Record<Variant, string> = {
   primary: 'bg-brand-600 active:bg-brand-700',
-  // The icon's navy: taking payment.
-  accent: 'bg-accent-700 active:bg-accent-600',
+  // The icon's orange: taking payment, and the main action on red.
+  accent: 'bg-accent active:bg-accent-600',
   secondary: 'bg-brand-50 active:bg-brand-100',
   outline: 'border border-brand-200 bg-white active:bg-brand-50',
   danger: 'bg-red-600 active:bg-red-700',
@@ -20,7 +20,7 @@ const container: Record<Variant, string> = {
 
 const label: Record<Variant, string> = {
   primary: 'text-white',
-  accent: 'text-white',
+  accent: 'text-brand-950',
   secondary: 'text-brand-800',
   outline: 'text-brand-800',
   danger: 'text-white',
@@ -30,7 +30,7 @@ const label: Record<Variant, string> = {
 
 const iconColor: Record<Variant, string> = {
   primary: colors.white,
-  accent: colors.white,
+  accent: colors.brand[950],
   secondary: colors.brand[800],
   outline: colors.brand[700],
   danger: colors.white,

@@ -22,7 +22,6 @@ class SetUpWorkspace implements ProvisionsTenants
 
         // The books' currency is fixed once set: amounts never change units.
         $workspace->fill([
-            'slug' => $organization->slug,
             'display_name' => $organization->displayName,
             'currency' => $workspace->exists ? $workspace->currency : ($organization->defaultCurrency ?? 'USD'),
             'timezone' => $organization->timezone ?? 'UTC',

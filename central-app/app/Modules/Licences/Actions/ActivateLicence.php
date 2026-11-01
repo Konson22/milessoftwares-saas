@@ -11,9 +11,11 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * A licence key on a PC: ties the key to the device and the pharmacy (once;
- * the same PC may ask again, for a lost code) and answers the signed
- * activation code the app keeps.
+ * A licence key on a PC or phone: ties the key to the device and the
+ * pharmacy or restaurant (once; the same device may ask again, for a lost
+ * code) and answers the signed activation code the app keeps. The key's
+ * product is signed into the code: a pharmacy key does not open the
+ * restaurant app, nor the other way round.
  */
 final class ActivateLicence
 {
@@ -21,6 +23,7 @@ final class ActivateLicence
 
     /**
      * @param  array{ip?: string|null, app_version?: string|null}  $meta
+     * @param  string|null  $product  The app asking (pharmacy, restaurant); null: any (staff).
      * @return array{code: string, activation: LicenceActivation}
      *
      * @throws LicenceDenied
@@ -33,6 +36,7 @@ final class ActivateLicence
         string $channel,
         array $meta = [],
         ?Authenticatable $actor = null,
+        ?string $product = null,
     ): array {
         $signer = LicenceSigner::fromConfig();
         if (! $signer->configured()) {
@@ -44,10 +48,13 @@ final class ActivateLicence
         $pharmacyId = LicenceCodes::pharmacy($pharmacy) ?? throw LicenceDenied::badPharmacy();
         $name = trim((string) $pharmacyName) !== '' ? mb_substr(trim((string) $pharmacyName), 0, 120) : null;
 
-        [$licenceKey, $activation, $new] = DB::transaction(function () use ($hash, $deviceCode, $pharmacyId, $name, $channel, $meta) {
+        [$licenceKey, $activation, $new] = DB::transaction(function () use ($hash, $deviceCode, $pharmacyId, $name, $channel, $meta, $product) {
             $licenceKey = LicenceKey::query()->where('key_hash', $hash)->lockForUpdate()->first() ?? throw LicenceDenied::unknownKey();
             if ($licenceKey->revoked_at !== null) {
                 throw LicenceDenied::revoked();
+            }
+            if ($product !== null && $licenceKey->product !== $product) {
+                throw LicenceDenied::wrongProduct($licenceKey->product);
             }
 
             $current = $licenceKey->activations()->whereNull('released_at')->latest('activated_at')->first();
@@ -96,6 +103,7 @@ final class ActivateLicence
     {
         return $signer->sign([
             'id' => $activation->id,
+            'product' => $key->product,
             'type' => $key->type,
             'device' => $activation->device_code,
             'branch' => $activation->pharmacy_id,

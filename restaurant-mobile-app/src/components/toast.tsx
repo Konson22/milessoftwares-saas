@@ -25,7 +25,7 @@ export function Toast() {
         key={toast.id}
         accessibilityRole="alert"
         onPress={hide}
-        className={`w-full max-w-xl flex-row items-center gap-2 rounded-2xl px-4 py-3 shadow-lg ${tone.box}`}>
+        className={`w-full max-w-xl flex-row items-center gap-2 px-4 py-3 shadow-lg ${tone.box}`}>
         <Ionicons name={tone.icon} size={20} color={colors.white} />
         <Text className="flex-1 text-base font-medium text-white">{toast.message}</Text>
       </Pressable>

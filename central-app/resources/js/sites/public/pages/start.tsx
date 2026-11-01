@@ -169,17 +169,17 @@ function Stepper({ current }: { current: number }) {
                     className="flex items-center gap-2"
                 >
                     <span
-                        className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 ${i === current ? 'bg-white font-semibold text-site-ink' : 'text-slate-300'}`}
+                        className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 ${i === current ? 'bg-white font-semibold text-site-ink ring-1 ring-site-line' : 'text-slate-600'}`}
                     >
                         <span
-                            className={`inline-flex size-5 items-center justify-center rounded-full text-xs ${i === current ? 'bg-site-accent-ink text-white' : 'bg-white/15 text-white'}`}
+                            className={`inline-flex size-5 items-center justify-center rounded-full text-xs ${i === current ? 'bg-site-orange-ink text-white' : 'bg-site-line text-site-ink'}`}
                         >
                             {i + 1}
                         </span>
                         {step}
                     </span>
                     {i < steps.length - 1 && (
-                        <span aria-hidden className="h-px w-6 bg-white/25" />
+                        <span aria-hidden className="h-px w-6 bg-site-line" />
                     )}
                 </li>
             ))}

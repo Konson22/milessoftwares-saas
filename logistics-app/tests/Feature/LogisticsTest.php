@@ -28,7 +28,7 @@ const MANAGER = [
 beforeEach(function () {
     config(['platform-client.modules.finance' => 'https://finance.internal/events']);
     $this->travelTo(CarbonImmutable::parse('2026-10-26 09:00'));
-    $this->asTenant('acme', fn () => Workspace::query()->create(['slug' => 'acme', 'display_name' => 'Acme', 'currency' => 'SSP', 'timezone' => 'Africa/Juba']));
+    $this->asTenant('acme', fn () => Workspace::query()->create(['display_name' => 'Acme', 'currency' => 'SSP', 'timezone' => 'Africa/Juba']));
 
     $this->customer = $this->asTenant('acme', fn () => Customer::query()->create(['name' => 'Nile Traders', 'phone' => '0912000000']));
     $this->truck = $this->asTenant('acme', fn () => Vehicle::query()->create(['registration' => 'SSD 123A', 'kind' => 'truck', 'odometer_km' => 10000, 'status' => Vehicle::AVAILABLE]));

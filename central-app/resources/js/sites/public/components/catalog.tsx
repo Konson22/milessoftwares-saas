@@ -1,4 +1,4 @@
-import { Link } from "@inertiajs/react";
+import { Link } from '@inertiajs/react';
 import {
     Activity,
     ArrowLeftRight,
@@ -46,15 +46,15 @@ import {
     Wallet,
     Warehouse,
     Wrench,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-import { waitlistUrl } from "@/sites/public/components/blocks";
-import { card, display, trialUrl } from "@/sites/public/components/styles";
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { waitlistUrl } from '@/sites/public/components/blocks';
+import { card, display, trialUrl } from '@/sites/public/components/styles';
 
 /** One product of the public catalog (MarketingCatalog::catalog()). */
 export type CatalogEntry = {
     slug: string;
-    category: "erp" | "application";
+    category: 'erp' | 'application';
     name: string;
     icon: string;
     summary: string;
@@ -68,12 +68,12 @@ export type CatalogEntry = {
     faqs: { question: string; answer: string }[];
     /** Path on the apex host, without a leading slash: erp/pharmacy. */
     url: string;
-    status: "available" | "early_access" | "coming_soon";
+    status: 'available' | 'early_access' | 'coming_soon';
     /** What an ERP is made of, from the registry. */
     includes: {
         code: string;
         name: string;
-        requirement: "required" | "optional";
+        requirement: 'required' | 'optional';
         listed: boolean;
     }[];
     /** Application code whose free trial this product starts; null: no trial today. */
@@ -84,9 +84,9 @@ export type CatalogEntry = {
     offering: Offering;
 };
 
-export type Platform = "web" | "desktop" | "android" | "ios";
-export type Connectivity = "online" | "offline_sync" | "offline";
-export type Licensing = "subscription" | "one_time" | "quotation";
+export type Platform = 'web' | 'desktop' | 'android' | 'ios';
+export type Connectivity = 'online' | 'offline_sync' | 'offline';
+export type Licensing = 'subscription' | 'one_time' | 'quotation';
 
 export type Offering = {
     platforms: Platform[];
@@ -98,74 +98,74 @@ export type Offering = {
 };
 
 export const platformLabels: Record<Platform, string> = {
-    web: "Web",
-    desktop: "Windows desktop",
-    android: "Android",
-    ios: "iOS",
+    web: 'Web',
+    desktop: 'Windows desktop',
+    android: 'Android',
+    ios: 'iOS',
 };
 
 export const connectivityLabels: Record<Connectivity, string> = {
-    online: "Online in the cloud",
-    offline_sync: "Offline with cloud sync",
-    offline: "Fully offline",
+    online: 'Online in the cloud',
+    offline_sync: 'Offline with cloud sync',
+    offline: 'Fully offline',
 };
 
 export const licensingLabels: Record<Licensing, string> = {
-    subscription: "Subscription",
-    one_time: "One-time purchase",
-    quotation: "Custom quotation",
+    subscription: 'Subscription',
+    one_time: 'One-time purchase',
+    quotation: 'Custom quotation',
 };
 
-export const categoryLabels: Record<CatalogEntry["category"], string> = {
-    erp: "ERP Solutions",
-    application: "Business Applications",
+export const categoryLabels: Record<CatalogEntry['category'], string> = {
+    erp: 'ERP Solutions',
+    application: 'Business Applications',
 };
 
 /** Each category's section of the products page. */
-export const categoryPaths: Record<CatalogEntry["category"], string> = {
-    erp: "/products#erp",
-    application: "/products#apps",
+export const categoryPaths: Record<CatalogEntry['category'], string> = {
+    erp: '/products#erp',
+    application: '/products#apps',
 };
 
 const icons: Record<string, LucideIcon> = {
     activity: Activity,
-    "arrow-left-right": ArrowLeftRight,
+    'arrow-left-right': ArrowLeftRight,
     banknote: Banknote,
-    "bar-chart": BarChart3,
-    "book-open-check": BookOpenCheck,
+    'bar-chart': BarChart3,
+    'book-open-check': BookOpenCheck,
     calculator: Calculator,
-    "calendar-check": CalendarCheck,
-    "chef-hat": ChefHat,
-    "clipboard-check": ClipboardCheck,
-    "clipboard-list": ClipboardList,
-    "credit-card": CreditCard,
-    "file-check": FileCheck2,
-    "file-spreadsheet": FileSpreadsheet,
-    "file-text": FileText,
-    "folder-kanban": FolderKanban,
-    "folder-lock": FolderLock,
+    'calendar-check': CalendarCheck,
+    'chef-hat': ChefHat,
+    'clipboard-check': ClipboardCheck,
+    'clipboard-list': ClipboardList,
+    'credit-card': CreditCard,
+    'file-check': FileCheck2,
+    'file-spreadsheet': FileSpreadsheet,
+    'file-text': FileText,
+    'folder-kanban': FolderKanban,
+    'folder-lock': FolderLock,
     globe: Globe,
-    "graduation-cap": GraduationCap,
-    "hand-coins": HandCoins,
-    "layout-grid": LayoutGrid,
+    'graduation-cap': GraduationCap,
+    'hand-coins': HandCoins,
+    'layout-grid': LayoutGrid,
     handshake: Handshake,
-    "heart-handshake": HeartHandshake,
+    'heart-handshake': HeartHandshake,
     history: History,
     landmark: Landmark,
     lock: Lock,
-    "map-pin": MapPin,
+    'map-pin': MapPin,
     package: Package,
-    "package-search": PackageSearch,
+    'package-search': PackageSearch,
     pill: Pill,
     receipt: Receipt,
-    "scan-barcode": ScanBarcode,
-    "scroll-text": ScrollText,
-    "shield-alert": ShieldAlert,
-    "shopping-cart": ShoppingCart,
+    'scan-barcode': ScanBarcode,
+    'scroll-text': ScrollText,
+    'shield-alert': ShieldAlert,
+    'shopping-cart': ShoppingCart,
     tags: Tags,
     truck: Truck,
-    "user-check": UserCheck,
-    "user-plus": UserPlus,
+    'user-check': UserCheck,
+    'user-plus': UserPlus,
     users: Users,
     utensils: Utensils,
     wallet: Wallet,
@@ -178,20 +178,20 @@ export function catalogIcon(name: string): LucideIcon {
     return icons[name] ?? LayoutGrid;
 }
 
-export const statusLabels: Record<CatalogEntry["status"], string | null> = {
-    available: "Available",
-    early_access: "Early access",
-    coming_soon: "Coming soon",
+export const statusLabels: Record<CatalogEntry['status'], string | null> = {
+    available: 'Available',
+    early_access: 'Early access',
+    coming_soon: 'Coming soon',
 };
 
-export function CatalogStatus({ status }: { status: CatalogEntry["status"] }) {
+export function CatalogStatus({ status }: { status: CatalogEntry['status'] }) {
     const tone = {
         available:
-            "bg-site-navy/10 text-site-navy in-[.site-dark]:bg-white/15 in-[.site-dark]:text-white",
+            'bg-site-navy/10 text-site-navy in-[.site-dark]:bg-white/15 in-[.site-dark]:text-white',
         early_access:
-            "bg-site-accent/10 text-site-accent-ink in-[.site-dark]:bg-white/15 in-[.site-dark]:text-white",
+            'bg-site-accent/10 text-site-accent-ink in-[.site-dark]:bg-white/15 in-[.site-dark]:text-white',
         coming_soon:
-            "bg-site-soft text-slate-700 ring-1 ring-site-line in-[.site-dark]:bg-white/15 in-[.site-dark]:text-white in-[.site-dark]:ring-white/20",
+            'bg-site-soft text-slate-700 ring-1 ring-site-line in-[.site-dark]:bg-white/15 in-[.site-dark]:text-white in-[.site-dark]:ring-white/20',
     }[status];
 
     return (
@@ -206,18 +206,18 @@ export function CatalogStatus({ status }: { status: CatalogEntry["status"] }) {
 /** The product's icon on a soft tinted square (white-tinted on a dark band). */
 export function CatalogTile({
     icon,
-    size = "md",
+    size = 'md',
 }: {
     icon: string;
-    size?: "sm" | "md" | "lg";
+    size?: 'sm' | 'md' | 'lg';
 }) {
     const Icon = catalogIcon(icon);
     const box = {
-        sm: "size-9 rounded-lg",
-        md: "size-12 rounded-xl",
-        lg: "size-16 rounded-2xl",
+        sm: 'size-9 rounded-lg',
+        md: 'size-12 rounded-xl',
+        lg: 'size-16 rounded-2xl',
     }[size];
-    const glyph = { sm: "size-4", md: "size-6", lg: "size-8" }[size];
+    const glyph = { sm: 'size-4', md: 'size-6', lg: 'size-8' }[size];
 
     return (
         <span
@@ -238,13 +238,13 @@ export function CatalogTile({
 export function ProductCard({
     product,
     trialDays,
-    headingLevel: Heading = "h3",
+    headingLevel: Heading = 'h3',
     highlights = false,
     title,
 }: {
     product: CatalogEntry;
     trialDays: number;
-    headingLevel?: "h2" | "h3";
+    headingLevel?: 'h2' | 'h3';
     highlights?: boolean;
     title?: string;
 }) {
@@ -256,7 +256,7 @@ export function ProductCard({
         >
             <span
                 aria-hidden
-                className="bg-site-accent absolute inset-x-0 top-0 h-1 origin-left scale-x-0 transition-transform duration-300 group-hover:scale-x-100"
+                className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-site-orange transition-transform duration-300 group-hover:scale-x-100"
             />
             <div className="flex items-start justify-between gap-3">
                 <CatalogTile icon={product.icon} />
@@ -271,7 +271,7 @@ export function ProductCard({
                 </Link>
             </Heading>
             <p
-                className={`mt-2 text-sm leading-relaxed text-slate-600 ${highlights && product.highlights ? "" : "flex-1"}`}
+                className={`mt-2 text-sm leading-relaxed text-slate-600 ${highlights && product.highlights ? '' : 'flex-1'}`}
             >
                 {product.summary}
             </p>
@@ -290,19 +290,19 @@ export function ProductCard({
             )}
             <PlatformList
                 platforms={product.offering.platforms}
-                planned={product.status === "coming_soon"}
+                planned={product.status === 'coming_soon'}
                 className="mt-5"
             />
             <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
                 {product.trial ? (
                     <a
                         href={trialUrl(product.trial)}
-                        className="inline-flex items-center gap-2 rounded-full bg-site-accent-ink px-4 py-2 text-sm font-bold text-white transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-site-navy"
+                        className="inline-flex items-center gap-2 rounded-full bg-site-orange-ink px-4 py-2 text-sm font-bold text-white transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-site-navy"
                     >
                         Start {trialDays}-day free trial
                         <span className="sr-only"> of {name}</span>
                     </a>
-                ) : product.status === "coming_soon" ? (
+                ) : product.status === 'coming_soon' ? (
                     <Link
                         href={waitlistUrl(product.name)}
                         className="inline-flex items-center gap-1.5 text-sm font-bold text-site-accent-ink hover:underline"
@@ -341,7 +341,7 @@ export function ProductCard({
 export function PlatformList({
     platforms,
     planned = false,
-    className = "",
+    className = '',
 }: {
     platforms: Platform[];
     planned?: boolean;
@@ -352,7 +352,7 @@ export function PlatformList({
             className={`flex flex-wrap items-center gap-1.5 text-xs ${className}`}
         >
             <span className="mr-0.5 font-semibold text-slate-500">
-                {planned ? "Planned for" : "Runs on"}
+                {planned ? 'Planned for' : 'Runs on'}
             </span>
             {platforms.map((platform) => (
                 <span

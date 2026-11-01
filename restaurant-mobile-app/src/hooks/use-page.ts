@@ -4,8 +4,9 @@ import { create } from 'zustand';
 
 import { ApiError, errorMessage } from '@/lib/api/client';
 import { haptic } from '@/lib/feedback';
-import { mode } from '@/lib/mode';
+import { navigation } from '@/lib/navigation';
 import { act, getPage, type AppPage, type Method, type SharedProps } from '@/lib/pages';
+import { useSync } from '@/offline/sync';
 import { useAuth } from '@/store/auth';
 import { toast } from '@/store/toast';
 
@@ -69,10 +70,19 @@ export function usePage<P = Record<string, any>>(path: string, every?: number) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [path, branchId]);
 
+  // What the phone kept was sent: the restaurant's page again.
+  useEffect(
+    () =>
+      useSync.subscribe((s, prev) => {
+        if (s.version !== prev.version) void reload();
+      }),
+    [reload],
+  );
+
   useFocusEffect(
     useCallback(() => {
       void reload();
-      if (!every || mode() !== 'online') return;
+      if (!every) return;
       const timer = setInterval(() => void reload(), every * 1000);
       return () => clearInterval(timer);
     }, [reload, every]),
@@ -97,7 +107,7 @@ function leaveFor(path: string, from: string) {
 }
 
 /** Sections that are tabs of their own. */
-export const TAB_SECTIONS = new Set(['floor', 'kitchen', 'bills', 'tills']);
+export const TAB_SECTIONS = new Set(navigation.flatMap((g) => g.items).filter((i) => i.tab && i.path).map((i) => i.path));
 
 export type FieldErrors = Record<string, string>;
 

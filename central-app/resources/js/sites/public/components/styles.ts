@@ -1,27 +1,29 @@
 import { trial } from '@/routes';
 
 /**
- * Pill buttons shared by links across the public site. Links, not
- * <Button>, because most of them navigate (some to another host).
+ * Buttons shared by links across the public site. Links, not <Button>,
+ * because most of them navigate (some to another host).
  *
- * In the logo's colours only, all solid (no gradients): white surfaces, the
- * logo blue for the main action and highlights, deep navy for the footer
- * and closing bands (see the site-* colours in resources/css/app.css).
+ * Clean and light, in the logo's colours only (no gradients): white and
+ * soft-blue surfaces, the logo orange for the main action, the logo blue
+ * for links and icons, deep navy for the closing band (see the site-* colours in
+ * resources/css/app.css). Squarer corners than pills, so they line up with
+ * the rest of the layout.
  */
 const base =
-    'inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-sm font-bold tracking-wide transition-[color,background-color,border-color,transform] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 active:scale-[0.98]';
+    'inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold transition-[color,background-color,border-color,box-shadow] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2';
 
 export const button = {
-    /** Main action: solid blue. */
-    primary: `${base} bg-site-accent-ink text-white hover:-translate-y-0.5 hover:bg-site-navy focus-visible:outline-site-accent`,
+    /** Main action: solid orange (the logo orange, darkened to 4.9:1 for white text). */
+    primary: `${base} bg-site-orange-ink text-white shadow-sm shadow-site-orange-ink/25 hover:bg-site-orange-deep focus-visible:outline-site-orange`,
     /** Strong secondary action on light. */
     dark: `${base} bg-site-navy text-white hover:bg-site-night focus-visible:outline-site-navy`,
-    /** Main action on a dark or gradient band. */
-    light: `${base} bg-white text-site-ink hover:-translate-y-0.5 focus-visible:outline-white`,
+    /** Main action on a dark band. */
+    light: `${base} bg-site-orange-ink text-white hover:bg-site-orange-deep focus-visible:outline-white`,
     /** Secondary action on a dark or gradient band. */
     outlineDark: `${base} border border-white/40 text-white hover:border-white hover:bg-white/10 focus-visible:outline-white`,
     /** Secondary action on white or lavender. */
-    outline: `${base} border border-site-line bg-white text-site-ink hover:border-site-accent/50 hover:text-site-accent-ink focus-visible:outline-site-accent`,
+    outline: `${base} border border-site-line bg-white text-site-ink hover:border-site-orange/50 hover:text-site-orange-ink focus-visible:outline-site-orange`,
 };
 
 export const textLink =
@@ -32,14 +34,17 @@ export const display =
     'font-semibold tracking-tight text-balance text-site-ink in-[.site-dark]:text-white';
 
 /**
- * Interactive surface (product/plan cards, FAQ rows that open): rounded,
- * flat, lifts a little on hover.
+ * Interactive surface (product/plan cards, FAQ rows that open): a flat
+ * hairline box whose border and shadow come up on hover.
  */
 export const card =
-    'rounded-3xl border border-site-line bg-white transition-[border-color,transform] duration-300 hover:-translate-y-1 hover:border-site-accent/30';
+    'rounded-2xl border border-site-line bg-white transition-[border-color,box-shadow] duration-200 hover:border-site-accent/40 hover:shadow-lg hover:shadow-site-night/5';
 
 /** Static surface (feature tiles, steps): same chrome, no hover. */
-export const panel = 'rounded-3xl border border-site-line bg-white';
+export const panel = 'rounded-2xl border border-site-line bg-white';
+
+/** The page width and gutter every section uses. */
+export const container = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
 
 /**
  * A row of cards that swipes sideways on small screens (the next card
@@ -53,20 +58,23 @@ export const rail =
 export const railItem =
     'w-[82%] max-w-sm shrink-0 snap-start sm:w-[calc(50%-0.75rem)] sm:max-w-none lg:w-auto';
 
-/** Gradient square behind a white icon. */
+/** Solid blue square behind a white icon. */
 export const iconChip =
-    'bg-site-accent-ink inline-flex shrink-0 items-center justify-center rounded-2xl text-white';
+    'bg-site-accent-ink inline-flex shrink-0 items-center justify-center rounded-xl text-white';
 
 /** A solid navy band: headings, labels and links inside switch to their light forms. */
 export const darkBand =
     'site-dark relative isolate overflow-hidden bg-site-navy text-slate-300';
 
 /**
- * Colour pairs for icon boxes, taken in turn by a row of features. One
- * for now, the logo blue on its own tint (a navy tint read as grey);
- * the icon keeps 3:1 on it.
+ * Colour pairs for icon boxes, taken in turn by a row of features: the
+ * logo blue and the logo orange, each on its own tint (a navy tint read
+ * as grey); the icon keeps 3:1 on it.
  */
-export const tints = ['bg-site-accent/10 text-site-accent-ink'] as const;
+export const tints = [
+    'bg-site-accent/10 text-site-accent-ink',
+    'bg-site-orange-wash text-site-orange-ink',
+] as const;
 
 /** "2-month" for 60 days, "14-day" otherwise. */
 export function trialLength(days: number): string {

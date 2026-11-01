@@ -12,14 +12,14 @@ export default function Thanks() {
 
             <PageHero
                 above={
-                    <span className="inline-flex size-12 items-center justify-center rounded-full bg-white text-site-accent-ink">
+                    <span className="inline-flex size-12 items-center justify-center rounded-full bg-site-accent/10 text-site-accent-ink">
                         <Check className="size-6" aria-hidden />
                     </span>
                 }
                 title="Thank you"
                 intro="We have your message and will be in touch within one working day. A confirmation is on its way to your inbox."
             >
-                <Link href="/" className={button.light}>
+                <Link href="/" className={button.primary}>
                     Back to the home page
                 </Link>
             </PageHero>

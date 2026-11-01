@@ -1,4 +1,4 @@
-import { ArrowLeft, Eye, EyeOff, Loader2, Pill, Store } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Eye, EyeOff, Loader2, Pill, Store } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 
 import type { Product, SignInWith } from '../../../shared/ipc';
@@ -6,7 +6,8 @@ import { ChangeMode } from '@/components/change-mode';
 import { Button, Field, Input, Notice } from '@/components/ui';
 import { API_MODE, errorMessage } from '@/lib/api';
 import { DEMO_ACCOUNTS } from '@/lib/api/mock';
-import { normalizeWorkspace, PRODUCTS, RETAIL_AVAILABLE } from '@/lib/config';
+import { businesses, type BusinessChoice } from '@/lib/api/platform';
+import { PRODUCTS, RETAIL_AVAILABLE, workspaceUrl } from '@/lib/config';
 import { useAuth } from '@/store/auth';
 
 import { CreateBusiness } from './create-business';
@@ -17,7 +18,6 @@ export function LoginPage() {
   const savedProduct = useAuth((s) => s.product);
   /** The pharmacy or the shop: each signs in with its own client, so it is chosen first. */
   const [product, setProduct] = useState<Product>(RETAIL_AVAILABLE ? savedProduct : 'pharmacy');
-  const [workspace, setWorkspace] = useState(savedWorkspace ?? '');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -33,6 +33,8 @@ export function LoginPage() {
   /** Signed in to create a business: its form, with the ID token to open it after. */
   const [creating, setCreating] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  /** Signed in with more than one business: which to open, with the sign-in's ID token. */
+  const [choosing, setChoosing] = useState<{ idToken: string; businesses: BusinessChoice[] } | null>(null);
   const creatingNow = intent === 'create';
 
   const run = async (key: string, task: () => Promise<void>) => {
@@ -47,10 +49,12 @@ export function LoginPage() {
     }
   };
 
-  /** Signs in on the platform, then opens the session at the workspace (or the new business's form). */
+  /**
+   * Signs in on the platform, then opens the person's business: the only
+   * one, or the one they choose (or the new business's form). No workspace
+   * address to type.
+   */
   const platform = (key: string, how: SignInWith) => {
-    const slug = normalizeWorkspace(workspace);
-    if (!slug && !creatingNow) return setError({ message: 'Enter your workspace address.' });
     setNotice(null);
     void run(key, async () => {
       const result = await window.desktop.signIn(how, product);
@@ -62,7 +66,17 @@ export function LoginPage() {
         setCode(null);
         setCreating(result.idToken);
       } else {
-        await signIn(slug, result.idToken, product);
+        const found = await businesses(product);
+        if (found.length === 0) {
+          await window.desktop.signOut().catch(() => {});
+          setError({ message: `Your account is not in a ${PRODUCTS[product].place} yet. Create one, or ask the owner to invite you.` });
+        } else if (found.length === 1) {
+          await signIn(found[0].slug, result.idToken, product);
+        } else {
+          // The last one opened here first.
+          setCode(null);
+          setChoosing({ idToken: result.idToken, businesses: [...found].sort((a, b) => Number(b.slug === savedWorkspace) - Number(a.slug === savedWorkspace)) });
+        }
       }
     });
   };
@@ -71,6 +85,7 @@ export function LoginPage() {
     setIntent(next);
     setNewAccount(true);
     setCreating(null);
+    setChoosing(null);
     setCode(null);
     setError(null);
     setNotice(null);
@@ -160,14 +175,24 @@ export function LoginPage() {
                 </button>
               ))}
             </div>
+          ) : choosing ? (
+            <ChooseBusiness
+              place={PRODUCTS[product].place}
+              businesses={choosing.businesses}
+              busy={busy}
+              onChoose={(slug) => void run(slug, () => signIn(slug, choosing.idToken, product))}
+              onBack={() => {
+                setChoosing(null);
+                void window.desktop.signOut().catch(() => {});
+              }}
+            />
           ) : creating ? (
             <CreateBusiness
               product={product}
               idToken={creating}
               onBack={() => switchIntent('open')}
-              onCreated={(slug, message) => {
+              onCreated={(_slug, message) => {
                 switchIntent('open');
-                setWorkspace(slug);
                 setNotice(message);
               }}
             />
@@ -224,19 +249,9 @@ export function LoginPage() {
                       <Input autoFocus autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} required />
                     </Field>
                   ) : null
-                ) : (
-                  <Field label="Workspace" hint={`As in your${PRODUCTS[product].place}.milesoftwares.com`}>
-                    <Input
-                      autoFocus={!savedWorkspace}
-                      value={workspace}
-                      onChange={(e) => setWorkspace(e.target.value)}
-                      placeholder={`your${PRODUCTS[product].place}`}
-                      required
-                    />
-                  </Field>
-                )}
+                ) : null}
                 <Field label="Email">
-                  <Input type="email" autoFocus={!!savedWorkspace || (creatingNow && !newAccount)} autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <Input type="email" autoFocus={!creatingNow || !newAccount} autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 </Field>
                 <Field label="Password">
                   <div className="relative">
@@ -293,7 +308,7 @@ export function LoginPage() {
             </div>
           )}
 
-          {API_MODE === 'live' && !creating && !code ? (
+          {API_MODE === 'live' && !creating && !code && !choosing ? (
             <p className="border-t border-border pt-4 text-center text-sm text-muted-foreground">
               {creatingNow ? 'Your business is already on Miles? ' : 'New to Miles? '}
               <button
@@ -306,9 +321,54 @@ export function LoginPage() {
               </button>
             </p>
           ) : null}
-          {!creating && !code ? <ChangeMode /> : null}
+          {!creating && !code && !choosing ? <ChangeMode /> : null}
         </div>
       </main>
+    </div>
+  );
+}
+
+/** Signed in with more than one business: which to open. */
+function ChooseBusiness({
+  place,
+  businesses,
+  busy,
+  onChoose,
+  onBack,
+}: {
+  place: string;
+  businesses: BusinessChoice[];
+  busy: string | null;
+  onChoose: (slug: string) => void;
+  onBack: () => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <p className="text-sm font-medium">You are in more than one {place}. Which one?</p>
+      <ul className="divide-y divide-border border border-border">
+        {businesses.map((b) => (
+          <li key={b.id}>
+            <button
+              type="button"
+              disabled={busy !== null || b.status !== 'active'}
+              onClick={() => onChoose(b.slug)}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-accent disabled:opacity-60"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-medium">{b.name}</span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {workspaceUrl(b.slug).replace(/^https?:\/\//, '')}
+                  {b.status !== 'active' ? ' · suspended' : b.is_owner ? ' · owner' : ''}
+                </span>
+              </span>
+              {busy === b.slug ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} className="text-muted-foreground" />}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <button type="button" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground" onClick={onBack}>
+        <ArrowLeft size={14} /> Sign in with another account
+      </button>
     </div>
   );
 }

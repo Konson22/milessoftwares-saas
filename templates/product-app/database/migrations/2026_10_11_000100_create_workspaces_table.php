@@ -13,7 +13,6 @@ return new class extends Migration
         Schema::create('workspaces', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('organization_id')->unique();
-            $table->string('slug', 63);
             $table->string('display_name');
             $table->char('currency', 3);
             $table->string('timezone', 64);

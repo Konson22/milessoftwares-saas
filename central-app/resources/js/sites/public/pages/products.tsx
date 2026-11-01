@@ -2,7 +2,7 @@ import { Link } from '@inertiajs/react';
 import { ArrowRight, Download, MonitorSmartphone } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { CtaBand, Eyebrow } from '@/sites/public/components/blocks';
+import { CtaBand } from '@/sites/public/components/blocks';
 import { ProductCard, categoryLabels } from '@/sites/public/components/catalog';
 import type { CatalogEntry } from '@/sites/public/components/catalog';
 import PageHero, { Accent } from '@/sites/public/components/page-hero';
@@ -163,10 +163,6 @@ export default function Products({ catalog, trialDays, canonical }: Props) {
                                 className={`scroll-mt-32 ${i % 2 === 1 ? 'border-t border-site-line' : ''} bg-white`}
                             >
                                 <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20">
-                                    <Eyebrow>
-                                        {categoryLabels[category]} ·{' '}
-                                        {byCategory(category).length}
-                                    </Eyebrow>
                                     <SectionHeading
                                         id={headingId}
                                         title={section.title}

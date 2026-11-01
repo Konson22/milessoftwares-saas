@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { SpeedMark } from '@/sites/public/components/page-hero';
 import { display } from '@/sites/public/components/styles';
 
 /**
@@ -25,9 +26,10 @@ export default function SectionHeading({
                     : ''
             }
         >
+            <SpeedMark className="mb-4" />
             <h2
                 id={id}
-                className={`text-[1.5rem] leading-tight sm:text-[2.75rem] ${display}`}
+                className={`text-[1.625rem] leading-[1.15] sm:text-4xl lg:text-[2.5rem] ${display}`}
             >
                 {title}
             </h2>

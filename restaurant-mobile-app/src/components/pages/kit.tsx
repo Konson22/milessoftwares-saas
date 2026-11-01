@@ -42,12 +42,9 @@ export function Panel({ title, right, children, className = '' }: { title?: stri
       {title || right ? (
         <View className="min-h-11 flex-row items-center justify-between gap-2 border-b border-slate-100 px-4 py-2">
           {title ? (
-            <View className="flex-1 flex-row items-center gap-2">
-              <View className="h-3.5 w-1 bg-accent" />
-              <Text className="flex-1 text-xs font-bold uppercase tracking-wider text-slate-600" numberOfLines={1}>
-                {title}
-              </Text>
-            </View>
+            <Text className="flex-1 text-xs font-bold uppercase tracking-wider text-slate-600" numberOfLines={1}>
+              {title}
+            </Text>
           ) : (
             <View className="flex-1" />
           )}

@@ -1,36 +1,32 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 
-import { ApiError, request, setRequestContext } from '@/lib/api/client';
+import { ApiError, currentWorkspace, request, setRequestContext } from '@/lib/api/client';
 import { platform, type RestaurantChoice } from '@/lib/api/platform';
 import { accessToken, loadTokens, saveTokens, signInOnPlatform, signInWithCode, signInWithPassword } from '@/lib/auth/tokens';
 import { setCurrency } from '@/lib/format';
-import { loadMode, saveMode } from '@/lib/mode';
-import type { Branch, Me, Mode, User } from '@/lib/types';
-import { dailyBackup } from '@/local/backup';
-import { openDatabase } from '@/local/db/database';
-import * as session from '@/local/db/session';
-import { LocalError } from '@/local/db/util';
-import { setSignedOutHandler } from '@/local/pages';
+import type { Branch, Me, User } from '@/lib/types';
+import { forgetPages } from '@/offline/cache';
+import { useOutbox } from '@/offline/outbox';
 
 const SESSION_KEY = 'miles-restaurant.session';
 const WORKSPACE_KEY = 'miles-restaurant.workspace';
+/** Where the old offline mode kept its choice; cleared on opening. */
+const OLD_MODE_KEY = 'miles-restaurant.mode';
 
 /**
- * chooseMode: first opening (or after switching): online or on this phone.
- * Offline: setUp on the very first run, then signedOut ⇄ ready.
- * Online: signedOut → chooseRestaurant (in more than one) → needsBranch
- * (more than one branch) → ready.
+ * signedOut → chooseRestaurant (in more than one) → needsBranch (more than
+ * one branch) → ready.
  */
-type Status = 'loading' | 'chooseMode' | 'setUp' | 'signedOut' | 'chooseRestaurant' | 'needsBranch' | 'ready';
+type Status = 'loading' | 'signedOut' | 'chooseRestaurant' | 'needsBranch' | 'ready';
 
-/** How the person signs in online: email and password (then a two-step code if asked), or the browser. */
+/** How the person signs in: email and password (then a two-step code if asked), or the browser. */
 export type SignInWith =
   | { with: 'password'; email: string; password: string }
   | { with: 'code'; code: string; recovery?: boolean }
   | { with: 'browser' };
 
-/** Online: who is signed in where; no secrets (the tokens live in the secure store). */
+/** Who is signed in where; no secrets (the tokens live in the secure store). */
 interface Saved {
   workspace: string;
   me: Me;
@@ -38,30 +34,23 @@ interface Saved {
 }
 
 interface AuthState {
-  mode: Mode | null;
   status: Status;
-  /** Online: the workspace's address. */
+  /** The workspace's address. */
   workspace: string | null;
   me: Me | null;
   branchId: string | null;
-  /** Online, signed in with more than one restaurant: the ones to choose from. */
+  /** Signed in with more than one restaurant: the ones to choose from. */
   choices: RestaurantChoice[];
-  /** Online: whether the restaurant answered the last call. */
+  /** Whether the restaurant answered the last call. */
   reachable: boolean;
 
   hydrate(): Promise<void>;
-  chooseMode(mode: Mode): Promise<void>;
-  /** Back to choosing the mode; the other mode's data stays. */
-  switchMode(): Promise<void>;
 
-  /** Offline, first run: the restaurant and its first manager, who is then signed in. */
-  setUp(input: session.SetUpInput): Promise<void>;
-  /** Offline: a username and password on this phone. */
-  signInLocal(username: string, password: string): Promise<void>;
-
-  /** Online: 'twoFactor' wants a code next; 'choose' lists the restaurants. */
+  /** 'twoFactor' wants a code next; 'choose' lists the restaurants. */
   signIn(how: SignInWith): Promise<'signedIn' | 'choose' | 'twoFactor'>;
   chooseRestaurant(workspace: string): Promise<void>;
+  /** A business just created here: its restaurant opens with the sign-in that made it. */
+  openCreated(workspace: string, idToken: string): Promise<void>;
   chooseBranch(branchId: string): Promise<void>;
   refreshMe(): Promise<void>;
 
@@ -79,29 +68,17 @@ function branchFor(me: Me, wanted: string | null): string | null {
   return me.branches.length === 1 ? me.branches[0].id : null;
 }
 
-/** The phone's answer, its refusal as an ApiError with the fields a form shows it against. */
-function onPhone<T>(task: () => T): T {
-  try {
-    return task();
-  } catch (error) {
-    if (error instanceof LocalError) throw new ApiError(error.message, error.status, error.errors, false, error.code);
-    throw error;
-  }
-}
-
 /** The sign-in's ID token while the person chooses a restaurant; never stored. */
 let pendingIdToken: string | null = null;
 
 export const useAuth = create<AuthState>((set, get) => {
   const signedOut = async () => {
-    if (get().mode === 'online') {
-      await saveTokens(null);
-      await saveSession(null);
-      setRequestContext({ workspace: null, branchId: null });
-    } else {
-      session.signOut();
-    }
+    await saveTokens(null);
+    await saveSession(null);
+    setRequestContext({ workspace: null, branchId: null });
     pendingIdToken = null;
+    // Their pages leave the phone; what waits to be sent stays, for when they sign in again.
+    await forgetPages();
     set({ status: 'signedOut', me: null, branchId: null, choices: [] });
   };
 
@@ -111,12 +88,21 @@ export const useAuth = create<AuthState>((set, get) => {
     onReachable: (reachable) => {
       if (get().reachable !== reachable) set({ reachable });
     },
-  });
-  setSignedOutHandler(() => {
-    if (get().status === 'ready') void signedOut();
+    onMoved: async (from, to) => {
+      setRequestContext({ workspace: to });
+      // What waits to be sent goes with it; pages are fetched again from the new address.
+      useOutbox.getState().moveWorkspace(from, to);
+      if ((await AsyncStorage.getItem(WORKSPACE_KEY)) === from) await AsyncStorage.setItem(WORKSPACE_KEY, to);
+      const { workspace, me, branchId } = get();
+      if (workspace === from && me) {
+        await saveSession({ workspace: to, me, branchId });
+        await forgetPages();
+        set({ workspace: to });
+      }
+    },
   });
 
-  /** Online: signed in at a workspace, in its branch when there is one to work in. */
+  /** Signed in at a workspace, in its branch when there is one to work in. */
   const enter = async (workspace: string, me: Me, wanted: string | null) => {
     const branchId = branchFor(me, wanted);
     setRequestContext({ workspace, branchId });
@@ -125,26 +111,8 @@ export const useAuth = create<AuthState>((set, get) => {
     set({ workspace, me, branchId, status: branchId ? 'ready' : 'needsBranch' });
   };
 
-  /** Offline: someone signed in on this phone. */
-  const enterLocal = (me: Me) => {
-    setCurrency(me.organization.currency, me.organization.decimals);
-    set({ me, workspace: null, branchId: me.branches[0]?.id ?? null, status: 'ready' });
-  };
-
-  const start = async (mode: Mode | null) => {
-    set({ mode, me: null, workspace: null, branchId: null, choices: [], reachable: true });
-    if (!mode) return set({ status: 'chooseMode' });
-
-    if (mode === 'offline') {
-      openDatabase();
-      if (!session.hasUsers()) return set({ status: 'setUp' });
-      dailyBackup();
-      const user = session.signedInUser();
-      if (user) enterLocal(session.me(user));
-      else set({ status: 'signedOut' });
-      return;
-    }
-
+  const start = async () => {
+    await AsyncStorage.removeItem(OLD_MODE_KEY);
     const raw = await AsyncStorage.getItem(SESSION_KEY);
     const saved = raw ? (JSON.parse(raw) as Saved) : null;
     const tokens = await loadTokens();
@@ -157,7 +125,7 @@ export const useAuth = create<AuthState>((set, get) => {
     void get().refreshMe().catch(() => {});
   };
 
-  /** Online: tells the workspace's restaurant who this is, then asks who and where. */
+  /** Tells the workspace's restaurant who this is, then asks who and where. */
   const openWorkspace = async (workspace: string, idToken: string) => {
     setRequestContext({ workspace, branchId: null });
     try {
@@ -173,12 +141,13 @@ export const useAuth = create<AuthState>((set, get) => {
       throw error;
     }
     const me = await request<Me>('GET', 'v1/me');
-    await AsyncStorage.setItem(WORKSPACE_KEY, workspace);
-    await enter(workspace, me, null);
+    // Typed at an old address, the workspace is now at its current one.
+    const where = currentWorkspace() ?? workspace;
+    await AsyncStorage.setItem(WORKSPACE_KEY, where);
+    await enter(where, me, null);
   };
 
   return {
-    mode: null,
     status: 'loading',
     workspace: null,
     me: null,
@@ -188,33 +157,11 @@ export const useAuth = create<AuthState>((set, get) => {
 
     async hydrate() {
       try {
-        await start(await loadMode());
+        await start();
       } catch (error) {
         console.warn('Opening failed', error);
-        set({ status: get().mode ? 'signedOut' : 'chooseMode' });
+        set({ status: 'signedOut' });
       }
-    },
-
-    async chooseMode(mode) {
-      await saveMode(mode);
-      await start(mode);
-    },
-
-    async switchMode() {
-      await signedOut();
-      await saveMode(null);
-      await start(null);
-    },
-
-    // A tick first: checking a password takes a moment, and the screen shows it is busy meanwhile.
-    async setUp(input) {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      enterLocal(onPhone(() => session.setUp(input)));
-    },
-
-    async signInLocal(username, password) {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      enterLocal(onPhone(() => session.signIn(username, password)));
     },
 
     async signIn(how) {
@@ -235,7 +182,7 @@ export const useAuth = create<AuthState>((set, get) => {
       }
       if (restaurants.length === 0) {
         await saveTokens(null);
-        throw new ApiError('Your account is not in a restaurant yet. Create one on the web, or ask the owner to invite you.', 403);
+        throw new ApiError('Your account is not in a restaurant yet. Create one, or ask the owner to invite you.', 403);
       }
       if (restaurants.length === 1) {
         await openWorkspace(restaurants[0].slug, tokens.idToken);
@@ -248,6 +195,8 @@ export const useAuth = create<AuthState>((set, get) => {
       set({ status: 'chooseRestaurant', choices: [...restaurants].sort((a, b) => Number(b.slug === last) - Number(a.slug === last)) });
       return 'choose';
     },
+
+    openCreated: (workspace, idToken) => openWorkspace(workspace, idToken),
 
     async chooseRestaurant(workspace) {
       if (!pendingIdToken) throw new ApiError('Sign in again.', 401);
@@ -263,12 +212,7 @@ export const useAuth = create<AuthState>((set, get) => {
     },
 
     async refreshMe() {
-      const { mode, workspace, branchId } = get();
-      if (mode === 'offline') {
-        const user = session.signedInUser();
-        if (user) enterLocal(session.me(user));
-        return;
-      }
+      const { workspace, branchId } = get();
       if (!workspace) return;
       try {
         const me = await request<Me>('GET', 'v1/me');

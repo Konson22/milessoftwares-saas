@@ -1,0 +1,21 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.milesoftwares'
+version = '0.1.0'
+
+android {
+  namespace "com.milesoftwares.sunmiprinter"
+  defaultConfig {
+    versionCode 1
+    versionName '0.1.0'
+  }
+}
+
+dependencies {
+  // Official SUNMI inner-printer AIDL client (Maven Central). 1.0.24 is the latest published
+  // release as of 2026-10; SUNMI's printer PDF still shows 1.0.15 as its example version.
+  implementation 'com.sunmi:printerlibrary:1.0.24'
+}

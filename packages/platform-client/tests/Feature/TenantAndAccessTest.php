@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Route;
 use Miles\PlatformClient\Api\PlatformApi;
 use Miles\PlatformClient\Http\Middleware\ResolveTenant;
 use Miles\PlatformClient\Tests\Fixtures\FakePlatform;
@@ -29,6 +30,13 @@ describe('tenant from the host', function () {
         ['acme.milesoftwares.test.evil.com', null],
         ['acme.evilmilesoftwares.test', null],
         ['-bad.milesoftwares.test', null],
+        ['bad-.milesoftwares.test', null],
+        ['1acme.milesoftwares.test', null],
+        ['ac--me.milesoftwares.test', null],
+        ['ac_me.milesoftwares.test', null],
+        [str_repeat('a', 64).'.milesoftwares.test', null],
+        ['a.milesoftwares.test', 'a'],
+        ['acme-grill2.milesoftwares.test', 'acme-grill2'],
     ]);
 
     it('answers 404 for hosts that are not a workspace', function (string $url) {
@@ -53,6 +61,44 @@ describe('tenant from the host', function () {
         $this->platform->down = true;
 
         $this->get($this->url('acme', 'auth/login'))->assertStatus(503);
+    });
+});
+
+describe('a workspace that changed its address', function () {
+    beforeEach(function () {
+        $this->platform->organizations['acme']['slug'] = 'acme-grill';
+        $this->platform->formerSlugs['acme'] = 'acme';
+    });
+
+    it('sends a browser to the same page at the new address', function () {
+        $this->get($this->url('acme', 'auth/login?next=%2Fdispense'))
+            ->assertStatus(301)
+            ->assertRedirect($this->url('acme-grill', 'auth/login?next=%2Fdispense'));
+    });
+
+    it('keeps the method of a form sent to the old address', function () {
+        Route::post('pharmacy/notes', fn () => 'saved')->middleware(['web', 'platform.tenant']);
+
+        $this->post($this->url('acme', 'notes'), ['body' => 'hello'])
+            ->assertStatus(308)
+            ->assertRedirect($this->url('acme-grill', 'notes'));
+    });
+
+    it('makes an Inertia visit load the new address', function () {
+        $this->withHeader('X-Inertia', 'true')->get($this->url('acme', 'auth/login'))
+            ->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', $this->url('acme-grill', 'auth/login'));
+    });
+
+    it('tells an app calling the API where the workspace is now', function () {
+        $this->getJson($this->url('acme', 'api/whoami'))
+            ->assertStatus(421)
+            ->assertJsonPath('code', ResolveTenant::MOVED)
+            ->assertJsonPath('slug', 'acme-grill');
+    });
+
+    it('serves the new address as usual', function () {
+        $this->get($this->url('acme-grill', 'auth/login'))->assertStatus(302)->assertRedirectContains(TestCase::ISSUER);
     });
 });
 

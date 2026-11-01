@@ -29,7 +29,7 @@ export function ScreenHeader({
 }) {
   const insets = useSafeAreaInsets();
   return (
-    <View className="bg-brand-600 pb-2" style={{ paddingTop: insets.top + 4 }}>
+    <View className="bg-brand-logo pb-2" style={{ paddingTop: insets.top + 4 }}>
       <View className="flex-row items-center gap-1 px-2">
         {icon ? <IconButton icon={icon} label={iconLabel ?? 'Back'} onPress={onIcon} onDark /> : <View className="w-3" />}
         <View className="flex-1">

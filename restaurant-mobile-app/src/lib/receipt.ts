@@ -1,9 +1,13 @@
 import * as Print from 'expo-print';
 
 import { dateTime, money, time } from './format';
+import { TerminalDocument } from './terminal-printer/builder';
+import { printOnTerminal, printsOnTerminal } from './terminal-printer/service';
+import type { PrintDocument } from './terminal-printer/types';
 
 /**
- * A bill on paper (an 80 mm roll or A4), through the system print dialog:
+ * A bill on paper: on the terminal's own printer (a SUNMI POS device), or
+ * an 80 mm roll or A4 through the system print dialog:
  * before payment, for the table to check, or a paid bill again.
  */
 
@@ -48,8 +52,29 @@ export function billHtml(bill: PrintedBill): string {
   </body></html>`;
 }
 
-/** The system print dialog (a Wi-Fi or Bluetooth printer the phone knows, or a PDF). */
+/** The bill for the terminal's printer, in its paper's columns. */
+export function billDocument(bill: PrintedBill): PrintDocument {
+  const d = new TerminalDocument();
+  d.text(bill.business, { align: 'center', bold: true });
+  if (bill.branch && bill.branch !== bill.business) d.text(bill.branch, { align: 'center' });
+  d.text(bill.title, { align: 'center', bold: true });
+  for (const detail of bill.details) d.text(detail, { align: 'center' });
+  d.rule();
+  for (const line of bill.lines) {
+    d.pair(`${line.quantity} x ${line.name}`, money(line.totalMinor, false));
+    d.text(`  ${money(line.unitPriceMinor, false)} each`);
+  }
+  d.rule();
+  d.pair('Total', money(bill.totalMinor), { bold: true });
+  d.rule();
+  for (const footer of bill.footer) d.text(footer);
+  d.blank().text(`Printed ${dateTime(new Date().toISOString())}`, { align: 'center' });
+  return d.build();
+}
+
+/** The terminal's printer, or the system print dialog (a Wi-Fi or Bluetooth printer the phone knows, or a PDF). */
 export async function printBill(bill: PrintedBill): Promise<void> {
+  if (printsOnTerminal()) return printOnTerminal(billDocument(bill), 'receipt');
   await Print.printAsync({ html: billHtml(bill) });
 }
 
@@ -129,6 +154,22 @@ export function kitchenTicketHtml(ticket: KitchenTicket): string {
   </body></html>`;
 }
 
+/** The kitchen ticket for the terminal's printer: large where it goes, then what to cook. */
+export function kitchenTicketDocument(ticket: KitchenTicket): PrintDocument {
+  const d = new TerminalDocument();
+  d.text(ticket.where, { align: 'center', bold: true, large: true });
+  d.text(`${ticket.number} · ${ticket.orderNumber}`, { align: 'center', bold: true });
+  d.text(`${time(ticket.sentAt)} · ${ticket.sentBy}`, { align: 'center' });
+  d.rule('=');
+  for (const line of ticket.lines) {
+    d.text(`${line.quantity} x ${line.name}${line.voided ? ' (VOID)' : ''}`, { bold: !line.voided, large: !line.voided });
+    if (line.note) d.text(`  >> ${line.note}`, { bold: true });
+  }
+  d.rule('=');
+  return d.build();
+}
+
 export async function printKitchenTicket(ticket: KitchenTicket): Promise<void> {
+  if (printsOnTerminal()) return printOnTerminal(kitchenTicketDocument(ticket), 'ticket');
   await Print.printAsync({ html: kitchenTicketHtml(ticket) });
 }

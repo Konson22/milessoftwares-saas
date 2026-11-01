@@ -109,13 +109,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Desktop downloads
+    | App downloads
     |--------------------------------------------------------------------------
     |
-    | Installers the public site offers at /download/{code}. The files live
-    | outside the repository, in `path` (on the server, under the shared
-    | storage, so a release keeps them). One that is not there yet is listed
-    | without a download. `product` is the catalog page it belongs to.
+    | Installers the public site offers at /download/{code}: Windows setup
+    | files and Android APKs. The files live outside the repository, in
+    | `path` (on the server, under the shared storage, so a release keeps
+    | them). One that is not there yet is listed without a download; an
+    | Android app with a `store` link (Google Play) offers that as well.
+    | `product` is the catalog page it belongs to. `releases` are the
+    | release notes, newest first; an older one whose own `file` is still
+    | on the server can be downloaded at /download/{code}/{version}.
     |
     */
 
@@ -124,21 +128,105 @@ return [
         'apps' => [
             [
                 'code' => 'pharmacy',
+                'platform' => 'windows',
                 'name' => 'Miles Pharmacy',
                 'summary' => 'Your pharmacy on a Windows PC, two ways. On its own: the whole pharmacy on one PC with its own database, no internet or account needed, free for 90 days and then activated with a licence key. Or as the counter of your Miles workspace: keeps selling when the internet drops and sends the sales once it is back (shops sign in to Miles Retail with the same app).',
                 'needs' => 'Nothing to start: a 90-day trial on one PC, or a Miles workspace with Pharmacy or Retail',
                 'file' => 'Miles Pharmacy Setup 1.1.0.exe',
                 'version' => '1.1.0',
                 'product' => 'erp/pharmacy',
+                'releases' => [
+                    [
+                        'version' => '1.1.0',
+                        'date' => '2026-10-31',
+                        'changes' => [
+                            'Offline pharmacies are free for 90 days, then activated with a licence key: online in the app, or by phone with a QR code.',
+                            'Settings in tabs: pharmacy, counter, receipt, backups, activation and system.',
+                            'Receipt printer setup: a Windows printer or a network thermal printer, with a connection check and a test page.',
+                            'Sign out from the profile menu, and a shorter setup for offline pharmacies.',
+                        ],
+                    ],
+                    [
+                        'version' => '1.0.0',
+                        'date' => '2026-10-25',
+                        'file' => 'Miles Pharmacy Setup 1.0.0.exe',
+                        'changes' => [
+                            'First release: the pharmacy and shop counter for Miles workspaces, with sales that wait for the internet.',
+                            'Barcode scanners, receipt printing and keyboard shortcuts.',
+                        ],
+                    ],
+                ],
             ],
             [
                 'code' => 'restaurant',
+                'platform' => 'windows',
                 'name' => 'Miles Restaurant',
                 'summary' => 'The floor, orders, kitchen screen, shifts and bills of your workspace restaurant on a Windows PC.',
                 'needs' => 'A Miles workspace with Restaurant',
                 'file' => 'Miles Restaurant Setup 1.0.0.exe',
                 'version' => '1.0.0',
                 'product' => 'erp/restaurant',
+                'releases' => [
+                    [
+                        'version' => '1.0.0',
+                        'date' => null,
+                        'changes' => ['First release: tables, orders, the kitchen screen, shifts and bills.'],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'pharmacy-android',
+                'platform' => 'android',
+                'name' => 'Miles Pharmacy POS',
+                'summary' => 'The pharmacy counter on an Android phone or tablet: sell, look up stock and prices, and scan barcodes with the camera.',
+                'needs' => 'A Miles workspace with Pharmacy',
+                'file' => 'Miles Pharmacy POS 1.0.0.apk',
+                'version' => '1.0.0',
+                'product' => 'erp/pharmacy',
+                'store' => env('PLATFORM_PLAY_PHARMACY_URL'),
+                'releases' => [
+                    [
+                        'version' => '1.0.0',
+                        'date' => null,
+                        'changes' => ['First release: sales, stock lookup and camera barcode scanning.'],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'retail-android',
+                'platform' => 'android',
+                'name' => 'Miles Retail',
+                'summary' => 'The shop counter on an Android phone or tablet: sales, stock counts and price checks from the shop floor.',
+                'needs' => 'A Miles workspace with Retail & POS',
+                'file' => 'Miles Retail 1.0.0.apk',
+                'version' => '1.0.0',
+                'product' => 'erp/retail',
+                'store' => env('PLATFORM_PLAY_RETAIL_URL'),
+                'releases' => [
+                    [
+                        'version' => '1.0.0',
+                        'date' => null,
+                        'changes' => ['First release: sales, stock counts and price checks.'],
+                    ],
+                ],
+            ],
+            [
+                'code' => 'restaurant-android',
+                'platform' => 'android',
+                'name' => 'Mataem Plus',
+                'summary' => 'Take orders at the table on an Android phone or tablet and send them straight to the kitchen.',
+                'needs' => 'A Miles workspace with Restaurant',
+                'file' => 'Miles Restaurant 1.0.0.apk',
+                'version' => '1.0.0',
+                'product' => 'erp/restaurant',
+                'store' => env('PLATFORM_PLAY_RESTAURANT_URL'),
+                'releases' => [
+                    [
+                        'version' => '1.0.0',
+                        'date' => null,
+                        'changes' => ['First release: table orders sent to the kitchen.'],
+                    ],
+                ],
             ],
         ],
     ],

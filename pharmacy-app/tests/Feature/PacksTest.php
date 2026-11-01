@@ -21,7 +21,7 @@ beforeEach(function () {
     config(['platform-client.modules.finance' => 'https://finance.internal/events']);
     $this->travelTo(now()->setDate(2026, 10, 12)->setTime(9, 0));
     $this->juba = $this->platform()->branch('acme', 'Juba');
-    $this->asTenant('acme', fn () => Workspace::query()->create(['slug' => 'acme', 'display_name' => 'Acme', 'currency' => 'SSP', 'timezone' => 'Africa/Juba']));
+    $this->asTenant('acme', fn () => Workspace::query()->create(['display_name' => 'Acme', 'currency' => 'SSP', 'timezone' => 'Africa/Juba']));
     $this->supplier = $this->asTenant('acme', fn () => Supplier::query()->create(['name' => 'Juba Medical Supplies']));
     $this->amox = $this->asTenant('acme', fn () => Medicine::factory()->create(['name' => 'Amoxil', 'unit' => 'capsule']));
     $this->para = $this->asTenant('acme', fn () => Medicine::factory()->create(['name' => 'Panadol']));

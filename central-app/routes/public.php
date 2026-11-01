@@ -42,11 +42,15 @@ Route::domain(PlatformHosts::root())->group(function () {
         Route::get('coming-soon', [PageController::class, 'comingSoon'])->name('coming-soon');
         Route::get('about', [PageController::class, 'about'])->name('about');
         Route::get('privacy', [PageController::class, 'privacy'])->name('privacy');
+        // An app's own policy, for its store listing (Play Store).
+        Route::get('privacy/mataem-plus', [PageController::class, 'privacyMataemPlus'])->name('privacy.mataem-plus');
         Route::get('terms', [PageController::class, 'terms'])->name('terms');
 
-        // Desktop installers; a file not on the server yet is a 404.
+        // Windows and Android installers (an older one by its version); a file not on the server yet is a 404.
         Route::get('downloads', [PageController::class, 'downloads'])->name('downloads');
-        Route::get('download/{code}', [PageController::class, 'download'])->where('code', '[a-z][a-z0-9-]*')->name('download');
+        Route::get('download/{code}/{version?}', [PageController::class, 'download'])
+            ->where(['code' => '[a-z][a-z0-9-]*', 'version' => '[0-9]+(\.[0-9]+){1,3}'])
+            ->name('download');
 
         // Choose an application and start its free trial (a new workspace).
         Route::get('start', [PageController::class, 'start'])->name('start');

@@ -1,17 +1,18 @@
 import { Link } from '@inertiajs/react';
-import { ArrowRight, Code2, LayoutGrid, Rocket } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import {
-    CtaBand,
-    Eyebrow,
-    FeatureGrid,
-} from '@/sites/public/components/blocks';
-import { ProductCard } from '@/sites/public/components/catalog';
+    ArrowRight,
+    Code2,
+    LayoutGrid,
+    Monitor,
+    Rocket,
+    Smartphone,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { CtaBand, FeatureGrid } from '@/sites/public/components/blocks';
 import type { CatalogEntry } from '@/sites/public/components/catalog';
 import {
     cloudPillars,
     howItWorks,
-    milesProducts,
     whyMiles,
 } from '@/sites/public/components/content';
 import FaqList, { faq } from '@/sites/public/components/faq';
@@ -22,7 +23,7 @@ import {
 } from '@/sites/public/components/offerings';
 import {
     Accent,
-    HeroBackdrop,
+    GridBackdrop,
     IconBox,
 } from '@/sites/public/components/page-hero';
 import type { Product } from '@/sites/public/components/product';
@@ -30,10 +31,8 @@ import SectionHeading from '@/sites/public/components/section-heading';
 import Seo, { organization, siteName } from '@/sites/public/components/seo';
 import {
     button,
-    card,
-    darkBand,
+    container,
     display,
-    panel,
     textLink,
 } from '@/sites/public/components/styles';
 
@@ -45,7 +44,7 @@ type Props = {
     canonical: string;
 };
 
-/** The cards just under the hero: subscriptions, custom work, the trial. */
+/** The three ways in, in a row just under the hero: subscriptions, custom work, the trial. */
 function highlights(trialDays: number): {
     icon: LucideIcon;
     title: string;
@@ -89,15 +88,6 @@ export default function MarketingHome({
     canonical,
 }: Props) {
     const origin = new URL(canonical).origin;
-    const portfolio = milesProducts.flatMap((item) => {
-        const entry = catalog.find(
-            (candidate) =>
-                candidate.category === item.category &&
-                candidate.slug === item.slug,
-        );
-
-        return entry ? [{ title: item.title, entry }] : [];
-    });
 
     return (
         <>
@@ -120,69 +110,65 @@ export default function MarketingHome({
                 }}
             />
 
-            {/* 1. Hero: solid navy under the white header; the copy on the left (60%), the product picture on the right (40%; below on phones). */}
-            <section className={darkBand}>
-                <HeroBackdrop />
-                <div className="site-rise mx-auto grid max-w-7xl items-center gap-12 px-4 pt-32 pb-20 sm:px-6 sm:pt-40 sm:pb-24 lg:grid-cols-[3fr_2fr] lg:gap-10">
-                    <div>
+            {/* 1. Hero: light, the copy centred over the grid backdrop. */}
+            <section className="relative isolate overflow-hidden bg-site-soft">
+                <GridBackdrop />
+                <div
+                    className={`site-rise ${container} flex flex-col items-center pt-28 pb-16 text-center sm:pt-36 sm:pb-24`}
+                >
+                    <div className="flex flex-col items-center">
+                        <p className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-site-line">
+                            <span
+                                aria-hidden
+                                className="size-1.5 rounded-full bg-site-orange"
+                            />
+                            {trialDays}-day free trial, no payment details
+                        </p>
                         <h1
-                            className={`max-w-3xl text-[2rem] leading-[1.1] min-[400px]:text-[2.375rem] sm:text-6xl ${display}`}
+                            className={`mt-6 max-w-3xl text-[2.25rem] leading-[1.05] min-[400px]:text-[2.625rem] sm:text-6xl lg:text-[4rem] ${display}`}
                         >
                             Business software{' '}
                             <Accent>that works together.</Accent>
                         </h1>
-                        <p className="mt-6 max-w-2xl text-base text-pretty text-slate-300 sm:text-lg">
+                        <p className="mt-6 max-w-2xl text-base leading-relaxed text-pretty text-slate-600 sm:text-lg">
                             Miles Global Softwares builds powerful business
                             applications and tailored software solutions to help
                             organizations manage operations, connect teams and
                             grow with confidence.
                         </p>
-                        <div className="mt-9 flex flex-wrap items-center gap-3">
+                        <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
                             <a href="#products" className={button.primary}>
                                 Explore Products
                                 <ArrowRight className="size-4" aria-hidden />
                             </a>
-                            <Link
-                                href="/platform"
-                                className={button.outlineDark}
-                            >
+                            <Link href="/platform" className={button.outline}>
                                 How it works
                             </Link>
                         </div>
                     </div>
-                    {/* The Miles products around one dashboard; decorative, the copy says it. */}
-                    <img
-                        src="/images/hero/web/saas-ecosystem.webp"
-                        alt=""
-                        width={1200}
-                        height={650}
-                        fetchPriority="high"
-                        decoding="async"
-                        className="mx-auto w-full max-w-2xl lg:max-w-none"
-                    />
                 </div>
             </section>
 
-            {/* Three ways in, just under the hero. */}
-            <div className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 sm:pt-14">
-                <ul className="grid gap-4 md:grid-cols-3">
+            {/* Three ways in, a divided row under the hero. */}
+            <div className="border-y border-site-line bg-white">
+                <ul
+                    className={`${container} grid divide-y divide-site-line md:grid-cols-3 md:divide-x md:divide-y-0`}
+                >
                     {highlights(trialDays).map((item, i) => (
                         <li key={item.href}>
                             <Link
                                 href={item.href}
-                                className={`${card} group flex h-full items-start gap-5 p-6`}
+                                className="group flex h-full items-start gap-4 py-7 md:px-7 md:first:pl-0 md:last:pr-0"
                             >
                                 <IconBox icon={item.icon} index={i} />
                                 <span className="flex-1">
-                                    <span
-                                        className={`block text-lg transition-colors group-hover:text-site-accent-ink ${display}`}
-                                    >
+                                    <span className="block font-semibold text-site-ink transition-colors group-hover:text-site-accent-ink">
                                         {item.title}
                                     </span>
                                     <span className="mt-1 block text-sm leading-relaxed text-slate-600">
                                         {item.body}
                                     </span>
-                                    <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-site-accent-ink">
+                                    <span className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-site-accent-ink">
                                         {item.cta}
                                         <ArrowRight
                                             className="size-4 transition-transform group-hover:translate-x-1"
@@ -196,61 +182,63 @@ export default function MarketingHome({
                 </ul>
             </div>
 
-            {/* 2. Miles Products */}
+            {/* 2. Miles Products: the whole family in one picture; each product is on the Products page. */}
             <section
                 id="products"
                 aria-labelledby="products-heading"
-                className="mx-auto max-w-7xl scroll-mt-24 px-4 py-16 sm:px-6 sm:py-24"
+                className={`${container} scroll-mt-24 py-20 sm:py-28`}
             >
-                <div className="flex flex-wrap items-end justify-between gap-6">
+                <div className="grid items-center gap-10 md:gap-12 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
+                    <img
+                        src="/images/home/miles-products.webp"
+                        alt="Miles business applications on a desktop, laptop, tablet and phone, surrounded by the industries they serve: restaurants, pharmacies, retail, schools, accounting, finance, HR, warehousing, hotels, water utilities, fuel stations and offices."
+                        width={1280}
+                        height={960}
+                        loading="lazy"
+                        decoding="async"
+                        className="mx-auto w-full max-w-2xl lg:max-w-none"
+                    />
                     <div>
-                        <Eyebrow>Miles Products</Eyebrow>
                         <SectionHeading
                             id="products-heading"
                             title={
                                 <>
-                                    Applications for each part of{' '}
-                                    <Accent>your business.</Accent>
+                                    One Platform.{' '}
+                                    <Accent>
+                                        Multiple Business Solutions.
+                                    </Accent>
                                 </>
                             }
-                            lead="Use one on its own or several together in the same workspace. Each product shows where it stands today: available, in early access or coming soon."
+                            lead="Discover a complete ecosystem of powerful business software designed to simplify daily operations, streamline workflows, improve productivity, and support business growth."
                             align="left"
                         />
-                    </div>
-                    <div className="flex flex-wrap gap-3">
-                        <Link href="/products#erp" className={button.outline}>
-                            ERP Solutions
-                        </Link>
-                        <Link href="/products#apps" className={button.outline}>
-                            Business Applications
+                        <p className="mt-4 max-w-xl text-base leading-relaxed text-pretty text-slate-600">
+                            From managing sales and inventory to handling
+                            financial operations, customer relationships, and
+                            other essential business activities, Miles Global
+                            Softwares provides reliable, scalable, and
+                            easy-to-use solutions for modern organizations.
+                        </p>
+                        <Link
+                            href="/products"
+                            className={`${button.primary} mt-8 w-full justify-center sm:w-auto`}
+                        >
+                            Explore All Products
+                            <ArrowRight className="size-4" aria-hidden />
                         </Link>
                     </div>
                 </div>
-                <ul className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                    {portfolio.map(({ title, entry }) => (
-                        <li key={entry.url}>
-                            <ProductCard
-                                product={entry}
-                                title={title}
-                                trialDays={trialDays}
-                                highlights
-                            />
-                        </li>
-                    ))}
-                </ul>
             </section>
 
             {/* 3. Miles Workspace */}
             <section
                 id="cloud"
                 aria-labelledby="cloud-heading"
-                className={`${darkBand} scroll-mt-24`}
+                className="scroll-mt-24 border-y border-site-line bg-site-soft"
             >
-                <HeroBackdrop />
-                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
+                <div className={`${container} py-20 sm:py-28`}>
                     <div className="flex flex-wrap items-end justify-between gap-6">
                         <div>
-                            <Eyebrow>Miles Workspace</Eyebrow>
                             <SectionHeading
                                 id="cloud-heading"
                                 title={
@@ -265,11 +253,11 @@ export default function MarketingHome({
                                 align="left"
                             />
                         </div>
-                        <Link href="/platform" className={button.light}>
+                        <Link href="/platform" className={button.outline}>
                             Explore Miles Workspace
                         </Link>
                     </div>
-                    <div className="mt-10">
+                    <div className="mt-14">
                         <FeatureGrid features={cloudPillars} columns={3} />
                     </div>
                 </div>
@@ -279,72 +267,74 @@ export default function MarketingHome({
             <section
                 id="custom"
                 aria-labelledby="custom-heading"
-                className="mx-auto max-w-7xl scroll-mt-24 px-4 py-16 sm:px-6 sm:py-24"
+                className={`${container} scroll-mt-24 py-20 sm:py-28`}
             >
-                <Eyebrow>Custom Software Development</Eyebrow>
-                <SectionHeading
-                    id="custom-heading"
-                    title={
-                        <>
-                            Your business is unique.{' '}
-                            <Accent>Your software can be too.</Accent>
-                        </>
-                    }
-                    lead="Not every organization fits into ready-made software. Separately from our subscription products, we develop systems designed around your workflows, operational requirements and goals: scoped with you, quoted, and delivered as a project."
-                    align="left"
-                />
-                <div className="mt-10 grid gap-5 md:grid-cols-2">
-                    <div className={`${panel} p-7`}>
-                        <h3 className="text-lg font-semibold">
-                            Customize a Miles product
-                        </h3>
-                        <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                            Start from one of our ERPs and have it adapted:
-                            extra fields, documents, reports and approval steps.
-                            You pay the product licence plus a setup or
-                            customization charge.
-                        </p>
+                <div className="grid gap-10 lg:grid-cols-[1fr_1fr] lg:gap-16">
+                    <div>
+                        <SectionHeading
+                            id="custom-heading"
+                            title={
+                                <>
+                                    Your business is unique.{' '}
+                                    <Accent>Your software can be too.</Accent>
+                                </>
+                            }
+                            lead="Not every organization fits into ready-made software. Separately from our subscription products, we develop systems designed around your workflows, operational requirements and goals: scoped with you, quoted, and delivered as a project."
+                            align="left"
+                        />
+                        <div className="mt-8 flex flex-wrap gap-3">
+                            <Link
+                                href={quoteUrl('Project: Custom software')}
+                                className={button.primary}
+                            >
+                                Discuss Your Project
+                                <ArrowRight className="size-4" aria-hidden />
+                            </Link>
+                            <Link
+                                href={quoteUrl('Quote: Custom software')}
+                                className={button.outline}
+                            >
+                                Request a Quotation
+                            </Link>
+                        </div>
                     </div>
-                    <div className={`${panel} p-7`}>
-                        <h3 className="text-lg font-semibold">
-                            Commission a new system
-                        </h3>
-                        <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                            A system built for you from your requirements: an
-                            ERP, a web, desktop or mobile application, or an
-                            integration. Priced by quotation after a
-                            requirements assessment.
-                        </p>
-                    </div>
+                    <dl className="divide-y divide-site-line self-start border-y border-site-line">
+                        <div className="py-6">
+                            <dt className="font-semibold text-site-ink">
+                                Customize a Miles product
+                            </dt>
+                            <dd className="mt-2 text-sm leading-relaxed text-slate-600">
+                                Start from one of our ERPs and have it adapted:
+                                extra fields, documents, reports and approval
+                                steps. You pay the product licence plus a setup
+                                or customization charge.
+                            </dd>
+                        </div>
+                        <div className="py-6">
+                            <dt className="font-semibold text-site-ink">
+                                Commission a new system
+                            </dt>
+                            <dd className="mt-2 text-sm leading-relaxed text-slate-600">
+                                A system built for you from your requirements:
+                                an ERP, a web, desktop or mobile application, or
+                                an integration. Priced by quotation after a
+                                requirements assessment.
+                            </dd>
+                        </div>
+                    </dl>
                 </div>
-                <div className="mt-5">
+                <div className="mt-14">
                     <ServiceCards />
-                </div>
-                <div className="mt-10 flex flex-wrap justify-center gap-3">
-                    <Link
-                        href={quoteUrl('Project: Custom software')}
-                        className={button.primary}
-                    >
-                        Discuss Your Project
-                        <ArrowRight className="size-4" aria-hidden />
-                    </Link>
-                    <Link
-                        href={quoteUrl('Quote: Custom software')}
-                        className={button.outline}
-                    >
-                        Request a Quotation
-                    </Link>
                 </div>
             </section>
 
-            {/* 5. Flexible software deployment */}
+            {/* 5. Flexible software deployment, and the apps to download */}
             <section
                 id="ways-to-run"
                 aria-labelledby="ways-heading"
                 className="scroll-mt-24 border-t border-site-line"
             >
-                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
-                    <Eyebrow>Flexible Software Deployment</Eyebrow>
+                <div className={`${container} py-20 sm:py-28`}>
                     <SectionHeading
                         id="ways-heading"
                         title={
@@ -356,19 +346,51 @@ export default function MarketingHome({
                         lead="Not every product offers every option. Each one below names the products that have it today."
                         align="left"
                     />
-                    <div className="mt-10">
+                    <div className="mt-12">
                         <DeploymentOptions
                             catalog={catalog}
                             trialDays={trialDays}
                         />
                     </div>
+                    <Link
+                        href="/downloads"
+                        className="group mt-10 flex flex-wrap items-center gap-x-6 gap-y-4 rounded-2xl border border-site-line bg-site-soft p-6 transition-colors hover:border-site-accent/40 sm:p-8"
+                    >
+                        <span className="flex -space-x-2" aria-hidden>
+                            <span className="inline-flex size-11 items-center justify-center rounded-xl bg-white text-site-accent-ink ring-1 ring-site-line">
+                                <Monitor className="size-5" />
+                            </span>
+                            <span className="inline-flex size-11 items-center justify-center rounded-xl bg-white text-site-accent-ink ring-1 ring-site-line">
+                                <Smartphone className="size-5" />
+                            </span>
+                        </span>
+                        <span className="min-w-60 flex-1">
+                            <span className="block font-semibold text-site-ink">
+                                Apps for Windows and Android
+                            </span>
+                            <span className="mt-1 block text-sm text-slate-600">
+                                The pharmacy and shop counter on a Windows PC,
+                                online or fully offline, and the counter apps
+                                for phones and tablets.
+                            </span>
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-site-accent-ink">
+                            Go to downloads
+                            <ArrowRight
+                                className="size-4 transition-transform group-hover:translate-x-1"
+                                aria-hidden
+                            />
+                        </span>
+                    </Link>
                 </div>
             </section>
 
             {/* 6. Why Miles Global Softwares */}
-            <section aria-labelledby="why-heading" className={darkBand}>
-                <HeroBackdrop />
-                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
+            <section
+                aria-labelledby="why-heading"
+                className="border-y border-site-line bg-site-soft"
+            >
+                <div className={`${container} py-20 sm:py-28`}>
                     <SectionHeading
                         id="why-heading"
                         title={
@@ -376,8 +398,9 @@ export default function MarketingHome({
                                 Why <Accent>Miles Global Softwares</Accent>
                             </>
                         }
+                        align="left"
                     />
-                    <div className="mt-10 sm:mt-14">
+                    <div className="mt-14">
                         <FeatureGrid features={whyMiles} columns={4} />
                     </div>
                 </div>
@@ -389,7 +412,7 @@ export default function MarketingHome({
                 aria-labelledby="how-heading"
                 className="scroll-mt-24"
             >
-                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
+                <div className={`${container} py-20 sm:py-28`}>
                     <SectionHeading
                         id="how-heading"
                         title={
@@ -397,17 +420,18 @@ export default function MarketingHome({
                                 How we <Accent>work</Accent>
                             </>
                         }
+                        align="left"
                     />
-                    <ol className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                    <ol className="mt-14 grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
                         {howItWorks.map((step, i) => (
                             <li
                                 key={step.title}
-                                className={`${panel} p-6 sm:p-7`}
+                                className="border-t-2 border-site-ink pt-6"
                             >
-                                <span className="inline-flex size-11 items-center justify-center rounded-full bg-site-accent-ink font-public-display text-sm font-bold text-white">
+                                <span className="font-public-display text-sm font-semibold text-site-accent-ink">
                                     {ordinal(i)}
                                 </span>
-                                <h3 className="mt-5 text-lg font-semibold">
+                                <h3 className="mt-3 text-lg font-semibold">
                                     {step.title}
                                 </h3>
                                 <p className="mt-2 text-sm leading-relaxed text-slate-600">
@@ -424,8 +448,10 @@ export default function MarketingHome({
                 aria-labelledby="faq-heading"
                 className="border-t border-site-line"
             >
-                <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1fr_1.5fr] lg:gap-16">
-                    <div className="lg:sticky lg:top-32 lg:self-start">
+                <div
+                    className={`${container} grid gap-10 py-20 sm:py-28 lg:grid-cols-[1fr_1.5fr] lg:gap-16`}
+                >
+                    <div className="lg:sticky lg:top-28 lg:self-start">
                         <SectionHeading
                             id="faq-heading"
                             title={

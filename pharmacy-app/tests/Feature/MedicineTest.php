@@ -24,7 +24,7 @@ function medicinePayload(array $overrides = []): array
 }
 
 beforeEach(function () {
-    $this->asTenant('acme', fn () => Workspace::query()->create(['slug' => 'acme', 'display_name' => 'Acme', 'currency' => 'SSP', 'timezone' => 'Africa/Juba']));
+    $this->asTenant('acme', fn () => Workspace::query()->create(['display_name' => 'Acme', 'currency' => 'SSP', 'timezone' => 'Africa/Juba']));
 });
 
 it('adds a medicine to the catalogue with its price in minor units', function () {

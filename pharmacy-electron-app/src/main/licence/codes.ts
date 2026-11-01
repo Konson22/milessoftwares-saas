@@ -24,6 +24,8 @@ export type LicenceType = 'single' | 'multi_device' | 'multi_branch';
 
 export interface Licence {
   id: string;
+  /** The app it opens; older codes carry none: pharmacy. */
+  product?: string;
   type: LicenceType;
   /** The device code it was issued for (XXXX-XXXX-XXXX). */
   device: string;
@@ -39,7 +41,7 @@ export interface Licence {
 }
 
 /** Why a code does not open this PC. */
-export type CodeProblem = 'format' | 'signature' | 'device' | 'branch' | 'expired';
+export type CodeProblem = 'format' | 'signature' | 'product' | 'device' | 'branch' | 'expired';
 
 export class CodeError extends Error {
   problem: CodeProblem;
@@ -87,6 +89,7 @@ export function decodeLicence(code: string, key: string | KeyObject = PUBLIC_KEY
 
 /** Whether a licence is for this PC and this pharmacy, and still running; null when it is. */
 export function checkLicence(licence: Licence, here: { device: string; branch: string; now: Date }): CodeProblem | null {
+  if ((licence.product ?? 'pharmacy') !== 'pharmacy') return 'product';
   if (normalizeCode(licence.device) !== normalizeCode(here.device)) return 'device';
   if (normalizeCode(licence.branch) !== normalizeCode(here.branch)) return 'branch';
   if (licence.expires !== null && Date.parse(licence.expires) <= here.now.getTime()) return 'expired';

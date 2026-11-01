@@ -21,7 +21,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 beforeEach(function () {
     $this->travelTo(CarbonImmutable::parse('2026-10-23 10:00'));
     $this->juba = $this->platform()->branch('acme', 'Juba');
-    $this->asTenant('acme', fn () => Workspace::query()->create(['slug' => 'acme', 'display_name' => 'Acme', 'currency' => 'SSP', 'timezone' => 'Africa/Juba']));
+    $this->asTenant('acme', fn () => Workspace::query()->create(['display_name' => 'Acme', 'currency' => 'SSP', 'timezone' => 'Africa/Juba']));
 
     $keeper = User::factory()->create();
     [$this->soap, $this->soapBatch, $this->paraBatch, $this->shelf] = $this->asTenant('acme', function () use ($keeper) {

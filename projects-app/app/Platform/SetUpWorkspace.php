@@ -18,7 +18,6 @@ class SetUpWorkspace implements ProvisionsTenants
         $workspace = Workspace::current() ?? new Workspace;
 
         $workspace->fill([
-            'slug' => $organization->slug,
             'display_name' => $organization->displayName,
             'currency' => $organization->defaultCurrency ?? 'USD',
             'timezone' => $organization->timezone ?? 'UTC',

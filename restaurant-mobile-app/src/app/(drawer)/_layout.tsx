@@ -5,6 +5,7 @@ import { AppHeader } from '@/components/app-header';
 import { DrawerMenu } from '@/components/drawer-menu';
 import { loadAccess, useAccess } from '@/hooks/use-page';
 import { colors } from '@/lib/theme';
+import { useSyncEngine } from '@/offline/sync';
 import { useAuth } from '@/store/auth';
 
 export const unstable_settings = { initialRouteName: '(tabs)' };
@@ -17,6 +18,8 @@ export const unstable_settings = { initialRouteName: '(tabs)' };
 export default function DrawerLayout() {
   const branchId = useAuth((s) => s.branchId);
   const userId = useAuth((s) => s.me?.user.id);
+  // What is done offline is sent when it can; the floor is kept for when the connection goes.
+  useSyncEngine();
 
   // The sections this member may open here (from the restaurant's home page).
   useEffect(() => {

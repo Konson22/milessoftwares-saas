@@ -59,14 +59,14 @@ export default function ProductPage({
                     <div className="flex flex-wrap items-center gap-3">
                         <Link
                             href="/products"
-                            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-300 transition-colors hover:text-white"
+                            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 transition-colors hover:text-site-accent-ink"
                         >
                             <ArrowLeft className="size-4" aria-hidden />
                             All products
                         </Link>
                         {statusLabel[product.status] && (
                             <span
-                                className={`rounded-full px-3 py-1 text-xs font-semibold ${product.status === 'beta' ? 'bg-site-accent-ink text-white' : 'bg-white text-slate-700 ring-1 ring-site-line'}`}
+                                className={`rounded-full px-3 py-1 text-xs font-semibold ${product.status === 'beta' ? 'bg-site-orange-ink text-white' : 'bg-white text-slate-700 ring-1 ring-site-line'}`}
                             >
                                 {statusLabel[product.status]}
                             </span>
@@ -77,12 +77,12 @@ export default function ProductPage({
                 intro={product.tagline}
             >
                 {trialable ? (
-                    <a href={trialUrl(product.code)} className={button.light}>
+                    <a href={trialUrl(product.code)} className={button.primary}>
                         Start {trialLength(trialDays)} free trial
                         <ArrowRight className="size-4" aria-hidden />
                     </a>
                 ) : (
-                    <Link href="/contact" className={button.light}>
+                    <Link href="/contact" className={button.primary}>
                         Tell me when it launches
                     </Link>
                 )}

@@ -15,25 +15,23 @@ export function DrawerMenu({ navigation }: DrawerContentComponentProps) {
   const insets = useSafeAreaInsets();
   const user = useAuth((s) => s.me?.user);
   const organization = useAuth((s) => s.me?.organization.name);
-  const mode = useAuth((s) => s.mode);
   const branch = useBranch();
   const shared = useAccess((s) => s.shared);
   const pathname = usePathname();
   const { section } = useGlobalSearchParams<{ section?: string }>();
-  const groups = visibleNavigation(shared, mode);
+  const groups = visibleNavigation(shared);
 
-  const active = (item: NavItem) => (item.tab ? pathname === item.tab : item.screen ? pathname === item.screen : pathname.startsWith('/p') && section === item.path);
+  const active = (item: NavItem) => (item.tab ? pathname === item.tab : pathname.startsWith('/p') && section === item.path);
 
   const open = (item: NavItem) => {
     navigation.closeDrawer();
     if (item.tab) router.navigate(item.tab as never);
-    else if (item.screen) router.push(item.screen as never);
     else router.navigate({ pathname: '/p/[section]', params: { section: item.path } });
   };
 
   return (
     <View className="flex-1 bg-white">
-      <View className="bg-brand-600 px-5 pb-5" style={{ paddingTop: insets.top + 16 }}>
+      <View className="bg-brand-logo px-5 pb-5" style={{ paddingTop: insets.top + 16 }}>
         <View className="flex-row items-center gap-3">
           <View className="h-12 w-12 items-center justify-center rounded-full border border-white/25 bg-white/15">
             <Text className="text-base font-bold text-white">{user ? initials(user.name) : '?'}</Text>
@@ -81,7 +79,6 @@ export function DrawerMenu({ navigation }: DrawerContentComponentProps) {
           className="min-h-12 flex-row items-center gap-3 px-3 active:bg-slate-100">
           <Ionicons name="person-circle-outline" size={21} color={colors.muted} />
           <Text className="flex-1 text-base font-medium text-slate-800">Account</Text>
-          <Text className="text-xs font-semibold uppercase text-slate-400">{mode}</Text>
         </Pressable>
       </View>
     </View>
