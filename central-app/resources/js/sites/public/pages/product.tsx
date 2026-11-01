@@ -66,7 +66,7 @@ export default function ProductPage({
                         </Link>
                         {statusLabel[product.status] && (
                             <span
-                                className={`rounded-full px-3 py-1 text-xs font-semibold ${product.status === 'beta' ? 'bg-site-orange-ink text-white' : 'bg-white text-slate-700 ring-1 ring-site-line'}`}
+                                className={`rounded-full px-3 py-1 text-xs font-semibold ${product.status === 'beta' ? 'bg-site-accent-ink text-white' : 'bg-white text-slate-700 ring-1 ring-site-line'}`}
                             >
                                 {statusLabel[product.status]}
                             </span>
@@ -91,7 +91,7 @@ export default function ProductPage({
             {product.features.length > 0 && (
                 <section
                     aria-labelledby="features-heading"
-                    className="mx-auto max-w-7xl px-4 py-24 sm:px-6"
+                    className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8"
                 >
                     <SectionHeading
                         id="features-heading"
@@ -126,9 +126,9 @@ export default function ProductPage({
                 <section
                     id="plans"
                     aria-labelledby="plans-heading"
-                    className="scroll-mt-20 border-y border-site-line bg-white"
+                    className="scroll-mt-20 border-y border-site-line bg-site-soft"
                 >
-                    <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6">
+                    <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
                         <SectionHeading
                             id="plans-heading"
                             title={`Plans that include ${product.name}`}
@@ -145,7 +145,7 @@ export default function ProductPage({
             {trialable && (
                 <section
                     aria-labelledby="try-heading"
-                    className="px-4 py-16 sm:px-6 sm:py-24"
+                    className="px-4 py-16 sm:px-6 lg:px-8 sm:py-24"
                 >
                     <div
                         className={`${darkBand} mx-auto flex max-w-7xl flex-col items-center gap-6 rounded-[2rem] px-6 py-14 text-center sm:px-12`}

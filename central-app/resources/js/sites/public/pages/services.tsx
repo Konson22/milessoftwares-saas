@@ -101,7 +101,7 @@ export default function Services({ canonical }: Props) {
                     aria-labelledby={`${service.id}-heading`}
                     className={`scroll-mt-24 ${i % 2 === 1 ? 'border-y border-site-line bg-white' : ''}`}
                 >
-                    <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.2fr_1fr] lg:gap-16">
+                    <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 lg:px-8 sm:py-20 lg:grid-cols-[1.2fr_1fr] lg:gap-16">
                         <div>
                             <IconBox icon={service.icon} index={i} />
                             <h2
@@ -144,7 +144,7 @@ export default function Services({ canonical }: Props) {
             <section
                 id="customize-or-build"
                 aria-labelledby="choice-heading"
-                className="mx-auto max-w-7xl scroll-mt-24 px-4 py-16 sm:px-6 sm:py-24"
+                className="mx-auto max-w-7xl scroll-mt-24 px-4 py-16 sm:px-6 lg:px-8 sm:py-24"
             >
                 <SectionHeading
                     id="choice-heading"
@@ -197,9 +197,9 @@ export default function Services({ canonical }: Props) {
 
             <section
                 aria-labelledby="process-heading"
-                className="border-y border-site-line bg-white"
+                className="border-y border-site-line bg-site-soft"
             >
-                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
+                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 sm:py-24">
                     <SectionHeading
                         id="process-heading"
                         title={
@@ -215,7 +215,7 @@ export default function Services({ canonical }: Props) {
                                 key={step.title}
                                 className={`${panel} p-6 sm:p-7`}
                             >
-                                <span className="inline-flex size-11 items-center justify-center rounded-full bg-site-orange-ink font-public-display text-sm font-bold text-white">
+                                <span className="inline-flex size-11 items-center justify-center rounded-full bg-site-accent-ink font-public-display text-sm font-bold text-white">
                                     {String(i + 1).padStart(2, '0')}
                                 </span>
                                 <h3 className="mt-5 text-lg font-semibold">

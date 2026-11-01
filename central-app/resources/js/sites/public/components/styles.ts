@@ -5,8 +5,8 @@ import { trial } from '@/routes';
  * because most of them navigate (some to another host).
  *
  * Clean and light, in the logo's colours only (no gradients): white and
- * soft-blue surfaces, the logo orange for the main action, the logo blue
- * for links and icons, deep navy for the closing band (see the site-* colours in
+ * soft-blue surfaces, the logo blue for the main action, links and
+ * icons, deep navy for the closing band (see the site-* colours in
  * resources/css/app.css). Squarer corners than pills, so they line up with
  * the rest of the layout.
  */
@@ -14,16 +14,16 @@ const base =
     'inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold transition-[color,background-color,border-color,box-shadow] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2';
 
 export const button = {
-    /** Main action: solid orange (the logo orange, darkened to 4.9:1 for white text). */
-    primary: `${base} bg-site-orange-ink text-white shadow-sm shadow-site-orange-ink/25 hover:bg-site-orange-deep focus-visible:outline-site-orange`,
+    /** Main action: solid blue (the logo blue, darkened to 5.3:1 for white text). */
+    primary: `${base} bg-site-accent-ink text-white shadow-sm shadow-site-accent-ink/25 hover:bg-site-accent-deep focus-visible:outline-site-highlight`,
     /** Strong secondary action on light. */
     dark: `${base} bg-site-navy text-white hover:bg-site-night focus-visible:outline-site-navy`,
     /** Main action on a dark band. */
-    light: `${base} bg-site-orange-ink text-white hover:bg-site-orange-deep focus-visible:outline-white`,
+    light: `${base} bg-site-accent-ink text-white hover:bg-site-accent-deep focus-visible:outline-white`,
     /** Secondary action on a dark or gradient band. */
     outlineDark: `${base} border border-white/40 text-white hover:border-white hover:bg-white/10 focus-visible:outline-white`,
     /** Secondary action on white or lavender. */
-    outline: `${base} border border-site-line bg-white text-site-ink hover:border-site-orange/50 hover:text-site-orange-ink focus-visible:outline-site-orange`,
+    outline: `${base} border border-site-line bg-white text-site-ink hover:border-site-highlight/50 hover:text-site-accent-ink focus-visible:outline-site-highlight`,
 };
 
 export const textLink =
@@ -68,12 +68,12 @@ export const darkBand =
 
 /**
  * Colour pairs for icon boxes, taken in turn by a row of features: the
- * logo blue and the logo orange, each on its own tint (a navy tint read
+ * logo blue on two tints (a navy tint read
  * as grey); the icon keeps 3:1 on it.
  */
 export const tints = [
-    'bg-site-accent/10 text-site-accent-ink',
-    'bg-site-orange-wash text-site-orange-ink',
+    'bg-site-accent/10 text-site-accent-ink in-[.site-dark]:bg-white/10 in-[.site-dark]:text-white',
+    'bg-site-wash text-site-accent-ink',
 ] as const;
 
 /** "2-month" for 60 days, "14-day" otherwise. */

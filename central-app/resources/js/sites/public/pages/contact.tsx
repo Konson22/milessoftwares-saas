@@ -38,7 +38,7 @@ export default function Contact({ formToken, subject, canonical }: Props) {
 
             <section
                 aria-label="Message"
-                className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[20rem_1fr]"
+                className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 lg:px-8 sm:py-16 lg:grid-cols-[20rem_1fr]"
             >
                 <aside className="space-y-6">
                     <div>

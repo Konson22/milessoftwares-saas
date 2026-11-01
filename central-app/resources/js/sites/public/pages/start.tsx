@@ -61,7 +61,7 @@ export default function Start({
 
             <section
                 aria-label="Choose an application"
-                className="mx-auto max-w-6xl px-4 py-12 pb-24 sm:px-6 sm:py-16"
+                className="mx-auto max-w-6xl px-4 py-12 pb-24 sm:px-6 lg:px-8 sm:py-16"
             >
                 {products.length === 0 ? (
                     <div className={`${card} p-10 text-center`}>
@@ -172,7 +172,7 @@ function Stepper({ current }: { current: number }) {
                         className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 ${i === current ? 'bg-white font-semibold text-site-ink ring-1 ring-site-line' : 'text-slate-600'}`}
                     >
                         <span
-                            className={`inline-flex size-5 items-center justify-center rounded-full text-xs ${i === current ? 'bg-site-orange-ink text-white' : 'bg-site-line text-site-ink'}`}
+                            className={`inline-flex size-5 items-center justify-center rounded-full text-xs ${i === current ? 'bg-site-accent-ink text-white' : 'bg-site-line text-site-ink'}`}
                         >
                             {i + 1}
                         </span>

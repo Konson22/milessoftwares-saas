@@ -43,7 +43,7 @@ export default function Platform({ canonical }: Props) {
                 aria-labelledby="how-it-works-heading"
                 className="scroll-mt-24"
             >
-                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
+                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 sm:py-24">
                     <SectionHeading
                         id="how-it-works-heading"
                         title="Everything your applications share, set up once"
@@ -59,9 +59,9 @@ export default function Platform({ canonical }: Props) {
             <section
                 id="subscriptions"
                 aria-labelledby="subscriptions-heading"
-                className="scroll-mt-24 border-y border-site-line bg-white"
+                className="scroll-mt-24 border-y border-site-line bg-site-soft"
             >
-                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
+                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 sm:py-24">
                     <SectionHeading
                         id="subscriptions-heading"
                         title={
@@ -79,7 +79,7 @@ export default function Platform({ canonical }: Props) {
                                 key={step.title}
                                 className={`${panel} p-6 sm:p-7`}
                             >
-                                <span className="inline-flex size-11 items-center justify-center rounded-full bg-site-orange-ink font-public-display text-sm font-bold text-white">
+                                <span className="inline-flex size-11 items-center justify-center rounded-full bg-site-accent-ink font-public-display text-sm font-bold text-white">
                                     {String(i + 1).padStart(2, '0')}
                                 </span>
                                 <h3 className="mt-5 text-lg font-semibold">
@@ -109,7 +109,7 @@ export default function Platform({ canonical }: Props) {
                     aria-labelledby={`${group.id}-heading`}
                     className={`scroll-mt-24 ${i % 2 === 1 ? 'border-y border-site-line bg-white' : ''}`}
                 >
-                    <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
+                    <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 sm:py-24">
                         <SectionHeading
                             id={`${group.id}-heading`}
                             title={group.title}

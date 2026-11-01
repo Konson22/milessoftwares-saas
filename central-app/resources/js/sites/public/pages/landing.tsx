@@ -167,7 +167,7 @@ export default function LandingPage({
             {/* Overview and audience */}
             <section
                 aria-labelledby="audience-heading"
-                className="px-4 pt-12 sm:px-6 sm:pt-16"
+                className="px-4 pt-12 sm:px-6 lg:px-8 sm:pt-16"
             >
                 <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 rounded-3xl bg-white px-6 py-6 text-center shadow-xl ring-1 shadow-site-night/5 ring-site-line sm:flex-row sm:px-10 sm:text-left">
                     <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-site-accent/10 text-site-accent-ink">
@@ -192,7 +192,7 @@ export default function LandingPage({
             {features.length > 0 && (
                 <section
                     aria-labelledby="features-heading"
-                    className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24"
+                    className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 sm:py-24"
                 >
                     <SectionHeading
                         id="features-heading"
@@ -217,9 +217,9 @@ export default function LandingPage({
             {product.workflow.length > 0 && (
                 <section
                     aria-labelledby="workflow-heading"
-                    className="border-y border-site-line bg-white"
+                    className="border-y border-site-line bg-site-soft"
                 >
-                    <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
+                    <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 sm:py-24">
                         <SectionHeading
                             id="workflow-heading"
                             title={
@@ -234,7 +234,7 @@ export default function LandingPage({
                                     key={step.title}
                                     className={`${panel} p-6 sm:p-7`}
                                 >
-                                    <span className="inline-flex size-10 items-center justify-center rounded-full bg-site-orange-ink font-public-display text-sm font-bold text-white">
+                                    <span className="inline-flex size-10 items-center justify-center rounded-full bg-site-accent-ink font-public-display text-sm font-bold text-white">
                                         {String(i + 1).padStart(2, '0')}
                                     </span>
                                     <h3 className="mt-5 text-lg font-semibold">
@@ -254,7 +254,7 @@ export default function LandingPage({
             <section
                 id="platforms"
                 aria-labelledby="platforms-heading"
-                className="mx-auto max-w-7xl scroll-mt-24 px-4 py-16 sm:px-6 sm:py-24"
+                className="mx-auto max-w-7xl scroll-mt-24 px-4 py-16 sm:px-6 lg:px-8 sm:py-24"
             >
                 <SectionHeading
                     id="platforms-heading"
@@ -376,7 +376,7 @@ export default function LandingPage({
             {product.includes.length > 0 && (
                 <section
                     aria-labelledby="included-heading"
-                    className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24"
+                    className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 sm:py-24"
                 >
                     <SectionHeading
                         id="included-heading"
@@ -443,9 +443,9 @@ export default function LandingPage({
             <section
                 id="plans"
                 aria-labelledby="plans-heading"
-                className="scroll-mt-20 border-y border-site-line bg-white"
+                className="scroll-mt-20 border-y border-site-line bg-site-soft"
             >
-                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
+                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 sm:py-24">
                     <SectionHeading
                         id="plans-heading"
                         title={
@@ -474,7 +474,7 @@ export default function LandingPage({
             {/* FAQs */}
             {product.faqs.length > 0 && (
                 <section aria-labelledby="product-faq-heading">
-                    <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1fr_1.5fr] lg:gap-16">
+                    <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:px-8 sm:py-24 lg:grid-cols-[1fr_1.5fr] lg:gap-16">
                         <SectionHeading
                             id="product-faq-heading"
                             title={

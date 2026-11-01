@@ -5,9 +5,10 @@ import { container, display, tints } from '@/sites/public/components/styles';
 /**
  * The short band every page but home opens with: a soft blue wash under
  * the header with a faint dot grid, a hairline below, and a left-aligned
- * title with one line of intro. The top padding clears the fixed header.
- * `above` is a small line over the title (a back link or a step);
- * `children`, at most one or two actions.
+ * title with one line of intro. The top padding clears the fixed header
+ * (h-16) with a modest gap, so the page content starts high. `above` is a
+ * small line over the title (a back link or a step); `children`, at most
+ * one or two actions, sit beside the copy from `lg` rather than under it.
  */
 export default function PageHero({
     above,
@@ -24,22 +25,24 @@ export default function PageHero({
         <section className="relative isolate overflow-hidden border-b border-site-line bg-site-soft">
             <GridBackdrop />
             <div
-                className={`site-rise ${container} flex flex-col justify-center pt-28 pb-14 sm:pt-36 sm:pb-20`}
+                className={`site-rise ${container} flex flex-col gap-x-12 gap-y-6 pt-24 pb-10 sm:pt-28 sm:pb-14 lg:flex-row lg:items-end lg:justify-between`}
             >
-                {above && <div className="mb-5">{above}</div>}
-                <SpeedMark className="mb-5" />
-                <h1
-                    className={`max-w-3xl text-[2rem] leading-[1.1] sm:text-5xl lg:text-[3.5rem] ${display}`}
-                >
-                    {title}
-                </h1>
-                {intro && (
-                    <p className="mt-5 max-w-2xl text-base leading-relaxed text-pretty text-slate-600 sm:text-lg">
-                        {intro}
-                    </p>
-                )}
+                <div className="min-w-0">
+                    {above && <div className="mb-4">{above}</div>}
+                    <SpeedMark className="mb-4" />
+                    <h1
+                        className={`max-w-4xl text-[2rem] leading-[1.1] sm:text-[2.75rem] lg:text-5xl ${display}`}
+                    >
+                        {title}
+                    </h1>
+                    {intro && (
+                        <p className="mt-4 max-w-2xl text-base leading-relaxed text-pretty text-slate-600 sm:text-lg">
+                            {intro}
+                        </p>
+                    )}
+                </div>
                 {children && (
-                    <div className="mt-8 flex flex-wrap items-center gap-3">
+                    <div className="flex shrink-0 flex-wrap items-center gap-3">
                         {children}
                     </div>
                 )}
@@ -62,13 +65,13 @@ export function GridBackdrop() {
 
 /**
  * A ring, two dots and a dotted patch behind a light section, in the
- * logo's blue, orange and navy. Decorative only.
+ * logo's blues and navy. Decorative only.
  */
 export function LightBackdrop() {
     return (
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-            <div className="absolute top-16 right-[7%] hidden size-28 rounded-full border-2 border-dashed border-site-orange/30 md:block" />
-            <div className="site-float absolute top-[22%] left-[6%] hidden size-4 rounded-full bg-site-orange/70 md:block" />
+            <div className="absolute top-16 right-[7%] hidden size-28 rounded-full border-2 border-dashed border-site-highlight/30 md:block" />
+            <div className="site-float absolute top-[22%] left-[6%] hidden size-4 rounded-full bg-site-highlight/70 md:block" />
             <div className="site-float-slow absolute right-[16%] bottom-[18%] hidden size-3 rounded-full bg-site-navy/40 md:block" />
             <div className="site-dots absolute bottom-6 left-[12%] hidden h-24 w-40 text-site-accent/20 md:block" />
         </div>
@@ -83,7 +86,7 @@ export function HeroBackdrop() {
     return (
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
             <Constellation />
-            <div className="absolute top-28 left-[6%] hidden size-40 rounded-full border border-site-orange/25 md:block" />
+            <div className="absolute top-28 left-[6%] hidden size-40 rounded-full border border-site-highlight/25 md:block" />
             <div className="site-dots absolute bottom-16 left-[10%] h-24 w-40 text-white/15" />
         </div>
     );
@@ -166,12 +169,12 @@ function Constellation() {
 }
 
 /**
- * The highlighted phrase of a heading, in the logo orange: its darker form
- * on light (4.9:1), the logo orange itself on a dark band (4.7:1).
+ * The highlighted phrase of a heading, in the logo blue: its darker form
+ * on light (5.3:1), a lighter blue on a dark band (5.1:1).
  */
 export function Accent({ children }: { children: ReactNode }) {
     return (
-        <span className="text-site-orange-ink in-[.site-dark]:text-site-orange">
+        <span className="text-site-accent-ink in-[.site-dark]:text-site-highlight">
             {children}
         </span>
     );
@@ -200,15 +203,15 @@ export function IconBox({
 }
 
 /**
- * The logo's speed lines, as a small rule over a heading: two blue dashes
- * and an orange one. Decorative only.
+ * The logo's speed squares, as a small rule over a heading: a navy dash
+ * and two blue ones. Decorative only.
  */
 export function SpeedMark({ className = '' }: { className?: string }) {
     return (
         <span aria-hidden className={`flex items-center gap-1.5 ${className}`}>
-            <span className="h-1.5 w-3 rounded-full bg-site-accent" />
-            <span className="h-1.5 w-6 rounded-full bg-site-accent-ink in-[.site-dark]:bg-site-accent" />
-            <span className="h-1.5 w-10 rounded-full bg-site-orange" />
+            <span className="h-1.5 w-3 rounded-full bg-site-navy in-[.site-dark]:bg-white/40" />
+            <span className="h-1.5 w-6 rounded-full bg-site-accent-ink in-[.site-dark]:bg-site-highlight" />
+            <span className="h-1.5 w-10 rounded-full bg-site-accent" />
         </span>
     );
 }

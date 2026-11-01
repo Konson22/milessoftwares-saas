@@ -102,7 +102,7 @@ function Group({
             aria-labelledby={`${id}-heading`}
             className={shaded ? 'border-y border-site-line bg-white' : ''}
         >
-            <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
+            <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 sm:py-24">
                 <SectionHeading
                     id={`${id}-heading`}
                     title={title}

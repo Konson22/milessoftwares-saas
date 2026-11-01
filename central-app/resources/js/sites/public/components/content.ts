@@ -17,7 +17,6 @@ import {
     Store,
     UserCheck,
     Users,
-    WifiOff,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -31,41 +30,42 @@ import type { LucideIcon } from 'lucide-react';
 export type Feature = { icon: LucideIcon; title: string; body: string };
 
 /** Why Miles Global Softwares, on the home page. */
-export const whyMiles: Feature[] = [
+export const whyMiles: (Feature & { points: string[] })[] = [
     {
         icon: Store,
-        title: 'Industry-focused software',
+        title: 'Built for your trade',
         body: 'Batches and expiry for medicines; barcodes, credit customers and price lists for shops. Built for the trade, not renamed for it.',
-    },
-    {
-        icon: Layers,
-        title: 'Ready-made and custom',
-        body: 'Start with a product that is ready today, have it adapted, or have a new system built around how you work.',
+        points: [
+            'Ready-made products you can use today',
+            'Adapted, or built new around how you work',
+        ],
     },
     {
         icon: MonitorSmartphone,
-        title: 'Web, desktop and mobile',
-        body: 'Every product runs in the browser. Selected products add desktop and mobile apps.',
-    },
-    {
-        icon: WifiOff,
-        title: 'Offline where available',
-        body: 'Desktop and mobile apps that carry on without internet and sync later, for the products that have them.',
+        title: 'Any screen, online or offline',
+        body: 'Every product runs in the browser. Selected products add desktop and mobile apps that carry on without internet and sync later.',
+        points: [
+            'Web, Windows and Android',
+            'Offline where the product offers it',
+        ],
     },
     {
         icon: KeyRound,
-        title: 'Connected applications',
-        body: 'One sign-in, one organization and one set of books across every Miles application.',
-    },
-    {
-        icon: Coins,
-        title: 'Flexible deployment and licensing',
-        body: 'Subscribe in the cloud, buy a standalone offline edition once where one is offered, or agree a quotation.',
+        title: 'One connected workspace',
+        body: 'One sign-in, one organization and one set of books across every Miles application you use.',
+        points: [
+            'Shared team and permissions',
+            'Add the next application as you grow',
+        ],
     },
     {
         icon: LifeBuoy,
-        title: 'Implementation and support',
-        body: 'Set-up, data loading, training and the maintenance and support you agree with us.',
+        title: 'Flexible licensing, real support',
+        body: 'Subscribe in the cloud, buy a standalone offline edition once where one is offered, or agree a quotation.',
+        points: [
+            'Set-up, data loading and training',
+            'Maintenance and support as agreed',
+        ],
     },
 ];
 

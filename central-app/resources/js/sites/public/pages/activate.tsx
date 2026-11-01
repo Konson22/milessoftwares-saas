@@ -81,7 +81,7 @@ export default function Activate({
 
             <section
                 aria-label="Activation"
-                className="mx-auto grid max-w-5xl gap-8 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[18rem_1fr]"
+                className="mx-auto grid max-w-5xl gap-8 px-4 py-12 sm:px-6 lg:px-8 sm:py-16 lg:grid-cols-[18rem_1fr]"
             >
                 <aside className="space-y-4 text-sm text-slate-600">
                     <span className={`${iconChip} size-12`}>
@@ -162,7 +162,7 @@ export default function Activate({
                                     <button
                                         type="submit"
                                         disabled={processing}
-                                        className="h-12 rounded-full bg-site-orange-ink px-7 font-bold text-white transition-colors hover:bg-site-orange-deep disabled:opacity-60"
+                                        className="h-12 rounded-full bg-site-accent-ink px-7 font-bold text-white transition-colors hover:bg-site-accent-deep disabled:opacity-60"
                                     >
                                         Get the activation code
                                     </button>

@@ -16,12 +16,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import type { CatalogEntry } from '@/sites/public/components/catalog';
 import { IconBox } from '@/sites/public/components/page-hero';
-import {
-    card,
-    display,
-    panel,
-    textLink,
-} from '@/sites/public/components/styles';
+import { display, panel, textLink } from '@/sites/public/components/styles';
 
 /** A request through the contact form, subject filled in. */
 export function quoteUrl(subject: string): string {
@@ -300,25 +295,90 @@ export function DeploymentOptions({
 }
 
 /** Custom development, as link cards. */
-export function ServiceCards() {
+/**
+ * The services in three cards for the homepage: the six on the Services
+ * page, grouped by what the customer is after.
+ */
+const serviceGroups: Omit<Service, 'href' | 'cta'>[] = [
+    {
+        id: 'custom-erp',
+        icon: Boxes,
+        title: 'Custom ERP and integrations',
+        body: 'A system designed around your departments, approvals and reports, connected to the software you already use.',
+        points: [
+            'Built on modules already in use',
+            'APIs and data imports from older systems',
+            'Migration, training and support',
+        ],
+    },
+    {
+        id: 'web-applications',
+        icon: MonitorSmartphone,
+        title: 'Web, desktop and mobile apps',
+        body: 'Portals, websites and online shops; counter apps that keep working offline; Android and iOS apps for staff or customers.',
+        points: [
+            'Any screen, one code base where it fits',
+            'Offline first, synced with your system',
+            'Hosting, installers and app stores handled',
+        ],
+    },
+    {
+        id: 'erp-customization',
+        icon: Settings2,
+        title: 'Customize a Miles product',
+        body: 'Start from one of our ERPs and have it adapted: extra fields, documents, print layouts, reports and approval steps.',
+        points: [
+            'Your product licence plus a setup charge',
+            'Reports, documents and print layouts',
+            'Approval steps and roles',
+        ],
+    },
+];
+
+/**
+ * The custom-work services as a numbered, divided list (no cards, no
+ * surface): each row links to its section on the Services page.
+ */
+export function ServiceList() {
     return (
-        <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {services.map((service, i) => (
+        <ol className="divide-y divide-site-line border-y border-site-line">
+            {serviceGroups.map((service, i) => (
                 <li key={service.id}>
                     <Link
                         href={`/services#${service.id}`}
-                        className={`${card} group flex h-full flex-col p-7`}
+                        className="group grid gap-x-6 gap-y-4 py-8 sm:grid-cols-[auto_1fr_auto] sm:items-start"
                     >
-                        <IconBox icon={service.icon} index={i} />
-                        <span
-                            className={`mt-6 text-xl transition-colors group-hover:text-site-accent-ink ${display}`}
-                        >
-                            {service.title}
+                        <span className="flex items-center gap-4">
+                            <span className="font-public-display text-sm font-semibold text-site-accent-ink tabular-nums">
+                                {String(i + 1).padStart(2, '0')}
+                            </span>
+                            <IconBox icon={service.icon} index={i} />
                         </span>
-                        <span className="mt-2 block flex-1 leading-relaxed text-slate-600">
-                            {service.body}
+                        <span className="block">
+                            <span
+                                className={`block text-xl transition-colors group-hover:text-site-accent-ink ${display}`}
+                            >
+                                {service.title}
+                            </span>
+                            <span className="mt-2 block max-w-xl leading-relaxed text-slate-600">
+                                {service.body}
+                            </span>
+                            <span className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+                                {service.points.map((point) => (
+                                    <span
+                                        key={point}
+                                        className="inline-flex items-center gap-2 text-sm text-slate-700"
+                                    >
+                                        <Check
+                                            className="size-4 shrink-0 text-site-accent-ink"
+                                            aria-hidden
+                                        />
+                                        {point}
+                                    </span>
+                                ))}
+                            </span>
                         </span>
-                        <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-site-accent-ink">
+                        <span className="inline-flex items-center gap-2 text-sm font-bold text-site-accent-ink sm:mt-1">
                             Learn more
                             <span className="sr-only">
                                 {' '}
@@ -332,6 +392,6 @@ export function ServiceCards() {
                     </Link>
                 </li>
             ))}
-        </ul>
+        </ol>
     );
 }

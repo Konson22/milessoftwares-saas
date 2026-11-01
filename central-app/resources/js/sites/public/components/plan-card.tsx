@@ -52,7 +52,7 @@ export default function PlanCard({
             {featured && (
                 <span
                     aria-hidden
-                    className="absolute inset-x-0 top-0 h-1.5 bg-site-orange"
+                    className="absolute inset-x-0 top-0 h-1.5 bg-site-highlight"
                 />
             )}
             <div className="flex items-start justify-between gap-4">

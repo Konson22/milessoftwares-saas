@@ -256,7 +256,7 @@ export function ProductCard({
         >
             <span
                 aria-hidden
-                className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-site-orange transition-transform duration-300 group-hover:scale-x-100"
+                className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-site-highlight transition-transform duration-300 group-hover:scale-x-100"
             />
             <div className="flex items-start justify-between gap-3">
                 <CatalogTile icon={product.icon} />
@@ -297,7 +297,7 @@ export function ProductCard({
                 {product.trial ? (
                     <a
                         href={trialUrl(product.trial)}
-                        className="inline-flex items-center gap-2 rounded-full bg-site-orange-ink px-4 py-2 text-sm font-bold text-white transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-site-navy"
+                        className="inline-flex items-center gap-2 rounded-full bg-site-accent-ink px-4 py-2 text-sm font-bold text-white transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-site-navy"
                     >
                         Start {trialDays}-day free trial
                         <span className="sr-only"> of {name}</span>

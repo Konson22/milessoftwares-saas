@@ -62,7 +62,7 @@ export default function About({ canonical }: Props) {
 
             <section
                 aria-labelledby="story-heading"
-                className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20"
+                className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 sm:py-20"
             >
                 <div className="grid gap-8 lg:grid-cols-2 lg:gap-16">
                     <div>
@@ -128,9 +128,9 @@ export default function About({ canonical }: Props) {
 
             <section
                 aria-labelledby="values-heading"
-                className="border-t border-site-line bg-white"
+                className="border-y border-site-line bg-site-soft"
             >
-                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20">
+                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 sm:py-20">
                     <SectionHeading
                         id="values-heading"
                         title={

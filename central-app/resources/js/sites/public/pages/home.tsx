@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import {
     ArrowRight,
+    Check,
     Code2,
     LayoutGrid,
     Monitor,
@@ -18,20 +19,17 @@ import {
 import FaqList, { faq } from '@/sites/public/components/faq';
 import {
     DeploymentOptions,
-    ServiceCards,
+    ServiceList,
     quoteUrl,
 } from '@/sites/public/components/offerings';
-import {
-    Accent,
-    GridBackdrop,
-    IconBox,
-} from '@/sites/public/components/page-hero';
+import { Accent, IconBox } from '@/sites/public/components/page-hero';
 import type { Product } from '@/sites/public/components/product';
 import SectionHeading from '@/sites/public/components/section-heading';
 import Seo, { organization, siteName } from '@/sites/public/components/seo';
 import {
     button,
     container,
+    darkBand,
     display,
     textLink,
 } from '@/sites/public/components/styles';
@@ -110,38 +108,37 @@ export default function MarketingHome({
                 }}
             />
 
-            {/* 1. Hero: light, the copy centred over the grid backdrop. */}
-            <section className="relative isolate overflow-hidden bg-site-soft">
-                <GridBackdrop />
+            {/*
+              Sections sit on solid bands, no patterns or gradients: navy,
+              white and soft blue in turn.
+            */}
+            {/* 1. Hero: solid navy, the copy centred. */}
+            <section className={darkBand}>
                 <div
                     className={`site-rise ${container} flex flex-col items-center pt-28 pb-16 text-center sm:pt-36 sm:pb-24`}
                 >
                     <div className="flex flex-col items-center">
-                        <p className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-site-line">
-                            <span
-                                aria-hidden
-                                className="size-1.5 rounded-full bg-site-orange"
-                            />
-                            {trialDays}-day free trial, no payment details
-                        </p>
                         <h1
-                            className={`mt-6 max-w-3xl text-[2.25rem] leading-[1.05] min-[400px]:text-[2.625rem] sm:text-6xl lg:text-[4rem] ${display}`}
+                            className={`max-w-3xl text-[2.25rem] leading-[1.05] min-[400px]:text-[2.625rem] sm:text-6xl lg:text-[4rem] ${display}`}
                         >
                             Business software{' '}
                             <Accent>that works together.</Accent>
                         </h1>
-                        <p className="mt-6 max-w-2xl text-base leading-relaxed text-pretty text-slate-600 sm:text-lg">
+                        <p className="mt-6 max-w-2xl text-base leading-relaxed text-pretty text-slate-300 sm:text-lg">
                             Miles Global Softwares builds powerful business
                             applications and tailored software solutions to help
                             organizations manage operations, connect teams and
                             grow with confidence.
                         </p>
                         <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-                            <a href="#products" className={button.primary}>
+                            <a href="#products" className={button.light}>
                                 Explore Products
                                 <ArrowRight className="size-4" aria-hidden />
                             </a>
-                            <Link href="/platform" className={button.outline}>
+                            <Link
+                                href="/platform"
+                                className={button.outlineDark}
+                            >
                                 How it works
                             </Link>
                         </div>
@@ -150,7 +147,7 @@ export default function MarketingHome({
             </section>
 
             {/* Three ways in, a divided row under the hero. */}
-            <div className="border-y border-site-line bg-white">
+            <div className="bg-white">
                 <ul
                     className={`${container} grid divide-y divide-site-line md:grid-cols-3 md:divide-x md:divide-y-0`}
                 >
@@ -186,9 +183,11 @@ export default function MarketingHome({
             <section
                 id="products"
                 aria-labelledby="products-heading"
-                className={`${container} scroll-mt-24 py-20 sm:py-28`}
+                className="scroll-mt-24"
             >
-                <div className="grid items-center gap-10 md:gap-12 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
+                <div
+                    className={`${container} grid items-center gap-10 py-20 sm:py-28 md:gap-12 lg:grid-cols-[1.15fr_1fr] lg:gap-16`}
+                >
                     <img
                         src="/images/home/miles-products.webp"
                         alt="Miles business applications on a desktop, laptop, tablet and phone, surrounded by the industries they serve: restaurants, pharmacies, retail, schools, accounting, finance, HR, warehousing, hotels, water utilities, fuel stations and offices."
@@ -234,7 +233,7 @@ export default function MarketingHome({
             <section
                 id="cloud"
                 aria-labelledby="cloud-heading"
-                className="scroll-mt-24 border-y border-site-line bg-site-soft"
+                className="scroll-mt-24 bg-white"
             >
                 <div className={`${container} py-20 sm:py-28`}>
                     <div className="flex flex-wrap items-end justify-between gap-6">
@@ -267,10 +266,12 @@ export default function MarketingHome({
             <section
                 id="custom"
                 aria-labelledby="custom-heading"
-                className={`${container} scroll-mt-24 py-20 sm:py-28`}
+                className="scroll-mt-24"
             >
-                <div className="grid gap-10 lg:grid-cols-[1fr_1fr] lg:gap-16">
-                    <div>
+                <div
+                    className={`${container} grid gap-12 py-20 sm:py-28 lg:grid-cols-[1fr_1.4fr] lg:gap-16`}
+                >
+                    <div className="lg:sticky lg:top-28 lg:self-start">
                         <SectionHeading
                             id="custom-heading"
                             title={
@@ -279,7 +280,7 @@ export default function MarketingHome({
                                     <Accent>Your software can be too.</Accent>
                                 </>
                             }
-                            lead="Not every organization fits into ready-made software. Separately from our subscription products, we develop systems designed around your workflows, operational requirements and goals: scoped with you, quoted, and delivered as a project."
+                            lead="Apart from our subscription products, we build and adapt software around your workflows: scoped with you, quoted, and delivered as a project."
                             align="left"
                         />
                         <div className="mt-8 flex flex-wrap gap-3">
@@ -298,33 +299,7 @@ export default function MarketingHome({
                             </Link>
                         </div>
                     </div>
-                    <dl className="divide-y divide-site-line self-start border-y border-site-line">
-                        <div className="py-6">
-                            <dt className="font-semibold text-site-ink">
-                                Customize a Miles product
-                            </dt>
-                            <dd className="mt-2 text-sm leading-relaxed text-slate-600">
-                                Start from one of our ERPs and have it adapted:
-                                extra fields, documents, reports and approval
-                                steps. You pay the product licence plus a setup
-                                or customization charge.
-                            </dd>
-                        </div>
-                        <div className="py-6">
-                            <dt className="font-semibold text-site-ink">
-                                Commission a new system
-                            </dt>
-                            <dd className="mt-2 text-sm leading-relaxed text-slate-600">
-                                A system built for you from your requirements:
-                                an ERP, a web, desktop or mobile application, or
-                                an integration. Priced by quotation after a
-                                requirements assessment.
-                            </dd>
-                        </div>
-                    </dl>
-                </div>
-                <div className="mt-14">
-                    <ServiceCards />
+                    <ServiceList />
                 </div>
             </section>
 
@@ -332,7 +307,7 @@ export default function MarketingHome({
             <section
                 id="ways-to-run"
                 aria-labelledby="ways-heading"
-                className="scroll-mt-24 border-t border-site-line"
+                className="scroll-mt-24 bg-white"
             >
                 <div className={`${container} py-20 sm:py-28`}>
                     <SectionHeading
@@ -386,23 +361,64 @@ export default function MarketingHome({
             </section>
 
             {/* 6. Why Miles Global Softwares */}
-            <section
-                aria-labelledby="why-heading"
-                className="border-y border-site-line bg-site-soft"
-            >
-                <div className={`${container} py-20 sm:py-28`}>
-                    <SectionHeading
-                        id="why-heading"
-                        title={
-                            <>
-                                Why <Accent>Miles Global Softwares</Accent>
-                            </>
-                        }
-                        align="left"
-                    />
-                    <div className="mt-14">
-                        <FeatureGrid features={whyMiles} columns={4} />
+            <section aria-labelledby="why-heading" className={darkBand}>
+                <div
+                    className={`${container} grid gap-12 py-20 sm:py-28 lg:grid-cols-[1fr_1.7fr] lg:gap-16`}
+                >
+                    <div className="lg:sticky lg:top-28 lg:self-start">
+                        <SectionHeading
+                            id="why-heading"
+                            title={
+                                <>
+                                    Why <Accent>Miles Global Softwares</Accent>
+                                </>
+                            }
+                            lead="Software made for the trade you run, on the screens you use, in one workspace, with people who set it up and stay to support it."
+                            align="left"
+                        />
+                        <Link
+                            href="/about"
+                            className={`${button.outlineDark} mt-8`}
+                        >
+                            About us
+                            <ArrowRight className="size-4" aria-hidden />
+                        </Link>
                     </div>
+                    <ul className="grid gap-4 sm:grid-cols-2 sm:gap-5">
+                        {whyMiles.map((item, i) => (
+                            <li
+                                key={item.title}
+                                className="flex flex-col rounded-2xl bg-white/5 p-6 ring-1 ring-white/10 sm:p-7"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <IconBox icon={item.icon} index={i} />
+                                    <span className="font-public-display text-sm font-semibold text-white/40 tabular-nums">
+                                        {ordinal(i)}
+                                    </span>
+                                </div>
+                                <h3 className="mt-5 text-lg font-semibold text-white">
+                                    {item.title}
+                                </h3>
+                                <p className="mt-2 text-sm leading-relaxed text-slate-300">
+                                    {item.body}
+                                </p>
+                                <ul className="mt-5 space-y-2 border-t border-white/10 pt-5">
+                                    {item.points.map((point) => (
+                                        <li
+                                            key={point}
+                                            className="flex items-start gap-2.5 text-sm text-slate-200"
+                                        >
+                                            <Check
+                                                className="mt-0.5 size-4 shrink-0 text-site-highlight"
+                                                aria-hidden
+                                            />
+                                            {point}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             </section>
 
@@ -410,7 +426,7 @@ export default function MarketingHome({
             <section
                 id="how-it-works"
                 aria-labelledby="how-heading"
-                className="scroll-mt-24"
+                className="scroll-mt-24 bg-site-wash"
             >
                 <div className={`${container} py-20 sm:py-28`}>
                     <SectionHeading
@@ -444,10 +460,7 @@ export default function MarketingHome({
             </section>
 
             {/* FAQ */}
-            <section
-                aria-labelledby="faq-heading"
-                className="border-t border-site-line"
-            >
+            <section aria-labelledby="faq-heading" className="bg-white">
                 <div
                     className={`${container} grid gap-10 py-20 sm:py-28 lg:grid-cols-[1fr_1.5fr] lg:gap-16`}
                 >

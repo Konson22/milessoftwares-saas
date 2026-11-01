@@ -46,6 +46,7 @@ const customSolutions: MenuItem[] = [
 ];
 
 const nav: NavEntry[] = [
+    { title: 'Home', href: '/' },
     { title: 'Miles Workspace', href: '/platform' },
     {
         title: 'Products',
@@ -80,7 +81,8 @@ function currentOf(
         : undefined;
 }
 
-function Brand() {
+/** The logo; `light` is the white-"MILES" variant for dark bands. */
+function Brand({ light = false }: { light?: boolean }) {
     return (
         <Link
             href="/"
@@ -88,9 +90,13 @@ function Brand() {
             className="flex shrink-0 items-center"
         >
             <img
-                src="/images/logo-site.png"
+                src={
+                    light
+                        ? '/images/logo-site-light.png'
+                        : '/images/logo-site.png'
+                }
                 alt="Miles Global Softwares"
-                width={872}
+                width={874}
                 height={250}
                 className="h-9 w-auto sm:h-10"
             />
@@ -247,7 +253,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                 Skip to content
             </a>
             <header
-                className={`fixed inset-x-0 top-0 z-40 border-b bg-white/95 backdrop-blur transition-[border-color,box-shadow] duration-300 ${scrolled ? 'border-site-line shadow-[0_6px_20px_-14px_rgb(6_36_78/0.3)]' : 'border-transparent'}`}
+                className={`fixed inset-x-0 top-0 z-40 border-b bg-white transition-[border-color,box-shadow] duration-300 ${scrolled ? 'border-site-line shadow-[0_6px_20px_-14px_rgb(6_36_78/0.3)]' : 'border-transparent'}`}
             >
                 <nav
                     aria-label="Main"
@@ -271,7 +277,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                                     <Link
                                         href={item.href}
                                         aria-current={currentOf(item, path)}
-                                        className={`relative block px-2.5 py-2 transition-colors after:absolute after:inset-x-2.5 after:-bottom-[1.0625rem] after:h-0.5 after:scale-x-0 after:bg-site-orange after:transition-transform hover:text-site-ink aria-[current=page]:font-semibold aria-[current=page]:text-site-ink aria-[current=page]:after:scale-x-100 aria-[current=true]:font-semibold aria-[current=true]:text-site-ink aria-[current=true]:after:scale-x-100 xl:px-3 xl:after:inset-x-3`}
+                                        className={`relative block px-2.5 py-2 transition-colors after:absolute after:inset-x-2.5 after:-bottom-[1.0625rem] after:h-0.5 after:scale-x-0 after:bg-site-highlight after:transition-transform hover:text-site-ink aria-[current=page]:font-semibold aria-[current=page]:text-site-ink aria-[current=page]:after:scale-x-100 aria-[current=true]:font-semibold aria-[current=true]:text-site-ink aria-[current=true]:after:scale-x-100 xl:px-3 xl:after:inset-x-3`}
                                     >
                                         {item.title}
                                     </Link>
@@ -371,12 +377,12 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
             <main id="main" className="flex-1">
                 {children}
             </main>
-            <footer className="border-t border-site-line bg-site-soft text-sm text-slate-600">
+            <footer className="site-dark bg-site-navy text-sm text-slate-300">
                 <div
                     className={`${container} grid grid-cols-2 gap-x-6 gap-y-10 py-14 sm:py-16 md:grid-cols-3 lg:grid-cols-[1.6fr_1fr_1fr_1fr]`}
                 >
                     <div className="col-span-2 md:col-span-3 lg:col-span-1">
-                        <Brand />
+                        <Brand light />
                         <p className="mt-5 max-w-xs leading-relaxed">
                             Business software that works together: Miles
                             products in one workspace, and custom software for
@@ -384,7 +390,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                         </p>
                         <Link
                             href="/contact"
-                            className="mt-6 inline-flex items-center gap-2 font-semibold text-site-accent-ink hover:underline"
+                            className="mt-6 inline-flex items-center gap-2 font-semibold text-white hover:underline"
                         >
                             Questions? Talk to us
                             <ArrowRight className="size-4" aria-hidden />
@@ -394,7 +400,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                                 <SocialIcon
                                     key={link.name}
                                     link={link}
-                                    className="bg-white text-site-ink ring-1 ring-site-line hover:text-site-accent-ink hover:ring-site-accent/40"
+                                    className="bg-white/10 text-white ring-1 ring-white/20 hover:bg-white/20 hover:ring-white/40"
                                 />
                             ))}
                         </div>
@@ -449,30 +455,30 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                         ]}
                     />
                 </div>
-                <div className="border-t border-site-line">
+                <div className="border-t border-white/15">
                     <div
                         className={`${container} flex flex-wrap items-center justify-between gap-x-6 gap-y-3 py-6`}
                     >
-                        <p className="text-slate-500">
+                        <p className="text-slate-400">
                             © {new Date().getFullYear()} Miles Global Link Co.
                             Ltd
                         </p>
                         <div className="flex flex-wrap gap-x-6 gap-y-2">
                             <Link
                                 href="/privacy"
-                                className="hover:text-site-ink hover:underline"
+                                className="hover:text-white hover:underline"
                             >
                                 Privacy policy
                             </Link>
                             <Link
                                 href="/terms"
-                                className="hover:text-site-ink hover:underline"
+                                className="hover:text-white hover:underline"
                             >
                                 Terms of service
                             </Link>
                             <a
                                 href={`mailto:${supportEmail}`}
-                                className="hover:text-site-ink hover:underline"
+                                className="hover:text-white hover:underline"
                             >
                                 {supportEmail}
                             </a>
@@ -491,12 +497,11 @@ function FooterColumn({
     title: string;
     links: { title: string; href: string; external?: boolean }[];
 }) {
-    const linkClass =
-        'inline-flex py-0.5 transition-colors hover:text-site-accent-ink';
+    const linkClass = 'inline-flex py-0.5 transition-colors hover:text-white';
 
     return (
         <div>
-            <h2 className="text-sm font-semibold text-site-ink">{title}</h2>
+            <h2 className="text-sm font-semibold text-white">{title}</h2>
             <ul className="mt-4 space-y-2.5">
                 {links.map((link) => (
                     <li key={link.href}>

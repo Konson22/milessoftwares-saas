@@ -21,44 +21,39 @@
  */
 @theme {
     /* Brand colours, from the logo (public/images/logo-*.png): the navy
-       of "MILES", the blue of the mark, and the orange of "GLOBAL
-       SOFTWARES" with the amber at the mark's edge. cyan is the light
-       blue, teal the same blue darkened for text; green is kept for
-       success notes only. */
-    --color-brand-ink: #021a40;
-    --color-brand-navy: #042356;
+       of "MILES" and of the mark's body, and the bright blue of the
+       mark's swoosh and "GLOBAL SOFTWARES".
+       cyan is the light blue, teal the blue darkened for text; green is
+       kept for success notes only. */
+    --color-brand-ink: #001a42;
+    --color-brand-navy: #00255b;
     --color-brand-navy-light: #005aa4;
-    --color-brand-blue: #0185fd;
+    --color-brand-blue: #0389fc;
     --color-brand-blue-dark: #0069d0;
     --color-brand-cyan: #2b9bff;
     --color-brand-teal: #0059ad;
-    --color-brand-orange: #f95808;
-    --color-brand-orange-dark: #c74405;
-    --color-brand-amber: #fc8c09;
     --color-brand-green: #03d5cd;
 
-    /* Public site, in the logo's colours only: navy for type and bands,
-       orange for the main action and highlights, blue for links and
-       icons, on white and soft blue.
+    /* Public site, in the logo's two colours: navy for type and bands,
+       the logo blue for actions, highlights, links and icons, on white
+       and soft blue.
        - accent (the logo blue) for shapes and large text on navy;
-         accent-ink for blue text on light (5.3:1).
-       - orange (the logo orange) for shapes, and for text on navy
-         (4.7:1); orange-ink for orange buttons and text on light (4.9:1).
+         accent-ink for buttons and blue text on light (5.3:1 with
+         white); accent-deep its hover.
+       - highlight, a lighter blue, for small shapes and for text on
+         navy (5.1:1).
        site-black is the app sidebar in product art. */
-    --color-site-ink: #042356;
+    --color-site-ink: #00255b;
     --color-site-wash: #e3f3ff;
     --color-site-soft: #f2f9ff;
     --color-site-line: #dbe8f5;
     --color-site-black: #070707;
-    --color-site-navy: #042356;
-    --color-site-night: #021a40;
-    --color-site-accent: #0185fd;
+    --color-site-navy: #00255b;
+    --color-site-night: #001a42;
+    --color-site-accent: #0389fc;
     --color-site-accent-ink: #0069d0;
-    --color-site-orange: #f95808;
-    --color-site-orange-ink: #c74405;
-    --color-site-orange-deep: #a33703;
-    --color-site-orange-wash: #fff1e8;
-    --color-site-amber: #fc8c09;
+    --color-site-accent-deep: #0055a8;
+    --color-site-highlight: #2b9bff;
     --color-site-slate: #515f6d;
     --font-public:
         'Nunito Variable', 'Nunito', ui-sans-serif, system-ui, sans-serif;
@@ -68,36 +63,36 @@
 
 /*
  * The signed-in hosts in the logo's colours: the "MILES" navy for the
- * sidebar, the mark's blue for actions, the "GLOBAL SOFTWARES" orange for
- * focus rings, the active sidebar item and charts. Overrides the shared
- * theme for this app only; the product apps keep their own.
+ * sidebar, the logo blue for actions, focus rings and the active sidebar
+ * item, and a run of blues for charts. Overrides the shared theme for
+ * this app only; the product apps keep their own.
  */
 :root {
     --primary: #0069d0;
-    --ring: #f95808;
+    --ring: #0389fc;
     --chart-1: #0069d0;
-    --chart-2: #f95808;
-    --chart-3: #042356;
-    --chart-4: #0185fd;
-    --chart-5: #fc8c09;
-    --sidebar: #042356;
-    --sidebar-primary: #c74405;
+    --chart-2: #00255b;
+    --chart-3: #2b9bff;
+    --chart-4: #7cc4ff;
+    --chart-5: #94a3b8;
+    --sidebar: #00255b;
+    --sidebar-primary: #0069d0;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-ring: #f95808;
+    --sidebar-ring: #0389fc;
 }
 
 .dark {
-    --primary: #0185fd;
-    --ring: #f95808;
+    --primary: #0389fc;
+    --ring: #2b9bff;
     --chart-1: #2b9bff;
-    --chart-2: #f95808;
-    --chart-3: #0185fd;
-    --chart-4: #fc8c09;
+    --chart-2: #7cc4ff;
+    --chart-3: #0389fc;
+    --chart-4: #bfe1ff;
     --chart-5: #94a3b8;
-    --sidebar: #021a40;
-    --sidebar-primary: #c74405;
+    --sidebar: #001a42;
+    --sidebar-primary: #0069d0;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-ring: #f95808;
+    --sidebar-ring: #2b9bff;
 }
 
 @layer utilities {

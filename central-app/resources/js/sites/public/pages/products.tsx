@@ -115,7 +115,7 @@ export default function Products({ catalog, trialDays, canonical }: Props) {
 
             {/* The filter: stays under the fixed header while the list scrolls. */}
             <div className="sticky top-14 z-30 border-b border-site-line bg-white sm:top-16">
-                <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6">
+                <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6 lg:px-8">
                     <div
                         role="group"
                         aria-label="Show products"
@@ -162,7 +162,7 @@ export default function Products({ catalog, trialDays, canonical }: Props) {
                                 aria-labelledby={headingId}
                                 className={`scroll-mt-32 ${i % 2 === 1 ? 'border-t border-site-line' : ''} bg-white`}
                             >
-                                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20">
+                                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 sm:py-20">
                                     <SectionHeading
                                         id={headingId}
                                         title={section.title}
@@ -188,9 +188,9 @@ export default function Products({ catalog, trialDays, canonical }: Props) {
             {/* Where the products run, beyond the browser. */}
             <section
                 aria-labelledby="devices-heading"
-                className="border-t border-site-line bg-white"
+                className="border-y border-site-line bg-site-soft"
             >
-                <div className="mx-auto flex max-w-7xl flex-col items-start gap-6 px-4 py-12 sm:px-6 md:flex-row md:items-center">
+                <div className="mx-auto flex max-w-7xl flex-col items-start gap-6 px-4 py-12 sm:px-6 lg:px-8 md:flex-row md:items-center">
                     <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-2xl bg-site-accent/10 text-site-accent-ink">
                         <MonitorSmartphone className="size-7" aria-hidden />
                     </span>

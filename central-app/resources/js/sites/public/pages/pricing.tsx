@@ -101,7 +101,7 @@ export default function Pricing({
             <section
                 id="plans"
                 aria-label="Plans"
-                className="mx-auto max-w-7xl scroll-mt-24 px-4 py-12 sm:px-6 sm:py-16"
+                className="mx-auto max-w-7xl scroll-mt-24 px-4 py-12 sm:px-6 lg:px-8 sm:py-16"
             >
                 {plans.length === 0 ? (
                     <div className="py-8 text-center">
@@ -166,9 +166,9 @@ export default function Pricing({
             <section
                 id="ways-to-buy"
                 aria-labelledby="buy-heading"
-                className="scroll-mt-24 border-y border-site-line bg-white"
+                className="scroll-mt-24 border-y border-site-line bg-site-soft"
             >
-                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
+                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 sm:py-24">
                     <SectionHeading
                         id="buy-heading"
                         title={
@@ -230,7 +230,7 @@ export default function Pricing({
             <section
                 id="ways-to-run"
                 aria-labelledby="ways-heading"
-                className="mx-auto max-w-7xl scroll-mt-24 px-4 py-16 sm:px-6 sm:py-24"
+                className="mx-auto max-w-7xl scroll-mt-24 px-4 py-16 sm:px-6 lg:px-8 sm:py-24"
             >
                 <SectionHeading
                     id="ways-heading"
@@ -250,7 +250,7 @@ export default function Pricing({
             </section>
 
             <section aria-labelledby="faq-heading">
-                <div className="mx-auto max-w-3xl px-4 py-24 sm:px-6">
+                <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
                     <SectionHeading id="faq-heading" title="Common questions" />
                     <div className="mt-12">
                         <FaqList items={pricingFaq(trialDays)} />

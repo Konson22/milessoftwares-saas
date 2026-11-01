@@ -39,18 +39,18 @@ export default function LegalPage({
                 title={title}
                 intro={intro}
                 above={
-                    <p className="text-sm font-semibold text-white/80">
+                    <p className="text-sm font-semibold text-slate-600">
                         Last updated <time dateTime={updated}>{date}</time>
                     </p>
                 }
             />
 
-            <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[16rem_1fr] lg:gap-16">
+            <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:px-8 sm:py-16 lg:grid-cols-[16rem_1fr] lg:gap-16">
                 <nav
                     aria-label="On this page"
                     className="lg:sticky lg:top-28 lg:self-start"
                 >
-                    <p className="text-sm font-bold tracking-wider text-site-orange-ink uppercase">
+                    <p className="text-sm font-semibold text-site-ink">
                         On this page
                     </p>
                     <ol className="mt-4 space-y-2 border-l border-site-line text-sm">
