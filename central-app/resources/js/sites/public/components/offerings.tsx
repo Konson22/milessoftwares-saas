@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import {
     ArrowRight,
+    BadgeCheck,
     Boxes,
     Cable,
     Check,
@@ -16,7 +17,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import type { CatalogEntry } from '@/sites/public/components/catalog';
 import { IconBox } from '@/sites/public/components/page-hero';
-import { display, panel, textLink } from '@/sites/public/components/styles';
+import { display, panel } from '@/sites/public/components/styles';
 
 /** A request through the contact form, subject filled in. */
 export function quoteUrl(subject: string): string {
@@ -156,18 +157,19 @@ export function deployments(trialDays: number): Deployment[] {
         {
             id: 'synced',
             icon: RefreshCw,
-            title: 'Desktop applications with cloud sync',
+            title: 'Desktop and mobile apps with cloud sync',
             tag: 'Works offline',
             points: [
-                'Installed on the computer at the counter',
+                'On the counter computer, a phone or a tablet',
                 'Supported work carries on without internet',
-                'Data syncs when the connection is back',
-                'What syncs differs from product to product',
+                'Syncs to the same business data when back online',
+                'What syncs, and what the mobile app can do, differs by product',
             ],
             licence: 'Included with the cloud plan of products that have it',
             offers: (entry) =>
-                entry.offering.platforms.includes('desktop') &&
-                entry.offering.connectivity.includes('offline_sync'),
+                hasMobile(entry) ||
+                (entry.offering.platforms.includes('desktop') &&
+                    entry.offering.connectivity.includes('offline_sync')),
         },
         {
             id: 'offline',
@@ -181,33 +183,6 @@ export function deployments(trialDays: number): Deployment[] {
             ],
             licence: 'One-time purchase; ask us for the price',
             offers: (entry) => entry.offering.connectivity.includes('offline'),
-        },
-        {
-            id: 'mobile',
-            icon: Smartphone,
-            title: 'Mobile applications',
-            tag: 'Android and iOS',
-            points: [
-                'Business work on a phone or tablet',
-                'Online or offline, depending on the product',
-                'Can do less than the desktop or web version',
-            ],
-            licence: 'Included with the cloud plan of products that have it',
-            offers: hasMobile,
-        },
-        {
-            id: 'connected',
-            icon: MonitorSmartphone,
-            title: 'Connected desktop and mobile',
-            tag: 'Shared data',
-            points: [
-                'Desktop and mobile apps for the same product',
-                'One set of business data where sync is supported',
-            ],
-            licence: 'Included with the cloud plan of products that have it',
-            offers: (entry) =>
-                entry.offering.platforms.includes('desktop') &&
-                hasMobile(entry),
         },
     ];
 }
@@ -226,7 +201,7 @@ export function DeploymentOptions({
     const released = catalog.filter((entry) => entry.status !== 'coming_soon');
 
     return (
-        <ul className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid gap-5 lg:grid-cols-3">
             {deployments(trialDays).map((option, i) => {
                 const products = released.filter(option.offers);
 
@@ -234,58 +209,66 @@ export function DeploymentOptions({
                     <li
                         key={option.id}
                         id={option.id}
-                        className={`${panel} flex scroll-mt-28 flex-col p-7`}
+                        className={`${panel} flex scroll-mt-28 flex-col overflow-hidden`}
                     >
-                        <div className="flex items-start justify-between gap-4">
-                            <IconBox icon={option.icon} index={i} />
-                            <span className="rounded-full bg-site-wash px-3 py-1 text-xs font-bold text-site-accent-ink">
-                                {option.tag}
-                            </span>
+                        <div className="flex flex-1 flex-col p-7">
+                            <div className="flex items-start justify-between gap-4">
+                                <IconBox icon={option.icon} index={i} />
+                                <span className="rounded-full bg-site-wash px-3 py-1 text-xs font-bold text-site-accent-ink">
+                                    {option.tag}
+                                </span>
+                            </div>
+                            <h3 className={`mt-6 text-xl ${display}`}>
+                                {option.title}
+                            </h3>
+                            <ul className="mt-4 space-y-2.5 text-sm text-slate-700">
+                                {option.points.map((point) => (
+                                    <li
+                                        key={point}
+                                        className="flex items-start gap-2.5"
+                                    >
+                                        <Check
+                                            className="mt-0.5 size-4 shrink-0 text-site-accent-ink"
+                                            aria-hidden
+                                        />
+                                        {point}
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
-                        <h3 className={`mt-6 text-xl ${display}`}>
-                            {option.title}
-                        </h3>
-                        <ul className="mt-4 space-y-2.5 text-sm text-slate-700">
-                            {option.points.map((point) => (
-                                <li
-                                    key={point}
-                                    className="flex items-start gap-2.5"
-                                >
-                                    <Check
-                                        className="mt-0.5 size-4 shrink-0 text-site-accent-ink"
-                                        aria-hidden
-                                    />
-                                    {point}
-                                </li>
-                            ))}
-                        </ul>
-                        <div className="mt-auto space-y-2 pt-6 text-sm">
-                            <p className="border-t border-site-line pt-5 font-semibold text-site-ink">
-                                {option.licence}
-                            </p>
-                            <p className="text-slate-600">
-                                {products.length > 0 ? (
-                                    <>
-                                        Available for{' '}
-                                        {products.map((entry, j) => (
-                                            <span key={entry.slug}>
-                                                {j > 0 &&
-                                                    (j === products.length - 1
-                                                        ? ' and '
-                                                        : ', ')}
+                        <div className="space-y-4 border-t border-site-line bg-site-wash px-7 py-6 text-sm">
+                            <div className="flex items-start gap-2.5">
+                                <BadgeCheck
+                                    className="mt-0.5 size-4 shrink-0 text-site-accent-ink"
+                                    aria-hidden
+                                />
+                                <p className="font-semibold text-site-ink">
+                                    {option.licence}
+                                </p>
+                            </div>
+                            {products.length > 0 ? (
+                                <div>
+                                    <p className="text-slate-600">
+                                        Available for
+                                    </p>
+                                    <ul className="mt-2 flex flex-wrap gap-2">
+                                        {products.map((entry) => (
+                                            <li key={entry.slug}>
                                                 <Link
                                                     href={`/${entry.url}`}
-                                                    className={textLink}
+                                                    className="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-semibold text-site-ink ring-1 ring-site-line transition-colors hover:text-site-accent-ink hover:ring-site-accent/40"
                                                 >
                                                     {entry.name}
                                                 </Link>
-                                            </span>
+                                            </li>
                                         ))}
-                                    </>
-                                ) : (
-                                    'Not offered by a released product yet.'
-                                )}
-                            </p>
+                                    </ul>
+                                </div>
+                            ) : (
+                                <p className="text-slate-600">
+                                    Not offered by a released product yet.
+                                </p>
+                            )}
                         </div>
                     </li>
                 );
