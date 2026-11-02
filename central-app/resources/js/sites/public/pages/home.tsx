@@ -1,7 +1,6 @@
 import { Link } from '@inertiajs/react';
 import {
     ArrowRight,
-    Check,
     Code2,
     LayoutGrid,
     Monitor,
@@ -11,12 +10,9 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { CtaBand, FeatureGrid } from '@/sites/public/components/blocks';
 import type { CatalogEntry } from '@/sites/public/components/catalog';
-import {
-    cloudPillars,
-    howItWorks,
-    whyMiles,
-} from '@/sites/public/components/content';
+import { cloudPillars, howItWorks } from '@/sites/public/components/content';
 import FaqList, { faq } from '@/sites/public/components/faq';
+import WhyMiles from '@/sites/public/components/why-miles';
 import {
     DeploymentOptions,
     ServiceList,
@@ -361,66 +357,7 @@ export default function MarketingHome({
             </section>
 
             {/* 6. Why Miles Global Softwares */}
-            <section aria-labelledby="why-heading" className={darkBand}>
-                <div
-                    className={`${container} grid gap-12 py-20 sm:py-28 lg:grid-cols-[1fr_1.7fr] lg:gap-16`}
-                >
-                    <div className="lg:sticky lg:top-28 lg:self-start">
-                        <SectionHeading
-                            id="why-heading"
-                            title={
-                                <>
-                                    Why <Accent>Miles Global Softwares</Accent>
-                                </>
-                            }
-                            lead="Software made for the trade you run, on the screens you use, in one workspace, with people who set it up and stay to support it."
-                            align="left"
-                        />
-                        <Link
-                            href="/about"
-                            className={`${button.outlineDark} mt-8`}
-                        >
-                            About us
-                            <ArrowRight className="size-4" aria-hidden />
-                        </Link>
-                    </div>
-                    <ul className="grid gap-4 sm:grid-cols-2 sm:gap-5">
-                        {whyMiles.map((item, i) => (
-                            <li
-                                key={item.title}
-                                className="flex flex-col rounded-2xl bg-white/5 p-6 ring-1 ring-white/10 sm:p-7"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <IconBox icon={item.icon} index={i} />
-                                    <span className="font-public-display text-sm font-semibold text-white/40 tabular-nums">
-                                        {ordinal(i)}
-                                    </span>
-                                </div>
-                                <h3 className="mt-5 text-lg font-semibold text-white">
-                                    {item.title}
-                                </h3>
-                                <p className="mt-2 text-sm leading-relaxed text-slate-300">
-                                    {item.body}
-                                </p>
-                                <ul className="mt-5 space-y-2 border-t border-white/10 pt-5">
-                                    {item.points.map((point) => (
-                                        <li
-                                            key={point}
-                                            className="flex items-start gap-2.5 text-sm text-slate-200"
-                                        >
-                                            <Check
-                                                className="mt-0.5 size-4 shrink-0 text-site-highlight"
-                                                aria-hidden
-                                            />
-                                            {point}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            </section>
+            <WhyMiles />
 
             {/* 7. How we work */}
             <section

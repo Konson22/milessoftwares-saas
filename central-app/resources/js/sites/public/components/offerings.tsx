@@ -17,7 +17,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import type { CatalogEntry } from '@/sites/public/components/catalog';
 import { IconBox } from '@/sites/public/components/page-hero';
-import { display, panel } from '@/sites/public/components/styles';
+import { display } from '@/sites/public/components/styles';
 
 /** A request through the contact form, subject filled in. */
 export function quoteUrl(subject: string): string {
@@ -202,53 +202,65 @@ export function DeploymentOptions({
 
     return (
         <ul className="grid gap-5 lg:grid-cols-3">
-            {deployments(trialDays).map((option, i) => {
+            {deployments(trialDays).map((option) => {
                 const products = released.filter(option.offers);
+                const Icon = option.icon;
 
                 return (
                     <li
                         key={option.id}
                         id={option.id}
-                        className={`${panel} flex scroll-mt-28 flex-col overflow-hidden`}
+                        className="group relative isolate flex scroll-mt-28 flex-col overflow-hidden rounded-3xl bg-site-soft p-2 ring-1 ring-site-line transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-site-accent/15"
                     >
-                        <div className="flex flex-1 flex-col p-7">
+                        {/* Large faded icon behind the top of the card. */}
+                        <Icon
+                            aria-hidden
+                            strokeWidth={1.25}
+                            className="pointer-events-none absolute -top-6 -right-6 -z-10 size-40 text-site-accent/10 transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-6"
+                        />
+                        <div className="flex flex-1 flex-col p-5 sm:p-6">
                             <div className="flex items-start justify-between gap-4">
-                                <IconBox icon={option.icon} index={i} />
-                                <span className="rounded-full bg-site-wash px-3 py-1 text-xs font-bold text-site-accent-ink">
+                                <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-white text-site-accent shadow-sm ring-1 ring-site-line">
+                                    <Icon className="size-5" aria-hidden />
+                                </span>
+                                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-site-accent-ink shadow-sm ring-1 ring-site-line">
                                     {option.tag}
                                 </span>
                             </div>
                             <h3 className={`mt-6 text-xl ${display}`}>
                                 {option.title}
                             </h3>
-                            <ul className="mt-4 space-y-2.5 text-sm text-slate-700">
+                            <ul className="mt-4 space-y-3 text-sm text-slate-700">
                                 {option.points.map((point) => (
                                     <li
                                         key={point}
-                                        className="flex items-start gap-2.5"
+                                        className="flex items-start gap-3"
                                     >
-                                        <Check
-                                            className="mt-0.5 size-4 shrink-0 text-site-accent-ink"
-                                            aria-hidden
-                                        />
+                                        <span className="mt-px inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-white text-site-accent ring-1 ring-site-line">
+                                            <Check
+                                                className="size-3"
+                                                strokeWidth={3}
+                                                aria-hidden
+                                            />
+                                        </span>
                                         {point}
                                     </li>
                                 ))}
                             </ul>
                         </div>
-                        <div className="space-y-4 border-t border-site-line bg-site-wash px-7 py-6 text-sm">
+                        <div className="space-y-4 rounded-2xl bg-site-accent p-5 text-sm text-white sm:p-6">
                             <div className="flex items-start gap-2.5">
                                 <BadgeCheck
-                                    className="mt-0.5 size-4 shrink-0 text-site-accent-ink"
+                                    className="mt-0.5 size-4 shrink-0"
                                     aria-hidden
                                 />
-                                <p className="font-semibold text-site-ink">
+                                <p className="font-semibold">
                                     {option.licence}
                                 </p>
                             </div>
                             {products.length > 0 ? (
-                                <div>
-                                    <p className="text-slate-600">
+                                <div className="border-t border-white/25 pt-4">
+                                    <p className="text-white/90">
                                         Available for
                                     </p>
                                     <ul className="mt-2 flex flex-wrap gap-2">
@@ -256,16 +268,20 @@ export function DeploymentOptions({
                                             <li key={entry.slug}>
                                                 <Link
                                                     href={`/${entry.url}`}
-                                                    className="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-semibold text-site-ink ring-1 ring-site-line transition-colors hover:text-site-accent-ink hover:ring-site-accent/40"
+                                                    className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-semibold text-site-accent-ink transition-shadow hover:shadow-md hover:shadow-black/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                                                 >
                                                     {entry.name}
+                                                    <ArrowRight
+                                                        className="size-3"
+                                                        aria-hidden
+                                                    />
                                                 </Link>
                                             </li>
                                         ))}
                                     </ul>
                                 </div>
                             ) : (
-                                <p className="text-slate-600">
+                                <p className="border-t border-white/25 pt-4 text-white/90">
                                     Not offered by a released product yet.
                                 </p>
                             )}
