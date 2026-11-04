@@ -14,6 +14,7 @@ import Platform from './platform';
 import Pricing from './pricing';
 import Privacy from './privacy';
 import PrivacyMataemPlus from './privacy-mataem-plus';
+import PrivacyMilesPharmacy from './privacy-miles-pharmacy';
 import Services from './services';
 import ProductPage from './product';
 import Products from './products';
@@ -298,6 +299,13 @@ const pages: [string, ReactNode][] = [
         <PrivacyMataemPlus
             key="privacy-mataem-plus"
             canonical="https://example.test/privacy/mataem-plus"
+        />,
+    ],
+    [
+        'Miles Pharmacy privacy',
+        <PrivacyMilesPharmacy
+            key="privacy-miles-pharmacy"
+            canonical="https://example.test/privacy/miles-pharmacy"
         />,
     ],
     [

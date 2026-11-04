@@ -205,6 +205,14 @@ class PageController extends Controller
         ]);
     }
 
+    /** The Miles Pharmacy POS mobile app's privacy policy, the URL for its store listing. */
+    public function privacyMilesPharmacy(): Response
+    {
+        return Inertia::render('public/privacy-miles-pharmacy', [
+            'canonical' => PlatformHosts::url(PlatformHosts::root(), 'privacy/miles-pharmacy'),
+        ]);
+    }
+
     public function terms(): Response
     {
         return Inertia::render('public/terms', [

@@ -283,6 +283,7 @@ it('serves the products, platform, coming-soon, about, services and legal pages'
     ['services', 'public/services'],
     ['privacy', 'public/privacy'],
     ['privacy/mataem-plus', 'public/privacy-mataem-plus'],
+    ['privacy/miles-pharmacy', 'public/privacy-miles-pharmacy'],
     ['terms', 'public/terms'],
 ]);
 

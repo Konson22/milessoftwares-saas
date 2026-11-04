@@ -44,6 +44,7 @@ Route::domain(PlatformHosts::root())->group(function () {
         Route::get('privacy', [PageController::class, 'privacy'])->name('privacy');
         // An app's own policy, for its store listing (Play Store).
         Route::get('privacy/mataem-plus', [PageController::class, 'privacyMataemPlus'])->name('privacy.mataem-plus');
+        Route::get('privacy/miles-pharmacy', [PageController::class, 'privacyMilesPharmacy'])->name('privacy.miles-pharmacy');
         Route::get('terms', [PageController::class, 'terms'])->name('terms');
 
         // Windows and Android installers (an older one by its version); a file not on the server yet is a 404.
