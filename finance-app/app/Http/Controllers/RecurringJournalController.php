@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Finance\JournalApprovals;
 use App\Finance\Money;
+use App\Finance\PaymentPolicy;
 use App\Finance\RecurringJournals;
 use App\Models\Journal;
 use App\Models\RecurringJournal;
@@ -20,10 +21,12 @@ use Inertia\Response;
  */
 class RecurringJournalController extends Controller
 {
-    public function index(Request $request, JournalApprovals $approvals): Response
+    public function index(Request $request, JournalApprovals $approvals, PaymentPolicy $payments): Response
     {
         $today = CarbonImmutable::today();
         $me = $this->user($request)->id;
+        $user = $this->user($request);
+        $banks = $payments->bankIds();
 
         return Inertia::render('recurring-journals/index', [
             'templates' => RecurringJournal::query()->with(['lastJournal', 'approver'])->orderBy('name')->get()->map(fn (RecurringJournal $template) => [
@@ -42,8 +45,11 @@ class RecurringJournalController extends Controller
                 'lastJournal' => $template->lastJournal === null ? null : ['id' => $template->lastJournal->id, 'number' => $template->lastJournal->number, 'date' => $template->lastJournal->entry_date->toDateString()],
                 'lastError' => $template->last_error,
                 // Waiting for a second person (journal approval is on).
-                'awaitingApproval' => ! $approvals->recurringCleared($template),
+                'awaitingApproval' => ! $approvals->recurringCleared($template, $banks),
                 'ownChange' => ($template->updated_by ?? $template->created_by) === $me,
+                'heldAsPayment' => $approvals->recurringHeldAsPayment($template, $banks),
+                // For showing the button: App\Finance\JournalApprovals decides.
+                'canApprove' => $user->can($approvals->recurringApprovedBy($template, $banks)),
                 'approvedBy' => $template->approver?->name,
             ]),
         ]);

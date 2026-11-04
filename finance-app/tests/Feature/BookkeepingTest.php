@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 const ACCOUNTANT = [
-    'finance.accounts.view', 'finance.accounts.manage', 'finance.journals.view', 'finance.journals.post',
+    'finance.accounts.view', 'finance.accounts.manage', 'finance.journals.view', 'finance.journals.post', 'finance.journals.reverse',
     'finance.payables.view', 'finance.payables.manage', 'finance.receivables.view', 'finance.receivables.manage',
     'finance.banking.view', 'finance.banking.manage', 'finance.reports.view',
 ];

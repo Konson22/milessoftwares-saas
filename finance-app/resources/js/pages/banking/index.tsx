@@ -192,18 +192,21 @@ export default function Banking({
                 description={`Across all accounts: ${money(total)}.`}
                 actions={
                     <>
+                        {(can('finance.banking.manage') ||
+                            can('finance.receipts.record')) && (
+                            <Button
+                                variant="outline"
+                                onClick={() => toggle('in')}
+                            >
+                                <ArrowDownToLine
+                                    className="size-4"
+                                    aria-hidden
+                                />
+                                Money in
+                            </Button>
+                        )}
                         {can('finance.banking.manage') && (
                             <>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => toggle('in')}
-                                >
-                                    <ArrowDownToLine
-                                        className="size-4"
-                                        aria-hidden
-                                    />
-                                    Money in
-                                </Button>
                                 <Button
                                     variant="outline"
                                     onClick={() => toggle('out')}

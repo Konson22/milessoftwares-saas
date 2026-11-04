@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Finance\PaymentPolicy;
+use App\Finance\PaymentRequests;
 use App\Finance\Tax;
 use App\Models\Account;
 use App\Models\TaxReturn;
@@ -95,14 +97,24 @@ class TaxReturnController extends Controller
         ]);
     }
 
-    public function settle(Request $request, TaxReturn $return, Tax $tax): RedirectResponse
+    public function settle(Request $request, TaxReturn $return, Tax $tax, PaymentPolicy $policy, PaymentRequests $requests): RedirectResponse
     {
         $data = $request->validate([
             'account_id' => ['required', 'uuid', $this->openAccount(bank: true)],
             'date' => ['required', 'date_format:Y-m-d'],
         ]);
 
-        $tax->settle($return, Account::query()->whereKey($data['account_id'])->firstOrFail(), CarbonImmutable::parse($data['date']), $this->user($request));
+        $bank = Account::query()->whereKey($data['account_id'])->firstOrFail();
+        $date = CarbonImmutable::parse($data['date']);
+
+        // Tax owed leaves the bank: held like any payment. A refund comes in.
+        if ($return->net_minor > 0 && $policy->holdsDirect($return->net_minor)) {
+            $held = $requests->holdTax($return, $bank, $date, $this->user($request));
+
+            return redirect()->route('payment-requests.index')->with('success', "{$held->number} is waiting for approval; the return is settled once it is approved and disbursed.");
+        }
+
+        $tax->settle($return, $bank, $date, $this->user($request));
 
         return back()->with('success', 'Settlement posted.');
     }

@@ -4,6 +4,7 @@ use App\Finance\Currencies;
 use App\Finance\FixedAssets;
 use App\Finance\JournalApprovals;
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\ApprovalRulesController;
 use App\Http\Controllers\AssetCategoryController;
 use App\Http\Controllers\BankingController;
 use App\Http\Controllers\BankRuleController;
@@ -20,6 +21,7 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\JournalApprovalController;
 use App\Http\Controllers\JournalController;
 use App\Http\Controllers\OpeningBalanceController;
+use App\Http\Controllers\PaymentRequestController;
 use App\Http\Controllers\PeriodController;
 use App\Http\Controllers\RecurringJournalController;
 use App\Http\Controllers\ReportController;
@@ -27,6 +29,7 @@ use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\SupplierPaymentController;
 use App\Http\Controllers\TaxCodeController;
 use App\Http\Controllers\TaxReturnController;
+use App\Http\Middleware\RequireAnyPermission;
 use App\Http\Middleware\RequireFeature;
 use Illuminate\Support\Facades\Route;
 use Miles\PlatformClient\PlatformConfig;
@@ -79,9 +82,12 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::get('journals', [JournalController::class, 'index'])->name('journals.index');
             Route::get('journals/{journal}', [JournalController::class, 'show'])->whereUuid('journal')->name('journals.show');
         });
-        Route::middleware('can:finance.journals.post')->group(function () {
+        // Whoever may only prepare has the journal held: JournalController::store.
+        Route::middleware(RequireAnyPermission::class.':finance.journals.prepare,finance.journals.post')->group(function () {
             Route::get('journals/create', [JournalController::class, 'create'])->name('journals.create');
             Route::post('journals', [JournalController::class, 'store'])->name('journals.store');
+        });
+        Route::middleware('can:finance.journals.reverse')->group(function () {
             Route::post('journals/{journal}/reverse', [JournalController::class, 'reverse'])->whereUuid('journal')->name('journals.reverse');
         });
 
@@ -89,14 +95,49 @@ Route::prefix(app(PlatformConfig::class)->path())
         Route::middleware('can:finance.journals.view')->group(function () {
             Route::get('journal-approvals', [JournalApprovalController::class, 'index'])->name('journal-approvals.index');
         });
-        Route::middleware('can:finance.journals.post')->group(function () {
+        Route::middleware(RequireAnyPermission::class.':finance.journals.prepare,finance.journals.post')->group(function () {
             Route::post('journal-approvals/{draft}/withdraw', [JournalApprovalController::class, 'withdraw'])->whereUuid('draft')->name('journal-approvals.withdraw');
         });
         Route::middleware('can:'.JournalApprovals::PERMISSION)->group(function () {
             Route::post('journal-approvals/{draft}/approve', [JournalApprovalController::class, 'approve'])->whereUuid('draft')->name('journal-approvals.approve');
             Route::post('journal-approvals/{draft}/reject', [JournalApprovalController::class, 'reject'])->whereUuid('draft')->name('journal-approvals.reject');
-            Route::put('journal-approvals/settings', [JournalApprovalController::class, 'settings'])->name('journal-approvals.settings');
+        });
+        // Which of the two: App\Finance\JournalApprovals, by what the journal does.
+        Route::middleware(RequireAnyPermission::class.':'.JournalApprovals::PERMISSION.',finance.payments.approve')->group(function () {
             Route::post('recurring-journals/{recurringJournal}/approve', [RecurringJournalController::class, 'approve'])->whereUuid('recurringJournal')->name('recurring-journals.approve');
+        });
+
+        // Who decides what needs approval: not the approvers themselves.
+        Route::middleware('can:finance.approvals.configure')->group(function () {
+            Route::get('approval-rules', ApprovalRulesController::class)->name('approval-rules.index');
+            Route::put('journal-approvals/settings', [JournalApprovalController::class, 'settings'])->name('journal-approvals.settings');
+            Route::put('payment-requests/settings', [PaymentRequestController::class, 'settings'])->name('payment-requests.settings');
+        });
+
+        // Payment requests: prepare, review, approve, disburse. Each step is
+        // checked again in App\Finance\PaymentRequests. Members who pay
+        // directly reach the list too, when approval turns theirs into requests.
+        Route::middleware(RequireAnyPermission::class.':finance.payments.view,finance.payments.prepare,finance.payables.manage,finance.banking.manage')->group(function () {
+            Route::get('payment-requests', [PaymentRequestController::class, 'index'])->name('payment-requests.index');
+        });
+        Route::middleware('can:finance.payments.prepare')->group(function () {
+            Route::get('payment-requests/create', [PaymentRequestController::class, 'create'])->name('payment-requests.create');
+            Route::post('payment-requests', [PaymentRequestController::class, 'store'])->name('payment-requests.store');
+        });
+        Route::middleware(RequireAnyPermission::class.':finance.payments.prepare,finance.payables.manage,finance.banking.manage')->group(function () {
+            Route::post('payment-requests/{paymentRequest}/withdraw', [PaymentRequestController::class, 'withdraw'])->whereUuid('paymentRequest')->name('payment-requests.withdraw');
+        });
+        Route::middleware('can:finance.payments.review')->group(function () {
+            Route::post('payment-requests/{paymentRequest}/review', [PaymentRequestController::class, 'review'])->whereUuid('paymentRequest')->name('payment-requests.review');
+        });
+        Route::middleware('can:finance.payments.approve')->group(function () {
+            Route::post('payment-requests/{paymentRequest}/approve', [PaymentRequestController::class, 'approve'])->whereUuid('paymentRequest')->name('payment-requests.approve');
+        });
+        Route::middleware(RequireAnyPermission::class.':finance.payments.review,finance.payments.approve')->group(function () {
+            Route::post('payment-requests/{paymentRequest}/reject', [PaymentRequestController::class, 'reject'])->whereUuid('paymentRequest')->name('payment-requests.reject');
+        });
+        Route::middleware('can:finance.payments.disburse')->group(function () {
+            Route::post('payment-requests/{paymentRequest}/disburse', [PaymentRequestController::class, 'disburse'])->whereUuid('paymentRequest')->name('payment-requests.disburse');
         });
 
         // Recurring journals: posted on a schedule (finance:recurring), or now.
@@ -135,11 +176,13 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::get('bills/{bill}', [BillController::class, 'show'])->whereUuid('bill')->name('bills.show');
             Route::get('supplier-payments', [SupplierPaymentController::class, 'index'])->name('supplier-payments.index');
         });
-        Route::middleware('can:finance.payables.manage')->group(function () {
+        Route::middleware(RequireAnyPermission::class.':finance.payables.manage,finance.bills.manage')->group(function () {
             Route::post('suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
             Route::put('suppliers/{supplier}', [SupplierController::class, 'update'])->whereUuid('supplier')->name('suppliers.update');
             Route::get('bills/create', [BillController::class, 'create'])->name('bills.create');
             Route::post('bills', [BillController::class, 'store'])->name('bills.store');
+        });
+        Route::middleware('can:finance.payables.manage')->group(function () {
             Route::get('supplier-payments/create', [SupplierPaymentController::class, 'create'])->name('supplier-payments.create');
             Route::post('supplier-payments', [SupplierPaymentController::class, 'store'])->name('supplier-payments.store');
         });
@@ -154,6 +197,8 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::get('invoices/create', [InvoiceController::class, 'create'])->name('invoices.create');
             Route::post('invoices', [InvoiceController::class, 'store'])->name('invoices.store');
             Route::post('invoices/{invoice}/void', [InvoiceController::class, 'void'])->whereUuid('invoice')->name('invoices.void');
+        });
+        Route::middleware(RequireAnyPermission::class.':finance.receivables.manage,finance.receipts.record')->group(function () {
             Route::post('invoices/{invoice}/payments', [CustomerPaymentController::class, 'store'])->whereUuid('invoice')->name('customer-payments.store');
         });
 
@@ -163,8 +208,11 @@ Route::prefix(app(PlatformConfig::class)->path())
         });
         Route::middleware('can:finance.banking.manage')->group(function () {
             Route::post('banking/money-out', [BankingController::class, 'moneyOut'])->name('banking.money-out');
-            Route::post('banking/money-in', [BankingController::class, 'moneyIn'])->name('banking.money-in');
             Route::post('banking/transfers', [BankingController::class, 'transfer'])->name('banking.transfer');
+        });
+
+        Route::middleware(RequireAnyPermission::class.':finance.banking.manage,finance.receipts.record')->group(function () {
+            Route::post('banking/money-in', [BankingController::class, 'moneyIn'])->name('banking.money-in');
         });
 
         // Bank statements and reconciliation.

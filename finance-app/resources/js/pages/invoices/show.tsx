@@ -322,138 +322,153 @@ export default function ShowInvoice({
                         </dl>
                     </Panel>
 
-                    {canManage && invoice.outstandingMinor > 0 && (
-                        <Panel>
-                            <PanelHeader title="Receive payment" />
-                            <PanelBody>
-                                <Form
-                                    {...receive.form(invoice.id)}
-                                    resetOnSuccess
-                                    className="grid gap-3"
-                                >
-                                    {({ errors, processing }) => (
-                                        <>
-                                            <Field
-                                                id="account_id"
-                                                label="Into"
-                                                error={errors.account_id}
-                                            >
-                                                <Select
+                    {(canManage || can('finance.receipts.record')) &&
+                        invoice.outstandingMinor > 0 && (
+                            <Panel>
+                                <PanelHeader title="Receive payment" />
+                                <PanelBody>
+                                    <Form
+                                        {...receive.form(invoice.id)}
+                                        resetOnSuccess
+                                        className="grid gap-3"
+                                    >
+                                        {({ errors, processing }) => (
+                                            <>
+                                                <Field
                                                     id="account_id"
-                                                    name="account_id"
-                                                    required
-                                                    defaultValue=""
+                                                    label="Into"
+                                                    error={errors.account_id}
                                                 >
-                                                    <option value="">
-                                                        Choose an account…
-                                                    </option>
-                                                    {banks
-                                                        .filter(
-                                                            (bank) =>
-                                                                bank.currency ===
-                                                                    null ||
-                                                                bank.currency ===
-                                                                    invoice.currency,
-                                                        )
-                                                        .map((bank) => (
-                                                            <option
-                                                                key={bank.id}
-                                                                value={bank.id}
-                                                            >
-                                                                {bank.label}
-                                                            </option>
-                                                        ))}
-                                                </Select>
-                                            </Field>
-                                            <Field
-                                                id="method"
-                                                label="Method"
-                                                error={errors.method}
-                                            >
-                                                <Select
-                                                    id="method"
-                                                    name="method"
-                                                    defaultValue="cash"
-                                                >
-                                                    {methods.map((method) => (
-                                                        <option
-                                                            key={method.value}
-                                                            value={method.value}
-                                                        >
-                                                            {method.label}
+                                                    <Select
+                                                        id="account_id"
+                                                        name="account_id"
+                                                        required
+                                                        defaultValue=""
+                                                    >
+                                                        <option value="">
+                                                            Choose an account…
                                                         </option>
-                                                    ))}
-                                                </Select>
-                                            </Field>
-                                            <div className="grid grid-cols-2 gap-3">
+                                                        {banks
+                                                            .filter(
+                                                                (bank) =>
+                                                                    bank.currency ===
+                                                                        null ||
+                                                                    bank.currency ===
+                                                                        invoice.currency,
+                                                            )
+                                                            .map((bank) => (
+                                                                <option
+                                                                    key={
+                                                                        bank.id
+                                                                    }
+                                                                    value={
+                                                                        bank.id
+                                                                    }
+                                                                >
+                                                                    {bank.label}
+                                                                </option>
+                                                            ))}
+                                                    </Select>
+                                                </Field>
                                                 <Field
-                                                    id="amount"
-                                                    label={
-                                                        invoice.currency
-                                                            ? `Amount (${invoice.currency})`
-                                                            : 'Amount'
-                                                    }
-                                                    error={errors.amount}
+                                                    id="method"
+                                                    label="Method"
+                                                    error={errors.method}
                                                 >
-                                                    <Input
+                                                    <Select
+                                                        id="method"
+                                                        name="method"
+                                                        defaultValue="cash"
+                                                    >
+                                                        {methods.map(
+                                                            (method) => (
+                                                                <option
+                                                                    key={
+                                                                        method.value
+                                                                    }
+                                                                    value={
+                                                                        method.value
+                                                                    }
+                                                                >
+                                                                    {
+                                                                        method.label
+                                                                    }
+                                                                </option>
+                                                            ),
+                                                        )}
+                                                    </Select>
+                                                </Field>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <Field
                                                         id="amount"
-                                                        name="amount"
-                                                        inputMode="decimal"
-                                                        className="text-right tabular-nums"
-                                                        required
-                                                    />
-                                                </Field>
-                                                <Field
-                                                    id="received_on"
-                                                    label="Date"
-                                                    error={errors.received_on}
-                                                >
-                                                    <Input
+                                                        label={
+                                                            invoice.currency
+                                                                ? `Amount (${invoice.currency})`
+                                                                : 'Amount'
+                                                        }
+                                                        error={errors.amount}
+                                                    >
+                                                        <Input
+                                                            id="amount"
+                                                            name="amount"
+                                                            inputMode="decimal"
+                                                            className="text-right tabular-nums"
+                                                            required
+                                                        />
+                                                    </Field>
+                                                    <Field
                                                         id="received_on"
-                                                        name="received_on"
-                                                        type="date"
-                                                        defaultValue={today}
-                                                        required
-                                                    />
-                                                </Field>
-                                            </div>
-                                            {invoice.currency && (
+                                                        label="Date"
+                                                        error={
+                                                            errors.received_on
+                                                        }
+                                                    >
+                                                        <Input
+                                                            id="received_on"
+                                                            name="received_on"
+                                                            type="date"
+                                                            defaultValue={today}
+                                                            required
+                                                        />
+                                                    </Field>
+                                                </div>
+                                                {invoice.currency && (
+                                                    <Field
+                                                        id="rate"
+                                                        label="Rate"
+                                                        error={errors.rate}
+                                                        hint={`Blank for the ${invoice.currency} rate on the date. The difference from ${invoice.exchangeRate} is an exchange gain or loss.`}
+                                                    >
+                                                        <Input
+                                                            id="rate"
+                                                            name="rate"
+                                                            inputMode="decimal"
+                                                        />
+                                                    </Field>
+                                                )}
                                                 <Field
-                                                    id="rate"
-                                                    label="Rate"
-                                                    error={errors.rate}
-                                                    hint={`Blank for the ${invoice.currency} rate on the date. The difference from ${invoice.exchangeRate} is an exchange gain or loss.`}
+                                                    id="memo"
+                                                    label="Memo"
+                                                    error={errors.memo}
                                                 >
                                                     <Input
-                                                        id="rate"
-                                                        name="rate"
-                                                        inputMode="decimal"
+                                                        id="memo"
+                                                        name="memo"
+                                                        maxLength={255}
                                                     />
                                                 </Field>
-                                            )}
-                                            <Field
-                                                id="memo"
-                                                label="Memo"
-                                                error={errors.memo}
-                                            >
-                                                <Input
-                                                    id="memo"
-                                                    name="memo"
-                                                    maxLength={255}
-                                                />
-                                            </Field>
-                                            <Button
-                                                type="submit"
-                                                disabled={processing}
-                                            >
-                                                Record payment
-                                            </Button>
-                                        </>
-                                    )}
-                                </Form>
-                            </PanelBody>
-                        </Panel>
-                    )}
+                                                <Button
+                                                    type="submit"
+                                                    disabled={processing}
+                                                >
+                                                    Record payment
+                                                </Button>
+                                            </>
+                                        )}
+                                    </Form>
+                                </PanelBody>
+                            </Panel>
+                        )}
 
                     <Panel>
                         <PanelHeader title="Payments and refunds" />

@@ -35,6 +35,7 @@ class Tax
     public function __construct(
         private readonly Ledger $ledger,
         private readonly Periods $periods,
+        private readonly PaymentPolicy $payments,
     ) {}
 
     /**
@@ -238,6 +239,10 @@ class Tax
             }
 
             $settlement = $latest->settlement_journal_id;
+            // Taking back a refund takes money out of the bank, with nobody to approve it.
+            if ($settlement !== null && $latest->net_minor < 0 && $this->payments->holdsDirect(abs($latest->net_minor))) {
+                throw ValidationException::withMessages(['return' => 'Unfiling this return would take its refund back out of the bank, and payments are being held. Someone who sets the approval rules has to lift the hold first.']);
+            }
             $latest->delete();
 
             if ($settlement !== null) {

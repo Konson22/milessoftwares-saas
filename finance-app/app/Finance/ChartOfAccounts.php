@@ -22,6 +22,7 @@ class ChartOfAccounts
         ['code' => '1020', 'name' => 'Mobile money', 'type' => AccountType::Asset, 'key' => Account::MOBILE_MONEY, 'bank' => BankKind::MobileMoney],
         ['code' => '1030', 'name' => 'Card settlements', 'type' => AccountType::Asset, 'key' => Account::CARD, 'bank' => BankKind::Card],
         ['code' => '1200', 'name' => 'Accounts receivable', 'type' => AccountType::Asset, 'key' => Account::RECEIVABLE],
+        ['code' => '1250', 'name' => 'Employee advances', 'type' => AccountType::Asset, 'key' => Account::EMPLOYEE_ADVANCES],
         ['code' => '1400', 'name' => 'Inventory', 'type' => AccountType::Asset, 'key' => Account::INVENTORY],
         ['code' => '1500', 'name' => 'Equipment', 'type' => AccountType::Asset],
         ['code' => '1590', 'name' => 'Accumulated depreciation', 'type' => AccountType::Asset],
@@ -45,6 +46,32 @@ class ChartOfAccounts
         ['code' => '6950', 'name' => 'Exchange gains and losses', 'type' => AccountType::Expense, 'key' => Account::FX],
         ['code' => '6960', 'name' => 'Gain or loss on disposal of assets', 'type' => AccountType::Expense, 'key' => Account::DISPOSAL],
     ];
+
+    /**
+     * The employee advances account; an organization already using its code
+     * gets the next free one.
+     */
+    public function advances(): Account
+    {
+        $this->ensure();
+
+        $found = Account::query()->where('system_key', Account::EMPLOYEE_ADVANCES)->first();
+        if ($found !== null) {
+            return $found;
+        }
+
+        $codes = Account::query()->pluck('code')->all();
+        $code = 1250;
+        while (in_array((string) $code, $codes, true)) {
+            $code++;
+        }
+
+        $account = new Account(['code' => (string) $code, 'name' => 'Employee advances', 'type' => AccountType::Asset]);
+        $account->system_key = Account::EMPLOYEE_ADVANCES;
+        $account->save();
+
+        return $account;
+    }
 
     /**
      * Creates whatever of the starting chart is missing; safe to run again.

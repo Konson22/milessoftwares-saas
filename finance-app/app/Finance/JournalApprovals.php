@@ -4,6 +4,7 @@ namespace App\Finance;
 
 use App\Models\Journal;
 use App\Models\JournalDraft;
+use App\Models\PaymentRequest;
 use App\Models\RecurringJournal;
 use App\Models\User;
 use App\Models\Workspace;
@@ -19,11 +20,17 @@ use Illuminate\Validation\ValidationException;
  * creator and the approver recorded. Nobody approves their own entry, owners
  * included.
  *
+ * A journal that takes money out of a bank while payments are held does not
+ * post here: it goes on to payment approval and disbursement like any other
+ * payment (PaymentRequests), since approving journals is not approving payments.
+ *
  * A recurring journal is approved once each time it is added or changed;
- * until then it does not post (RecurringJournals).
+ * until then it does not post (RecurringJournals). One that takes money out of
+ * a bank while payments are held needs a payment approver instead.
  *
  * Journals from documents (invoices, bills, payments, banking) and products'
- * events are not held: the documents are their own record.
+ * events are not held: the documents are their own record. Money leaving a
+ * bank account has its own approval (PaymentPolicy, PaymentRequests).
  */
 class JournalApprovals
 {
@@ -33,6 +40,8 @@ class JournalApprovals
         private readonly Ledger $ledger,
         private readonly Periods $periods,
         private readonly DocumentNumbers $numbers,
+        private readonly PaymentPolicy $payments,
+        private readonly PaymentRequests $requests,
     ) {}
 
     /**
@@ -46,6 +55,20 @@ class JournalApprovals
         }
 
         return $workspace->journal_approval_threshold_minor === null || $totalMinor >= $workspace->journal_approval_threshold_minor;
+    }
+
+    /**
+     * Whether these stored lines take money out of a bank or cash account
+     * while payments are held. $reverses counts the journal's own reversal.
+     *
+     * @param  list<array{account_id: string, debit_minor: int, credit_minor: int}>  $lines
+     * @param  list<string>|null  $bankIds  when already known, for many templates in a row
+     */
+    public function heldAsPayment(array $lines, bool $reverses = false, ?array $bankIds = null): bool
+    {
+        $out = $this->payments->bankOutflow($lines, $reverses, $bankIds);
+
+        return $out > 0 && $this->payments->holdsDirect($out);
     }
 
     /**
@@ -90,16 +113,24 @@ class JournalApprovals
     }
 
     /**
-     * Posts the draft.
+     * Posts the draft, or passes it on to payment approval when it takes
+     * money out of a bank while payments are held.
      *
      * @throws ValidationException when it is not waiting, is the approver's own, or no longer posts (a locked month, a closed account)
      */
-    public function approve(JournalDraft $draft, User $by): Journal
+    public function approve(JournalDraft $draft, User $by): Journal|PaymentRequest
     {
         return DB::transaction(function () use ($draft, $by) {
             $locked = $this->pending($draft);
             if ($locked->submitted_by === $by->id) {
                 throw ValidationException::withMessages(['draft' => "{$locked->number} is your own entry: someone else approves it."]);
+            }
+
+            if ($this->heldAsPayment($locked->lines)) {
+                $request = $this->requests->holdJournal($locked->entry_date, $locked->memo, $locked->lines, $locked->submitter, $locked->number);
+                $locked->forceFill(['status' => JournalDraft::APPROVED, 'reviewed_by' => $by->id, 'reviewed_at' => now()])->save();
+
+                return $request;
             }
 
             $journal = $this->ledger->post($locked->entry_date, $locked->memo, StoredLines::toLedger($locked->lines), [
@@ -152,30 +183,61 @@ class JournalApprovals
 
     /**
      * Whether the recurring journal may post: approved since it was last
-     * changed, or not needing approval for its amount.
+     * changed, or not needing approval for its amount. One that takes money
+     * out of a bank while payments are held needs a payment approver's.
+     *
+     * @param  list<string>|null  $bankIds  when already known, for many templates in a row
      */
-    public function recurringCleared(RecurringJournal $template): bool
+    public function recurringCleared(RecurringJournal $template, ?array $bankIds = null): bool
     {
-        return $template->approved_at !== null || ! $this->required($template->total());
+        if ($this->recurringHeldAsPayment($template, $bankIds)) {
+            return $template->approved_for_payment;
+        }
+
+        return $template->approved_at !== null || ! $this->required(StoredLines::total($template->lines));
+    }
+
+    /**
+     * @param  list<string>|null  $bankIds  when already known, for many templates in a row
+     */
+    public function recurringHeldAsPayment(RecurringJournal $template, ?array $bankIds = null): bool
+    {
+        return $this->heldAsPayment($template->lines, $template->reverses, $bankIds);
+    }
+
+    /**
+     * The permission that approves this recurring journal.
+     *
+     * @param  list<string>|null  $bankIds  when already known, for many templates in a row
+     */
+    public function recurringApprovedBy(RecurringJournal $template, ?array $bankIds = null): string
+    {
+        return $this->recurringHeldAsPayment($template, $bankIds) ? 'finance.payments.approve' : self::PERMISSION;
     }
 
     /**
      * Approves a recurring journal as it stands.
      *
-     * @throws ValidationException when it is the approver's own, or already approved
+     * @throws ValidationException when it is the approver's own, already approved, or theirs to leave to a payment approver
      */
     public function approveRecurring(RecurringJournal $template, User $by): RecurringJournal
     {
         return DB::transaction(function () use ($template, $by) {
             $locked = RecurringJournal::query()->whereKey($template->id)->lockForUpdate()->firstOrFail();
-            if ($locked->approved_at !== null) {
+            $held = $this->recurringHeldAsPayment($locked);
+            if ($held ? $locked->approved_for_payment : $locked->approved_at !== null) {
                 throw ValidationException::withMessages(['approve' => "“{$locked->name}” is already approved."]);
+            }
+            if (! $by->can($this->recurringApprovedBy($locked))) {
+                throw ValidationException::withMessages(['approve' => $held
+                    ? "“{$locked->name}” takes money out of a bank: a payment approver approves it."
+                    : "“{$locked->name}” is a journal: a journal approver approves it."]);
             }
             if (($locked->updated_by ?? $locked->created_by) === $by->id) {
                 throw ValidationException::withMessages(['approve' => "You set up or last changed “{$locked->name}”: someone else approves it."]);
             }
 
-            $locked->forceFill(['approved_by' => $by->id, 'approved_at' => now()])->save();
+            $locked->forceFill(['approved_by' => $by->id, 'approved_at' => now(), 'approved_for_payment' => $held])->save();
 
             return $locked;
         });

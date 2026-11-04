@@ -1,6 +1,7 @@
 import {
     ArrowDownToLine,
     ArrowUpFromLine,
+    Banknote,
     BookOpenText,
     Boxes,
     Building2,
@@ -22,6 +23,7 @@ import {
     Repeat,
     Rows3,
     ShieldCheck,
+    SlidersHorizontal,
     Shapes,
     Scale,
     Target,
@@ -43,8 +45,10 @@ import { index as depreciation } from '@/routes/depreciation';
 import { index as dimensions } from '@/routes/dimensions';
 import { index as fixedAssets } from '@/routes/fixed-assets';
 import { index as invoices } from '@/routes/invoices';
+import { index as approvalRules } from '@/routes/approval-rules';
 import { index as journalApprovals } from '@/routes/journal-approvals';
 import { index as journals } from '@/routes/journals';
+import { index as paymentRequests } from '@/routes/payment-requests';
 import { index as periods } from '@/routes/periods';
 import { index as reconciliation } from '@/routes/reconciliation';
 import { index as recurringJournals } from '@/routes/recurring-journals';
@@ -66,8 +70,8 @@ import { index as taxCodes } from '@/routes/tax-codes';
 import { index as taxReturns } from '@/routes/tax-returns';
 
 export type NavItem = ShellNavItem & {
-    /** Shown to members holding this catalog permission (or owners); null for everyone. */
-    permission: string | null;
+    /** Shown to members holding this catalog permission, or any of these (or owners); null for everyone. */
+    permission: string | string[] | null;
     /** Shown only when the plan includes this feature. */
     feature?: Feature;
 };
@@ -75,7 +79,14 @@ export type NavItem = ShellNavItem & {
 /** Plan features that add sections (shared props of the same name). */
 export type Feature = 'multicurrency' | 'fixedAssets';
 
-export type NavGroup = { title: string; items: NavItem[] };
+/**
+ * Who a section is mainly for. A member with only the finance dashboard does
+ * not get accounting's sections in the menu, and the other way round. It
+ * only tidies the menu: what they may open is decided by their permissions.
+ */
+export type NavArea = 'finance' | 'accounting';
+
+export type NavGroup = { title: string; area?: NavArea; items: NavItem[] };
 
 /**
  * Finance's sections, in menu order.
@@ -93,7 +104,36 @@ export const navigation: NavGroup[] = [
         ],
     },
     {
+        title: 'Payments',
+        items: [
+            {
+                title: 'Payment requests',
+                href: paymentRequests(),
+                icon: Banknote,
+                permission: [
+                    'finance.payments.view',
+                    'finance.payments.prepare',
+                    'finance.payables.manage',
+                    'finance.banking.manage',
+                ],
+            },
+        ],
+    },
+    {
+        title: 'Planning',
+        area: 'finance',
+        items: [
+            {
+                title: 'Budgets',
+                href: budgets(),
+                icon: Target,
+                permission: 'finance.reports.view',
+            },
+        ],
+    },
+    {
         title: 'Accounting',
+        area: 'accounting',
         items: [
             {
                 title: 'Chart of accounts',
@@ -114,6 +154,12 @@ export const navigation: NavGroup[] = [
                 permission: 'finance.journals.view',
             },
             {
+                title: 'Approval rules',
+                href: approvalRules(),
+                icon: SlidersHorizontal,
+                permission: 'finance.approvals.configure',
+            },
+            {
                 title: 'Recurring journals',
                 href: recurringJournals(),
                 icon: Repeat,
@@ -130,12 +176,6 @@ export const navigation: NavGroup[] = [
                 href: dimensions(),
                 icon: Shapes,
                 permission: 'finance.accounts.view',
-            },
-            {
-                title: 'Budgets',
-                href: budgets(),
-                icon: Target,
-                permission: 'finance.reports.view',
             },
             {
                 title: 'Currencies',
@@ -205,6 +245,7 @@ export const navigation: NavGroup[] = [
     },
     {
         title: 'Fixed assets',
+        area: 'accounting',
         items: [
             {
                 title: 'Asset register',
@@ -231,6 +272,7 @@ export const navigation: NavGroup[] = [
     },
     {
         title: 'Tax',
+        area: 'accounting',
         items: [
             {
                 title: 'Tax returns',
@@ -320,12 +362,23 @@ export function visibleNavigation(
     can: (permission: string) => boolean,
     features: Partial<Record<Feature, boolean>> = {},
 ): NavGroup[] {
+    const finance = can('finance.dashboard.finance');
+    const accounting = can('finance.dashboard.accounting');
+    const hidden: NavArea | null =
+        finance && !accounting
+            ? 'accounting'
+            : accounting && !finance
+              ? 'finance'
+              : null;
+
     return navigation
+        .filter((group) => group.area === undefined || group.area !== hidden)
         .map((group) => ({
             ...group,
             items: group.items.filter(
                 (item) =>
-                    (item.permission === null || can(item.permission)) &&
+                    (item.permission === null ||
+                        [item.permission].flat().some(can)) &&
                     (item.feature === undefined ||
                         features[item.feature] === true),
             ),

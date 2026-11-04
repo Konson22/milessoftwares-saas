@@ -8,7 +8,7 @@ use App\Models\JournalLine;
 use Inertia\Testing\AssertableInertia as Assert;
 
 const RECONCILER = [
-    'finance.accounts.view', 'finance.journals.view', 'finance.journals.post',
+    'finance.accounts.view', 'finance.journals.view', 'finance.journals.post', 'finance.journals.reverse',
     'finance.banking.view', 'finance.banking.manage', 'finance.banking.reconcile',
 ];
 

@@ -9,7 +9,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 const PREPARER = ['finance.accounts.view', 'finance.journals.view', 'finance.journals.post'];
 
-const APPROVER = ['finance.accounts.view', 'finance.journals.view', 'finance.journals.post', 'finance.journals.approve', 'finance.periods.manage'];
+const APPROVER = ['finance.accounts.view', 'finance.journals.view', 'finance.journals.post', 'finance.journals.approve', 'finance.periods.manage', 'finance.approvals.configure'];
 
 beforeEach(function () {
     $this->platform()->organization('acme');
@@ -213,7 +213,7 @@ it('lets only approvers change the setting', function () {
     $this->get(jaUrl('journal-approvals'))->assertOk();
 
     jaTurnOn('250.50');
-    $this->get(jaUrl('journal-approvals'))->assertInertia(fn (Assert $page) => $page->where('setting.enabled', true)->where('setting.threshold', '250.50'));
+    $this->get(jaUrl('approval-rules'))->assertInertia(fn (Assert $page) => $page->where('journals.enabled', true)->where('journals.threshold', '250.50'));
     $this->put(jaUrl('journal-approvals/settings'), ['journal_approval' => '0', 'threshold' => '100'])->assertSessionHasNoErrors();
     $this->get(jaUrl('journals/create'))->assertInertia(fn (Assert $page) => $page->where('approval', null));
 });

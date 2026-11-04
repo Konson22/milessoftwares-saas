@@ -72,6 +72,7 @@ class RecurringJournals
             $template->updated_by = $by->id;
             $template->approved_by = null;
             $template->approved_at = null;
+            $template->approved_for_payment = false;
             $template->save();
 
             return $template;

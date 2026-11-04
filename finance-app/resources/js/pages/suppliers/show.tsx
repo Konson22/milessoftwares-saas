@@ -77,7 +77,9 @@ export default function ShowSupplier({
 }: Props) {
     const can = useCan();
     const money = useMoney();
-    const canManage = can('finance.payables.manage');
+    const canManage =
+        can('finance.payables.manage') || can('finance.bills.manage');
+    const canPay = can('finance.payables.manage');
     const [editing, setEditing] = useState(false);
 
     return (
@@ -113,16 +115,21 @@ export default function ShowSupplier({
                                     New bill
                                 </Link>
                             </Button>
-                            <Button asChild>
-                                <Link
-                                    href={pay({
-                                        query: { supplier: supplier.id },
-                                    })}
-                                >
-                                    <Banknote className="size-4" aria-hidden />
-                                    Pay
-                                </Link>
-                            </Button>
+                            {canPay && (
+                                <Button asChild>
+                                    <Link
+                                        href={pay({
+                                            query: { supplier: supplier.id },
+                                        })}
+                                    >
+                                        <Banknote
+                                            className="size-4"
+                                            aria-hidden
+                                        />
+                                        Pay
+                                    </Link>
+                                </Button>
+                            )}
                         </>
                     )
                 }

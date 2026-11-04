@@ -88,7 +88,7 @@ export default function ShowJournal({ journal }: Props) {
                 description={journal.memo}
                 actions={
                     journal.reversible &&
-                    can('finance.journals.post') && (
+                    can('finance.journals.reverse') && (
                         <Button
                             variant="outline"
                             onClick={() => setReversing((value) => !value)}

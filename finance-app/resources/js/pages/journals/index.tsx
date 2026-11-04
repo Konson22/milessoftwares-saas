@@ -51,7 +51,8 @@ export default function Journals({ from, to, search, journals }: Props) {
                 title="Journals"
                 description="Every entry in the books. Entries from products are posted automatically."
                 actions={
-                    can('finance.journals.post') && (
+                    (can('finance.journals.post') ||
+                        can('finance.journals.prepare')) && (
                         <Button asChild>
                             <Link href={create()}>
                                 <NotebookPen className="size-4" aria-hidden />

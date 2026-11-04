@@ -33,7 +33,10 @@ class Reconciliation
     /** Days either side within which a single candidate is matched automatically. */
     public const AUTO_DAYS = 3;
 
-    public function __construct(private readonly Banking $banking) {}
+    public function __construct(
+        private readonly Banking $banking,
+        private readonly PaymentPolicy $payments,
+    ) {}
 
     /**
      * @param  list<array{date: CarbonImmutable, description: string, reference: string|null, amount: int}>  $rows
@@ -174,6 +177,9 @@ class Reconciliation
             }
 
             $bank = Account::query()->findOrFail($locked->account_id);
+            if ($this->held($locked, $bank)) {
+                throw ValidationException::withMessages(['line' => 'Payments of this size need approval: raise a payment request or a journal, then match this line to it.']);
+            }
             $description = $memo ?? $locked->description;
             $journal = $locked->amount_minor > 0
                 ? $this->banking->moneyIn($bank, $other, $locked->amount_minor, $locked->line_date, $description, $by)
@@ -211,7 +217,8 @@ class Reconciliation
                 }
 
                 $rule = $rules->first(fn (BankRule $rule) => $rule->account->active && $rule->applies($line));
-                if ($rule !== null) {
+                // Payment approval still applies: such a line waits to be matched.
+                if ($rule !== null && ! $this->held($line, Account::query()->findOrFail($line->account_id))) {
                     $this->enter($line, $rule->account, $rule->memo, $by);
                     $entered++;
                 }
@@ -359,6 +366,17 @@ class Reconciliation
                 'amountMinor' => $line->debit_minor - $line->credit_minor,
             ])->all()),
         ];
+    }
+
+    /**
+     * Whether entering this line would pay out money that approval holds. A
+     * statement is a typed-in or imported file, so it cannot stand in for the
+     * approval.
+     */
+    private function held(BankStatementLine $line, Account $bank): bool
+    {
+        return $line->amount_minor < 0
+            && $this->payments->holdsDirect($this->payments->booksAmount(-$line->amount_minor, $bank->currency, $line->line_date));
     }
 
     public function latest(Account $bank): ?BankStatement

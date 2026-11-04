@@ -47,6 +47,9 @@ class Account extends Model
 
     public const RECEIVABLE = 'receivable';
 
+    /** Money paid to staff ahead, until it is settled. */
+    public const EMPLOYEE_ADVANCES = 'employee_advances';
+
     public const INVENTORY = 'inventory';
 
     public const PAYABLE = 'payable';

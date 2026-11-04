@@ -11,6 +11,7 @@ enum BankKind: string
     case Bank = 'bank';
     case MobileMoney = 'mobile_money';
     case Card = 'card';
+    case PettyCash = 'petty_cash';
 
     public function label(): string
     {
@@ -19,6 +20,7 @@ enum BankKind: string
             self::Bank => 'Bank account',
             self::MobileMoney => 'Mobile money',
             self::Card => 'Card settlements',
+            self::PettyCash => 'Petty cash',
         };
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Finance\Currencies;
 use App\Finance\Money;
 use App\Models\Account;
+use App\Models\Bill;
 use App\Models\DimensionValue;
 use App\Models\ExchangeRate;
 use App\Models\TaxCode;
@@ -12,6 +13,7 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Exists;
 use Illuminate\Validation\ValidationException;
@@ -53,6 +55,36 @@ abstract class Controller
             false => $rule->whereNull('bank_kind'),
             null => $rule,
         };
+    }
+
+    /**
+     * Typed amounts per bill, in the payment's currency: the bank's, or else
+     * the bills'.
+     *
+     * @param  array<array-key, mixed>  $typed  bill id => typed amount
+     * @return array{0: array<string, int>, 1: string|null} the amounts in minor units, and the currency
+     *
+     * @throws ValidationException
+     */
+    protected function billAllocations(array $typed, Account $from): array
+    {
+        $amounts = [];
+        foreach ($typed as $billId => $amount) {
+            if (! Str::isUuid((string) $billId)) {
+                throw ValidationException::withMessages(['allocations' => 'Unknown bill.']);
+            }
+            if (is_string($amount) && $amount !== '') {
+                $amounts[(string) $billId] = $amount;
+            }
+        }
+
+        $currency = $from->currency ?? Bill::query()->whereIn('id', array_keys($amounts))->whereNotNull('currency')->value('currency');
+        $allocations = [];
+        foreach ($amounts as $billId => $amount) {
+            $allocations[$billId] = $this->amountIn($amount, $currency, "allocations.{$billId}");
+        }
+
+        return [$allocations, $currency];
     }
 
     /**

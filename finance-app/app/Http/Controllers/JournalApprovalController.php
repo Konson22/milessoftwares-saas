@@ -4,11 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Finance\JournalApprovals;
 use App\Finance\Money;
+use App\Finance\PaymentPolicy;
 use App\Models\Account;
 use App\Models\DimensionValue;
 use App\Models\JournalDraft;
+use App\Models\PaymentRequest;
 use App\Models\RecurringJournal;
-use App\Models\Workspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -16,11 +17,11 @@ use Inertia\Response;
 
 /**
  * Journal approvals: manual journals waiting for a second person, the
- * latest decisions, and the organization's approval setting.
+ * latest decisions.
  */
 class JournalApprovalController extends Controller
 {
-    public function index(Request $request, JournalApprovals $approvals): Response
+    public function index(Request $request, JournalApprovals $approvals, PaymentPolicy $payments): Response
     {
         $me = $this->user($request)->id;
         $pending = JournalDraft::query()->with('submitter')->where('status', JournalDraft::PENDING)->orderBy('created_at')->get();
@@ -56,24 +57,22 @@ class JournalApprovalController extends Controller
             ], $draft->lines),
         ];
 
-        $workspace = Workspace::current();
+        $banks = $payments->bankIds();
 
         return Inertia::render('journal-approvals/index', [
             'pending' => $pending->map($row)->values(),
             'decided' => $decided->map($row)->values(),
-            'setting' => [
-                'enabled' => $workspace->journal_approval ?? false,
-                'threshold' => $workspace?->journal_approval_threshold_minor === null ? '' : Money::toMajor($workspace->journal_approval_threshold_minor),
-            ],
-            'recurringAwaiting' => RecurringJournal::query()->where('active', true)->get()->reject(fn (RecurringJournal $template) => $approvals->recurringCleared($template))->count(),
+            'recurringAwaiting' => RecurringJournal::query()->where('active', true)->get()->reject(fn (RecurringJournal $template) => $approvals->recurringCleared($template, $banks))->count(),
         ]);
     }
 
     public function approve(Request $request, JournalDraft $draft, JournalApprovals $approvals): RedirectResponse
     {
-        $journal = $approvals->approve($draft, $this->user($request));
+        $result = $approvals->approve($draft, $this->user($request));
 
-        return back()->with('success', "{$draft->number} approved and posted as {$journal->number}.");
+        return back()->with('success', $result instanceof PaymentRequest
+            ? "{$draft->number} approved. It takes money out of a bank, so it now waits as payment request {$result->number}."
+            : "{$draft->number} approved and posted as {$result->number}.");
     }
 
     public function reject(Request $request, JournalDraft $draft, JournalApprovals $approvals): RedirectResponse

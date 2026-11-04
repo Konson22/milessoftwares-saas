@@ -6,7 +6,11 @@ import {
     NotebookPen,
     TrendingUp,
 } from 'lucide-react';
+import { AccountingDashboard } from '@/components/accounting-dashboard';
+import type { AccountingDashboardData } from '@/components/accounting-dashboard';
 import { Amount } from '@/components/amount';
+import { FinanceDashboard } from '@/components/finance-dashboard';
+import type { FinanceDashboardData } from '@/components/finance-dashboard';
 import { EmptyState } from '@miles/ui/components/empty-state';
 import { PageHeader } from '@miles/ui/components/page-header';
 import { Panel, PanelHeader } from '@miles/ui/components/panel';
@@ -23,6 +27,7 @@ import {
 } from '@miles/ui/components/ui/table';
 import { useCan } from '@/lib/access';
 import { sourceLabel, useMoney } from '@/lib/format';
+import { home } from '@/routes';
 import { index as banking } from '@/routes/banking';
 import { index as bills } from '@/routes/bills';
 import { index as invoices } from '@/routes/invoices';
@@ -33,7 +38,18 @@ import {
 } from '@/routes/journals';
 import { profitAndLoss } from '@/routes/reports';
 
+type DashboardView = 'finance' | 'accounting';
+
+const VIEW_LABELS: Record<DashboardView, string> = {
+    finance: 'Finance',
+    accounting: 'Accounting',
+};
+
 type Props = {
+    views: DashboardView[];
+    view: DashboardView | null;
+    finance: FinanceDashboardData | null;
+    accounting: AccountingDashboardData | null;
     cash: { id: string; name: string; balanceMinor: number }[] | null;
     receivable: { outstandingMinor: number; overdue: number } | null;
     payable: {
@@ -62,6 +78,10 @@ type Props = {
  * The books at a glance.
  */
 export default function Home({
+    views,
+    view,
+    finance,
+    accounting,
     cash,
     receivable,
     payable,
@@ -81,7 +101,8 @@ export default function Home({
                 title="Dashboard"
                 description={`The books of ${workspace?.name ?? 'your workspace'}.`}
                 actions={
-                    can('finance.journals.post') && (
+                    (can('finance.journals.post') ||
+                        can('finance.journals.prepare')) && (
                         <Button asChild>
                             <Link href={newJournal()}>
                                 <NotebookPen className="size-4" aria-hidden />
@@ -92,155 +113,199 @@ export default function Home({
                 }
             />
 
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {cash && (
-                    <StatCard
-                        label="Cash and bank"
-                        value={money(cashTotal)}
-                        hint={`${cash.length} accounts`}
-                        icon={Landmark}
-                        accent="blue"
-                        href={banking()}
-                    />
-                )}
-                {receivable && (
-                    <StatCard
-                        label="Customers owe"
-                        value={money(receivable.outstandingMinor)}
-                        hint={
-                            receivable.overdue > 0
-                                ? `${receivable.overdue} invoices overdue`
-                                : 'Nothing overdue'
-                        }
-                        icon={ArrowDownToLine}
-                        accent={receivable.overdue > 0 ? 'amber' : 'emerald'}
-                        href={invoices()}
-                    />
-                )}
-                {payable && (
-                    <StatCard
-                        label="Owed to suppliers"
-                        value={money(payable.outstandingMinor)}
-                        hint={
-                            payable.overdue > 0
-                                ? `${payable.overdue} bills overdue`
-                                : `${payable.dueSoon} due in 7 days`
-                        }
-                        icon={ArrowUpFromLine}
-                        accent={payable.overdue > 0 ? 'red' : 'violet'}
-                        href={bills()}
-                    />
-                )}
-                {month && (
-                    <StatCard
-                        label="Profit this month"
-                        value={money(month.profitMinor)}
-                        hint={`${money(month.revenueMinor)} in, ${money(month.expensesMinor)} out`}
-                        icon={TrendingUp}
-                        accent={month.profitMinor >= 0 ? 'emerald' : 'red'}
-                        href={profitAndLoss()}
-                    />
-                )}
-            </div>
+            {views.length > 1 && (
+                <div className="mb-3 flex gap-1" role="tablist">
+                    {views.map((option) => (
+                        <Button
+                            key={option}
+                            size="sm"
+                            variant={option === view ? 'default' : 'outline'}
+                            role="tab"
+                            aria-selected={option === view}
+                            asChild
+                        >
+                            <Link href={home({ query: { view: option } })}>
+                                {VIEW_LABELS[option]}
+                            </Link>
+                        </Button>
+                    ))}
+                </div>
+            )}
 
-            <div className="mt-4 grid gap-3 xl:grid-cols-3">
-                {recent && (
-                    <Panel className="xl:col-span-2">
-                        <PanelHeader
-                            title="Latest entries"
-                            actions={
-                                <Button variant="ghost" size="sm" asChild>
-                                    <Link href={journals()}>All journals</Link>
-                                </Button>
-                            }
+            {view === 'finance' && finance && (
+                <FinanceDashboard
+                    data={finance}
+                    cash={cash}
+                    payable={payable}
+                />
+            )}
+            {view === 'accounting' && accounting && (
+                <AccountingDashboard
+                    data={accounting}
+                    receivable={receivable}
+                    payable={payable}
+                />
+            )}
+
+            {view === null && (
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    {cash && (
+                        <StatCard
+                            label="Cash and bank"
+                            value={money(cashTotal)}
+                            hint={`${cash.length} accounts`}
+                            icon={Landmark}
+                            accent="blue"
+                            href={banking()}
                         />
-                        {recent.length === 0 ? (
-                            <EmptyState
-                                icon={NotebookPen}
-                                title="Nothing posted yet"
-                            >
-                                Sales, payments and supplier bills from your
-                                products appear here as they are booked.
-                            </EmptyState>
-                        ) : (
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Journal</TableHead>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead>Memo</TableHead>
-                                        <TableHead>From</TableHead>
-                                        <TableHead className="text-right">
-                                            Amount
-                                        </TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {recent.map((journal) => (
-                                        <TableRow key={journal.id}>
-                                            <TableCell className="font-mono text-xs">
-                                                <Link
-                                                    href={showJournal(
-                                                        journal.id,
-                                                    )}
-                                                    className="text-primary hover:underline"
-                                                >
-                                                    {journal.number}
-                                                </Link>
-                                            </TableCell>
-                                            <TableCell className="tabular-nums">
-                                                {journal.date}
-                                            </TableCell>
-                                            <TableCell className="max-w-80 truncate">
-                                                {journal.memo}
-                                            </TableCell>
-                                            <TableCell>
-                                                <StatusBadge
-                                                    tone={
-                                                        journal.source ===
-                                                        'finance'
-                                                            ? 'neutral'
-                                                            : 'info'
-                                                    }
-                                                >
-                                                    {sourceLabel(
-                                                        journal.source,
-                                                    )}
-                                                </StatusBadge>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <Amount
-                                                    minor={journal.totalMinor}
-                                                />
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        )}
-                    </Panel>
-                )}
+                    )}
+                    {receivable && (
+                        <StatCard
+                            label="Customers owe"
+                            value={money(receivable.outstandingMinor)}
+                            hint={
+                                receivable.overdue > 0
+                                    ? `${receivable.overdue} invoices overdue`
+                                    : 'Nothing overdue'
+                            }
+                            icon={ArrowDownToLine}
+                            accent={
+                                receivable.overdue > 0 ? 'amber' : 'emerald'
+                            }
+                            href={invoices()}
+                        />
+                    )}
+                    {payable && (
+                        <StatCard
+                            label="Owed to suppliers"
+                            value={money(payable.outstandingMinor)}
+                            hint={
+                                payable.overdue > 0
+                                    ? `${payable.overdue} bills overdue`
+                                    : `${payable.dueSoon} due in 7 days`
+                            }
+                            icon={ArrowUpFromLine}
+                            accent={payable.overdue > 0 ? 'red' : 'violet'}
+                            href={bills()}
+                        />
+                    )}
+                    {month && (
+                        <StatCard
+                            label="Profit this month"
+                            value={money(month.profitMinor)}
+                            hint={`${money(month.revenueMinor)} in, ${money(month.expensesMinor)} out`}
+                            icon={TrendingUp}
+                            accent={month.profitMinor >= 0 ? 'emerald' : 'red'}
+                            href={profitAndLoss()}
+                        />
+                    )}
+                </div>
+            )}
 
-                {cash && (
-                    <Panel>
-                        <PanelHeader title="Bank and cash" />
-                        <ul className="divide-y text-sm">
-                            {cash.map((bank) => (
-                                <li
-                                    key={bank.id}
-                                    className="flex items-center justify-between gap-3 px-4 py-2.5"
+            {view !== 'finance' && (
+                <div className="mt-4 grid gap-3 xl:grid-cols-3">
+                    {recent && (
+                        <Panel className="xl:col-span-2">
+                            <PanelHeader
+                                title="Latest entries"
+                                actions={
+                                    <Button variant="ghost" size="sm" asChild>
+                                        <Link href={journals()}>
+                                            All journals
+                                        </Link>
+                                    </Button>
+                                }
+                            />
+                            {recent.length === 0 ? (
+                                <EmptyState
+                                    icon={NotebookPen}
+                                    title="Nothing posted yet"
                                 >
-                                    <span>{bank.name}</span>
-                                    <Amount
-                                        minor={bank.balanceMinor}
-                                        className="font-medium"
-                                    />
-                                </li>
-                            ))}
-                        </ul>
-                    </Panel>
-                )}
-            </div>
+                                    Sales, payments and supplier bills from your
+                                    products appear here as they are booked.
+                                </EmptyState>
+                            ) : (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Journal</TableHead>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Memo</TableHead>
+                                            <TableHead>From</TableHead>
+                                            <TableHead className="text-right">
+                                                Amount
+                                            </TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {recent.map((journal) => (
+                                            <TableRow key={journal.id}>
+                                                <TableCell className="font-mono text-xs">
+                                                    <Link
+                                                        href={showJournal(
+                                                            journal.id,
+                                                        )}
+                                                        className="text-primary hover:underline"
+                                                    >
+                                                        {journal.number}
+                                                    </Link>
+                                                </TableCell>
+                                                <TableCell className="tabular-nums">
+                                                    {journal.date}
+                                                </TableCell>
+                                                <TableCell className="max-w-80 truncate">
+                                                    {journal.memo}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <StatusBadge
+                                                        tone={
+                                                            journal.source ===
+                                                            'finance'
+                                                                ? 'neutral'
+                                                                : 'info'
+                                                        }
+                                                    >
+                                                        {sourceLabel(
+                                                            journal.source,
+                                                        )}
+                                                    </StatusBadge>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <Amount
+                                                        minor={
+                                                            journal.totalMinor
+                                                        }
+                                                    />
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            )}
+                        </Panel>
+                    )}
+
+                    {cash && view === null && (
+                        <Panel>
+                            <PanelHeader title="Bank and cash" />
+                            <ul className="divide-y text-sm">
+                                {cash.map((bank) => (
+                                    <li
+                                        key={bank.id}
+                                        className="flex items-center justify-between gap-3 px-4 py-2.5"
+                                    >
+                                        <span>{bank.name}</span>
+                                        <Amount
+                                            minor={bank.balanceMinor}
+                                            className="font-medium"
+                                        />
+                                    </li>
+                                ))}
+                            </ul>
+                        </Panel>
+                    )}
+                </div>
+            )}
         </>
     );
 }

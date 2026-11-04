@@ -3,23 +3,27 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AccountType;
-use App\Finance\Balances;
+use App\Finance\Dashboards;
+use App\Finance\FixedAssets;
 use App\Finance\Statements;
 use App\Models\Account;
 use App\Models\Bill;
 use App\Models\Invoice;
 use App\Models\Journal;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Miles\PlatformClient\Access\CurrentAccess;
 
 /**
  * The books at a glance; each figure only for members who may see it.
+ * Which dashboards a member gets comes from catalog permissions, never role
+ * names, so someone holding both gets both over the same records.
  */
 class HomeController extends Controller
 {
-    public function __invoke(CurrentAccess $currentAccess, Balances $balances, Statements $statements): Response
+    public function __invoke(Request $request, CurrentAccess $currentAccess, Statements $statements, Dashboards $dashboards): Response
     {
         $access = $currentAccess->get();
         $can = fn (string $permission) => $access?->allowsIn($permission) ?? false;
@@ -27,7 +31,7 @@ class HomeController extends Controller
 
         $cash = null;
         if ($can('finance.banking.view')) {
-            $totals = $balances->totals();
+            $totals = $dashboards->totals();
             $cash = Account::query()->banks()->orderBy('code')->get()->map(fn (Account $bank) => [
                 'id' => $bank->id,
                 'name' => $bank->name,
@@ -63,7 +67,14 @@ class HomeController extends Controller
             ])->values()->all()
             : null;
 
+        $views = array_values(array_filter(['finance', 'accounting'], fn (string $view) => $can("finance.dashboard.{$view}")));
+        $view = in_array($request->query('view'), $views, true) ? $request->query('view') : ($views[0] ?? null);
+
         return Inertia::render('home', [
+            'views' => $views,
+            'view' => $view,
+            'finance' => $view === 'finance' ? $dashboards->finance($can, $today) : null,
+            'accounting' => $view === 'accounting' ? $dashboards->accounting($can, $today, FixedAssets::enabled()) : null,
             'cash' => $cash,
             'receivable' => $receivable,
             'payable' => $payable,

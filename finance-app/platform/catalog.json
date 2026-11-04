@@ -6,7 +6,7 @@
         "kind": "shared_module",
         "status": "beta"
     },
-    "version": "1.8.0",
+    "version": "1.9.0",
     "permissions": [
         {
             "key": "finance.accounts.view",
@@ -28,13 +28,13 @@
         },
         {
             "key": "finance.journals.post",
-            "name": "Post and reverse manual journals",
+            "name": "Post manual journals directly, when they do not need approval",
             "sensitivity": 3,
             "scopes": ["organization"]
         },
         {
             "key": "finance.journals.approve",
-            "name": "Approve other people's manual and recurring journals, and set when approval is needed",
+            "name": "Approve other people's manual and recurring journals",
             "sensitivity": 3,
             "scopes": ["organization"]
         },
@@ -46,7 +46,7 @@
         },
         {
             "key": "finance.payables.manage",
-            "name": "Record bills and pay suppliers",
+            "name": "Record bills and pay suppliers without a payment request, unless approval holds the payment",
             "sensitivity": 3,
             "scopes": ["organization"]
         },
@@ -70,7 +70,7 @@
         },
         {
             "key": "finance.banking.manage",
-            "name": "Record money in, money out and transfers",
+            "name": "Record money in, money out and transfers without a payment request, unless approval holds them",
             "sensitivity": 3,
             "scopes": ["organization"]
         },
@@ -112,7 +112,79 @@
         },
         {
             "key": "finance.periods.manage",
-            "name": "Lock months, close years and enter opening balances",
+            "name": "Close accounting periods: lock months, close years and enter opening balances",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.dashboard.finance",
+            "name": "See the financial management dashboard",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.dashboard.accounting",
+            "name": "See the accounting dashboard",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.journals.prepare",
+            "name": "Enter manual journals that wait for approval",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.journals.reverse",
+            "name": "Reverse posted journals",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.bills.manage",
+            "name": "Record suppliers and bills (paying them is separate)",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.receipts.record",
+            "name": "Record money received: customer receipts and money in",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.payments.view",
+            "name": "View payment requests",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.payments.prepare",
+            "name": "Prepare payment requests",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.payments.review",
+            "name": "Review payment requests",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.payments.approve",
+            "name": "Approve payment requests",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.payments.disburse",
+            "name": "Disburse approved payment requests",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.approvals.configure",
+            "name": "Set when journals and payments need review and approval",
             "sensitivity": 3,
             "scopes": ["organization"]
         }
@@ -131,35 +203,113 @@
     ],
     "roles": [
         {
+            "key": "finance_manager",
+            "name": "Finance Manager",
+            "sensitivity": 3,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "finance.dashboard.finance",
+                "finance.journals.view",
+                "finance.payables.view",
+                "finance.receivables.view",
+                "finance.banking.view",
+                "finance.reports.view",
+                "finance.budgets.manage",
+                "finance.payments.view",
+                "finance.payments.approve"
+            ]
+        },
+        {
+            "key": "finance_officer",
+            "name": "Finance Officer",
+            "sensitivity": 3,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "finance.dashboard.finance",
+                "finance.payables.view",
+                "finance.receivables.view",
+                "finance.banking.view",
+                "finance.reports.view",
+                "finance.payments.view",
+                "finance.payments.prepare"
+            ]
+        },
+        {
+            "key": "cashier",
+            "name": "Cashier",
+            "sensitivity": 3,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "finance.dashboard.finance",
+                "finance.payables.view",
+                "finance.receivables.view",
+                "finance.banking.view",
+                "finance.receipts.record",
+                "finance.payments.view",
+                "finance.payments.disburse"
+            ]
+        },
+        {
+            "key": "chief_accountant",
+            "name": "Chief Accountant",
+            "sensitivity": 3,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "finance.dashboard.accounting",
+                "finance.accounts.view",
+                "finance.accounts.manage",
+                "finance.journals.view",
+                "finance.journals.prepare",
+                "finance.journals.post",
+                "finance.journals.approve",
+                "finance.journals.reverse",
+                "finance.payables.view",
+                "finance.bills.manage",
+                "finance.receivables.view",
+                "finance.receivables.manage",
+                "finance.receipts.record",
+                "finance.banking.view",
+                "finance.banking.reconcile",
+                "finance.reports.view",
+                "finance.periods.manage",
+                "finance.tax.manage",
+                "finance.currencies.manage",
+                "finance.assets.manage",
+                "finance.payments.view",
+                "finance.payments.review"
+            ]
+        },
+        {
             "key": "accountant",
             "name": "Accountant",
             "sensitivity": 3,
             "delegable": true,
             "scopes": ["organization"],
             "permissions": [
+                "finance.dashboard.accounting",
                 "finance.accounts.view",
-                "finance.accounts.manage",
                 "finance.journals.view",
+                "finance.journals.prepare",
                 "finance.journals.post",
-                "finance.journals.approve",
                 "finance.payables.view",
-                "finance.payables.manage",
+                "finance.bills.manage",
                 "finance.receivables.view",
                 "finance.receivables.manage",
+                "finance.receipts.record",
                 "finance.banking.view",
-                "finance.banking.manage",
                 "finance.banking.reconcile",
                 "finance.reports.view",
-                "finance.periods.manage",
-                "finance.tax.manage",
-                "finance.currencies.manage",
-                "finance.budgets.manage",
-                "finance.assets.manage"
+                "finance.payments.view",
+                "finance.payments.review"
             ]
         },
         {
             "key": "bookkeeper",
-            "name": "Bookkeeper",
+            "name": "Bookkeeper (small teams, pays directly)",
             "sensitivity": 3,
             "delegable": true,
             "scopes": ["organization"],
@@ -182,13 +332,107 @@
             "delegable": true,
             "scopes": ["organization"],
             "permissions": [
+                "finance.dashboard.finance",
+                "finance.dashboard.accounting",
                 "finance.accounts.view",
                 "finance.journals.view",
                 "finance.payables.view",
                 "finance.receivables.view",
                 "finance.banking.view",
-                "finance.reports.view"
+                "finance.reports.view",
+                "finance.payments.view"
             ]
+        },
+        {
+            "key": "system_administrator",
+            "name": "System Administrator",
+            "sensitivity": 3,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "finance.accounts.view",
+                "finance.accounts.manage",
+                "finance.approvals.configure"
+            ]
+        }
+    ],
+    "separation_of_duties": [
+        {
+            "permissions": [
+                "finance.payments.prepare",
+                "finance.payments.approve"
+            ],
+            "mode": "warn",
+            "description": "One person both requesting and approving payments removes the second check."
+        },
+        {
+            "permissions": [
+                "finance.payments.review",
+                "finance.payments.approve"
+            ],
+            "mode": "warn",
+            "description": "Review and approval are meant to be two different checks."
+        },
+        {
+            "permissions": [
+                "finance.payments.approve",
+                "finance.payments.disburse"
+            ],
+            "mode": "warn",
+            "description": "One person both approving and releasing money removes the second check."
+        },
+        {
+            "permissions": [
+                "finance.payments.prepare",
+                "finance.payments.disburse"
+            ],
+            "mode": "warn",
+            "description": "One person both requesting and releasing money should not handle the same payment."
+        },
+        {
+            "permissions": ["finance.bills.manage", "finance.payments.approve"],
+            "mode": "warn",
+            "description": "Recording a bill and approving its payment lets one person create and clear a debt."
+        },
+        {
+            "permissions": [
+                "finance.payments.disburse",
+                "finance.banking.reconcile"
+            ],
+            "mode": "warn",
+            "description": "Whoever releases money should not also reconcile the account it left."
+        },
+        {
+            "permissions": [
+                "finance.payments.disburse",
+                "finance.journals.post"
+            ],
+            "mode": "warn",
+            "description": "Whoever releases money should not also be able to post entries that hide it."
+        },
+        {
+            "permissions": [
+                "finance.payments.approve",
+                "finance.journals.approve"
+            ],
+            "mode": "warn",
+            "description": "One person approving both payments and journals controls both sides of an entry."
+        },
+        {
+            "permissions": [
+                "finance.approvals.configure",
+                "finance.payments.approve"
+            ],
+            "mode": "warn",
+            "description": "An approver who sets the approval rules can switch off the check on themselves."
+        },
+        {
+            "permissions": [
+                "finance.approvals.configure",
+                "finance.journals.approve"
+            ],
+            "mode": "warn",
+            "description": "An approver who sets the approval rules can switch off the check on themselves."
         }
     ]
 }

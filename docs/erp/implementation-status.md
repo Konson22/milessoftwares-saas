@@ -33,6 +33,7 @@
 | Finance F6 Multicurrency | Done 2026-10-20 |
 | Finance F7 Budgets | Done 2026-10-20 |
 | Finance F8 Fixed assets | Done 2026-10-20 |
+| Finance F11 Roles and approvals | Built 2026-11-04, not yet checked in a browser |
 | Restaurant T0 Application | Done 2026-10-25 |
 | Restaurant T1 Menu, tables, orders, kitchen and bills | Done 2026-10-25 |
 

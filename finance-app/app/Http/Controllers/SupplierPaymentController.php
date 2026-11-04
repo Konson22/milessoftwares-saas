@@ -5,15 +5,16 @@ namespace App\Http\Controllers;
 use App\Finance\Currencies;
 use App\Finance\Money;
 use App\Finance\Payables;
+use App\Finance\PaymentPolicy;
+use App\Finance\PaymentRequests;
 use App\Models\Account;
 use App\Models\Bill;
+use App\Models\PaymentRequest;
 use App\Models\Supplier;
 use App\Models\SupplierPayment;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -81,7 +82,7 @@ class SupplierPaymentController extends Controller
         ]);
     }
 
-    public function store(Request $request, Payables $payables): RedirectResponse
+    public function store(Request $request, Payables $payables, PaymentPolicy $policy, PaymentRequests $requests): RedirectResponse
     {
         $data = $request->validate([
             'supplier_id' => ['required', 'uuid', $this->ours('suppliers')],
@@ -95,35 +96,36 @@ class SupplierPaymentController extends Controller
             'rate' => ['nullable', 'string', Currencies::RATE_RULE],
         ]);
 
-        $typed = [];
-        foreach ($data['allocations'] ?? [] as $billId => $amount) {
-            if (! Str::isUuid((string) $billId)) {
-                throw ValidationException::withMessages(['allocations' => 'Unknown bill.']);
-            }
-            if (is_string($amount) && $amount !== '') {
-                $typed[(string) $billId] = $amount;
-            }
-        }
-
-        // Amounts are in the payment's currency: the bank's, or else the bills'.
         $from = Account::query()->findOrFail((string) $data['account_id']);
-        $currency = $from->currency ?? Bill::query()->whereIn('id', array_keys($typed))->whereNotNull('currency')->value('currency');
-        $allocations = [];
-        foreach ($typed as $billId => $amount) {
-            $allocations[$billId] = $this->amountIn($amount, $currency, "allocations.{$billId}");
+        [$allocations, $currency] = $this->billAllocations($data['allocations'] ?? [], $from);
+        $supplier = Supplier::query()->findOrFail((string) $data['supplier_id']);
+        $amount = $this->amountIn($data['amount'], $currency);
+        $paidOn = CarbonImmutable::parse($data['paid_on']);
+        $rate = ($data['rate'] ?? '') === '' ? null : Currencies::normalize($data['rate']);
+
+        // Approval on: this becomes a payment request, whatever the caller meant.
+        if ($policy->holdsPayment($amount, $currency, $paidOn, $rate)) {
+            $held = $requests->submit(PaymentRequest::SUPPLIER, $from, $amount, $paidOn, $data['memo'] ?? "Payment to {$supplier->name}", $this->user($request), [
+                'supplier' => $supplier,
+                'currency' => $currency,
+                'allocations' => $allocations,
+                'reference' => $data['reference'] ?? null,
+                'rate' => $rate,
+            ]);
+
+            return redirect()->route('payment-requests.index')->with('success', "{$held->number} is waiting for approval; the supplier is paid once it is approved and disbursed.");
         }
 
-        $supplier = Supplier::query()->findOrFail((string) $data['supplier_id']);
         $payment = $payables->pay(
             $supplier,
             $from,
-            $this->amountIn($data['amount'], $currency),
-            CarbonImmutable::parse($data['paid_on']),
+            $amount,
+            $paidOn,
             $allocations,
             $data['reference'] ?? null,
             $data['memo'] ?? null,
             $this->user($request),
-            ($data['rate'] ?? '') === '' ? null : Currencies::normalize($data['rate']),
+            $rate,
         );
 
         return redirect()->route('suppliers.show', $supplier)->with('success', "Payment {$payment->number} recorded.");

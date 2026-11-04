@@ -42,6 +42,8 @@ type Props = {
         lastError: string | null;
         awaitingApproval: boolean;
         ownChange: boolean;
+        heldAsPayment: boolean;
+        canApprove: boolean;
         approvedBy: string | null;
     }[];
 };
@@ -53,7 +55,6 @@ type Props = {
 export default function RecurringJournals({ templates }: Props) {
     const can = useCan();
     const manage = can('finance.journals.post');
-    const approver = can('finance.journals.approve');
     const { errors } = usePage().props as { errors: Record<string, string> };
 
     return (
@@ -175,7 +176,7 @@ export default function RecurringJournals({ templates }: Props) {
                                                 <StatusBadge tone="warning">
                                                     Awaiting approval
                                                 </StatusBadge>
-                                                {approver &&
+                                                {template.canApprove &&
                                                     !template.ownChange && (
                                                         <Form
                                                             {...approve.form(
@@ -202,6 +203,13 @@ export default function RecurringJournals({ templates }: Props) {
                                                             )}
                                                         </Form>
                                                     )}
+                                                {template.heldAsPayment && (
+                                                    <span className="text-xs text-muted-foreground">
+                                                        It takes money out of a
+                                                        bank: a payment approver
+                                                        approves it.
+                                                    </span>
+                                                )}
                                                 {template.ownChange && (
                                                     <span className="text-xs text-muted-foreground">
                                                         Your change: someone

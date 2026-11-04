@@ -22,6 +22,7 @@ money out, transfers), trial balance, profit and loss, balance sheet, product ev
 | F8 Fixed assets ✅ | asset categories (accounts, method, life), register, acquisition from a bill or journal, depreciation (straight line, declining balance) run monthly into the ledger, disposal with gain or loss; plan feature `finance.fixed_assets` | a run never depreciates below residual value or twice for a month; register net book value equals the asset accounts |
 | F9 Review fixes, recurring journals, ratios ✅ | four review fixes (tax on replaced opening balances, case-insensitive search, reversed journals in reconciliation, overdue on the due day); recurring journals (weekly to yearly, month ends kept, reversing accruals, daily `finance:recurring`); financial ratios with the previous period | each occurrence posts once and in order; a locked period stops a template without failing others; ratios computed from the same balances as the statements |
 | F10 Journal approvals ✅ | maker-checker for manual and recurring journals, on per organization for all or from an amount; drafts outside the ledger; approve, reject, withdraw; catalog 1.8.0 `finance.journals.approve` | nobody approves their own entry; a draft moves no balance until approved; an unapproved recurring journal never posts |
+| F11 Roles and approvals ✅ | finance and accounting roles, permission-driven dashboards and menu, payment requests (prepare, review, approve, disburse), direct payments held by approval, reversal and journal preparation as separate permissions; catalog 1.9.0; [finance-roles.md](finance-roles.md) | no step can be skipped or repeated by calling the routes directly; nobody approves what they prepared; a disbursed request is one ledger entry; the dashboards' figures come from the same records as the reports |
 | Later | multi-level approval routing, consolidation across organizations, bank feeds, e-invoicing, customer statements | — |
 
 ## Permissions
@@ -32,8 +33,10 @@ money out, transfers), trial balance, profit and loss, balance sheet, product ev
 | `finance.banking.reconcile`: import statements, match, reconcile, bank rules | 3 | F3 (catalog 1.2.0) |
 | `finance.tax.manage`: tax codes, file, settle and unfile tax returns | 3 | F4 (catalog 1.3.0) |
 | `finance.journals.approve`: approve or reject other people's manual and recurring journals, set when approval is needed | 3 | F10 (catalog 1.8.0) |
+| The dashboard, payment, bill, receipt, journal-preparation, reversal and approval-rule permissions: see [finance-roles.md](finance-roles.md) | 1 to 3 | F11 (catalog 1.9.0) |
 
-Viewing the periods page needs `finance.journals.view`. The Accountant role gets every new
+Roles as they stand are in [finance-roles.md](finance-roles.md); the notes here describe the phases
+as they were built. Viewing the periods page needs `finance.journals.view`. The Accountant role gets every new
 permission; Bookkeeper and Auditor do not get `finance.periods.manage`. Bookkeeper gets
 `finance.banking.reconcile`; viewing statements and rules needs `finance.banking.view`. Only Accountant gets
 `finance.tax.manage`; viewing tax codes and returns needs `finance.reports.view`.

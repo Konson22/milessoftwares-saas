@@ -3,6 +3,7 @@
 namespace App\Finance;
 
 use App\Models\Account;
+use App\Models\DimensionValue;
 use App\Models\Journal;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -25,14 +26,16 @@ class Banking
 
     /**
      * Dr the expense (or other) account / Cr the bank.
+     *
+     * @param  array{cost_centre?: DimensionValue|null, project?: DimensionValue|null}  $dimensions  on the expense line
      */
-    public function moneyOut(Account $bank, Account $to, int $amountMinor, CarbonImmutable $date, string $description, User $by, ?string $rate = null): Journal
+    public function moneyOut(Account $bank, Account $to, int $amountMinor, CarbonImmutable $date, string $description, User $by, ?string $rate = null, array $dimensions = []): Journal
     {
         $this->check($bank, $to, $amountMinor);
         $side = $this->side($bank, $amountMinor, $date, $rate);
 
         return $this->ledger->post($date, $description, [
-            ['account' => $to, 'debit' => $side['books'], 'description' => $description],
+            ['account' => $to, 'debit' => $side['books'], 'description' => $description] + $dimensions,
             ['account' => $bank, 'credit' => $side['books'], 'currency' => $side['currency']],
         ], ['source_type' => 'money_out'], $by);
     }

@@ -55,7 +55,8 @@ export default function Suppliers({ search, suppliers }: Props) {
                 title="Suppliers"
                 description="Suppliers from your products are added automatically with their first bill."
                 actions={
-                    can('finance.payables.manage') && (
+                    (can('finance.payables.manage') ||
+                        can('finance.bills.manage')) && (
                         <Button onClick={() => setAdding((value) => !value)}>
                             <Plus className="size-4" aria-hidden />
                             New supplier

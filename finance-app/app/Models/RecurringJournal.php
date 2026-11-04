@@ -30,6 +30,7 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property string|null $updated_by who last added or changed it (it cannot approve itself)
  * @property string|null $approved_by
  * @property CarbonImmutable|null $approved_at null: not approved since it was last changed
+ * @property bool $approved_for_payment approved by a payment approver, as one taking money out of a bank needs
  * @property-read Journal|null $lastJournal
  * @property-read User|null $approver
  */
@@ -66,6 +67,7 @@ class RecurringJournal extends Model
             'ends_on' => 'immutable_date',
             'next_on' => 'immutable_date',
             'approved_at' => 'immutable_datetime',
+            'approved_for_payment' => 'boolean',
             'posted_count' => 'integer',
             'reverses' => 'boolean',
             'active' => 'boolean',

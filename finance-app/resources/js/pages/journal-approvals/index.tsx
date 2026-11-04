@@ -19,13 +19,7 @@ import {
     TableRow,
 } from '@miles/ui/components/ui/table';
 import { useCan } from '@/lib/access';
-import { useAmountStep } from '@/lib/format';
-import {
-    approve,
-    reject,
-    settings,
-    withdraw,
-} from '@/routes/journal-approvals';
+import { approve, reject, withdraw } from '@/routes/journal-approvals';
 import { show as journalRoute } from '@/routes/journals';
 import { index as recurringJournals } from '@/routes/recurring-journals';
 
@@ -55,7 +49,6 @@ type Draft = {
 type Props = {
     pending: Draft[];
     decided: Draft[];
-    setting: { enabled: boolean; threshold: string };
     recurringAwaiting: number;
 };
 
@@ -67,13 +60,11 @@ const STATUS: Record<string, { label: string; tone: Tone }> = {
 };
 
 /**
- * Manual journals waiting for a second person, recent decisions, and when
- * approval is needed.
+ * Manual journals waiting for a second person, and recent decisions.
  */
 export default function JournalApprovals({
     pending,
     decided,
-    setting,
     recurringAwaiting,
 }: Props) {
     const can = useCan();
@@ -86,8 +77,6 @@ export default function JournalApprovals({
                 title="Journal approvals"
                 description="A second person checks manual journals before they reach the books. Nobody approves their own entry."
             />
-
-            {approver && <ApprovalSetting setting={setting} />}
 
             {recurringAwaiting > 0 && (
                 <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
@@ -122,7 +111,10 @@ export default function JournalApprovals({
                                 key={draft.id}
                                 draft={draft}
                                 approver={approver}
-                                poster={can('finance.journals.post')}
+                                poster={
+                                    can('finance.journals.post') ||
+                                    can('finance.journals.prepare')
+                                }
                             />
                         ))}
                     </div>
@@ -359,76 +351,5 @@ function PendingDraft({
                 </TableBody>
             </Table>
         </div>
-    );
-}
-
-function ApprovalSetting({
-    setting,
-}: {
-    setting: { enabled: boolean; threshold: string };
-}) {
-    const step = useAmountStep();
-    const [enabled, setEnabled] = useState(setting.enabled);
-
-    return (
-        <Panel className="mb-3">
-            <PanelHeader
-                title="When approval is needed"
-                description="For manual and recurring journals. Journals from invoices, bills, payments, banking and products post as before."
-            />
-            <PanelBody>
-                <Form
-                    {...settings.form()}
-                    className="flex flex-wrap items-end gap-3"
-                >
-                    {({ processing, errors }) => (
-                        <>
-                            <label className="flex h-9 items-center gap-2 text-sm">
-                                <input
-                                    type="hidden"
-                                    name="journal_approval"
-                                    value="0"
-                                />
-                                <input
-                                    type="checkbox"
-                                    name="journal_approval"
-                                    value="1"
-                                    checked={enabled}
-                                    onChange={(event) =>
-                                        setEnabled(event.target.checked)
-                                    }
-                                />
-                                Manual journals need a second person's approval
-                            </label>
-                            {enabled && (
-                                <Field
-                                    id="threshold"
-                                    label="From this amount up"
-                                    error={errors.threshold}
-                                    hint="Blank: every manual journal"
-                                >
-                                    <Input
-                                        id="threshold"
-                                        name="threshold"
-                                        type="number"
-                                        min="0"
-                                        step={step}
-                                        defaultValue={setting.threshold}
-                                        className="w-40"
-                                    />
-                                </Field>
-                            )}
-                            <Button
-                                type="submit"
-                                variant="outline"
-                                disabled={processing}
-                            >
-                                Save
-                            </Button>
-                        </>
-                    )}
-                </Form>
-            </PanelBody>
-        </Panel>
     );
 }

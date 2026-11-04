@@ -8,7 +8,7 @@ use App\Models\Supplier;
 use Inertia\Testing\AssertableInertia as Assert;
 
 const DIMENSION_KEEPER = [
-    'finance.accounts.view', 'finance.accounts.manage', 'finance.journals.view', 'finance.journals.post',
+    'finance.accounts.view', 'finance.accounts.manage', 'finance.journals.view', 'finance.journals.post', 'finance.journals.reverse',
     'finance.payables.view', 'finance.payables.manage', 'finance.reports.view',
 ];
 
