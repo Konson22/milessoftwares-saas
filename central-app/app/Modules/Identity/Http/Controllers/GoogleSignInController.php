@@ -118,7 +118,7 @@ class GoogleSignInController
      * address, which is then linked; otherwise a new account if registration
      * is open. An unverified Google address never matches or creates anything.
      */
-    private function resolveUser(string $subject, string $email, bool $emailVerified, string $name): ?User
+    public function resolveUser(string $subject, string $email, bool $emailVerified, string $name): ?User
     {
         $linked = SocialAccount::query()
             ->where('provider', self::PROVIDER)

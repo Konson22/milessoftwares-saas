@@ -37,6 +37,10 @@ return [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT_URI'),
+        // Native sign-in in the mobile apps: ID tokens are accepted for the
+        // client ID above (the apps' webClientId) and these, comma-separated
+        // (iOS client IDs, should a token be issued for one).
+        'native_client_ids' => env('GOOGLE_NATIVE_CLIENT_IDS'),
     ],
 
     'slack' => [

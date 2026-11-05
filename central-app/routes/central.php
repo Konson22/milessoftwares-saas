@@ -3,6 +3,7 @@
 use App\Http\Controllers\FallbackController;
 use App\Modules\Identity\Http\Controllers\FirstPartySignInController;
 use App\Modules\Identity\Http\Controllers\GoogleSignInController;
+use App\Modules\Identity\Http\Controllers\NativeGoogleSignInController;
 use App\Modules\Identity\Http\Controllers\SignOutController;
 use App\Sites\Central\Http\Controllers\Account\JoinController;
 use App\Sites\Central\Http\Controllers\Account\PasswordSetupController;
@@ -55,6 +56,8 @@ Route::domain(PlatformHosts::auth())->group(function () {
     Route::middleware(['guest:'.config('fortify.guard'), 'throttle:20,1'])->group(function () {
         Route::get('auth/google', [GoogleSignInController::class, 'redirect'])->name('google.redirect');
         Route::get('auth/google/callback', [GoogleSignInController::class, 'callback'])->name('google.callback');
+        // The mobile apps' native Google sign-in: a Google ID token for a session here.
+        Route::post('auth/google/native', NativeGoogleSignInController::class)->name('google.native');
     });
 
     // First sign-in with a temporary password: choose your own.
