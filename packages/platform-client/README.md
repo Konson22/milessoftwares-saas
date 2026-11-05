@@ -84,7 +84,7 @@ $this->app->bind(ProvisionsTenants::class, CreateDefaultPharmacy::class);
 ### A mobile app
 
 A native app signs in on the platform itself (authorization code + PKCE, a public client with
-the app's redirect URI, e.g. `com.milesoftwares.pharmacy://oauth`) and calls the product with the
+the app's redirect URI, e.g. `com.asaasvantage.pharmacypos://oauth`) and calls the product with the
 access token as a bearer token. Set `PLATFORM_MOBILE_CLIENT_ID` to that client and put the API
 under `platform.api` (tenant from the host + token verified against the platform's keys, audience
 the mobile client, then the same access gate):

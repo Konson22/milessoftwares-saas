@@ -31,7 +31,7 @@ class RegisterLocalProduct extends Command
         {--prefix= : Path on workspace hosts (default: the application code)}
         {--entitle=* : Workspace slugs to entitle to the product}
         {--fresh : Issue new clients and secrets even if the product .env has them}
-        {--mobile-redirect=* : Redirect URIs of the mobile app (e.g. com.milesoftwares.pharmacy://oauth): registers its public client}
+        {--mobile-redirect=* : Redirect URIs of the mobile app (e.g. com.asaasvantage.pharmacypos://oauth): registers its public client}
         {--catalog=platform/catalog.json : Catalog to register, relative to the folder. Another application than the folder\'s own is hosted by it}';
 
     protected $description = 'Register a product folder with the local platform and write its .env';
