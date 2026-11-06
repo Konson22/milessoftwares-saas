@@ -177,7 +177,7 @@ return [
             [
                 'code' => 'pharmacy-android',
                 'platform' => 'android',
-                'name' => 'Miles Pharmacy POS',
+                'name' => 'Miles Pharma POS',
                 'summary' => 'The pharmacy counter on an Android phone or tablet: sell, look up stock and prices, and scan barcodes with the camera.',
                 'needs' => 'A Miles workspace with Pharmacy',
                 'file' => 'Miles Pharmacy POS 1.0.0.apk',

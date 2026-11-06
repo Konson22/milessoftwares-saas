@@ -21,7 +21,7 @@ const sections: LegalSection[] = [
         body: (
             <>
                 <p>
-                    Miles Pharmacy POS is a pharmacy counter app for phones and
+                    Miles Pharma POS is a pharmacy counter app for phones and
                     tablets, made by Miles Global Softwares, the software
                     business of Miles Global Link Co. Ltd ("Miles", "we", "us").
                     It handles a pharmacy's sales, prescriptions, stock checks,
@@ -229,7 +229,7 @@ const sections: LegalSection[] = [
         title: 'Children',
         body: (
             <p>
-                Miles Pharmacy POS is business software for pharmacy staff. It
+                Miles Pharma POS is business software for pharmacy staff. It
                 is not meant for children, and we do not knowingly collect their
                 accounts. A pharmacy may record a child's name and age on a
                 prescription, as part of its own records.
@@ -255,15 +255,15 @@ export default function PrivacyMilesPharmacy({ canonical }: Props) {
     return (
         <>
             <Seo
-                title="Miles Pharmacy POS privacy policy"
-                description="What the Miles Pharmacy POS app collects, where it keeps it and who can see it, on the device and in a Miles workspace."
+                title="Miles Pharma POS privacy policy"
+                description="What the Miles Pharma POS app collects, where it keeps it and who can see it, on the device and in a Miles workspace."
                 canonical={canonical}
             />
 
             <LegalPage
                 title={
                     <>
-                        Miles Pharmacy POS <Accent>privacy policy</Accent>
+                        Miles Pharma POS <Accent>privacy policy</Accent>
                     </>
                 }
                 intro="What the pharmacy app collects, where it keeps it, and what you can ask us to do with it."
