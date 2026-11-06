@@ -11,19 +11,25 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Miles\PlatformClient\Access\CurrentAccess;
 use Miles\PlatformClient\Api\Branch;
+use Miles\PlatformClient\Api\PlatformApi;
 use Miles\PlatformClient\Tenancy\CurrentTenant;
 
 /**
  * GET api/v1/me: who is signed in to the app, in which workspace, and the
  * branches they may work in (as the web's branch choice). With none, why:
  * the organization has no branch yet, or the member has no role in one.
+ * ?fresh=1 asks the platform rather than the cache: the app has just added a
+ * branch there, and the person is waiting to work in it.
  */
 class MeController extends Controller
 {
-    public function __invoke(Request $request, Branches $branches, CurrentTenant $tenant, CurrentAccess $access): JsonResponse
+    public function __invoke(Request $request, Branches $branches, CurrentTenant $tenant, CurrentAccess $access, PlatformApi $api): JsonResponse
     {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
+        if ($request->boolean('fresh')) {
+            $api->forget($tenant->require()->id);
+        }
         $available = $branches->available();
         $currency = Money::currency();
 

@@ -3,24 +3,18 @@
 namespace App\Sites\Central\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Modules\Applications\Models\Application;
 use App\Modules\Applications\Models\ApplicationRole;
 use App\Modules\Authorization\Actions\SeparationOfDutiesWarning;
-use App\Modules\Authorization\Support\AccessResolver;
 use App\Modules\Authorization\Support\WorkspaceAbilities;
 use App\Modules\Entitlements\Models\Entitlement;
 use App\Modules\Memberships\Actions\Invitations;
 use App\Modules\Memberships\Actions\MembershipActionDenied;
-use App\Modules\Memberships\Enums\MembershipStatus;
 use App\Modules\Memberships\Models\Invitation;
 use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Memberships\Support\ProposedAccess;
-use App\Modules\Organizations\Enums\OrganizationStatus;
-use App\Modules\Organizations\Models\Organization;
-use App\Modules\Organizations\Models\OrganizationSlug;
 use App\Modules\Structure\Models\Branch;
-use App\Support\Tenancy\TenantContext;
+use App\Sites\Central\Http\Controllers\Api\Concerns\RunsAsWorkspaceMember;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -33,9 +27,9 @@ use Illuminate\Validation\ValidationException;
  */
 class AppInvitationController extends Controller
 {
+    use RunsAsWorkspaceMember;
+
     public function __construct(
-        private readonly TenantContext $tenant,
-        private readonly AccessResolver $access,
         private readonly Invitations $invitations,
     ) {}
 
@@ -139,42 +133,18 @@ class AppInvitationController extends Controller
     }
 
     /**
-     * Runs as the person's active membership in the workspace, when they may
-     * manage access there. Anyone else learns nothing about it (404).
+     * As a member who may manage access in the workspace.
      *
      * @param  callable(OrganizationMembership, Application): JsonResponse  $callback
      */
     private function as(Request $request, string $slug, callable $callback): JsonResponse
     {
-        /** @var User $user */
-        $user = $request->user();
-        /** @var Application $application */
-        $application = $request->attributes->get('api_application');
-
-        $organization = OrganizationSlug::query()
-            ->with('organization')
-            ->where('slug', strtolower($slug))
-            ->where('is_primary', true)
-            ->first()
-            ?->organization;
-
-        abort_unless($organization instanceof Organization && $organization->status->resolvesWorkspace(), 404);
-
-        return $this->tenant->run($organization, function () use ($organization, $user, $application, $callback): JsonResponse {
-            $membership = OrganizationMembership::query()
-                ->where('user_id', $user->getKey())
-                ->where('status', MembershipStatus::Active)
-                ->first();
-
-            abort_unless($membership !== null, 404);
-            // Status is only disclosed to members.
-            if ($organization->status === OrganizationStatus::Suspended) {
-                return response()->json(['error' => 'organization_suspended', 'message' => __('This business is suspended.')], 403);
-            }
-            abort_unless((new WorkspaceAbilities($this->access))->manageAccess($membership), 403);
-
-            return $callback($membership, $application);
-        });
+        return $this->asMember(
+            $request,
+            $slug,
+            fn (WorkspaceAbilities $abilities, OrganizationMembership $membership): bool => $abilities->manageAccess($membership),
+            $callback,
+        );
     }
 
     /**

@@ -366,3 +366,15 @@ it('keeps another branch\'s prescriptions and sales unknown', function () {
     api('GET', "prescriptions/{$prescription['id']}", branch: $this->wau)->assertNotFound();
     api('GET', "sales/{$sale['id']}", branch: $this->wau)->assertNotFound();
 });
+
+it('shows a branch the app just added when asked for a fresh answer', function () {
+    $this->actingAsAppMember('acme', owner: true);
+    $this->getJson($this->workspaceUrl('acme', 'api/v1/me'))->assertOk()->assertJsonCount(2, 'branches');
+
+    $this->platform()->branch('acme', 'Rumbek');
+
+    // The platform's answer stays cached for the others...
+    $this->getJson($this->workspaceUrl('acme', 'api/v1/me'))->assertOk()->assertJsonCount(2, 'branches');
+    // ...but not for whoever just added it.
+    $this->getJson($this->workspaceUrl('acme', 'api/v1/me?fresh=1'))->assertOk()->assertJsonCount(3, 'branches');
+});

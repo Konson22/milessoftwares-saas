@@ -1,5 +1,6 @@
 <?php
 
+use App\Sites\Central\Http\Controllers\Api\AppBranchController;
 use App\Sites\Central\Http\Controllers\Api\AppInvitationController;
 use App\Sites\Central\Http\Controllers\Api\AppOrganizationController;
 use App\Sites\Central\Http\Controllers\Api\IntegrationController;
@@ -56,6 +57,12 @@ Route::prefix('api/v1')->middleware('throttle:600,1')->name('api.')->group(funct
         Route::post('organizations', [AppOrganizationController::class, 'store'])
             ->middleware('throttle:10,60')
             ->name('organizations.store');
+
+        // Another branch of it (mobile counter).
+        Route::post('organizations/{organization}/branches', [AppBranchController::class, 'store'])
+            ->where(['organization' => '[a-z0-9-]+'])
+            ->middleware('throttle:30,60')
+            ->name('branches.store');
 
         // Its staff, invited from the app (mobile counter).
         Route::prefix('organizations/{organization}/invitations')

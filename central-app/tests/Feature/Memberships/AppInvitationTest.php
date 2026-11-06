@@ -159,3 +159,78 @@ it('refuses while the business is suspended', function () {
 it('refuses requests without a valid token', function () {
     $this->flushHeaders()->getJson(mobileApiUrl('organizations/gudele/invitations'))->assertUnauthorized();
 });
+
+it('adds a branch from the app, with a code from its name', function () {
+    $this->withToken($this->ownerToken)->postJson(mobileApiUrl('organizations/gudele/branches'), ['name' => 'Juba Town', 'city' => 'Juba'])
+        ->assertCreated()
+        ->assertJsonPath('branch.name', 'Juba Town')
+        ->assertJsonPath('branch.code', 'JUBA-TOWN')
+        ->assertJsonPath('branch.city', 'Juba');
+
+    $added = app(TenantContext::class)->run($this->organization, fn () => Branch::query()->where('code', 'JUBA-TOWN')->sole());
+    expect($added->country_code)->toBe('SS')->and($added->status)->toBe('active');
+
+    // The same name again, one with no latin letters: still a code of their own.
+    $this->withToken($this->ownerToken)->postJson(mobileApiUrl('organizations/gudele/branches'), ['name' => 'Juba Town'])
+        ->assertCreated()->assertJsonPath('branch.code', 'JUBA-TOWN-2');
+    $this->withToken($this->ownerToken)->postJson(mobileApiUrl('organizations/gudele/branches'), ['name' => 'جوبا'])
+        ->assertCreated();
+
+    $this->withToken($this->ownerToken)->postJson(mobileApiUrl('organizations/gudele/branches'), ['name' => ''])
+        ->assertUnprocessable()->assertJsonValidationErrors('name');
+});
+
+it('adds branches for those who manage the structure only', function () {
+    $outsider = User::factory()->create();
+    $this->withToken(mobileToken($outsider, $this->mobile['client_id']))
+        ->postJson(mobileApiUrl('organizations/gudele/branches'), ['name' => 'Wau'])->assertNotFound();
+
+    $member = User::factory()->create();
+    app(TenantContext::class)->run($this->organization, fn () => OrganizationMembership::query()->forceCreate([
+        'user_id' => $member->id,
+        'status' => 'active',
+    ]));
+    $this->withToken(mobileToken($member, $this->mobile['client_id']))
+        ->postJson(mobileApiUrl('organizations/gudele/branches'), ['name' => 'Wau'])->assertForbidden();
+
+    $this->organization->forceFill(['status' => OrganizationStatus::Suspended])->save();
+    $this->withToken($this->ownerToken)->postJson(mobileApiUrl('organizations/gudele/branches'), ['name' => 'Wau'])
+        ->assertForbidden()->assertJsonPath('error', 'organization_suspended');
+
+    expect(app(TenantContext::class)->run($this->organization, fn () => Branch::query()->count()))->toBe(1);
+});
+
+it('gives the app a new id token when it refreshes, to open another workspace', function () {
+    $user = User::factory()->create();
+    $verifier = Str::random(64);
+    $location = (string) $this->actingAs($user)->get(route('passport.authorizations.authorize').'?'.http_build_query([
+        'client_id' => $this->mobile['client_id'],
+        'redirect_uri' => MOBILE_CALLBACK,
+        'response_type' => 'code',
+        'scope' => 'openid profile email',
+        'state' => Str::random(32),
+        'nonce' => Str::random(32),
+        'code_challenge' => rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '='),
+        'code_challenge_method' => 'S256',
+    ]))->headers->get('Location');
+    parse_str((string) parse_url($location, PHP_URL_QUERY), $callback);
+    $first = $this->post(route('passport.token'), [
+        'grant_type' => 'authorization_code',
+        'client_id' => $this->mobile['client_id'],
+        'redirect_uri' => MOBILE_CALLBACK,
+        'code' => $callback['code'],
+        'code_verifier' => $verifier,
+    ])->assertOk();
+
+    $refreshed = $this->post(route('passport.token'), [
+        'grant_type' => 'refresh_token',
+        'client_id' => $this->mobile['client_id'],
+        'refresh_token' => $first->json('refresh_token'),
+        'scope' => 'openid profile email',
+    ])->assertOk();
+
+    $claims = json_decode(base64_decode(strtr(explode('.', (string) $refreshed->json('id_token'))[1], '-_', '+/')), true);
+    expect($claims['sub'])->toBe($user->id)
+        ->and($claims['aud'])->toBe($this->mobile['client_id'])
+        ->and($claims['email'])->toBe($user->email);
+});

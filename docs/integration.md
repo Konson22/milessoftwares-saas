@@ -119,6 +119,7 @@ access token from its **public** client, not a service token. These routes are u
 |---|---|
 | `GET organizations/slug-availability?slug=` | `{ "available": bool, "errors": [...] }` |
 | `POST organizations` | Creates the business, as "New business" on the dashboard does: `display_name`, `legal_name`, `slug`, `country_code`, `default_currency`, `timezone`, optional `business_type` and `contact_email`. It also needs `branch_name` and takes an optional `branch_city` for the first branch (code `MAIN`). |
+| `POST organizations/{slug}/branches` | Adds a branch, as the workspace's Structure page does, for owners and members who manage the structure: `name`, optional `city`, `address`, `code` (from the name when left out; made unique in the workspace). Answers `201 { "branch": { "id", "name", "code", "city" } }`. Products cache branches: pharmacy's `GET api/v1/me?fresh=1` reads past that cache. |
 
 - The person becomes the owner. The business gets the free trial of the application whose client
   sent the request, when that application offers trials.
