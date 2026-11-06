@@ -5,6 +5,7 @@ namespace App\Modules\Identity\Http\Controllers;
 use App\Models\User;
 use App\Modules\Identity\Models\SocialAccount;
 use App\Modules\Identity\Support\AuthenticationEventRecorder;
+use App\Modules\Identity\Support\SessionTracker;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -33,7 +34,10 @@ class GoogleSignInController
 {
     private const PROVIDER = 'google';
 
-    public function __construct(private readonly AuthenticationEventRecorder $recorder) {}
+    public function __construct(
+        private readonly AuthenticationEventRecorder $recorder,
+        private readonly SessionTracker $sessions,
+    ) {}
 
     public function redirect(): Response
     {
@@ -117,6 +121,8 @@ class GoogleSignInController
      * The linked account first; otherwise the account with this verified
      * address, which is then linked; otherwise a new account if registration
      * is open. An unverified Google address never matches or creates anything.
+     * An account still waiting for its email link was registered by someone
+     * who never proved this address, so the Google owner takes it over clean.
      */
     public function resolveUser(string $subject, string $email, bool $emailVerified, string $name): ?User
     {
@@ -160,6 +166,9 @@ class GoogleSignInController
                 return null;
             } elseif ($user->email_verified_at === null) {
                 // Google has proven the address.
+                if (! $user->hasVerifiedEmail()) {
+                    $this->removeUnprovenAccess($user, $name);
+                }
                 $user->forceFill(['email_verified_at' => now()])->save();
             }
 
@@ -176,6 +185,26 @@ class GoogleSignInController
 
             return $user;
         });
+    }
+
+    /**
+     * Whoever registered with this address before its owner signed in: their
+     * password, sessions and app tokens stop working (tokens would otherwise
+     * come alive once the address counts as confirmed). An account an
+     * organization's administrator added keeps its temporary password: the
+     * address was vouched for, and that person is expected to use it.
+     */
+    private function removeUnprovenAccess(User $user, string $name): void
+    {
+        $user->forceFill(['name' => Str::limit($name, 255, ''), 'password' => Str::random(64)])->save();
+
+        $this->sessions->revokeAll($user, 'unproven_registration');
+
+        $tokenIds = DB::table('oauth_access_tokens')->where('user_id', $user->getKey())->where('revoked', false)->pluck('id');
+        DB::table('oauth_access_tokens')->whereIn('id', $tokenIds)->update(['revoked' => true]);
+        DB::table('oauth_refresh_tokens')->whereIn('access_token_id', $tokenIds)->update(['revoked' => true]);
+
+        $this->recorder->record('unproven_registration_replaced', $user, context: ['provider' => self::PROVIDER]);
     }
 
     private function failed(string $message): RedirectResponse
