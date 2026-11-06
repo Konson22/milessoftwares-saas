@@ -5,17 +5,16 @@ namespace App\Sites\Central\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Applications\Models\Application;
-use App\Modules\Audit\AuditLogger;
 use App\Modules\Entitlements\Actions\ManageEntitlements;
 use App\Modules\Entitlements\Models\Entitlement;
 use App\Modules\Marketing\Support\MarketingCatalog;
 use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Memberships\Support\MembershipLookup;
+use App\Modules\Organizations\Actions\AddFirstBranch;
 use App\Modules\Organizations\Actions\CheckSlugAvailability;
 use App\Modules\Organizations\Actions\CreateOrganization;
-use App\Modules\Structure\Models\Branch;
+use App\Modules\Organizations\Models\Organization;
 use App\Sites\Central\Http\Requests\Api\CreateAppOrganizationRequest;
-use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -75,10 +74,9 @@ class AppOrganizationController extends Controller
     public function store(
         CreateAppOrganizationRequest $request,
         CreateOrganization $create,
+        AddFirstBranch $firstBranch,
         ManageEntitlements $entitlements,
         MarketingCatalog $catalog,
-        TenantContext $tenant,
-        AuditLogger $audit,
     ): JsonResponse {
         /** @var User $user */
         $user = $request->user();
@@ -86,17 +84,12 @@ class AppOrganizationController extends Controller
         $application = $request->attributes->get('api_application');
 
         // The business and its branch together, or neither.
-        [$organization, $branch] = DB::transaction(function () use ($create, $user, $request, $tenant): array {
+        $organization = DB::transaction(function () use ($create, $firstBranch, $user, $request): Organization {
             $organization = $create->handle($user, $request->validated());
+            $firstBranch->handle($organization, $user, $request->branch()['name'], $request->branch()['city']);
 
-            return [$organization, $tenant->run($organization, fn (): Branch => Branch::query()->create([
-                'name' => $request->branch()['name'],
-                'code' => 'MAIN',
-                'city' => $request->branch()['city'],
-                'country_code' => $organization->country_code,
-            ]))];
+            return $organization;
         });
-        $audit->record('branch.created', $branch, ['changes' => $branch->getAttributes()], actor: $user, organizationId: $organization->id);
 
         $trial = in_array($application->code, array_column($catalog->trialable(), 'code'), true)
             ? $entitlements->startTrial($organization, $application, $user)

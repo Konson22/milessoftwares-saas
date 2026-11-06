@@ -12,6 +12,7 @@ use App\Modules\Organizations\Enums\OrganizationStatus;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationSlug;
 use App\Modules\Products\Support\ProductCatalog;
+use App\Modules\Structure\Models\Branch;
 use App\Support\Hosts\PlatformHosts;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
@@ -62,6 +63,23 @@ it('creates an active organization with the creator as owner', function () {
         ->and(session(CurrentOrganization::SESSION_KEY))->toBe($organization->id);
 
     $audit = AuditLog::query()->where('action', 'organization.created')->sole();
+    expect($audit->organization_id)->toBe($organization->id)
+        ->and($audit->actor_id)->toBe($user->id);
+});
+
+it('starts the new business with a main branch', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post(appUrl('organizations'), organizationInput())->assertSessionHasNoErrors();
+
+    $organization = Organization::query()->sole();
+
+    app(TenantContext::class)->run($organization, function () {
+        expect(Branch::query()->sole()->only(['name', 'code', 'city', 'country_code']))
+            ->toBe(['name' => 'Main branch', 'code' => 'MAIN', 'city' => null, 'country_code' => 'SS']);
+    });
+
+    $audit = AuditLog::query()->where('action', 'branch.created')->sole();
     expect($audit->organization_id)->toBe($organization->id)
         ->and($audit->actor_id)->toBe($user->id);
 });

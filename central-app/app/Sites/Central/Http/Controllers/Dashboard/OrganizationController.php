@@ -8,13 +8,16 @@ use App\Modules\Entitlements\Actions\ManageEntitlements;
 use App\Modules\Marketing\Support\MarketingCatalog;
 use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Memberships\Support\CurrentOrganization;
+use App\Modules\Organizations\Actions\AddFirstBranch;
 use App\Modules\Organizations\Actions\CheckSlugAvailability;
 use App\Modules\Organizations\Actions\CreateOrganization;
+use App\Modules\Organizations\Models\Organization;
 use App\Sites\Central\Http\Requests\Dashboard\CreateOrganizationRequest;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -54,9 +57,15 @@ class OrganizationController extends Controller
         ]);
     }
 
-    public function store(CreateOrganizationRequest $request, CreateOrganization $create, CurrentOrganization $current, ManageEntitlements $entitlements): RedirectResponse
+    public function store(CreateOrganizationRequest $request, CreateOrganization $create, AddFirstBranch $firstBranch, CurrentOrganization $current, ManageEntitlements $entitlements): RedirectResponse
     {
-        $organization = $create->handle($request->user(), $request->validated());
+        // The business and its first branch together, or neither.
+        $organization = DB::transaction(function () use ($create, $firstBranch, $request): Organization {
+            $organization = $create->handle($request->user(), $request->validated());
+            $firstBranch->handle($organization, $request->user());
+
+            return $organization;
+        });
 
         $current->switchTo($request, $request->user(), $organization->getKey());
 
