@@ -48,12 +48,13 @@ class IdentityServiceProvider extends ServiceProvider
 
     /**
      * A sign-in with nowhere else to go (no workspace or product waiting in
-     * url.intended) lands on the customer dashboard. Fortify copied the
+     * url.intended) lands on the account's businesses, which opens the only
+     * one or lets the member choose. Fortify copied the
      * passkey destination while booting, so it is set again here.
      */
     private function configureSignInDestination(): void
     {
-        $dashboard = PlatformHosts::url(PlatformHosts::app(), 'dashboard');
+        $dashboard = PlatformHosts::url(PlatformHosts::auth(), 'workspaces/continue');
 
         config([
             'fortify.redirects.login' => $dashboard,

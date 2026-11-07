@@ -7,11 +7,11 @@ import { Panel, PanelHeader } from '@miles/ui/components/panel';
 import { StatusBadge } from '@miles/ui/components/status-badge';
 import InputError from '@/shared/components/input-error';
 import { Button } from '@/shared/components/ui/button';
-import { dashboard } from '@/routes';
-import { plans as organizationPlans } from '@/routes/organization';
-import { create as createOrganization } from '@/routes/organizations';
 import { appIcon } from '@/shared/lib/app-icons';
 import { formatDate } from '@/shared/lib/billing';
+import { workspaceRoutes } from '@/sites/central/lib/workspace-routes';
+import { trial as accountTrial } from '@/routes';
+import { create as createOrganization } from '@/routes/organizations';
 
 type Application = {
     code: string;
@@ -64,12 +64,16 @@ export default function Trial({
                 description={
                     <>
                         For {organization.displayName} (
-                        <Link
-                            href={`/trial${initial ? `?app=${encodeURIComponent(initial)}` : ''}`}
+                        <a
+                            href={accountTrial.url(
+                                initial
+                                    ? { query: { app: initial } }
+                                    : undefined,
+                            )}
                             className="underline"
                         >
-                            change workspace
-                        </Link>
+                            choose another business
+                        </a>
                         ). No payment details are needed, and nothing is charged
                         unless you choose a plan.
                     </>
@@ -85,15 +89,15 @@ export default function Trial({
                         Ask the owner of {organization.displayName} to start it,
                         or create a business of your own.
                         <Button asChild className="mt-4">
-                            <Link
-                                href={createOrganization(
+                            <a
+                                href={createOrganization.url(
                                     initial
                                         ? { query: { app: initial } }
                                         : undefined,
                                 )}
                             >
                                 New business
-                            </Link>
+                            </a>
                         </Button>
                     </EmptyState>
                 </Panel>
@@ -104,7 +108,7 @@ export default function Trial({
                     </EmptyState>
                 </Panel>
             ) : (
-                <Form action="/trial" method="post">
+                <Form action={workspaceRoutes.trialStore} method="post">
                     {({ errors, processing }) => (
                         <div className="grid gap-3 lg:grid-cols-[1fr_20rem]">
                             <Panel aria-labelledby="choose">
@@ -168,7 +172,7 @@ export default function Trial({
                                     <p className="mt-3 text-center text-xs text-muted-foreground">
                                         Want to pay right away?{' '}
                                         <Link
-                                            href={organizationPlans()}
+                                            href={workspaceRoutes.plans}
                                             className="underline"
                                         >
                                             See plans
@@ -239,10 +243,3 @@ function Option({
         </label>
     );
 }
-
-Trial.layout = {
-    breadcrumbs: [
-        { title: 'Dashboard', href: dashboard() },
-        { title: 'Free trial', href: '/trial' },
-    ],
-};

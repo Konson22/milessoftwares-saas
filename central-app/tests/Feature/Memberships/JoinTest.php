@@ -69,7 +69,7 @@ it('sends the browser to the workspace with a full page load after joining from 
 
 it('sends people who already have an account to sign in and accept instead', function () {
     User::factory()->create(['email' => 'Nyandeng@example.test']);
-    $accept = PlatformHosts::url(PlatformHosts::app(), 'invitations/'.$this->token);
+    $accept = PlatformHosts::url(PlatformHosts::auth(), 'invitations/'.$this->token);
 
     $this->get(joinUrl($this->token))->assertRedirect($accept);
     $this->post(joinUrl($this->token), [

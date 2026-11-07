@@ -73,7 +73,7 @@ final class TrialConfirmation
                 'website' => PlatformHosts::root(),
             ],
             'plansUrl' => PlatformHosts::url(PlatformHosts::root(), 'pricing'),
-            'dashboardUrl' => PlatformHosts::url(PlatformHosts::app()),
+            'dashboardUrl' => $organization->workspaceUrl() ?? PlatformHosts::url(PlatformHosts::auth(), 'workspaces'),
         ];
     }
 

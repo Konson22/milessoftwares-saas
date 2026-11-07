@@ -13,12 +13,6 @@ import {
     TableHeader,
     TableRow,
 } from '@/shared/components/ui/table';
-import { dashboard } from '@/routes';
-import {
-    billing as organizationBilling,
-    settings as organizationSettings,
-} from '@/routes/organization';
-import { show as showInvoice } from '@/routes/organization/invoices';
 import { ReportPaymentDialog } from '@/sites/central/components/report-payment-dialog';
 import {
     formatDate,
@@ -29,6 +23,7 @@ import {
     paymentStatusLabel,
     paymentTone,
 } from '@/shared/lib/billing';
+import { workspaceRoutes } from '@/sites/central/lib/workspace-routes';
 
 export type InvoiceRow = {
     id: string;
@@ -169,7 +164,7 @@ export default function OrganizationBilling({
                                         <TableRow key={invoice.id}>
                                             <TableCell className="pl-4">
                                                 <Link
-                                                    href={showInvoice(
+                                                    href={workspaceRoutes.invoice(
                                                         invoice.id,
                                                     )}
                                                     className="font-medium hover:underline"
@@ -265,7 +260,7 @@ export default function OrganizationBilling({
                                 title="Billing contact"
                                 actions={
                                     <Link
-                                        href={organizationSettings()}
+                                        href={workspaceRoutes.settings}
                                         className="text-sm text-muted-foreground hover:text-foreground"
                                     >
                                         Edit
@@ -311,7 +306,7 @@ export default function OrganizationBilling({
                                         </TableCell>
                                         <TableCell>
                                             <Link
-                                                href={showInvoice(
+                                                href={workspaceRoutes.invoice(
                                                     payment.invoiceId,
                                                 )}
                                                 className="hover:underline"
@@ -358,10 +353,3 @@ export default function OrganizationBilling({
         </>
     );
 }
-
-OrganizationBilling.layout = {
-    breadcrumbs: [
-        { title: 'Dashboard', href: dashboard() },
-        { title: 'Billing', href: organizationBilling() },
-    ],
-};

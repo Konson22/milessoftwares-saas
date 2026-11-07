@@ -4,9 +4,7 @@ use App\Modules\Applications\Models\Application;
 use App\Modules\Audit\Models\AuditLog;
 use App\Modules\Authorization\Support\Scope;
 use App\Modules\Entitlements\Models\Entitlement;
-use App\Modules\Memberships\Support\CurrentOrganization;
 use App\Modules\Organizations\Actions\CreateOrganization;
-use App\Support\Hosts\PlatformHosts;
 use App\Support\Tenancy\TenantContext;
 use Inertia\Testing\AssertableInertia;
 use Tests\Support\AuthorizationFixtures;
@@ -31,7 +29,7 @@ function home(): string
 
 function asCurrent($membership): void
 {
-    test()->actingAs($membership->user)->post(PlatformHosts::url(PlatformHosts::app(), "organizations/{$membership->organization_id}/switch"));
+    test()->workIn($membership);
 }
 
 it('lists an entitled application for members who hold a role in it', function () {
@@ -69,7 +67,7 @@ it('opens the workspace home to administrators, even right after signing in', fu
             ->withSession(['signed_in' => true])
             ->get(home())
             ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page->component('central/workspace/home'));
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('central/workspace/dashboard'));
     }
 });
 
@@ -96,34 +94,14 @@ it('takes a member with one application straight to it right after signing in', 
         ->assertRedirect(rtrim(home(), '/').'/retail');
 });
 
-it('takes a member with one application from the dashboard straight to it right after signing in', function () {
-    $dashboard = PlatformHosts::url(PlatformHosts::app(), 'dashboard');
-
+it('shows the picker to a member with one application coming back later', function () {
     $this->actingAs($this->cashier->user)
-        ->withSession(['signed_in' => true])
-        ->get($dashboard)
-        ->assertRedirect(rtrim(home(), '/').'/retail');
-
-    // Coming back later shows the dashboard.
-    $this->flushSession()
-        ->actingAs($this->cashier->user)
-        ->get($dashboard)
-        ->assertOk();
+        ->get(home())
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page->component('central/workspace/apps'));
 });
 
-it('keeps administrators and members without one application on the dashboard after signing in', function () {
-    $dashboard = PlatformHosts::url(PlatformHosts::app(), 'dashboard');
-
-    foreach ([$this->owner, $this->plainMember] as $membership) {
-        $this->actingAs($membership->user)
-            ->withSession(['signed_in' => true])
-            ->get($dashboard)
-            ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page->component('central/dashboard'));
-    }
-});
-
-it('keeps members of more than one organization on the dashboard after signing in', function () {
+it('takes a member straight to their application even when they belong to other businesses', function () {
     app(CreateOrganization::class)->handle($this->cashier->user, [
         'display_name' => 'Second Shop', 'legal_name' => 'Second Shop Ltd', 'slug' => 'second-shop',
         'country_code' => 'SS', 'default_currency' => 'SSP', 'timezone' => 'Africa/Juba',
@@ -132,8 +110,8 @@ it('keeps members of more than one organization on the dashboard after signing i
 
     $this->actingAs($this->cashier->user)
         ->withSession(['signed_in' => true])
-        ->get(PlatformHosts::url(PlatformHosts::app(), 'dashboard'))
-        ->assertOk();
+        ->get(home())
+        ->assertRedirect(rtrim(home(), '/').'/retail');
 });
 
 it('shows the picker, not a redirect, to members without an application after signing in', function () {
@@ -144,11 +122,9 @@ it('shows the picker, not a redirect, to members without an application after si
         ->assertInertia(fn (AssertableInertia $page) => $page->component('central/workspace/apps')->has('modules', 0));
 });
 
-it('shares no workspace applications on the app host', function () {
-    asCurrent($this->owner);
-
+it('shares no workspace applications on the account pages', function () {
     $this->actingAs($this->owner->user)
-        ->get(PlatformHosts::url(PlatformHosts::app(), 'dashboard'))
+        ->get($this->authUrl('workspaces'))
         ->assertInertia(fn (AssertableInertia $page) => $page->has('apps', 0));
 });
 
@@ -161,7 +137,7 @@ it('hides applications the member holds no role in', function () {
 it('shows owners every entitled application', function () {
     $this->actingAs($this->owner->user)
         ->get(home())
-        ->assertInertia(fn (AssertableInertia $page) => $page->has('modules', 1));
+        ->assertInertia(fn (AssertableInertia $page) => $page->has('apps', 1));
 });
 
 it('hides applications that are not entitled or not released', function (Closure $change) {
@@ -169,7 +145,7 @@ it('hides applications that are not entitled or not released', function (Closure
 
     $this->actingAs($this->owner->user)
         ->get(home())
-        ->assertInertia(fn (AssertableInertia $page) => $page->has('modules', 0));
+        ->assertInertia(fn (AssertableInertia $page) => $page->has('apps', 0));
 })->with([
     'entitlement revoked' => [fn ($test) => app(TenantContext::class)->run($test->organization, fn () => Entitlement::query()->update(['revoked_at' => now()]))],
     'application planned' => [fn () => Application::query()->where('code', 'retail')->update(['status' => 'planned'])],
@@ -179,7 +155,8 @@ it('hides applications that are not entitled or not released', function (Closure
 it('summarizes the current organization on the dashboard', function () {
     asCurrent($this->owner);
 
-    $this->get(route('dashboard'))->assertInertia(fn (AssertableInertia $page) => $page
+    $this->get(home())->assertInertia(fn (AssertableInertia $page) => $page
+        ->component('central/workspace/dashboard')
         ->where('current.displayName', $this->organization->display_name)
         ->where('current.counts.members', 3)
         ->where('current.counts.branches', 2)
@@ -190,7 +167,7 @@ it('summarizes the current organization on the dashboard', function () {
 it('lets the owner edit organization details', function () {
     asCurrent($this->owner);
 
-    $this->put(PlatformHosts::url(PlatformHosts::app(), 'organization/details'), [
+    $this->put(home().'manage/details', [
         'display_name' => 'Manggala Group',
         'legal_name' => 'Manggala Group Ltd',
         'timezone' => 'Africa/Nairobi',
@@ -205,12 +182,11 @@ it('lets the owner edit organization details', function () {
 
 it('keeps details and the subscription view to the owner', function () {
     asCurrent($this->cashier);
-    expect(session(CurrentOrganization::SESSION_KEY))->toBe($this->organization->id);
 
-    $this->put(PlatformHosts::url(PlatformHosts::app(), 'organization/details'), [
+    $this->put(home().'manage/details', [
         'display_name' => 'Hijacked', 'legal_name' => 'X', 'timezone' => 'UTC', 'default_currency' => 'USD',
     ])->assertForbidden();
-    $this->get(PlatformHosts::url(PlatformHosts::app(), 'organization/subscription'))->assertForbidden();
+    $this->get(home().'manage/subscription')->assertForbidden();
 
     expect($this->organization->refresh()->display_name)->not->toBe('Hijacked');
 });
@@ -218,10 +194,10 @@ it('keeps details and the subscription view to the owner', function () {
 it('shows the owner which applications the organization can use', function () {
     asCurrent($this->owner);
 
-    $this->get(PlatformHosts::url(PlatformHosts::app(), 'organization/subscription'))
+    $this->get(home().'manage/subscription')
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('central/organizations/subscription')
+            ->component('central/workspace/manage/subscription')
             ->has('entitlements', 1)
             ->where('entitlements.0.application', 'Retail')
             ->where('entitlements.0.source', 'manual'));

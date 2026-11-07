@@ -130,7 +130,7 @@ it('sends someone on a temporary password to choose their own before anything el
 
     $setup = PlatformHosts::url(PlatformHosts::auth(), 'password/setup');
     $this->get(membersAt('/'))->assertRedirect($setup);
-    $this->get(PlatformHosts::url(PlatformHosts::app(), 'dashboard'))->assertRedirect($setup);
+    $this->get(PlatformHosts::url(PlatformHosts::auth(), 'workspaces'))->assertRedirect($setup);
 
     // Not the temporary password again.
     $this->post($setup, ['password' => $credentials['password'], 'password_confirmation' => $credentials['password']])
@@ -145,7 +145,7 @@ it('sends someone on a temporary password to choose their own before anything el
         ->and($user->temporary_password_expires_at)->toBeNull()
         ->and(Hash::check('a-Much-better-one-42', $user->password))->toBeTrue();
 
-    $this->get(PlatformHosts::url(PlatformHosts::app(), 'dashboard'))->assertOk();
+    $this->get(PlatformHosts::url(PlatformHosts::auth(), 'workspaces'))->assertOk();
 });
 
 it('refuses a temporary password after it expires', function () {

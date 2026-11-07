@@ -1,9 +1,11 @@
 <?php
 
 use App\Models\User;
+use App\Modules\Applications\Support\WorkspaceShell;
 use App\Modules\Identity\Models\AuthenticationEvent;
 use App\Modules\Identity\Models\OAuthClient;
 use App\Modules\Identity\OpenId\SigningKey;
+use App\Modules\Organizations\Actions\CreateOrganization;
 use App\Support\Hosts\PlatformHosts;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Facades\Http;
@@ -15,30 +17,42 @@ use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Signer\Key\InMemory;
 use Lcobucci\JWT\Signer\Rsa\Sha256;
 
+/*
+| The OIDC relying party, exercised on a business host with the shared
+| workspace client. admin.<root> signs in the same way with its own client.
+*/
+
 beforeEach(function () {
     /** @var OAuthClient $client */
-    $client = app(ClientRepository::class)->createAuthorizationCodeGrantClient(
-        'Miles Global Softwares Dashboard',
-        [PlatformHosts::url(PlatformHosts::app(), 'auth/callback')],
-        confidential: true,
-    );
+    $client = app(ClientRepository::class)->createAuthorizationCodeGrantClient('Workspace', [], confidential: true);
+    WorkspaceShell::register((string) $client->getKey());
 
     config([
-        'platform.oidc.clients.app.id' => $client->getKey(),
-        'platform.oidc.clients.app.secret' => $client->plainSecret,
+        'platform.oidc.clients.workspace.id' => $client->getKey(),
+        'platform.oidc.clients.workspace.secret' => $client->plainSecret,
     ]);
 
     $this->client = $client;
+    $this->owner = User::factory()->create();
+    app(CreateOrganization::class)->handle($this->owner, [
+        'display_name' => 'First Party Trading', 'legal_name' => 'First Party Trading Ltd', 'slug' => 'firstparty',
+        'country_code' => 'SS', 'default_currency' => 'SSP', 'timezone' => 'Africa/Juba',
+    ]);
 });
 
+function signInHostUrl(string $path = '/'): string
+{
+    return PlatformHosts::url(PlatformHosts::workspace('firstparty'), $path);
+}
+
 /**
- * Starts a sign-in on the app host and returns the authorize query.
+ * Starts a sign-in on the business host and returns the authorize query.
  *
  * @return array<string, string>
  */
 function startSignIn(): array
 {
-    $location = (string) test()->get(PlatformHosts::url(PlatformHosts::app(), 'auth/login'))
+    $location = (string) test()->get(signInHostUrl('auth/login'))
         ->assertRedirect()
         ->headers->get('Location');
 
@@ -61,7 +75,7 @@ function idToken(array $overrides = [], ?string $privateKey = null): string
 
     $claims = array_merge([
         'iss' => PlatformHosts::url(PlatformHosts::auth()),
-        'aud' => config('platform.oidc.clients.app.id'),
+        'aud' => config('platform.oidc.clients.workspace.id'),
         'sub' => null,
         'nonce' => null,
         'exp' => now()->addHour(),
@@ -93,18 +107,15 @@ function fakeTokenEndpoint(string $idToken): void
 
 function callback(array $query): TestResponse
 {
-    return test()->get(PlatformHosts::url(PlatformHosts::app(), 'auth/callback').'?'.http_build_query($query));
+    return test()->get(signInHostUrl('auth/callback').'?'.http_build_query($query));
 }
 
-it('sends guests on the app host into the OIDC sign-in', function () {
-    $this->get(route('dashboard'))->assertRedirect(PlatformHosts::url(PlatformHosts::app(), 'auth/login'));
+it('sends guests on a business host into the OIDC sign-in', function () {
+    $this->get(signInHostUrl('/'))->assertRedirect(signInHostUrl('auth/login'));
 });
 
-it('sends guests starting a free trial to sign up, then back to the trial', function () {
-    $this->get(PlatformHosts::url(PlatformHosts::app(), 'trial?app=retail'))
-        ->assertRedirect(PlatformHosts::url(PlatformHosts::app(), 'auth/login?register=1'));
-
-    $location = (string) $this->get(PlatformHosts::url(PlatformHosts::app(), 'auth/login?register=1'))->headers->get('Location');
+it('asks the provider to sign up rather than sign in when told to', function () {
+    $location = (string) $this->get(signInHostUrl('auth/login?register=1'))->headers->get('Location');
     parse_str((string) parse_url($location, PHP_URL_QUERY), $query);
 
     expect($query['prompt'] ?? null)->toBe('create');
@@ -118,7 +129,7 @@ it('builds an authorization request the provider accepts', function () {
 
     expect($query)
         ->client_id->toBe($this->client->getKey())
-        ->redirect_uri->toBe(PlatformHosts::url(PlatformHosts::app(), 'auth/callback'))
+        ->redirect_uri->toBe(signInHostUrl('auth/callback'))
         ->code_challenge_method->toBe('S256')
         ->scope->toBe('openid profile email')
         ->not->toHaveKey('prompt');
@@ -128,10 +139,10 @@ it('builds an authorization request the provider accepts', function () {
         ->assertRedirect()
         ->headers->get('Location');
 
-    expect($location)->toStartWith(PlatformHosts::url(PlatformHosts::app(), 'auth/callback').'?code=');
+    expect($location)->toStartWith(signInHostUrl('auth/callback').'?code=');
 });
 
-it('signs the user in on the app host after a valid callback', function () {
+it('signs the user in on the business host after a valid callback', function () {
     $user = User::factory()->create();
     $query = startSignIn();
     fakeTokenEndpoint(idToken(['sub' => $user->id, 'nonce' => $query['nonce']]));
@@ -139,7 +150,7 @@ it('signs the user in on the app host after a valid callback', function () {
     callback(['code' => 'authorization-code', 'state' => $query['state']])->assertRedirect('/');
 
     $this->assertAuthenticatedAs($user);
-    expect(AuthenticationEvent::query()->where('event', 'login')->value('host'))->toBe(PlatformHosts::app());
+    expect(AuthenticationEvent::query()->where('event', 'login')->value('host'))->toBe(PlatformHosts::workspace('firstparty'));
 
     Http::assertSent(function (HttpRequest $request) use ($query) {
         $challenge = rtrim(strtr(base64_encode(hash('sha256', (string) $request['code_verifier'], true)), '+/', '-_'), '=');
@@ -148,7 +159,7 @@ it('signs the user in on the app host after a valid callback', function () {
             && $request['code'] === 'authorization-code'
             && $request['redirect_uri'] === $query['redirect_uri']
             && $challenge === $query['code_challenge']
-            && $request->hasHeader('Authorization', 'Basic '.base64_encode($this->client->getKey().':'.config('platform.oidc.clients.app.secret')));
+            && $request->hasHeader('Authorization', 'Basic '.base64_encode($this->client->getKey().':'.config('platform.oidc.clients.workspace.secret')));
     });
 });
 
@@ -227,7 +238,7 @@ it('rejects a replayed callback', function () {
     fakeTokenEndpoint(idToken(['sub' => $user->id, 'nonce' => $query['nonce']]));
 
     callback(['code' => 'c', 'state' => $query['state']])->assertRedirect('/');
-    $this->post(PlatformHosts::url(PlatformHosts::app(), 'logout'));
+    $this->post(signInHostUrl('logout'));
 
     callback(['code' => 'c', 'state' => $query['state']])->assertStatus(400);
     $this->assertGuest();
@@ -235,18 +246,18 @@ it('rejects a replayed callback', function () {
 
 it('signs out locally and offers a central sign-out on the auth host', function () {
     $this->actingAs(User::factory()->create())
-        ->post(PlatformHosts::url(PlatformHosts::app(), 'logout'))
+        ->post(signInHostUrl('logout'))
         ->assertRedirect(PlatformHosts::url(PlatformHosts::auth(), 'signout'));
 
     $this->assertGuest();
 });
 
 it('shares host-aware account links with the frontend', function () {
-    $this->actingAs(User::factory()->create())
-        ->get(route('dashboard'))
+    $this->actingAs($this->owner)
+        ->get(signInHostUrl('/'))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('platform.isAuthHost', false)
-            ->where('platform.logoutUrl', PlatformHosts::url(PlatformHosts::app(), 'logout'))
+            ->where('platform.logoutUrl', signInHostUrl('logout'))
             ->where('platform.accountUrl', PlatformHosts::url(PlatformHosts::auth(), 'settings/profile')));
 });
 

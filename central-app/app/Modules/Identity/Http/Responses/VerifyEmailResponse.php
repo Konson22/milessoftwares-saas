@@ -23,6 +23,6 @@ class VerifyEmailResponse implements VerifyEmailResponseContract
             return new JsonResponse('', 204);
         }
 
-        return redirect()->intended(PlatformHosts::url(PlatformHosts::app(), '/dashboard'));
+        return redirect()->intended(PlatformHosts::url(PlatformHosts::auth(), 'workspaces/continue'));
     }
 }

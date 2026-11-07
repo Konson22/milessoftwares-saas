@@ -23,7 +23,7 @@ class SignOutController
 
         return Inertia::render('central/auth/sign-out', [
             'homeUrl' => PlatformHosts::url(PlatformHosts::root()),
-            'dashboardUrl' => PlatformHosts::url(PlatformHosts::app()),
+            'dashboardUrl' => PlatformHosts::url(PlatformHosts::auth(), 'workspaces'),
         ]);
     }
 }

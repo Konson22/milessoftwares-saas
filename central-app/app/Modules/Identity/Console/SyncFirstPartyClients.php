@@ -23,10 +23,9 @@ class SyncFirstPartyClients extends Command
         {--rotate : Issue new secrets for existing clients}
         {--write-env : Write client ids and secrets to the .env file}';
 
-    protected $description = 'Create or repair the OpenID Connect clients for the app, admin and workspace hosts';
+    protected $description = 'Create or repair the OpenID Connect clients for the admin and workspace hosts';
 
     private const NAMES = [
-        'app' => 'Miles Global Softwares Dashboard',
         'admin' => 'Miles Global Softwares Admin',
         'workspace' => 'Miles Global Softwares Workspace',
     ];
@@ -38,7 +37,6 @@ class SyncFirstPartyClients extends Command
         foreach (FirstPartyClient::KEYS as $key) {
             // Workspace callbacks are per organization (WorkspaceShell), not static.
             $redirectUris = match ($key) {
-                'app' => [FirstPartyClient::redirectUriForHost(PlatformHosts::app())],
                 'admin' => [FirstPartyClient::redirectUriForHost(PlatformHosts::admin())],
                 default => [],
             };

@@ -121,12 +121,12 @@ class Preflight extends Command
         $this->check($hasKey, 'Token signing key is present', $hasKey ? 'present' : 'missing');
 
         $missing = [];
-        foreach (['app', 'admin', 'workspace'] as $client) {
+        foreach (['admin', 'workspace'] as $client) {
             if (! config("platform.oidc.clients.{$client}.id") || ! config("platform.oidc.clients.{$client}.secret")) {
                 $missing[] = $client;
             }
         }
-        $this->check($missing === [], 'First-party OIDC clients are configured', $missing === [] ? 'app, admin, workspace' : 'missing: '.implode(', ', $missing));
+        $this->check($missing === [], 'First-party OIDC clients are configured', $missing === [] ? 'admin, workspace' : 'missing: '.implode(', ', $missing));
     }
 
     private function headers(): void

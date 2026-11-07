@@ -23,19 +23,18 @@ it('serves sign-in on the auth host only', function () {
     $this->get(host('auth').'/login')->assertOk()->assertInertia(fn ($page) => $page->component('central/auth/login'));
 
     $this->get(host().'/login')->assertNotFound();
-    $this->get(host('app').'/login')->assertNotFound();
 });
 
-it('serves the dashboard on the app host only', function () {
+it('serves the list of businesses on the auth host only', function () {
     $user = User::factory()->create();
 
-    $this->actingAs($user)->get(host('app').'/dashboard')->assertOk();
-    $this->actingAs($user)->get(host('auth').'/dashboard')->assertNotFound();
-    $this->actingAs($user)->get(host().'/dashboard')->assertNotFound();
+    $this->actingAs($user)->get(host('auth').'/workspaces')->assertOk();
+    $this->actingAs($user)->get(host().'/workspaces')->assertNotFound();
 });
 
-it('sends guests on the app host into its OIDC sign-in', function () {
-    $this->get(host('app').'/dashboard')->assertRedirect(host('app').'/auth/login');
+it('sends everything on the retired app host elsewhere, permanently', function () {
+    $this->get(host('app').'/login')->assertStatus(301);
+    $this->get(host('app').'/dashboard')->assertStatus(301)->assertRedirect(host('auth').'/workspaces/continue');
 });
 
 it('rejects reserved first-level hosts', function (string $label) {

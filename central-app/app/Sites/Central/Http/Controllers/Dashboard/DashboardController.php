@@ -22,7 +22,6 @@ use App\Modules\Subscriptions\Models\Plan;
 use App\Modules\Subscriptions\Models\PlanRequest;
 use App\Modules\Subscriptions\Models\Subscription;
 use App\Modules\Subscriptions\Models\SubscriptionItem;
-use App\Sites\Central\Http\Middleware\RememberTrialChoice;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,34 +29,37 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * The customer dashboard. Right after signing in, a member of one
- * organization who works in only one of its applications (and does not
- * administer the workspace) goes straight into that application, as the
- * workspace home does; coming back later shows the dashboard.
+ * The workspace home ({business}.<root>/). Administrators get the dashboard:
+ * the business at a glance, its applications and, for the owner, what it
+ * owes. Everyone else gets a page to pick one of their applications, and
+ * right after signing in goes straight into it when they have only one;
+ * coming back later shows the picker.
  */
 class DashboardController extends Controller
 {
     public function __invoke(Request $request, MembershipLookup $memberships, Launcher $launcher, AccessResolver $access, AccountStanding $standing, MarketingCatalog $catalog, TenantContext $tenant): Response|RedirectResponse
     {
-        // Signed up from "Start free trial" on the public site (verifying the
-        // email address lands here): carry on to that application's trial.
-        $chosen = $request->session()->pull(RememberTrialChoice::SESSION_KEY);
-        if (is_string($chosen) && in_array($chosen, array_column($catalog->trialable(), 'code'), true)) {
-            return redirect()->route('trial', ['app' => $chosen]);
-        }
-
-        if ($request->session()->get(FirstPartySignInController::JUST_SIGNED_IN) === true) {
-            $only = $this->onlyApplication($memberships->activeFor($request->user()), $launcher, $access, $tenant);
-            if ($only !== null) {
-                return redirect()->away($only);
-            }
-        }
-
+        $organization = $tenant->require();
         $current = $request->attributes->get('membership');
-        $current = $current instanceof OrganizationMembership ? $current : null;
-        $isOwner = $current !== null && $access->isOwner($current);
+        abort_unless($current instanceof OrganizationMembership, 403);
 
-        return Inertia::render('central/dashboard', [
+        if (! (new WorkspaceAbilities($access))->administers($current)) {
+            $modules = $launcher->for($current);
+
+            if (count($modules) === 1 && $request->session()->get(FirstPartySignInController::JUST_SIGNED_IN) === true) {
+                return redirect()->away($modules[0]['href']);
+            }
+
+            return Inertia::render('central/workspace/apps', [
+                'organization' => ['id' => $organization->id, 'displayName' => $organization->display_name],
+                'modules' => $modules,
+            ]);
+        }
+
+        $isOwner = $access->isOwner($current);
+
+        return Inertia::render('central/workspace/dashboard', [
+            // The member's other businesses, each on its own host.
             'organizations' => $memberships->activeFor($request->user())
                 ->map(fn (OrganizationMembership $membership) => [
                     'id' => $membership->organization_id,
@@ -69,9 +71,9 @@ class DashboardController extends Controller
                 ])
                 ->values()
                 ->all(),
-            // Runs inside the current organization's tenant context
-            // (ResolveCurrentOrganization), so these queries are scoped to it.
-            'current' => $current === null ? null : [
+            // Runs inside the workspace's tenant context (ResolveTenant), so
+            // these queries are scoped to it.
+            'current' => [
                 'displayName' => $current->organization->display_name,
                 'workspaceUrl' => $current->organization->workspaceUrl(),
                 'applications' => $launcher->for($current),
@@ -122,31 +124,6 @@ class DashboardController extends Controller
                 ] : null,
             ],
         ]);
-    }
-
-    /**
-     * Where a member works when it is in exactly one place: one organization
-     * with a workspace, not administered by them, and one application.
-     *
-     * @param  iterable<OrganizationMembership>  $memberships
-     */
-    private function onlyApplication(iterable $memberships, Launcher $launcher, AccessResolver $access, TenantContext $tenant): ?string
-    {
-        $memberships = collect($memberships);
-        $membership = $memberships->first();
-
-        if ($memberships->count() !== 1
-            || ! $membership instanceof OrganizationMembership
-            || ! $membership->organization->status->resolvesWorkspace()) {
-            return null;
-        }
-
-        /** @var list<array{href: string}>|null $applications */
-        $applications = $tenant->run($membership->organization, fn () => (new WorkspaceAbilities($access))->administers($membership)
-            ? null
-            : $launcher->for($membership));
-
-        return $applications !== null && count($applications) === 1 ? $applications[0]['href'] : null;
     }
 
     /**

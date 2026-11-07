@@ -7,7 +7,6 @@ use App\Modules\Audit\Models\AuditLog;
 use App\Modules\Entitlements\Actions\ManageEntitlements;
 use App\Modules\Entitlements\Models\Entitlement;
 use App\Modules\Memberships\Models\OrganizationMembership;
-use App\Modules\Memberships\Support\CurrentOrganization;
 use App\Modules\Organizations\Enums\OrganizationStatus;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationSlug;
@@ -21,7 +20,7 @@ use Laravel\Passport\ClientRepository;
 
 function appUrl(string $path): string
 {
-    return PlatformHosts::url(PlatformHosts::app(), $path);
+    return PlatformHosts::url(PlatformHosts::auth(), $path);
 }
 
 /**
@@ -44,8 +43,8 @@ it('creates an active organization with the creator as owner', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
-        ->post(appUrl('organizations'), organizationInput())
-        ->assertRedirect(route('dashboard'))
+        ->post(appUrl('workspaces'), organizationInput())
+        ->assertRedirect(PlatformHosts::url(PlatformHosts::workspace('manggala')))
         ->assertSessionHasNoErrors();
 
     $organization = Organization::query()->sole();
@@ -59,8 +58,7 @@ it('creates an active organization with the creator as owner', function () {
         ->and($organization->owner_membership_id)->toBe($owner->id)
         ->and($owner->user_id)->toBe($user->id)
         ->and($owner->organization_id)->toBe($organization->id)
-        ->and($organization->primarySlug->slug)->toBe('manggala')
-        ->and(session(CurrentOrganization::SESSION_KEY))->toBe($organization->id);
+        ->and($organization->primarySlug->slug)->toBe('manggala');
 
     $audit = AuditLog::query()->where('action', 'organization.created')->sole();
     expect($audit->organization_id)->toBe($organization->id)
@@ -70,7 +68,7 @@ it('creates an active organization with the creator as owner', function () {
 it('starts the new business with a main branch', function () {
     $user = User::factory()->create();
 
-    $this->actingAs($user)->post(appUrl('organizations'), organizationInput())->assertSessionHasNoErrors();
+    $this->actingAs($user)->post(appUrl('workspaces'), organizationInput())->assertSessionHasNoErrors();
 
     $organization = Organization::query()->sole();
 
@@ -86,7 +84,7 @@ it('starts the new business with a main branch', function () {
 
 it('opens the new workspace for its owner', function () {
     $user = User::factory()->create();
-    $this->actingAs($user)->post(appUrl('organizations'), organizationInput());
+    $this->actingAs($user)->post(appUrl('workspaces'), organizationInput());
 
     $this->get('http://manggala.'.config('platform.root_domain').'/')->assertOk();
 });
@@ -95,7 +93,7 @@ it('registers the workspace sign-in callback for the new organization', function
     $client = app(ClientRepository::class)->createAuthorizationCodeGrantClient('Workspace', [], confidential: true);
     WorkspaceShell::register((string) $client->getKey());
 
-    $this->actingAs(User::factory()->create())->post(appUrl('organizations'), organizationInput());
+    $this->actingAs(User::factory()->create())->post(appUrl('workspaces'), organizationInput());
 
     expect(DB::table('application_client_redirect_uris')->pluck('uri')->all())
         ->toBe([PlatformHosts::url(PlatformHosts::workspace('manggala'), 'auth/callback')]);
@@ -103,7 +101,7 @@ it('registers the workspace sign-in callback for the new organization', function
 
 it('normalizes the slug to lowercase', function () {
     $this->actingAs(User::factory()->create())
-        ->post(appUrl('organizations'), organizationInput(['slug' => 'Manggala']))
+        ->post(appUrl('workspaces'), organizationInput(['slug' => 'Manggala']))
         ->assertSessionHasNoErrors();
 
     expect(OrganizationSlug::query()->value('slug'))->toBe('manggala');
@@ -111,7 +109,7 @@ it('normalizes the slug to lowercase', function () {
 
 it('rejects unusable slugs', function (string $slug) {
     $this->actingAs(User::factory()->create())
-        ->post(appUrl('organizations'), organizationInput(['slug' => $slug]))
+        ->post(appUrl('workspaces'), organizationInput(['slug' => $slug]))
         ->assertSessionHasErrors('slug');
 
     expect(Organization::query()->count())->toBe(0);
@@ -131,7 +129,7 @@ it('rejects a slug that is in use or was ever used', function (bool $retired) {
     }
 
     $this->actingAs(User::factory()->create())
-        ->post(appUrl('organizations'), organizationInput())
+        ->post(appUrl('workspaces'), organizationInput())
         ->assertSessionHasErrors(['slug' => 'This slug is already taken.']);
 })->with(['in use' => false, 'retired' => true]);
 
@@ -139,19 +137,19 @@ it('reports slug availability', function () {
     Organization::factory()->withSlug('taken-name')->create();
     $this->actingAs(User::factory()->create());
 
-    $this->getJson(appUrl('organizations/slug-availability?slug=fresh-name'))
+    $this->getJson(appUrl('workspaces/slug-availability?slug=fresh-name'))
         ->assertOk()
         ->assertExactJson(['available' => true, 'errors' => []]);
 
-    $this->getJson(appUrl('organizations/slug-availability?slug=taken-name'))
+    $this->getJson(appUrl('workspaces/slug-availability?slug=taken-name'))
         ->assertJson(['available' => false, 'errors' => ['This slug is already taken.']]);
 
-    $this->getJson(appUrl('organizations/slug-availability?slug=support'))
+    $this->getJson(appUrl('workspaces/slug-availability?slug=support'))
         ->assertJson(['available' => false, 'errors' => ['This slug is reserved.']]);
 });
 
-it('requires sign-in on the app host', function () {
-    $this->post(appUrl('organizations'), organizationInput())->assertRedirect(appUrl('auth/login'));
+it('requires sign-in', function () {
+    $this->post(appUrl('workspaces'), organizationInput())->assertRedirect(route('login'));
 
     expect(Organization::query()->count())->toBe(0);
 });
@@ -162,14 +160,14 @@ it('starts a free trial of the application chosen on the public site', function 
     $user = User::factory()->create();
 
     $this->actingAs($user)
-        ->get(appUrl('organizations/create?app=retail'))
+        ->get(appUrl('workspaces/create?app=retail'))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('trial.days', 60)
             ->where('trial.selected', 'retail')
             ->where('trial.applications.0.code', 'retail'));
 
-    $this->post(appUrl('organizations'), organizationInput(['trial_application' => 'retail']))
-        ->assertRedirect(route('dashboard'))
+    $this->post(appUrl('workspaces'), organizationInput(['trial_application' => 'retail']))
+        ->assertRedirect(PlatformHosts::url(PlatformHosts::workspace('manggala')))
         ->assertSessionHasNoErrors();
 
     $organization = Organization::query()->sole();
@@ -188,7 +186,7 @@ it('creates a workspace without a trial when none is chosen', function () {
     Application::query()->forceCreate(['code' => 'retail', 'name' => 'Retail', 'category' => 'operations', 'kind' => 'standalone', 'status' => 'available']);
 
     $this->actingAs(User::factory()->create())
-        ->post(appUrl('organizations'), organizationInput(['trial_application' => '']))
+        ->post(appUrl('workspaces'), organizationInput(['trial_application' => '']))
         ->assertSessionHasNoErrors();
 
     $organization = Organization::query()->sole();
@@ -200,7 +198,7 @@ it('offers trials only of released or beta applications', function (string $code
     Application::query()->forceCreate(['code' => 'platform', 'name' => 'Platform', 'category' => 'platform', 'kind' => 'platform', 'status' => 'available']);
 
     $this->actingAs(User::factory()->create())
-        ->post(appUrl('organizations'), organizationInput(['trial_application' => $code]))
+        ->post(appUrl('workspaces'), organizationInput(['trial_application' => $code]))
         ->assertSessionHasErrors('trial_application');
 
     expect(Organization::query()->count())->toBe(0);
@@ -209,7 +207,7 @@ it('offers trials only of released or beta applications', function (string $code
 it('never gives an organization a second trial of the same application', function () {
     $retail = Application::query()->forceCreate(['code' => 'retail', 'name' => 'Retail', 'category' => 'operations', 'kind' => 'standalone', 'status' => 'available']);
     $user = User::factory()->create();
-    $this->actingAs($user)->post(appUrl('organizations'), organizationInput(['trial_application' => 'retail']));
+    $this->actingAs($user)->post(appUrl('workspaces'), organizationInput(['trial_application' => 'retail']));
     $organization = Organization::query()->sole();
 
     expect(fn () => app(ManageEntitlements::class)->startTrial($organization, $retail, $user))
@@ -235,7 +233,7 @@ describe('trials of an ERP product', function () {
     }
 
     it('tries the shared modules the product needs alongside the application', function () {
-        $this->actingAs($this->user)->post(appUrl('organizations'), organizationInput(['trial_application' => 'pharmacy']))
+        $this->actingAs($this->user)->post(appUrl('workspaces'), organizationInput(['trial_application' => 'pharmacy']))
             ->assertSessionHasNoErrors();
 
         $organization = Organization::query()->sole();
@@ -246,13 +244,13 @@ describe('trials of an ERP product', function () {
     });
 
     it('adds nothing to a trial of the shared module itself', function () {
-        $this->actingAs($this->user)->post(appUrl('organizations'), organizationInput(['trial_application' => 'finance']));
+        $this->actingAs($this->user)->post(appUrl('workspaces'), organizationInput(['trial_application' => 'finance']));
 
         expect(trialsOf(Organization::query()->sole()))->toBe(['finance']);
     });
 
     it('does not try a shared module again that the organization has already tried', function () {
-        $this->actingAs($this->user)->post(appUrl('organizations'), organizationInput(['trial_application' => 'finance']));
+        $this->actingAs($this->user)->post(appUrl('workspaces'), organizationInput(['trial_application' => 'finance']));
         $organization = Organization::query()->sole();
 
         app(ManageEntitlements::class)->startTrial($organization, $this->pharmacy, $this->user);

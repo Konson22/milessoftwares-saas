@@ -49,7 +49,7 @@ it('signs in and links the account with the verified address', function () {
     fakeGoogleUser();
 
     $this->get(route('google.callback'))
-        ->assertRedirect(PlatformHosts::url(PlatformHosts::app(), 'dashboard'));
+        ->assertRedirect(PlatformHosts::url(PlatformHosts::auth(), 'workspaces/continue'));
 
     $this->assertAuthenticatedAs($user);
     expect(SocialAccount::query()->sole())

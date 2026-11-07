@@ -24,7 +24,7 @@ use Inertia\Response;
  * Where invitation emails lead. Someone new chooses their name and password
  * and is in: holding the link proves they read mail at the invited address,
  * so the account starts verified and the invitation is accepted at once.
- * Someone who already has an account signs in and accepts on the app host,
+ * Someone who already has an account signs in and accepts on the auth host,
  * as before.
  */
 class JoinController extends Controller
@@ -110,9 +110,9 @@ class JoinController extends Controller
         return User::query()->whereRaw('lower(email) = ?', [mb_strtolower($invitation->email)])->exists();
     }
 
-    /** The existing flow: sign in on the app host, then accept. */
+    /** The existing flow: sign in on the auth host, then accept. */
     private function acceptUrl(string $token): string
     {
-        return PlatformHosts::url(PlatformHosts::app(), 'invitations/'.$token);
+        return PlatformHosts::url(PlatformHosts::auth(), 'invitations/'.$token);
     }
 }

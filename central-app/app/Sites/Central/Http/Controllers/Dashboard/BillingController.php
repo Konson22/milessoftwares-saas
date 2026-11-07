@@ -32,7 +32,7 @@ class BillingController extends Controller
     {
         $organization = $this->ownedOrganization($request, $this->tenant);
 
-        return Inertia::render('central/organizations/billing', [
+        return Inertia::render('central/workspace/manage/billing', [
             'organization' => [
                 'displayName' => $organization->display_name,
                 'billingEmail' => $organization->billing_email ?? $organization->contact_email,
@@ -62,7 +62,7 @@ class BillingController extends Controller
         // Tenant-scoped: another organization's invoice id 404s.
         $record = Invoice::query()->with(['lines', 'payments'])->findOrFail($invoice);
 
-        return Inertia::render('central/organizations/invoice', [
+        return Inertia::render('central/workspace/manage/invoice', [
             'invoice' => [
                 ...$this->invoiceRow($record),
                 'periodStart' => $record->period_start?->toDateString(),

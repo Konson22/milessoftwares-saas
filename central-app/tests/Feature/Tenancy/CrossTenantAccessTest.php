@@ -69,12 +69,6 @@ it('shows a member of both organizations only the members of the host they are o
             ->where('members', fn ($members) => collect($members)->pluck('id')->doesntContain($this->alphaMember->id)));
 });
 
-it('cannot make a foreign organization current on the app host', function () {
-    $this->actingAs($this->alphaMember->user)
-        ->post('http://app.'.config('platform.root_domain').'/organizations/'.$this->beta->id.'/switch')
-        ->assertNotFound();
-});
-
 it('does not expose a user\'s other organizations to non-members', function () {
     $outsider = User::factory()->create();
 

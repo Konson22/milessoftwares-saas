@@ -7,7 +7,7 @@ import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { Spinner } from '@/shared/components/ui/spinner';
-import { dashboard } from '@/routes';
+import { workspaces } from '@/routes';
 import {
     create as createOrganization,
     slugAvailability,
@@ -337,7 +337,7 @@ function SlugStatus({
 
 CreateOrganization.layout = {
     breadcrumbs: [
-        { title: 'Dashboard', href: dashboard() },
+        { title: 'Your businesses', href: workspaces() },
         { title: 'New business', href: createOrganization() },
     ],
 };

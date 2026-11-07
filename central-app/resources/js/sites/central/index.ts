@@ -4,10 +4,10 @@ import SettingsLayout from '@/sites/central/layouts/settings/layout';
 import WorkspaceLayout from '@/sites/central/layouts/workspace-layout';
 
 /**
- * Central app: auth., app. and the {business} workspace hosts. Pages in
- * ./pages are rendered as `central/{page}`. Each host has its own chrome;
- * the workspace suspension page and the members' application picker render
- * their own.
+ * Central app: the auth host (account, businesses, sign-in) and the
+ * {business} workspace hosts. Pages in ./pages are rendered as
+ * `central/{page}`. Each host has its own chrome; the workspace suspension
+ * page and the members' application picker render their own.
  */
 export function layout(page: string): unknown {
     switch (true) {

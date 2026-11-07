@@ -51,10 +51,11 @@ describe('site layouts', () => {
     });
 
     it.each([
-        ['workspace/home', WorkspaceLayout],
+        ['workspace/dashboard', WorkspaceLayout],
+        ['workspace/manage/billing', WorkspaceLayout],
         ['workspace/manage/access', WorkspaceLayout],
         ['auth/login', AuthLayout],
-        ['dashboard', AppLayout],
+        ['workspaces', AppLayout],
         ['organizations/create', AppLayout],
     ])('gives central %s its host layout', (page, layout) => {
         expect(centralLayout(page)).toBe(layout);
@@ -73,9 +74,9 @@ describe('site layouts', () => {
 
     it('uses the layout of the site the page was loaded from', async () => {
         await resolvePage('public/thanks');
-        await resolvePage('central/dashboard');
+        await resolvePage('central/workspaces');
 
         expect(resolveLayout('public/thanks')).toBe(MarketingLayout);
-        expect(resolveLayout('central/dashboard')).toBe(AppLayout);
+        expect(resolveLayout('central/workspaces')).toBe(AppLayout);
     });
 });

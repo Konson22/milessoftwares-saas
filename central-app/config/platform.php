@@ -272,7 +272,7 @@ return [
     | First-party OpenID Connect clients
     |--------------------------------------------------------------------------
     |
-    | app.<root>, admin.<root> and every workspace host sign users in through
+    | admin.<root> and every workspace host sign users in through
     | the auth host like any product would. Create the clients with `php artisan platform:oidc-clients`.
     |
     | backchannel_url: where the token endpoint is reached server-to-server.
@@ -284,10 +284,6 @@ return [
     'oidc' => [
         'backchannel_url' => env('PLATFORM_OIDC_BACKCHANNEL_URL'),
         'clients' => [
-            'app' => [
-                'id' => env('PLATFORM_APP_CLIENT_ID'),
-                'secret' => env('PLATFORM_APP_CLIENT_SECRET'),
-            ],
             'admin' => [
                 'id' => env('PLATFORM_ADMIN_CLIENT_ID'),
                 'secret' => env('PLATFORM_ADMIN_CLIENT_SECRET'),

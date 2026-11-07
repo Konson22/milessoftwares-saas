@@ -8,7 +8,7 @@ use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 
 /**
- * Organization settings, subscription and billing on app.<root> are the
+ * Organization settings, subscription and billing on the workspace host are the
  * owner's alone until scoped roles arrive in Phase 4.
  */
 trait ResolvesOwnedOrganization

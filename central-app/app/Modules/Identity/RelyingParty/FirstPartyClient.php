@@ -7,7 +7,7 @@ use RuntimeException;
 
 /**
  * A platform host acting as a confidential OpenID Connect client of the auth
- * host: app., admin., or a workspace host. All workspaces share one client;
+ * host: admin. or a workspace host. All workspaces share one client;
  * each workspace's callback URI is registered per organization.
  */
 final readonly class FirstPartyClient
@@ -15,7 +15,7 @@ final readonly class FirstPartyClient
     /**
      * Clients created by `platform:oidc-clients`.
      */
-    public const KEYS = ['app', 'admin', 'workspace'];
+    public const KEYS = ['admin', 'workspace'];
 
     /**
      * @param  non-empty-string  $id
@@ -45,7 +45,6 @@ final readonly class FirstPartyClient
         }
 
         $host ??= match ($key) {
-            'app' => PlatformHosts::app(),
             'admin' => PlatformHosts::admin(),
             default => throw new RuntimeException('The workspace client needs the tenant host.'),
         };

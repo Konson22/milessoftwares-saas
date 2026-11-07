@@ -30,20 +30,19 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(PlatformHosts::url(PlatformHosts::app(), 'dashboard'));
+        $response->assertRedirect(PlatformHosts::url(PlatformHosts::auth(), 'workspaces/continue'));
     }
 
-    public function test_the_login_form_reaches_the_dashboard_with_a_full_page_load()
+    public function test_the_login_form_lands_on_the_businesses_list_on_the_same_host()
     {
         $user = User::factory()->create();
 
-        // Inertia posts with XHR, which cannot follow a redirect to the app host.
+        // Same host: an ordinary redirect, which Inertia's XHR follows.
         $this->withHeader('X-Inertia', 'true')->post(route('login.store'), [
             'email' => $user->email,
             'password' => 'password',
         ])
-            ->assertStatus(409)
-            ->assertHeader('X-Inertia-Location', PlatformHosts::url(PlatformHosts::app(), 'dashboard'));
+            ->assertRedirect(PlatformHosts::url(PlatformHosts::auth(), 'workspaces/continue'));
     }
 
     public function test_users_with_two_factor_enabled_are_redirected_to_two_factor_challenge()

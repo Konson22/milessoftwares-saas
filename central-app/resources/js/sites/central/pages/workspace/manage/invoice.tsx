@@ -11,8 +11,6 @@ import {
     TableHeader,
     TableRow,
 } from '@/shared/components/ui/table';
-import { dashboard } from '@/routes';
-import { billing as organizationBilling } from '@/routes/organization';
 import { ReportPaymentDialog } from '@/sites/central/components/report-payment-dialog';
 import {
     formatDate,
@@ -26,7 +24,8 @@ import {
 import type {
     InvoiceRow,
     PaymentRow,
-} from '@/sites/central/pages/organizations/billing';
+} from '@/sites/central/pages/workspace/manage/billing';
+import { workspaceRoutes } from '@/sites/central/lib/workspace-routes';
 
 type Props = {
     invoice: InvoiceRow & {
@@ -77,7 +76,7 @@ export default function OrganizationInvoice({
 
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <Button asChild variant="ghost" size="sm" className="-ml-2">
-                    <Link href={organizationBilling()}>
+                    <Link href={workspaceRoutes.billing}>
                         <ArrowLeft /> Billing
                     </Link>
                 </Button>
@@ -294,10 +293,3 @@ export default function OrganizationInvoice({
         </>
     );
 }
-
-OrganizationInvoice.layout = {
-    breadcrumbs: [
-        { title: 'Dashboard', href: dashboard() },
-        { title: 'Billing', href: organizationBilling() },
-    ],
-};

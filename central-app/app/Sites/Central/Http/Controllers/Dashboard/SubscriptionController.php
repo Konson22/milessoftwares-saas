@@ -35,7 +35,7 @@ class SubscriptionController extends Controller
         $organization = $this->ownedOrganization($request, $this->tenant);
         $pendingCancellations = PlanRequest::query()->where('status', 'pending')->where('type', 'cancel')->pluck('id', 'subscription_id');
 
-        return Inertia::render('central/organizations/subscription', [
+        return Inertia::render('central/workspace/manage/subscription', [
             'organization' => ['displayName' => $organization->display_name],
             'subscriptions' => Subscription::query()
                 ->with('items.plan:id,name,billing_interval,price_minor,currency')
@@ -93,7 +93,7 @@ class SubscriptionController extends Controller
             ->all();
         $requested = PlanRequest::query()->where('status', 'pending')->where('type', 'subscribe')->pluck('id', 'plan_id');
 
-        return Inertia::render('central/organizations/plans', [
+        return Inertia::render('central/workspace/manage/plans', [
             'organization' => ['displayName' => $organization->display_name],
             'plans' => Plan::query()
                 ->where('status', 'active')

@@ -9,8 +9,9 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Remembers the application chosen on the public site ("Start free trial",
  * /trial?app=...) before signing in, registering or verifying the email
- * address gets in the way: those can end on the dashboard rather than back
- * on the trial, and the dashboard then carries on to it. Runs before the
+ * address gets in the way: those can end on the list of businesses
+ * (workspaces/continue) rather than back on the trial, and that then
+ * carries on to it. Runs before the
  * auth middleware, so guests' choices are kept too.
  */
 class RememberTrialChoice

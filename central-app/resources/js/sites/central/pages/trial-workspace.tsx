@@ -1,19 +1,19 @@
-import { Form, Head, Link } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { Building2, ChevronRight, Plus } from 'lucide-react';
 import { PageHeader } from '@miles/ui/components/page-header';
 import { Panel, PanelHeader } from '@miles/ui/components/panel';
 import { StatusBadge } from '@miles/ui/components/status-badge';
 import { Button } from '@/shared/components/ui/button';
-import OrganizationController from '@/actions/App/Sites/Central/Http/Controllers/Dashboard/OrganizationController';
-import { dashboard } from '@/routes';
+import { trial, workspaces as workspacesRoute } from '@/routes';
 import { create as createOrganization } from '@/routes/organizations';
 
 type Workspace = {
     id: string;
     name: string;
     address: string | null;
+    /** The trial on that business's own host; null when it is not open. */
+    trialUrl: string | null;
     isOwner: boolean;
-    isCurrent: boolean;
 };
 
 type Props = {
@@ -25,8 +25,8 @@ type Props = {
 };
 
 /**
- * First step of a free trial for someone who already has workspaces: the
- * trial goes to one of them, or to a new one.
+ * First step of a free trial for someone who already has businesses: the
+ * trial goes to one of them (confirmed on its own host), or to a new one.
  */
 export default function TrialWorkspace({
     trialDays,
@@ -65,11 +65,6 @@ export default function TrialWorkspace({
                                         <span className="font-medium">
                                             {workspace.name}
                                         </span>
-                                        {workspace.isCurrent && (
-                                            <StatusBadge tone="info">
-                                                Current
-                                            </StatusBadge>
-                                        )}
                                         {workspace.isOwner && (
                                             <StatusBadge>Owner</StatusBadge>
                                         )}
@@ -80,30 +75,14 @@ export default function TrialWorkspace({
                                         </p>
                                     )}
                                 </div>
-                                <Form
-                                    {...OrganizationController.switch.form(
-                                        workspace.id,
-                                    )}
-                                >
-                                    {({ processing }) => (
-                                        <>
-                                            <input
-                                                type="hidden"
-                                                name="trial"
-                                                value={selected ?? ''}
-                                            />
-                                            <Button
-                                                type="submit"
-                                                size="sm"
-                                                variant="outline"
-                                                disabled={processing}
-                                            >
-                                                Use this
-                                                <ChevronRight aria-hidden />
-                                            </Button>
-                                        </>
-                                    )}
-                                </Form>
+                                {workspace.trialUrl && (
+                                    <Button asChild size="sm" variant="outline">
+                                        <a href={workspace.trialUrl}>
+                                            Use this
+                                            <ChevronRight aria-hidden />
+                                        </a>
+                                    </Button>
+                                )}
                             </li>
                         ))}
                     </ul>
@@ -136,7 +115,7 @@ export default function TrialWorkspace({
 
 TrialWorkspace.layout = {
     breadcrumbs: [
-        { title: 'Dashboard', href: dashboard() },
-        { title: 'Free trial', href: '/trial' },
+        { title: 'Your businesses', href: workspacesRoute() },
+        { title: 'Free trial', href: trial() },
     ],
 };

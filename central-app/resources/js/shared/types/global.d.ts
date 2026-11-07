@@ -16,6 +16,9 @@ declare module '@inertiajs/core' {
                 isAuthHost: boolean;
                 accountUrl: string;
                 securityUrl: string;
+                /** The account's businesses, on the auth host. */
+                workspacesUrl: string;
+                newBusinessUrl: string;
                 logoutUrl: string;
             };
             tenant: { displayName: string; isOwner: boolean } | null;

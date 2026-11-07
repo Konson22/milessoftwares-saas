@@ -10,7 +10,6 @@ use App\Modules\Memberships\Enums\MembershipStatus;
 use App\Modules\Memberships\Models\Invitation;
 use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Memberships\Notifications\OrganizationInvitation;
-use App\Modules\Memberships\Support\CurrentOrganization;
 use App\Modules\Organizations\Models\Organization;
 use App\Support\Hosts\PlatformHosts;
 use App\Support\Tenancy\TenantContext;
@@ -38,7 +37,7 @@ function workspaceAt(string $path): string
 
 function invitationUrl(string $token, string $suffix = ''): string
 {
-    return PlatformHosts::url(PlatformHosts::app(), "invitations/{$token}{$suffix}");
+    return PlatformHosts::url(PlatformHosts::auth(), "invitations/{$token}{$suffix}");
 }
 
 /**
@@ -91,17 +90,16 @@ it('lets the invited account join', function () {
             ->where('status', 'pending')
             ->where('organization.displayName', $this->organization->display_name));
 
-    acceptAs($this->invitee, $token)->assertRedirect(route('dashboard'));
+    acceptAs($this->invitee, $token)->assertRedirect(workspaceAt(''));
 
     expect(membershipOf($this->invitee)?->status)->toBe(MembershipStatus::Active)
         ->and(Invitation::acrossTenants()->sole()->status)->toBe('accepted')
-        ->and(session(CurrentOrganization::SESSION_KEY))->toBe($this->organization->id)
         ->and(AuditLog::query()->where('action', 'invitation.accepted')->value('organization_id'))->toBe($this->organization->id);
 });
 
 it('can be used only once', function () {
     $token = invite($this->owner);
-    acceptAs($this->invitee, $token)->assertRedirect(route('dashboard'));
+    acceptAs($this->invitee, $token)->assertRedirect(workspaceAt(''));
 
     acceptAs($this->invitee, $token)->assertSessionHasErrors(['invitation' => 'This invitation is no longer valid.']);
 
@@ -145,7 +143,7 @@ it('invalidates the old link when resent', function () {
     });
 
     acceptAs($this->invitee, $oldToken)->assertSessionHasErrors('invitation');
-    acceptAs($this->invitee, $newToken)->assertRedirect(route('dashboard'));
+    acceptAs($this->invitee, $newToken)->assertRedirect(workspaceAt(''));
 });
 
 it('refuses an account with a different email and does not reveal the organization', function () {
@@ -166,7 +164,7 @@ it('refuses an account with a different email and does not reveal the organizati
 it('matches the email without regard to case', function () {
     $token = invite($this->owner, 'Amina@Example.TEST');
 
-    acceptAs($this->invitee, $token)->assertRedirect(route('dashboard'));
+    acceptAs($this->invitee, $token)->assertRedirect(workspaceAt(''));
 });
 
 it('requires a verified email address', function () {
@@ -210,7 +208,7 @@ it('gives a proposed role on acceptance, checked as the inviter', function () {
         'branch_id' => $this->juba->id,
     ]);
 
-    acceptAs($this->invitee, $token)->assertRedirect(route('dashboard'));
+    acceptAs($this->invitee, $token)->assertRedirect(workspaceAt(''));
 
     $assignment = RoleAssignment::acrossTenants()->where('membership_id', membershipOf($this->invitee)->id)->sole();
     expect($assignment->branch_id)->toBe($this->juba->id)
@@ -229,7 +227,7 @@ it('asks the inviter to confirm a role that conflicts with itself, and gives it 
     $token = invite($this->owner, extra: [...$proposal, 'acknowledge_sod' => '1']);
     expect(Invitation::acrossTenants()->sole()->proposed_access['acknowledge_sod'])->toBeTrue();
 
-    acceptAs($this->invitee, $token)->assertRedirect(route('dashboard'));
+    acceptAs($this->invitee, $token)->assertRedirect(workspaceAt(''));
 
     $assignment = RoleAssignment::acrossTenants()->where('membership_id', membershipOf($this->invitee)->id)->sole();
     expect($assignment->role->key)->toBe('shift_supervisor')
@@ -245,7 +243,7 @@ it('gives several proposed roles on acceptance', function () {
     ]);
     expect(Invitation::acrossTenants()->sole()->proposedRoles())->toHaveCount(2);
 
-    acceptAs($this->invitee, $token)->assertRedirect(route('dashboard'));
+    acceptAs($this->invitee, $token)->assertRedirect(workspaceAt(''));
 
     expect(RoleAssignment::acrossTenants()->where('membership_id', membershipOf($this->invitee)->id)->with('role')->get()->pluck('role.key')->sort()->values()->all())
         ->toBe(['auditor', 'cashier']);
@@ -265,7 +263,7 @@ it('asks the inviter to confirm roles that conflict with each other', function (
     expect(Invitation::acrossTenants()->count())->toBe(0);
 
     $token = invite($this->owner, extra: [...$proposal, 'acknowledge_sod' => '1']);
-    acceptAs($this->invitee, $token)->assertRedirect(route('dashboard'));
+    acceptAs($this->invitee, $token)->assertRedirect(workspaceAt(''));
 
     expect(RoleAssignment::acrossTenants()->where('membership_id', membershipOf($this->invitee)->id)->count())->toBe(2);
 });
@@ -277,7 +275,7 @@ it('still honours an invitation that proposed one role in the old format', funct
         'scope' => ['scope_type' => 'branch', 'branch_id' => $this->juba->id],
     ]])->save();
 
-    acceptAs($this->invitee, $token)->assertRedirect(route('dashboard'));
+    acceptAs($this->invitee, $token)->assertRedirect(workspaceAt(''));
 
     expect(RoleAssignment::acrossTenants()->where('membership_id', membershipOf($this->invitee)->id)->sole()->role->key)->toBe('cashier');
 });
@@ -301,7 +299,7 @@ it('still adds the member but skips a proposed role the inviter can no longer gi
         ->update(['revoked_at' => now()]));
     app(TenantContext::class)->clear();
 
-    acceptAs($this->invitee, $token)->assertRedirect(route('dashboard'));
+    acceptAs($this->invitee, $token)->assertRedirect(route('workspaces'));
 
     expect(membershipOf($this->invitee)?->isActive())->toBeTrue()
         ->and(RoleAssignment::acrossTenants()->where('membership_id', membershipOf($this->invitee)->id)->count())->toBe(0)
@@ -327,5 +325,5 @@ it('returns 404 for another organization\'s invitation id', function () {
 });
 
 it('rejects malformed tokens before any lookup', function () {
-    $this->actingAs($this->invitee)->get(PlatformHosts::url(PlatformHosts::app(), 'invitations/short'))->assertNotFound();
+    $this->actingAs($this->invitee)->get(PlatformHosts::url(PlatformHosts::auth(), 'invitations/short'))->assertNotFound();
 });

@@ -5,15 +5,14 @@ namespace App\Sites\Central\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Modules\Memberships\Actions\Invitations;
 use App\Modules\Memberships\Actions\MembershipActionDenied;
-use App\Modules\Memberships\Support\CurrentOrganization;
 use App\Modules\Organizations\Models\Organization;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 /**
- * Invitation links land on the app host. Guests sign in (or register) first
+ * Invitation links land on the auth host. Guests sign in (or register) first
  * and come back here. The page reveals the organization's name only to the
  * account the invitation was sent to.
  */
@@ -44,7 +43,7 @@ class InvitationAcceptanceController extends Controller
         ]);
     }
 
-    public function accept(Request $request, string $token, CurrentOrganization $current): RedirectResponse
+    public function accept(Request $request, string $token): SymfonyResponse
     {
         try {
             $result = $this->invitations->accept($request->user(), $token);
@@ -52,14 +51,19 @@ class InvitationAcceptanceController extends Controller
             return back()->withErrors(['invitation' => $e->getMessage()]);
         }
 
-        $current->switchTo($request, $request->user(), $result['organization']->id);
+        // A note about the role is shown here, next to the business in the
+        // list; otherwise straight into the business on its own host.
+        $url = $result['organization']->workspaceUrl();
+        if ($result['roleNote'] !== null || $url === null) {
+            Inertia::flash('toast', [
+                'type' => $result['roleNote'] === null ? 'success' : 'warning',
+                'message' => $result['roleNote'] ?? __('Welcome to :name.', ['name' => $result['organization']->display_name]),
+            ]);
 
-        Inertia::flash('toast', [
-            'type' => $result['roleNote'] === null ? 'success' : 'warning',
-            'message' => $result['roleNote'] ?? __('Welcome to :name.', ['name' => $result['organization']->display_name]),
-        ]);
+            return redirect()->route('workspaces');
+        }
 
-        return redirect()->route('dashboard');
+        return Inertia::location($url);
     }
 
     /**

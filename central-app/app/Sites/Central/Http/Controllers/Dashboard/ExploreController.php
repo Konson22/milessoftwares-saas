@@ -15,7 +15,7 @@ class ExploreController extends Controller
 {
     public function __invoke(MarketingCatalog $catalog): Response
     {
-        return Inertia::render('central/explore', [
+        return Inertia::render('central/workspace/manage/explore', [
             'trialDays' => (int) config('platform.marketing.trial_days'),
             'applications' => array_map(fn (array $product) => [
                 'code' => $product['code'],

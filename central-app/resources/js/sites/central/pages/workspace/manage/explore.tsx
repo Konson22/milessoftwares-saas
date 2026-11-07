@@ -5,8 +5,8 @@ import { PageHeader } from '@miles/ui/components/page-header';
 import { Panel, PanelHeader } from '@miles/ui/components/panel';
 import { StatusBadge } from '@miles/ui/components/status-badge';
 import { Button } from '@/shared/components/ui/button';
-import { dashboard, explore, trial } from '@/routes';
 import { appIcon } from '@/shared/lib/app-icons';
+import { workspaceRoutes } from '@/sites/central/lib/workspace-routes';
 
 type Application = {
     code: string;
@@ -114,12 +114,9 @@ function ApplicationGrid({ applications }: { applications: Application[] }) {
                                 className="mt-auto self-start"
                             >
                                 <Link
-                                    href={trial({
-                                        query: {
-                                            app: application.code,
-                                            chosen: 1,
-                                        },
-                                    })}
+                                    href={workspaceRoutes.trial(
+                                        application.code,
+                                    )}
                                 >
                                     Start free trial <ArrowRight />
                                 </Link>
@@ -131,10 +128,3 @@ function ApplicationGrid({ applications }: { applications: Application[] }) {
         </ul>
     );
 }
-
-Explore.layout = {
-    breadcrumbs: [
-        { title: 'Dashboard', href: dashboard() },
-        { title: 'Explore the ERP', href: explore() },
-    ],
-};

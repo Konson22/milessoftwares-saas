@@ -17,12 +17,10 @@ import {
     DialogTrigger,
 } from '@/shared/components/ui/dialog';
 import { Label } from '@/shared/components/ui/label';
-import { dashboard } from '@/routes';
-import { plans as organizationPlans } from '@/routes/organization';
-import { store as storeRequest } from '@/routes/organization/plan-requests';
 import { RequestHistory } from '@/sites/central/components/request-history';
 import type { PlanRequestRow } from '@/sites/central/components/request-history';
 import { formatMoney, intervalLabel } from '@/shared/lib/billing';
+import { workspaceRoutes } from '@/sites/central/lib/workspace-routes';
 
 type Plan = {
     id: string;
@@ -170,7 +168,8 @@ function RequestDialog({ plan }: { plan: Plan }) {
             </DialogTrigger>
             <DialogContent>
                 <Form
-                    {...storeRequest.form()}
+                    action={workspaceRoutes.planRequests}
+                    method="post"
                     options={{ preserveScroll: true }}
                     onSuccess={() => setOpen(false)}
                     className="space-y-4"
@@ -236,10 +235,3 @@ function RequestDialog({ plan }: { plan: Plan }) {
         </Dialog>
     );
 }
-
-OrganizationPlans.layout = {
-    breadcrumbs: [
-        { title: 'Dashboard', href: dashboard() },
-        { title: 'Plans', href: organizationPlans() },
-    ],
-};

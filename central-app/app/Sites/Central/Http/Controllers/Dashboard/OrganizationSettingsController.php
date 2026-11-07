@@ -6,15 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Modules\Audit\AuditLogger;
 use App\Modules\Organizations\Actions\RenameOrganizationSlug;
 use App\Sites\Central\Http\Controllers\Dashboard\Concerns\ResolvesOwnedOrganization;
+use App\Support\Hosts\PlatformHosts;
 use App\Support\Tenancy\TenantContext;
 use DateTimeZone;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 /**
- * General settings of the current organization: details, regional
+ * General settings of the business, on its workspace host (/manage/settings): details, regional
  * defaults, billing details and the workspace address. Owner-only until
  * scoped roles arrive in Phase 4.
  */
@@ -26,7 +28,7 @@ class OrganizationSettingsController extends Controller
     {
         $organization = $this->ownedOrganization($request, $tenant);
 
-        return Inertia::render('central/organizations/settings', [
+        return Inertia::render('central/workspace/manage/settings', [
             'details' => [
                 'display_name' => $organization->display_name,
                 'legal_name' => $organization->legal_name,
@@ -65,16 +67,16 @@ class OrganizationSettingsController extends Controller
         ]);
     }
 
-    public function updateSlug(Request $request, TenantContext $tenant, RenameOrganizationSlug $rename): RedirectResponse
+    public function updateSlug(Request $request, TenantContext $tenant, RenameOrganizationSlug $rename): SymfonyResponse
     {
         $organization = $this->ownedOrganization($request, $tenant);
         $validated = $request->validate(['slug' => ['required', 'string', 'max:63']]);
 
-        $rename->handle($organization, $validated['slug'], $request->user());
+        $slug = $rename->handle($organization, $validated['slug'], $request->user());
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Workspace address updated.')]);
-
-        return back();
+        // The workspace now answers on its new host (the old one redirects there
+        // for a while): carry on to these settings at the new address.
+        return Inertia::location(PlatformHosts::url(PlatformHosts::workspace($slug->slug), 'manage/settings'));
     }
 
     public function updateDetails(Request $request, TenantContext $tenant, AuditLogger $audit): RedirectResponse

@@ -52,7 +52,7 @@ class HandleInertiaRequests extends Middleware
             'platform' => $this->platformLinks($request),
             // Length of the self-serve free trial, for "Start your N-day free trial".
             'trialDays' => (int) config('platform.marketing.trial_days'),
-            // Set on workspace hosts (and on app. once an organization is current).
+            // Set on workspace hosts.
             // Admin host only: the signed-in staff member and their permissions.
             'staff' => fn () => ($staff = $request->attributes->get('staff')) instanceof PlatformStaff
                 ? ['permissions' => array_map(fn (PlatformPermission $permission) => $permission->value, $staff->permissions())]
@@ -69,7 +69,7 @@ class HandleInertiaRequests extends Middleware
                 : [],
             'tenant' => fn () => ($organization = app(TenantContext::class)->organization()) === null ? null : [
                 'displayName' => $organization->display_name,
-                // The app. sidebar shows organization settings and billing to the owner only.
+                // The workspace sidebar shows settings, plans and billing to the owner only.
                 'isOwner' => ($membership = $request->attributes->get('membership')) instanceof OrganizationMembership
                     && $organization->owner_membership_id === $membership->id,
             ],
@@ -78,9 +78,10 @@ class HandleInertiaRequests extends Middleware
 
     /**
      * Account links differ per host: only the auth host serves account
-     * settings and the central sign-out; app. and admin. sign out locally.
+     * settings, the list of businesses and the central sign-out; admin. and
+     * the workspaces sign out locally.
      *
-     * @return array{host: string, isAuthHost: bool, accountUrl: string, securityUrl: string, logoutUrl: string}
+     * @return array{host: string, isAuthHost: bool, accountUrl: string, securityUrl: string, workspacesUrl: string, newBusinessUrl: string, logoutUrl: string}
      */
     private function platformLinks(Request $request): array
     {
@@ -91,8 +92,9 @@ class HandleInertiaRequests extends Middleware
             'isAuthHost' => $type === HostType::Auth,
             'accountUrl' => PlatformHosts::url(PlatformHosts::auth(), 'settings/profile'),
             'securityUrl' => PlatformHosts::url(PlatformHosts::auth(), 'settings/security'),
+            'workspacesUrl' => PlatformHosts::url(PlatformHosts::auth(), 'workspaces'),
+            'newBusinessUrl' => PlatformHosts::url(PlatformHosts::auth(), 'workspaces/create'),
             'logoutUrl' => match ($type) {
-                HostType::App => PlatformHosts::url(PlatformHosts::app(), 'logout'),
                 HostType::Admin => PlatformHosts::url(PlatformHosts::admin(), 'logout'),
                 HostType::Workspace => PlatformHosts::url($request->getHost(), 'logout'),
                 default => PlatformHosts::url(PlatformHosts::auth(), 'logout'),

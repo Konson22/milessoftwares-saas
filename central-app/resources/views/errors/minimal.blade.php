@@ -25,14 +25,14 @@
     [$homeLabel, $homeUrl] = match (true) {
         in_array($type, [HostType::Marketing, HostType::Www, HostType::Reserved, HostType::Unknown], true) => ['Go to homepage', PlatformHosts::url(PlatformHosts::root())],
         ! $signedIn => ['Sign in', $signInUrl],
-        $type === HostType::App, $type === HostType::Auth => ['Go to dashboard', PlatformHosts::url(PlatformHosts::app(), '/dashboard')],
+        $type === HostType::App, $type === HostType::Auth => ['Your businesses', PlatformHosts::url(PlatformHosts::auth(), '/workspaces')],
         $type === HostType::Admin => ['Admin overview', PlatformHosts::url(PlatformHosts::admin())],
         default => ['Workspace home', PlatformHosts::url($host)],
     };
     $showSignIn = ! $signedIn && $homeUrl !== $signInUrl;
     $showRegister = ! $signedIn && $registerUrl !== null;
     $dashboardUrl = $signedIn && in_array($type, [HostType::Marketing, HostType::Www, HostType::Workspace], true)
-        ? PlatformHosts::url(PlatformHosts::app(), '/dashboard')
+        ? PlatformHosts::url(PlatformHosts::auth(), '/workspaces')
         : null;
     $contactUrl = $type === HostType::Admin ? null : PlatformHosts::url(PlatformHosts::root(), '/contact');
     $code = trim($__env->yieldContent('code'));
@@ -222,7 +222,7 @@
                 @if ($dashboardUrl)
                     <a class="btn" href="{{ $dashboardUrl }}">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
-                        Dashboard
+                        Your businesses
                     </a>
                 @endif
                 @if ($contactUrl)

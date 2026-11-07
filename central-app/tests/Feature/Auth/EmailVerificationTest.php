@@ -57,7 +57,7 @@ class EmailVerificationTest extends TestCase
         Event::assertDispatched(Verified::class);
 
         $this->assertTrue($user->fresh()->hasVerifiedEmail());
-        $response->assertRedirect(PlatformHosts::url(PlatformHosts::app(), '/dashboard'));
+        $response->assertRedirect(PlatformHosts::url(PlatformHosts::auth(), '/workspaces/continue'));
     }
 
     public function test_email_is_not_verified_with_invalid_hash()
@@ -121,7 +121,7 @@ class EmailVerificationTest extends TestCase
         );
 
         $this->actingAs($user)->get($verificationUrl)
-            ->assertRedirect(PlatformHosts::url(PlatformHosts::app(), '/dashboard'));
+            ->assertRedirect(PlatformHosts::url(PlatformHosts::auth(), '/workspaces/continue'));
 
         Event::assertNotDispatched(Verified::class);
         $this->assertTrue($user->fresh()->hasVerifiedEmail());

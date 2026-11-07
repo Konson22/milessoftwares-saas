@@ -12,7 +12,6 @@ use App\Modules\Marketing\Support\MarketingCatalog;
 use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Subscriptions\Models\Plan;
-use App\Support\Hosts\PlatformHosts;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
@@ -45,14 +44,14 @@ function trialOrganization(): array
     return [$organization, $owner];
 }
 
-function trialAppUrl(string $path): string
+function trialAppUrl(string $path, ?Organization $organization = null): string
 {
-    return PlatformHosts::url(PlatformHosts::app(), $path);
+    return test()->businessUrl($path, $organization);
 }
 
 function trialWorkAs(OrganizationMembership $membership): void
 {
-    test()->actingAs($membership->user)->post(trialAppUrl("organizations/{$membership->organization_id}/switch"));
+    test()->workIn($membership);
 }
 
 /**
@@ -76,94 +75,79 @@ function trialIsCurrent(Organization $organization, Application $application): b
 }
 
 describe('the trial page', function () {
-    it('sends guests to sign in', function () {
-        $this->get(trialAppUrl('trial?app=retail'))->assertRedirect();
+    it('sends guests to sign up', function () {
+        $this->get($this->authUrl('trial?app=retail'))->assertRedirect(route('register'));
 
         expect(trialRows($this->organization, $this->retail))->toHaveCount(0);
     });
 
-    it('remembers the product chosen as a guest until the dashboard, after signing up', function () {
-        $this->get(trialAppUrl('trial?app=retail'))->assertRedirect();
+    it('remembers the product chosen as a guest until the businesses list, after signing up', function () {
+        $this->get($this->authUrl('trial?app=retail'))->assertRedirect();
 
-        // Verifying the email address ends on the dashboard, not the trial.
+        // Verifying the email address ends on the businesses list, not the trial.
         $user = OrganizationMembership::factory()->make()->user;
-        $this->actingAs($user)->get(route('dashboard'))
+        $this->actingAs($user)->get(route('workspaces.continue'))
             ->assertRedirect(route('trial', ['app' => 'retail']));
 
         // Once only, and not for products that cannot be tried.
-        $this->get(route('dashboard'))->assertOk();
-        $this->get(trialAppUrl('trial?app=nothing_here'));
-        $this->get(route('dashboard'))->assertOk();
+        $this->get(route('workspaces.continue'))->assertRedirect(route('organizations.create'));
+        $this->get($this->authUrl('trial?app=nothing_here'));
+        $this->get(route('workspaces.continue'))->assertRedirect(route('organizations.create'));
     });
 
     it('sends someone without a business to create one, keeping the product', function () {
         $user = OrganizationMembership::factory()->make()->user;
 
-        $this->actingAs($user)->get(trialAppUrl('trial?app=retail'))
+        $this->actingAs($user)->get($this->authUrl('trial?app=retail'))
             ->assertRedirect(route('organizations.create', ['app' => 'retail']));
     });
 
-    it('adds the trial to the owner\'s business instead of asking for a new one', function () {
-        trialWorkAs($this->owner);
-
-        $this->get(trialAppUrl('organizations/create?app=retail'))
-            ->assertRedirect(route('trial', ['app' => 'retail']));
-
-        // Without a product it is a new business, as asked.
-        $this->get(trialAppUrl('organizations/create'))->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page->component('central/organizations/create'));
-    });
-
-    it('lets a member who is not the owner start a business of their own for it', function () {
+    it('lets anyone start a new business for it', function () {
         $member = OrganizationMembership::factory()->create(['organization_id' => $this->organization->id]);
         trialWorkAs($member);
 
-        $this->get(trialAppUrl('organizations/create?app=retail'))->assertOk()
+        $this->get($this->authUrl('workspaces/create?app=retail'))->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('central/organizations/create')
                 ->where('trial.selected', 'retail'));
     });
 
-    it('starts trials from Explore in the current business', function () {
+    it('starts trials from Explore on the business host', function () {
         trialWorkAs($this->owner);
 
-        $this->get(trialAppUrl('explore'))->assertOk();
-        $this->get(trialAppUrl('trial?app=retail&chosen=1'))->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page->component('central/trial')->where('selected', 'retail'));
+        $this->get(trialAppUrl('manage/explore'))->assertOk();
+        $this->get(trialAppUrl('manage/trial?app=retail'))->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('central/workspace/manage/trial')->where('selected', 'retail'));
     });
 
-    it('asks someone with workspaces which one the trial is for, or a new one', function () {
+    it('asks someone with businesses which one the trial is for, or a new one', function () {
         [$other, $otherOwner] = trialOrganization();
         $otherOwner->forceFill(['user_id' => $this->owner->user_id])->save();
         trialWorkAs($this->owner);
 
-        $this->get(trialAppUrl('trial?app=retail'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+        $this->get($this->authUrl('trial?app=retail'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
             ->component('central/trial-workspace')
             ->where('application', 'Retail')
             ->where('selected', 'retail')
             ->has('workspaces', 2)
-            ->where('workspaces.0.isCurrent', true));
+            ->where('workspaces', fn ($workspaces) => collect($workspaces)->pluck('trialUrl')->sort()->values()->all() === collect([
+                test()->businessUrl('/manage/trial?app=retail', $this->organization),
+                test()->businessUrl('/manage/trial?app=retail', $other),
+            ])->sort()->values()->all()));
 
-        // An existing one: it becomes current and the trial page follows.
-        $this->post(trialAppUrl("organizations/{$other->id}/switch"), ['trial' => 'retail'])
-            ->assertRedirect(route('trial', ['app' => 'retail', 'chosen' => 1]));
-        $this->get(trialAppUrl('trial?app=retail&chosen=1'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('central/trial')
+        // An existing one: its own trial page.
+        $this->get(trialAppUrl('manage/trial?app=retail', $other))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('central/workspace/manage/trial')
             ->where('organization.displayName', $other->display_name));
 
-        // A new one: the create form, not back to the trial.
-        $this->get(trialAppUrl('organizations/create?app=retail&new=1'))->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('central/organizations/create')
-                ->where('trial.selected', 'retail'));
         expect(trialRows($other, $this->retail))->toHaveCount(0);
     });
 
     it('shows the owner what the business may try, and starts nothing on a GET', function () {
         trialWorkAs($this->owner);
 
-        $this->get(trialAppUrl('trial?app=retail&chosen=1'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('central/trial')
+        $this->get(trialAppUrl('manage/trial?app=retail'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('central/workspace/manage/trial')
             ->where('isOwner', true)
             ->where('trialDays', 60)
             ->where('selected', 'retail')
@@ -176,7 +160,7 @@ describe('the trial page', function () {
         $member = OrganizationMembership::factory()->create(['organization_id' => $this->organization->id]);
         trialWorkAs($member);
 
-        $this->get(trialAppUrl('trial?chosen=1'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+        $this->get(trialAppUrl('manage/trial'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
             ->where('isOwner', false)
             ->where('applications', []));
     });
@@ -187,9 +171,9 @@ describe('starting a trial', function () {
         $this->freezeSecond();
         trialWorkAs($this->owner);
 
-        $this->post(trialAppUrl('trial'), ['application' => 'retail', 'valid_until' => now()->addYears(5)->toDateString()])
+        $this->post(trialAppUrl('manage/trial'), ['application' => 'retail', 'valid_until' => now()->addYears(5)->toDateString()])
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('dashboard'));
+            ->assertRedirect(test()->businessUrl('/'));
 
         $trial = trialRows($this->organization, $this->retail)->sole();
 
@@ -203,22 +187,22 @@ describe('starting a trial', function () {
     it('treats a repeated confirmation as the same trial', function () {
         trialWorkAs($this->owner);
 
-        $this->post(trialAppUrl('trial'), ['application' => 'retail'])->assertSessionHasNoErrors();
-        $this->post(trialAppUrl('trial'), ['application' => 'retail'])->assertSessionHasNoErrors()->assertRedirect(route('dashboard'));
+        $this->post(trialAppUrl('manage/trial'), ['application' => 'retail'])->assertSessionHasNoErrors();
+        $this->post(trialAppUrl('manage/trial'), ['application' => 'retail'])->assertSessionHasNoErrors()->assertRedirect(test()->businessUrl('/'));
 
         expect(trialRows($this->organization, $this->retail))->toHaveCount(1);
     });
 
     it('never gives a second trial once one has ended', function () {
         trialWorkAs($this->owner);
-        $this->post(trialAppUrl('trial'), ['application' => 'retail']);
+        $this->post(trialAppUrl('manage/trial'), ['application' => 'retail']);
 
         $this->travel(61)->days();
 
         expect(trialIsCurrent($this->organization, $this->retail))->toBeFalse();
 
         trialWorkAs($this->owner);
-        $this->post(trialAppUrl('trial'), ['application' => 'retail'])->assertSessionHasErrors('application');
+        $this->post(trialAppUrl('manage/trial'), ['application' => 'retail'])->assertSessionHasErrors('application');
 
         expect(trialRows($this->organization, $this->retail))->toHaveCount(1);
     });
@@ -229,7 +213,7 @@ describe('starting a trial', function () {
         });
         trialWorkAs($this->owner);
 
-        $this->post(trialAppUrl('trial'), ['application' => 'retail'])->assertSessionHasErrors('application');
+        $this->post(trialAppUrl('manage/trial'), ['application' => 'retail'])->assertSessionHasErrors('application');
 
         expect(trialRows($this->organization, $this->retail)->where('source', 'trial'))->toHaveCount(0);
     });
@@ -238,7 +222,7 @@ describe('starting a trial', function () {
         $this->retail->forceFill(['trial_enabled' => false])->save();
         trialWorkAs($this->owner);
 
-        $this->post(trialAppUrl('trial'), ['application' => 'retail'])->assertSessionHasErrors('application');
+        $this->post(trialAppUrl('manage/trial'), ['application' => 'retail'])->assertSessionHasErrors('application');
 
         expect(trialRows($this->organization, $this->retail))->toHaveCount(0)
             ->and(array_column(app(MarketingCatalog::class)->trialable(), 'code'))->not->toContain('retail');
@@ -248,14 +232,14 @@ describe('starting a trial', function () {
         $this->retail->forceFill(['status' => $status])->save();
         trialWorkAs($this->owner);
 
-        $this->post(trialAppUrl('trial'), ['application' => 'retail'])->assertSessionHasErrors('application');
+        $this->post(trialAppUrl('manage/trial'), ['application' => 'retail'])->assertSessionHasErrors('application');
     })->with(['planned', 'retired']);
 
     it('lets only the owner start a trial', function () {
         $member = OrganizationMembership::factory()->create(['organization_id' => $this->organization->id]);
         trialWorkAs($member);
 
-        $this->post(trialAppUrl('trial'), ['application' => 'retail'])->assertForbidden();
+        $this->post(trialAppUrl('manage/trial'), ['application' => 'retail'])->assertForbidden();
 
         expect(trialRows($this->organization, $this->retail))->toHaveCount(0);
     });
@@ -264,7 +248,7 @@ describe('starting a trial', function () {
         [$other] = trialOrganization();
         trialWorkAs($this->owner);
 
-        $this->post(trialAppUrl('trial'), ['application' => 'retail', 'organization_id' => $other->id])->assertSessionHasNoErrors();
+        $this->post(trialAppUrl('manage/trial'), ['application' => 'retail', 'organization_id' => $other->id])->assertSessionHasNoErrors();
 
         expect(trialRows($this->organization, $this->retail))->toHaveCount(1)
             ->and(trialRows($other, $this->retail))->toHaveCount(0);
@@ -273,7 +257,7 @@ describe('starting a trial', function () {
     it('cannot be started by a GET', function () {
         trialWorkAs($this->owner);
 
-        $this->get(trialAppUrl('trial?app=retail&confirm=1'))->assertOk();
+        $this->get(trialAppUrl('manage/trial?app=retail&confirm=1'))->assertOk();
 
         expect(trialRows($this->organization, $this->retail))->toHaveCount(0);
     });
@@ -282,17 +266,17 @@ describe('starting a trial', function () {
 describe('after the trial', function () {
     it('shows the running trial and its days left on the dashboard', function () {
         trialWorkAs($this->owner);
-        $this->post(trialAppUrl('trial'), ['application' => 'retail']);
+        $this->post(trialAppUrl('manage/trial'), ['application' => 'retail']);
         $this->travel(10)->days();
 
         trialWorkAs($this->owner);
-        $this->get(trialAppUrl('dashboard'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+        $this->get(trialAppUrl('/'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
             ->where('current.billing.trials', fn ($trials) => collect($trials)->firstWhere('code', 'retail')['daysLeft'] === 50));
     });
 
     it('converts to a paid plan, keeping the data and recording the conversion', function () {
         trialWorkAs($this->owner);
-        $this->post(trialAppUrl('trial'), ['application' => 'retail']);
+        $this->post(trialAppUrl('manage/trial'), ['application' => 'retail']);
 
         $plan = new Plan;
         $plan->forceFill([

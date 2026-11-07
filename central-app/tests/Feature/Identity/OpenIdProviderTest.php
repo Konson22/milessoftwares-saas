@@ -104,7 +104,7 @@ it('serves OAuth and discovery endpoints on the auth host only', function (strin
     $this->post(PlatformHosts::url($host, 'oauth/token'))->assertNotFound();
 })->with([
     'apex' => fn () => PlatformHosts::root(),
-    'app' => fn () => PlatformHosts::app(),
+    'business' => fn () => PlatformHosts::workspace('acme'),
     'admin' => fn () => PlatformHosts::admin(),
 ]);
 

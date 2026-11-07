@@ -13,8 +13,8 @@ import {
 } from '@/shared/components/ui/dialog';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
-import { store as storePayment } from '@/routes/organization/invoices/payments';
 import { formatMoney, methodLabel } from '@/shared/lib/billing';
+import { workspaceRoutes } from '@/sites/central/lib/workspace-routes';
 
 type Invoice = {
     id: string;
@@ -50,7 +50,8 @@ export function ReportPaymentDialog({
             </DialogTrigger>
             <DialogContent>
                 <Form
-                    {...storePayment.form(invoice.id)}
+                    action={workspaceRoutes.invoicePayments(invoice.id)}
+                    method="post"
                     options={{ preserveScroll: true }}
                     onSuccess={() => setOpen(false)}
                     resetOnSuccess

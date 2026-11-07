@@ -15,7 +15,7 @@ use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 /**
- * Sign-in for app. and admin. through the auth host (OIDC code flow). Each
+ * Sign-in for business hosts and admin. through the auth host (OIDC code flow). Each
  * host keeps its own host-only session; single sign-on comes from the
  * session on auth.
  */

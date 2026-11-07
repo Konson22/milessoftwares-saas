@@ -2,8 +2,8 @@ import { Form } from '@inertiajs/react';
 import { Panel, PanelHeader } from '@miles/ui/components/panel';
 import { StatusBadge } from '@miles/ui/components/status-badge';
 import { Button } from '@/shared/components/ui/button';
-import { withdraw } from '@/routes/organization/plan-requests';
 import { formatDate, humanize, requestTone } from '@/shared/lib/billing';
+import { workspaceRoutes } from '@/sites/central/lib/workspace-routes';
 
 export type PlanRequestRow = {
     id: string;
@@ -71,7 +71,10 @@ export function RequestHistory({ requests }: { requests: PlanRequestRow[] }) {
                             </StatusBadge>
                             {request.status === 'pending' && (
                                 <Form
-                                    {...withdraw.form(request.id)}
+                                    action={workspaceRoutes.withdrawRequest(
+                                        request.id,
+                                    )}
+                                    method="post"
                                     options={{ preserveScroll: true }}
                                 >
                                     {({ processing }) => (

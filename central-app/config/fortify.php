@@ -73,9 +73,9 @@ return [
     |
     */
 
-    // Account security on the auth host. The customer dashboard lives on the
-    // app host and is reached via SSO from Phase 2 onwards.
-    'home' => '/settings/profile',
+    // The account's businesses on the auth host: opens the only one, or lists
+    // them. Each business lives on its own host, reached via SSO.
+    'home' => '/workspaces/continue',
 
     /*
     |--------------------------------------------------------------------------

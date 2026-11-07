@@ -3,14 +3,12 @@ import type { ReactNode } from 'react';
 import { PageHeader } from '@miles/ui/components/page-header';
 import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
 import { StatusBadge } from '@miles/ui/components/status-badge';
-import OrganizationSettingsController from '@/actions/App/Sites/Central/Http/Controllers/Dashboard/OrganizationSettingsController';
 import InputError from '@/shared/components/input-error';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
-import { dashboard } from '@/routes';
-import { settings as organizationSettings } from '@/routes/organization';
 import { formatDate, humanize } from '@/shared/lib/billing';
+import { workspaceRoutes } from '@/sites/central/lib/workspace-routes';
 
 type Details = {
     display_name: string;
@@ -135,7 +133,8 @@ export default function OrganizationSettings({
 
                 <div className="max-w-3xl min-w-0 flex-1 space-y-3">
                     <Form
-                        {...OrganizationSettingsController.updateDetails.form()}
+                        action={workspaceRoutes.details}
+                        method="put"
                         options={{ preserveScroll: true }}
                         className="space-y-3"
                     >
@@ -312,7 +311,8 @@ export default function OrganizationSettings({
                     </Form>
 
                     <Form
-                        {...OrganizationSettingsController.updateBilling.form()}
+                        action={workspaceRoutes.billingDetails}
+                        method="put"
                         options={{ preserveScroll: true }}
                     >
                         {({ processing, errors }) => (
@@ -384,7 +384,8 @@ export default function OrganizationSettings({
                     </Form>
 
                     <Form
-                        {...OrganizationSettingsController.updateSlug.form()}
+                        action={workspaceRoutes.slug}
+                        method="put"
                         options={{ preserveScroll: true }}
                         resetOnSuccess
                     >
@@ -502,10 +503,3 @@ function Field({
         </div>
     );
 }
-
-OrganizationSettings.layout = {
-    breadcrumbs: [
-        { title: 'Dashboard', href: dashboard() },
-        { title: 'General settings', href: organizationSettings() },
-    ],
-};

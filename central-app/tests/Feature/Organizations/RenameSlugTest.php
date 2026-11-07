@@ -27,12 +27,13 @@ function ownedOrganization(User $owner, string $slug = 'manggala'): Organization
 
 function asCurrentOwner(User $owner, Organization $organization): void
 {
-    test()->actingAs($owner)->post(PlatformHosts::url(PlatformHosts::app(), "organizations/{$organization->id}/switch"));
+    test()->actingAs($owner);
+    test()->business = $organization;
 }
 
 function renameTo(string $slug): TestResponse
 {
-    return test()->put(PlatformHosts::url(PlatformHosts::app(), 'organization/slug'), ['slug' => $slug]);
+    return test()->put(test()->businessUrl('manage/slug'), ['slug' => $slug]);
 }
 
 it('moves the workspace to the new slug and redirects the old one', function () {
@@ -79,7 +80,7 @@ it('never releases a retired slug to another organization', function () {
     $this->travel(400)->days();
 
     $this->actingAs(User::factory()->create())
-        ->post(PlatformHosts::url(PlatformHosts::app(), 'organizations'), [
+        ->post(PlatformHosts::url(PlatformHosts::auth(), 'workspaces'), [
             'display_name' => 'Impostor', 'legal_name' => 'Impostor Ltd', 'slug' => 'manggala',
             'country_code' => 'SS', 'default_currency' => 'SSP', 'timezone' => 'Africa/Juba',
         ])
@@ -110,13 +111,16 @@ it('only lets the owner change the slug', function () {
     asCurrentOwner($member, $organization);
 
     renameTo('taken-over')->assertForbidden();
-    $this->get(PlatformHosts::url(PlatformHosts::app(), 'organization/settings'))->assertForbidden();
+    $this->get(test()->businessUrl('manage/settings'))->assertForbidden();
 
     expect($organization->primarySlug()->value('slug'))->toBe('manggala');
 });
 
-it('needs a current organization', function () {
-    $this->actingAs(User::factory()->create());
+it('refuses people who are not members of the business', function () {
+    $organization = ownedOrganization(User::factory()->create());
+    asCurrentOwner(User::factory()->create(), $organization);
 
-    renameTo('anything-new')->assertNotFound();
+    renameTo('anything-new')->assertForbidden();
+
+    expect($organization->primarySlug()->value('slug'))->toBe('manggala');
 });

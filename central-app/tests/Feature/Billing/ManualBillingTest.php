@@ -12,7 +12,6 @@ use App\Modules\Organizations\Models\Organization;
 use App\Modules\Subscriptions\Models\Plan;
 use App\Modules\Subscriptions\Models\PlanRequest;
 use App\Modules\Subscriptions\Models\Subscription;
-use App\Support\Hosts\PlatformHosts;
 use App\Support\Tenancy\TenantContext;
 use Inertia\Testing\AssertableInertia;
 use Tests\Support\AdminFixtures;
@@ -52,12 +51,12 @@ function billingOrganization(): array
 
 function billingAppUrl(string $path): string
 {
-    return PlatformHosts::url(PlatformHosts::app(), $path);
+    return test()->businessUrl($path);
 }
 
 function billingWorkAs(OrganizationMembership $membership): void
 {
-    test()->actingAs($membership->user)->post(billingAppUrl("organizations/{$membership->organization_id}/switch"));
+    test()->workIn($membership);
 }
 
 function billingSubscribe(Organization $organization): Subscription
@@ -95,19 +94,19 @@ it('invoices a subscription at its plan prices and shows the owner what is owed'
 
     billingWorkAs($this->owner);
 
-    $this->get(billingAppUrl('organization/billing'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
-        ->component('central/organizations/billing')
+    $this->get(billingAppUrl('manage/billing'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+        ->component('central/workspace/manage/billing')
         ->has('invoices', 1)
         ->where('invoices.0.number', $invoice->number)
         ->where('summary.balances.0', ['currency' => 'USD', 'amountMinor' => 2500])
         ->where('summary.nextDue.id', $invoice->id));
 
-    $this->get(billingAppUrl('dashboard'))->assertInertia(fn (AssertableInertia $page) => $page
+    $this->get(billingAppUrl('/'))->assertInertia(fn (AssertableInertia $page) => $page
         ->where('current.billing.openInvoices', 1)
         ->has('current.billing.recentInvoices', 1));
 
-    $this->get(billingAppUrl("organization/billing/invoices/{$invoice->id}"))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
-        ->component('central/organizations/invoice')
+    $this->get(billingAppUrl("manage/billing/invoices/{$invoice->id}"))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+        ->component('central/workspace/manage/invoice')
         ->where('invoice.totalMinor', 2500)
         ->has('invoice.lines', 1));
 });
@@ -116,7 +115,7 @@ it('counts a reported payment only once staff confirm it', function () {
     $invoice = billingIssueFor($this->organization, billingSubscribe($this->organization));
     billingWorkAs($this->owner);
 
-    $this->post(billingAppUrl("organization/billing/invoices/{$invoice->id}/payments"), [
+    $this->post(billingAppUrl("manage/billing/invoices/{$invoice->id}/payments"), [
         'method' => 'mobile_money', 'amount' => '10.00', 'reference' => 'MM-123', 'paid_on' => today()->toDateString(),
     ])->assertSessionHasNoErrors();
 
@@ -145,11 +144,11 @@ it('refuses a payment larger than what is still owed', function () {
     $invoice = billingIssueFor($this->organization, billingSubscribe($this->organization));
     billingWorkAs($this->owner);
 
-    $this->post(billingAppUrl("organization/billing/invoices/{$invoice->id}/payments"), [
+    $this->post(billingAppUrl("manage/billing/invoices/{$invoice->id}/payments"), [
         'method' => 'cash', 'amount' => '25.01', 'reference' => 'R1', 'paid_on' => today()->toDateString(),
     ])->assertSessionHasErrors('amount');
 
-    $this->post(billingAppUrl("organization/billing/invoices/{$invoice->id}/payments"), [
+    $this->post(billingAppUrl("manage/billing/invoices/{$invoice->id}/payments"), [
         'method' => 'cash', 'amount' => '0', 'reference' => 'R1', 'paid_on' => today()->toDateString(),
     ])->assertSessionHasErrors('amount');
 
@@ -159,7 +158,7 @@ it('refuses a payment larger than what is still owed', function () {
 it('rejects a report with a reason the owner can see, and decides each report once', function () {
     $invoice = billingIssueFor($this->organization, billingSubscribe($this->organization));
     billingWorkAs($this->owner);
-    $this->post(billingAppUrl("organization/billing/invoices/{$invoice->id}/payments"), [
+    $this->post(billingAppUrl("manage/billing/invoices/{$invoice->id}/payments"), [
         'method' => 'bank_transfer', 'amount' => '25', 'reference' => 'TX-9', 'paid_on' => today()->toDateString(),
     ]);
     $payment = app(TenantContext::class)->run($this->organization, fn () => Payment::query()->sole());
@@ -173,7 +172,7 @@ it('rejects a report with a reason the owner can see, and decides each report on
     expect($payment->refresh()->status)->toBe('rejected')->and($invoice->refresh()->amount_paid_minor)->toBe(0);
 
     billingWorkAs($this->owner);
-    $this->get(billingAppUrl('organization/billing'))->assertInertia(fn (AssertableInertia $page) => $page
+    $this->get(billingAppUrl('manage/billing'))->assertInertia(fn (AssertableInertia $page) => $page
         ->where('payments.0.status', 'rejected')
         ->where('payments.0.rejectionReason', 'Not received'));
 });
@@ -181,7 +180,7 @@ it('rejects a report with a reason the owner can see, and decides each report on
 it('voids an unpaid invoice and rejects reports still waiting on it', function () {
     $invoice = billingIssueFor($this->organization, billingSubscribe($this->organization));
     billingWorkAs($this->owner);
-    $this->post(billingAppUrl("organization/billing/invoices/{$invoice->id}/payments"), [
+    $this->post(billingAppUrl("manage/billing/invoices/{$invoice->id}/payments"), [
         'method' => 'cash', 'amount' => '5', 'reference' => 'C1', 'paid_on' => today()->toDateString(),
     ]);
 
@@ -223,16 +222,16 @@ it('keeps billing to the owner and to the organization it belongs to', function 
     [, $otherOwner] = billingOrganization();
 
     billingWorkAs($member);
-    $this->get(billingAppUrl('organization/billing'))->assertForbidden();
-    $this->get(billingAppUrl('organization/plans'))->assertForbidden();
-    $this->post(billingAppUrl("organization/billing/invoices/{$invoice->id}/payments"), [
+    $this->get(billingAppUrl('manage/billing'))->assertForbidden();
+    $this->get(billingAppUrl('manage/plans'))->assertForbidden();
+    $this->post(billingAppUrl("manage/billing/invoices/{$invoice->id}/payments"), [
         'method' => 'cash', 'amount' => '5', 'reference' => 'X', 'paid_on' => today()->toDateString(),
     ])->assertForbidden();
-    $this->get(billingAppUrl('dashboard'))->assertInertia(fn (AssertableInertia $page) => $page->where('current.billing', null));
+    $this->get(billingAppUrl('/'))->assertInertia(fn (AssertableInertia $page) => $page->component('central/workspace/apps')->missing('current'));
 
     billingWorkAs($otherOwner);
-    $this->get(billingAppUrl("organization/billing/invoices/{$invoice->id}"))->assertNotFound();
-    $this->post(billingAppUrl("organization/billing/invoices/{$invoice->id}/payments"), [
+    $this->get(billingAppUrl("manage/billing/invoices/{$invoice->id}"))->assertNotFound();
+    $this->post(billingAppUrl("manage/billing/invoices/{$invoice->id}/payments"), [
         'method' => 'cash', 'amount' => '5', 'reference' => 'X', 'paid_on' => today()->toDateString(),
     ])->assertNotFound();
 
@@ -256,13 +255,13 @@ it('keeps billing actions to staff with billing.manage', function () {
 it('starts a plan the owner asked for once staff approve', function () {
     billingWorkAs($this->owner);
 
-    $this->get(billingAppUrl('organization/plans'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
-        ->component('central/organizations/plans')
+    $this->get(billingAppUrl('manage/plans'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+        ->component('central/workspace/manage/plans')
         ->has('plans', 1)
         ->where('plans.0.subscribed', false));
 
-    $this->post(billingAppUrl('organization/plan-requests'), ['plan_id' => $this->plan->id, 'note' => 'Two tills'])->assertSessionHasNoErrors();
-    $this->post(billingAppUrl('organization/plan-requests'), ['plan_id' => $this->plan->id])->assertSessionHasErrors('request');
+    $this->post(billingAppUrl('manage/plan-requests'), ['plan_id' => $this->plan->id, 'note' => 'Two tills'])->assertSessionHasNoErrors();
+    $this->post(billingAppUrl('manage/plan-requests'), ['plan_id' => $this->plan->id])->assertSessionHasErrors('request');
 
     $request = app(TenantContext::class)->run($this->organization, fn () => PlanRequest::query()->sole());
     expect($request->status)->toBe('pending');
@@ -278,20 +277,20 @@ it('starts a plan the owner asked for once staff approve', function () {
         ->and(app(TenantContext::class)->run($this->organization, fn () => Entitlement::query()->current()->where('application_id', $this->retail->id)->exists()))->toBeTrue();
 
     billingWorkAs($this->owner);
-    $this->get(billingAppUrl('organization/plans'))->assertInertia(fn (AssertableInertia $page) => $page->where('plans.0.subscribed', true));
-    $this->post(billingAppUrl('organization/plan-requests'), ['plan_id' => $this->plan->id])->assertSessionHasErrors('plan_id');
+    $this->get(billingAppUrl('manage/plans'))->assertInertia(fn (AssertableInertia $page) => $page->where('plans.0.subscribed', true));
+    $this->post(billingAppUrl('manage/plan-requests'), ['plan_id' => $this->plan->id])->assertSessionHasErrors('plan_id');
 });
 
 it('lets the owner withdraw a request, and staff decline one with a note', function () {
     billingWorkAs($this->owner);
-    $this->post(billingAppUrl('organization/plan-requests'), ['plan_id' => $this->plan->id]);
+    $this->post(billingAppUrl('manage/plan-requests'), ['plan_id' => $this->plan->id]);
     $first = app(TenantContext::class)->run($this->organization, fn () => PlanRequest::query()->sole());
 
-    $this->post(billingAppUrl("organization/plan-requests/{$first->id}/withdraw"))->assertSessionHasNoErrors();
+    $this->post(billingAppUrl("manage/plan-requests/{$first->id}/withdraw"))->assertSessionHasNoErrors();
     expect($first->refresh()->status)->toBe('withdrawn');
 
     // Withdrawn requests no longer block asking again.
-    $this->post(billingAppUrl('organization/plan-requests'), ['plan_id' => $this->plan->id])->assertSessionHasNoErrors();
+    $this->post(billingAppUrl('manage/plan-requests'), ['plan_id' => $this->plan->id])->assertSessionHasNoErrors();
     $second = app(TenantContext::class)->run($this->organization, fn () => PlanRequest::query()->where('status', 'pending')->sole());
 
     $this->actingAs($this->billing->user)
@@ -307,8 +306,8 @@ it('ends a subscription when staff approve the owner\'s cancellation request', f
     $subscription = billingSubscribe($this->organization);
     billingWorkAs($this->owner);
 
-    $this->post(billingAppUrl("organization/subscriptions/{$subscription->id}/cancellation"), ['note' => 'Closing the shop'])->assertSessionHasNoErrors();
-    $this->get(billingAppUrl('organization/subscription'))->assertInertia(fn (AssertableInertia $page) => $page
+    $this->post(billingAppUrl("manage/subscriptions/{$subscription->id}/cancellation"), ['note' => 'Closing the shop'])->assertSessionHasNoErrors();
+    $this->get(billingAppUrl('manage/subscription'))->assertInertia(fn (AssertableInertia $page) => $page
         ->whereNot('subscriptions.0.cancellationRequestId', null)
         ->where('requests.0.type', 'cancel'));
 
@@ -324,7 +323,7 @@ it('ends a subscription when staff approve the owner\'s cancellation request', f
 it('lets the owner set who invoices are addressed to', function () {
     billingWorkAs($this->owner);
 
-    $this->put(billingAppUrl('organization/billing-details'), [
+    $this->put(billingAppUrl('manage/billing-details'), [
         'billing_email' => 'accounts@example.test',
         'billing_address' => 'Plot 4, Juba',
         'tax_id' => 'TIN-001',
@@ -333,7 +332,7 @@ it('lets the owner set who invoices are addressed to', function () {
     expect($this->organization->refresh()->billing_email)->toBe('accounts@example.test')
         ->and($this->organization->tax_id)->toBe('TIN-001');
 
-    $this->get(billingAppUrl('organization/settings'))->assertInertia(fn (AssertableInertia $page) => $page
+    $this->get(billingAppUrl('manage/settings'))->assertInertia(fn (AssertableInertia $page) => $page
         ->where('billing.billing_email', 'accounts@example.test')
         ->has('timezones'));
 });
@@ -351,11 +350,11 @@ it('shows the owner subscriptions, payments and the modules they can add', funct
 
     $invoice = billingIssueFor($this->organization, billingSubscribe($this->organization));
     billingWorkAs($this->owner);
-    $this->post(billingAppUrl("organization/billing/invoices/{$invoice->id}/payments"), [
+    $this->post(billingAppUrl("manage/billing/invoices/{$invoice->id}/payments"), [
         'method' => 'mobile_money', 'amount' => '10.00', 'reference' => 'MM-123', 'paid_on' => today()->toDateString(),
     ])->assertSessionHasNoErrors();
 
-    $this->get(billingAppUrl('dashboard'))->assertInertia(fn (AssertableInertia $page) => $page
+    $this->get(billingAppUrl('/'))->assertInertia(fn (AssertableInertia $page) => $page
         ->has('current.billing.subscriptions', 1)
         ->where('current.billing.subscriptions.0.plans.0.name', 'Retail Standard')
         ->has('current.billing.recentPayments', 1)
@@ -376,8 +375,8 @@ it('keeps billing, payments and modules from members who do not own the organiza
     $member = OrganizationMembership::factory()->create(['organization_id' => $this->organization->id]);
     billingWorkAs($member);
 
-    $this->get(billingAppUrl('dashboard'))->assertInertia(fn (AssertableInertia $page) => $page
-        ->where('current.billing', null));
+    $this->get(billingAppUrl('/'))->assertInertia(fn (AssertableInertia $page) => $page
+        ->component('central/workspace/apps')->missing('current'));
 });
 
 it('lists every ERP application on the explore page to start a business on, owner or not', function () {
@@ -385,8 +384,8 @@ it('lists every ERP application on the explore page to start a business on, owne
     $member = OrganizationMembership::factory()->create(['organization_id' => $this->organization->id]);
     billingWorkAs($member);
 
-    $this->get(billingAppUrl('explore'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
-        ->component('central/explore')
+    $this->get(billingAppUrl('manage/explore'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+        ->component('central/workspace/manage/explore')
         ->where('trialDays', (int) config('platform.marketing.trial_days'))
         ->where('applications', fn ($applications) => collect($applications)->pluck('comingSoon', 'code')->only(['hr', 'retail'])->sortKeys()->all()
             === ['hr' => true, 'retail' => false]));

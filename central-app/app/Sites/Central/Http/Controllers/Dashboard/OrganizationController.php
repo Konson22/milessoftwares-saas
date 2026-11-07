@@ -6,39 +6,26 @@ use App\Http\Controllers\Controller;
 use App\Modules\Applications\Models\Application;
 use App\Modules\Entitlements\Actions\ManageEntitlements;
 use App\Modules\Marketing\Support\MarketingCatalog;
-use App\Modules\Memberships\Models\OrganizationMembership;
-use App\Modules\Memberships\Support\CurrentOrganization;
 use App\Modules\Organizations\Actions\AddFirstBranch;
 use App\Modules\Organizations\Actions\CheckSlugAvailability;
 use App\Modules\Organizations\Actions\CreateOrganization;
 use App\Modules\Organizations\Models\Organization;
 use App\Sites\Central\Http\Requests\Dashboard\CreateOrganizationRequest;
-use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class OrganizationController extends Controller
 {
     /**
-     * ?app=<code> comes from "Start free trial" on the public site and
-     * preselects that application's trial. The owner of the current business
-     * adds it there instead (the trial page), without a new name and address.
+     * A new business, on the auth host. ?app=<code> comes from "Start free
+     * trial" and preselects that application's trial.
      */
-    public function create(Request $request, MarketingCatalog $catalog, TenantContext $tenant): Response|RedirectResponse
+    public function create(Request $request, MarketingCatalog $catalog): Response
     {
-        $membership = $request->attributes->get('membership');
-        // ?new=1: the trial's workspace choice asked for a new one.
-        if ($request->filled('app')
-            && ! $request->boolean('new')
-            && $membership instanceof OrganizationMembership
-            && $tenant->organization()?->owner_membership_id === $membership->id) {
-            return redirect()->route('trial', ['app' => $request->string('app')->toString()]);
-        }
-
         $trialable = array_map(fn (array $product) => [
             'code' => $product['code'],
             'name' => $product['name'],
@@ -57,7 +44,7 @@ class OrganizationController extends Controller
         ]);
     }
 
-    public function store(CreateOrganizationRequest $request, CreateOrganization $create, AddFirstBranch $firstBranch, CurrentOrganization $current, ManageEntitlements $entitlements): RedirectResponse
+    public function store(CreateOrganizationRequest $request, CreateOrganization $create, AddFirstBranch $firstBranch, ManageEntitlements $entitlements): SymfonyResponse
     {
         // The business and its first branch together, or neither.
         $organization = DB::transaction(function () use ($create, $firstBranch, $request): Organization {
@@ -67,32 +54,14 @@ class OrganizationController extends Controller
             return $organization;
         });
 
-        $current->switchTo($request, $request->user(), $organization->getKey());
-
         $trial = $request->trialApplication();
         if ($trial !== null) {
             $entitlements->startTrial($organization, Application::query()->where('code', $trial)->sole(), $request->user());
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => $trial === null
-            ? __(':name is ready.', ['name' => $organization->display_name])
-            : __(':name is ready. Your :days-day trial has started.', ['name' => $organization->display_name, 'days' => (int) config('platform.marketing.trial_days')]),
-        ]);
-
-        return redirect()->route('dashboard');
-    }
-
-    public function switch(Request $request, CurrentOrganization $current, string $organization): RedirectResponse
-    {
-        // Same response for "not a member" and "no such organization".
-        abort_if($current->switchTo($request, $request->user(), $organization) === null, 404);
-
-        // Chosen for a free trial: carry on to it.
-        if ($request->has('trial')) {
-            return redirect()->route('trial', array_filter(['app' => $request->string('trial')->toString(), 'chosen' => 1]));
-        }
-
-        return redirect()->route('dashboard');
+        // The business has its own host and session: open it there (signing in
+        // to it is silent, the auth host session is already there).
+        return Inertia::location((string) $organization->refresh()->workspaceUrl());
     }
 
     public function slugAvailability(Request $request, CheckSlugAvailability $slugs): JsonResponse

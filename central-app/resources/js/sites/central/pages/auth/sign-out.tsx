@@ -25,7 +25,7 @@ export default function SignOut({ homeUrl, dashboardUrl }: Props) {
 
                 <div className="flex justify-between text-sm">
                     <a className="underline" href={dashboardUrl}>
-                        Back to dashboard
+                        Back to your businesses
                     </a>
                     <a className="underline" href={homeUrl}>
                         Stay signed in

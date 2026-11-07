@@ -71,6 +71,6 @@ class PasswordSetupController extends Controller
      */
     private function carryOn(Request $request): RedirectResponse
     {
-        return redirect()->intended(PlatformHosts::url(PlatformHosts::app(), 'dashboard'));
+        return redirect()->intended(PlatformHosts::url(PlatformHosts::auth(), 'workspaces/continue'));
     }
 }

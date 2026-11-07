@@ -50,10 +50,10 @@ Implement the following hostname structure:
 |---|---|
 | milesoftwares.com | Public marketing website |
 | www.milesoftwares.com | Redirect to primary website |
-| auth.milesoftwares.com | Central authentication |
-| app.milesoftwares.com | Customer dashboard |
+| auth.milesoftwares.com | Central authentication, your businesses, new business |
+| app.milesoftwares.com | Retired: old links redirect to auth or the business host |
 | admin.milesoftwares.com | Internal system administration |
-| {business}.milesoftwares.com | Individual customer workspace |
+| {business}.milesoftwares.com | Individual customer workspace: dashboard at /, settings, plans and billing under /manage |
 
 Each registered business receives a unique subdomain.
 
@@ -588,7 +588,7 @@ Provide reusable role and scope selection components.
 
 Domain:
 
-app.milesoftwares.com
+{business}.milesoftwares.com (/ and /manage/...), with the list of businesses at auth.milesoftwares.com/workspaces. app.milesoftwares.com is retired and redirects.
 
 This is the customer-facing control panel.
 

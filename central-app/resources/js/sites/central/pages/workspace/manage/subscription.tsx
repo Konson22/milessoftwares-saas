@@ -17,12 +17,6 @@ import {
     DialogTrigger,
 } from '@/shared/components/ui/dialog';
 import { Label } from '@/shared/components/ui/label';
-import { dashboard } from '@/routes';
-import {
-    plans as organizationPlans,
-    subscription as organizationSubscription,
-} from '@/routes/organization';
-import { cancellation } from '@/routes/organization/subscriptions';
 import { RequestHistory } from '@/sites/central/components/request-history';
 import type { PlanRequestRow } from '@/sites/central/components/request-history';
 import {
@@ -32,6 +26,7 @@ import {
     intervalLabel,
     subscriptionTone,
 } from '@/shared/lib/billing';
+import { workspaceRoutes } from '@/sites/central/lib/workspace-routes';
 
 type Subscription = {
     id: string;
@@ -89,7 +84,7 @@ export default function OrganizationSubscription({
                 description="Your plans and the applications they include. Changes are confirmed by Miles Global Softwares."
                 actions={
                     <Button asChild>
-                        <Link href={organizationPlans()}>
+                        <Link href={workspaceRoutes.plans}>
                             <Package /> Change or add a plan
                         </Link>
                     </Button>
@@ -106,7 +101,7 @@ export default function OrganizationSubscription({
                                 title="No active subscription"
                                 action={
                                     <Button asChild size="sm">
-                                        <Link href={organizationPlans()}>
+                                        <Link href={workspaceRoutes.plans}>
                                             Browse plans
                                         </Link>
                                     </Button>
@@ -268,7 +263,8 @@ function CancelDialog({ subscription }: { subscription: Subscription }) {
             </DialogTrigger>
             <DialogContent>
                 <Form
-                    {...cancellation.form(subscription.id)}
+                    action={workspaceRoutes.cancellation(subscription.id)}
+                    method="post"
                     options={{ preserveScroll: true }}
                     onSuccess={() => setOpen(false)}
                     className="space-y-4"
@@ -325,10 +321,3 @@ function CancelDialog({ subscription }: { subscription: Subscription }) {
         </Dialog>
     );
 }
-
-OrganizationSubscription.layout = {
-    breadcrumbs: [
-        { title: 'Dashboard', href: dashboard() },
-        { title: 'Subscription', href: organizationSubscription() },
-    ],
-};

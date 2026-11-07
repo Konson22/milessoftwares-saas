@@ -1,4 +1,4 @@
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
     AppWindow,
@@ -20,17 +20,7 @@ import { Panel, PanelHeader } from '@miles/ui/components/panel';
 import { StatCard } from '@miles/ui/components/stat-card';
 import { StatusBadge } from '@miles/ui/components/status-badge';
 import type { Tone } from '@miles/ui/components/status-badge';
-import OrganizationController from '@/actions/App/Sites/Central/Http/Controllers/Dashboard/OrganizationController';
 import { Button } from '@/shared/components/ui/button';
-import { dashboard } from '@/routes';
-import {
-    billing as organizationBilling,
-    plans as organizationPlans,
-    settings as organizationSettings,
-    subscription as organizationSubscription,
-} from '@/routes/organization';
-import { show as showInvoice } from '@/routes/organization/invoices';
-import { create as createOrganization } from '@/routes/organizations';
 import { appIcon } from '@/shared/lib/app-icons';
 import {
     formatDate,
@@ -43,6 +33,7 @@ import {
     paymentTone,
     subscriptionTone,
 } from '@/shared/lib/billing';
+import { workspaceRoutes } from '@/sites/central/lib/workspace-routes';
 
 type Organization = {
     id: string;
@@ -177,7 +168,7 @@ export default function Dashboard({ organizations, current }: Props) {
 
     return (
         <>
-            <Head title="Dashboard" />
+            <Head title="Home" />
 
             <PageHeader
                 title={`${greeting()}${firstName ? `, ${firstName}` : ''}`}
@@ -189,21 +180,11 @@ export default function Dashboard({ organizations, current }: Props) {
                 actions={
                     current && (
                         <>
-                            {current.canManageAccess &&
-                                current.workspaceUrl && (
-                                    <Button asChild variant="outline">
-                                        <a
-                                            href={`${current.workspaceUrl}/manage/invitations`}
-                                        >
-                                            <MailPlus /> Invite people
-                                        </a>
-                                    </Button>
-                                )}
-                            {current.workspaceUrl && (
-                                <Button asChild>
-                                    <a href={current.workspaceUrl}>
-                                        Open workspace <ArrowRight />
-                                    </a>
+                            {current.canManageAccess && (
+                                <Button asChild variant="outline">
+                                    <Link href="/manage/invitations">
+                                        <MailPlus /> Invite people
+                                    </Link>
                                 </Button>
                             )}
                         </>
@@ -275,7 +256,7 @@ function BillingAlerts({ billing }: { billing: Billing }) {
                 billing.overdueInvoices === 1
                     ? `Invoice ${billing.nextDue.number} was due on ${formatDate(billing.nextDue.dueOn)}. Pay it to keep your applications running.`
                     : `${billing.overdueInvoices} invoices are overdue. Pay them to keep your applications running.`,
-            href: organizationBilling().url,
+            href: workspaceRoutes.billing,
             cta: 'View billing',
         });
     }
@@ -291,7 +272,7 @@ function BillingAlerts({ billing }: { billing: Billing }) {
                     days <= 0
                         ? 'Your trial ends today. Choose a plan to keep access.'
                         : `Your trial ends in ${days} day${days === 1 ? '' : 's'} (${formatDate(billing.trialEndsAt)}). Choose a plan to keep access.`,
-                href: organizationPlans().url,
+                href: workspaceRoutes.plans,
                 cta: 'See plans',
             });
         }
@@ -302,7 +283,7 @@ function BillingAlerts({ billing }: { billing: Billing }) {
             tone: 'info',
             icon: ReceiptText,
             text: `${billing.paymentsAwaitingConfirmation} reported payment${billing.paymentsAwaitingConfirmation === 1 ? ' is' : 's are'} waiting for confirmation by Miles Global Softwares.`,
-            href: organizationBilling().url,
+            href: workspaceRoutes.billing,
             cta: 'Details',
         });
     }
@@ -372,7 +353,7 @@ function Stats({ current }: { current: Current }) {
                                 ? `Next due ${formatDate(current.billing.nextDue.dueOn)}`
                                 : 'All invoices are paid'
                         }
-                        href={organizationBilling()}
+                        href={workspaceRoutes.billing}
                     />
                     <StatCard
                         label="Subscriptions"
@@ -384,7 +365,7 @@ function Stats({ current }: { current: Current }) {
                                 ? `${current.billing.pendingRequests} request${current.billing.pendingRequests === 1 ? '' : 's'} pending`
                                 : `${current.applications.length} application${current.applications.length === 1 ? '' : 's'} in use`
                         }
-                        href={organizationSubscription()}
+                        href={workspaceRoutes.subscription}
                     />
                 </>
             ) : (
@@ -438,7 +419,7 @@ function Applications({
                 actions={
                     current.isOwner && (
                         <Button asChild size="sm" variant="ghost">
-                            <Link href={organizationPlans()}>
+                            <Link href={workspaceRoutes.plans}>
                                 Add applications
                             </Link>
                         </Button>
@@ -452,7 +433,7 @@ function Applications({
                     action={
                         current.isOwner && (
                             <Button asChild size="sm">
-                                <Link href={organizationPlans()}>
+                                <Link href={workspaceRoutes.plans}>
                                     Browse plans
                                 </Link>
                             </Button>
@@ -504,7 +485,7 @@ function BillingPanel({ billing }: { billing: Billing }) {
                 title={<span id="billing">Recent invoices</span>}
                 actions={
                     <Button asChild size="sm" variant="ghost">
-                        <Link href={organizationBilling()}>View all</Link>
+                        <Link href={workspaceRoutes.billing}>View all</Link>
                     </Button>
                 }
             />
@@ -517,7 +498,7 @@ function BillingPanel({ billing }: { billing: Billing }) {
                     {billing.recentInvoices.map((invoice) => (
                         <li key={invoice.id}>
                             <Link
-                                href={showInvoice(invoice.id)}
+                                href={workspaceRoutes.invoice(invoice.id)}
                                 className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted/40"
                             >
                                 <span className="min-w-0 flex-1">
@@ -548,7 +529,7 @@ function BillingPanel({ billing }: { billing: Billing }) {
             )}
             <div className="border-t px-4 py-3">
                 <Link
-                    href={organizationSettings()}
+                    href={workspaceRoutes.settings}
                     className="text-sm text-muted-foreground hover:text-foreground"
                 >
                     Business settings →
@@ -566,7 +547,7 @@ function SubscriptionsPanel({ billing }: { billing: Billing }) {
                 description="Plans you are subscribed to."
                 actions={
                     <Button asChild size="sm" variant="ghost">
-                        <Link href={organizationSubscription()}>Manage</Link>
+                        <Link href={workspaceRoutes.subscription}>Manage</Link>
                     </Button>
                 }
             />
@@ -576,7 +557,9 @@ function SubscriptionsPanel({ billing }: { billing: Billing }) {
                     title="No subscriptions yet"
                     action={
                         <Button asChild size="sm">
-                            <Link href={organizationPlans()}>Browse plans</Link>
+                            <Link href={workspaceRoutes.plans}>
+                                Browse plans
+                            </Link>
                         </Button>
                     }
                 >
@@ -643,7 +626,7 @@ function PaymentsPanel({ billing }: { billing: Billing }) {
                 description="Payments you reported against invoices."
                 actions={
                     <Button asChild size="sm" variant="ghost">
-                        <Link href={organizationBilling()}>View all</Link>
+                        <Link href={workspaceRoutes.billing}>View all</Link>
                     </Button>
                 }
             />
@@ -658,7 +641,9 @@ function PaymentsPanel({ billing }: { billing: Billing }) {
                     {billing.recentPayments.map((payment) => (
                         <li key={payment.id}>
                             <Link
-                                href={showInvoice(payment.invoiceId)}
+                                href={workspaceRoutes.invoice(
+                                    payment.invoiceId,
+                                )}
                                 className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted/40"
                             >
                                 <span className="min-w-0 flex-1">
@@ -693,7 +678,7 @@ function PaymentsPanel({ billing }: { billing: Billing }) {
             {billing.nextDue && (
                 <div className="border-t px-4 py-3">
                     <Link
-                        href={showInvoice(billing.nextDue.id)}
+                        href={workspaceRoutes.invoice(billing.nextDue.id)}
                         className="text-sm text-muted-foreground hover:text-foreground"
                     >
                         Pay {billing.nextDue.number} (
@@ -722,7 +707,7 @@ function TrialsPanel({ trials }: { trials: Billing['trials'] }) {
                 description="Choose a plan before a trial ends to keep using the application. Your data stays as it is."
                 actions={
                     <Button asChild size="sm" variant="outline">
-                        <Link href={organizationPlans()}>Choose a plan</Link>
+                        <Link href={workspaceRoutes.plans}>Choose a plan</Link>
                     </Button>
                 }
             />
@@ -824,7 +809,7 @@ function RecommendationsPanel({
                 description={`More of the Miles Global Softwares ERP to add to ${workspace}.`}
                 actions={
                     <Button asChild size="sm" variant="ghost">
-                        <Link href={organizationPlans()}>See plans</Link>
+                        <Link href={workspaceRoutes.plans}>See plans</Link>
                     </Button>
                 }
             />
@@ -870,8 +855,10 @@ function RecommendationsPanel({
                                         <Link
                                             href={
                                                 module.state === 'trialable'
-                                                    ? `/trial?app=${module.code}&chosen=1`
-                                                    : organizationPlans()
+                                                    ? workspaceRoutes.trial(
+                                                          module.code,
+                                                      )
+                                                    : workspaceRoutes.plans
                                             }
                                             className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
                                         >
@@ -893,104 +880,61 @@ function RecommendationsPanel({
 }
 
 function Organizations({ organizations }: { organizations: Organization[] }) {
+    const { platform } = usePage().props;
+
     return (
         <Panel aria-labelledby="organizations">
             <PanelHeader
                 title={<span id="organizations">Your businesses</span>}
-                description="Businesses you belong to. The current one is shown above."
+                description="Each business has its own address. You are in the one marked here."
                 actions={
                     <Button asChild size="sm" variant="outline">
-                        <Link href={createOrganization()}>
+                        <a href={platform.newBusinessUrl}>
                             <Plus /> New business
-                        </Link>
+                        </a>
                     </Button>
                 }
             />
-            {organizations.length === 0 ? (
-                <EmptyState
-                    icon={Building2}
-                    title="You are not part of a business yet"
-                    action={
-                        <Button asChild size="sm">
-                            <Link href={createOrganization()}>
-                                Create a business
-                            </Link>
-                        </Button>
-                    }
-                >
-                    Create one for your business, or ask a colleague to invite
-                    you.
-                </EmptyState>
-            ) : (
-                <ul className="divide-y">
-                    {organizations.map((organization) => (
-                        <li
-                            key={organization.id}
-                            className="flex flex-wrap items-center gap-3 px-4 py-3"
-                        >
-                            <span className="grid size-9 shrink-0 place-items-center rounded-md bg-muted font-semibold text-muted-foreground uppercase">
-                                {organization.displayName.slice(0, 1)}
-                            </span>
-                            <div className="min-w-0 flex-1">
-                                <p className="truncate font-medium">
-                                    {organization.displayName}
-                                </p>
-                                <div className="mt-0.5 flex flex-wrap gap-1">
-                                    {organization.isCurrent && (
-                                        <StatusBadge tone="info">
-                                            Current
-                                        </StatusBadge>
-                                    )}
-                                    {organization.isOwner && (
-                                        <StatusBadge>Owner</StatusBadge>
-                                    )}
-                                    {organization.status === 'suspended' && (
-                                        <StatusBadge tone="danger">
-                                            Suspended
-                                        </StatusBadge>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                {!organization.isCurrent && (
-                                    <Form
-                                        {...OrganizationController.switch.form(
-                                            organization.id,
-                                        )}
-                                    >
-                                        {({ processing }) => (
-                                            <Button
-                                                type="submit"
-                                                size="sm"
-                                                variant="outline"
-                                                disabled={processing}
-                                            >
-                                                Make current
-                                            </Button>
-                                        )}
-                                    </Form>
+            <ul className="divide-y">
+                {organizations.map((organization) => (
+                    <li
+                        key={organization.id}
+                        className="flex flex-wrap items-center gap-3 px-4 py-3"
+                    >
+                        <span className="grid size-9 shrink-0 place-items-center rounded-md bg-muted font-semibold text-muted-foreground uppercase">
+                            {organization.displayName.slice(0, 1)}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                            <p className="truncate font-medium">
+                                {organization.displayName}
+                            </p>
+                            <div className="mt-0.5 flex flex-wrap gap-1">
+                                {organization.isCurrent && (
+                                    <StatusBadge tone="info">
+                                        You are here
+                                    </StatusBadge>
                                 )}
-                                {organization.workspaceUrl && (
-                                    <Button asChild size="sm" variant="ghost">
-                                        <a href={organization.workspaceUrl}>
-                                            Open workspace
-                                        </a>
-                                    </Button>
+                                {organization.isOwner && (
+                                    <StatusBadge>Owner</StatusBadge>
+                                )}
+                                {organization.status === 'suspended' && (
+                                    <StatusBadge tone="danger">
+                                        Suspended
+                                    </StatusBadge>
                                 )}
                             </div>
-                        </li>
-                    ))}
-                </ul>
-            )}
+                        </div>
+                        {!organization.isCurrent &&
+                            organization.workspaceUrl && (
+                                <Button asChild size="sm" variant="ghost">
+                                    <a href={organization.workspaceUrl}>
+                                        Open <ArrowRight />
+                                    </a>
+                                </Button>
+                            )}
+                    </li>
+                ))}
+            </ul>
         </Panel>
     );
 }
-
-Dashboard.layout = {
-    breadcrumbs: [
-        {
-            title: 'Dashboard',
-            href: dashboard(),
-        },
-    ],
-};

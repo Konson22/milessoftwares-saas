@@ -1,11 +1,15 @@
 <?php
 
 use App\Models\User;
+use App\Modules\Billing\Models\Invoice;
+use App\Modules\Entitlements\Actions\ManageEntitlements;
 use App\Modules\Memberships\Models\Invitation;
 use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Structure\Models\Branch;
 use App\Modules\Structure\Models\Position;
+use App\Modules\Subscriptions\Actions\PlanRequests;
+use App\Modules\Subscriptions\Models\Plan;
 use App\Support\Hosts\PlatformHosts;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Routing\Route as RoutingRoute;
@@ -116,6 +120,20 @@ test('no workspace route accepts another organization\'s record ids', function (
             'invited_by_membership_id' => $this->owner->id, 'status' => 'pending', 'expires_at' => now()->addDay(),
         ])->save())->id,
     ];
+
+    // Its plan request, subscription and invoice, for the owner's pages.
+    $plan = tap(new Plan)->forceFill([
+        'code' => 'sweep-plan', 'name' => 'Sweep', 'billing_interval' => 'monthly',
+        'price_minor' => 1000, 'currency' => 'USD', 'status' => 'active', 'is_public' => true,
+    ]);
+    $plan->save();
+    $subscription = app(ManageEntitlements::class)->assignPlan($victim, $plan, null);
+    $records['subscription'] = $subscription->id;
+    $records['planRequest'] = app(PlanRequests::class)->requestCancellation($victim, $subscription, $this->owner->user, null)->id;
+    $records['invoice'] = app(TenantContext::class)->run($victim, fn () => tap(new Invoice, fn (Invoice $invoice) => $invoice->forceFill([
+        'number' => 'INV-SWEEP-000001', 'currency' => 'USD', 'total_minor' => 1000,
+        'issued_at' => now(), 'due_on' => now()->addDays(14),
+    ])->save()))->id;
     app(TenantContext::class)->clear();
 
     // The attacker owns a different organization: full rights on their own host.
