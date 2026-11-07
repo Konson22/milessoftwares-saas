@@ -202,7 +202,7 @@
             "category": "erp",
             "name": "Restaurant ERP",
             "icon": "utensils",
-            "registry": null,
+            "registry": { "type": "erp", "code": "restaurant" },
             "summary": "Tables, orders and the kitchen, with bills and tills in one place.",
             "headline": "From the table to the kitchen to the bill.",
             "subhead": "Table orders, a kitchen screen, bills and tills, and drinks stock for restaurants, cafés and bars, on the web and on the floor staff's phones. Add Finance & Accounting for the books.",
