@@ -32,7 +32,7 @@ export function UserMenu({
     links = [],
     signOut,
 }: {
-    user: { name: string; email: string };
+    user: { name: string; email: string; avatar?: string | null };
     subtitle?: string | null;
     links?: UserMenuLink[];
     signOut?: { label: string; action: string; method: 'post' };
@@ -51,9 +51,18 @@ export function UserMenu({
                 onClick={() => setOpen((value) => !value)}
                 className="flex items-center gap-2 px-1.5 py-0.5 text-left transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
-                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
-                    {initials(user.name)}
-                </span>
+                {user.avatar ? (
+                    <img
+                        src={user.avatar}
+                        alt=""
+                        referrerPolicy="no-referrer"
+                        className="size-7 shrink-0 rounded-full object-cover"
+                    />
+                ) : (
+                    <span className="grid size-7 shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
+                        {initials(user.name)}
+                    </span>
+                )}
                 <span className="hidden min-w-0 leading-tight sm:block">
                     <span className="block max-w-36 truncate text-sm font-medium">
                         {user.name}

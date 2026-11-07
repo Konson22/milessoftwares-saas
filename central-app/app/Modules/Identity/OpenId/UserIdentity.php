@@ -39,6 +39,7 @@ final class UserIdentity implements IdentityEntityInterface
     {
         return [
             'name' => $this->user->name,
+            'picture' => $this->user->avatar_url,
             'updated_at' => $this->user->updated_at?->getTimestamp(),
             'email' => $this->user->email,
             'email_verified' => $this->user->email_verified_at !== null,

@@ -5,6 +5,7 @@ namespace App\Sites\Central\Http\Controllers\Account;
 use App\Concerns\PasswordValidationRules;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Modules\Identity\Http\Controllers\GoogleSignInController;
 use App\Modules\Memberships\Actions\Invitations;
 use App\Modules\Memberships\Actions\MembershipActionDenied;
 use App\Modules\Memberships\Models\Invitation;
@@ -24,6 +25,8 @@ use Inertia\Response;
  * Where invitation emails lead. Someone new chooses their name and password
  * and is in: holding the link proves they read mail at the invited address,
  * so the account starts verified and the invitation is accepted at once.
+ * Or they join with the Google account of the invited address: no password,
+ * and their Google name and picture.
  * Someone who already has an account signs in and accepts on the auth host,
  * as before.
  */
@@ -52,7 +55,31 @@ class JoinController extends Controller
             'email' => $invitation->email,
             'organization' => Organization::query()->find($invitation->organization_id)?->display_name,
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
+            'canJoinWithGoogle' => GoogleSignInController::configured(),
         ]);
+    }
+
+    /**
+     * "Join with Google": remembers the invitation, then signs in with Google,
+     * which accepts it once Google has proven the invited address.
+     */
+    public function google(Request $request, string $token): RedirectResponse
+    {
+        abort_unless(GoogleSignInController::configured(), 404);
+
+        $invitation = $this->invitations->findByToken($token);
+
+        if ($invitation === null || $invitation->effectiveStatus() !== 'pending') {
+            return redirect()->route('join.show', $token);
+        }
+
+        if ($request->user() !== null) {
+            return redirect()->away($this->acceptUrl($token));
+        }
+
+        $request->session()->put(GoogleSignInController::JOIN_SESSION_KEY, $token);
+
+        return redirect()->route('google.redirect');
     }
 
     public function store(Request $request, string $token): RedirectResponse

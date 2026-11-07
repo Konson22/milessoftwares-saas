@@ -97,6 +97,7 @@ class FortifyServiceProvider extends ServiceProvider
 
         Fortify::registerView(fn () => Inertia::render('central/auth/register', [
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
+            'canSignInWithGoogle' => GoogleSignInController::configured(),
         ]));
 
         Fortify::twoFactorChallengeView(fn () => Inertia::render('central/auth/two-factor-challenge'));

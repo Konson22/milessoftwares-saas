@@ -1,4 +1,5 @@
 import { Form, Head } from '@inertiajs/react';
+import GoogleSignInButton from '@/shared/components/google-sign-in-button';
 import InputError from '@/shared/components/input-error';
 import PasswordInput from '@/shared/components/password-input';
 import TextLink from '@/shared/components/text-link';
@@ -11,12 +12,26 @@ import { store } from '@/routes/register';
 
 type Props = {
     passwordRules: string;
+    canSignInWithGoogle: boolean;
 };
 
-export default function Register({ passwordRules }: Props) {
+export default function Register({
+    passwordRules,
+    canSignInWithGoogle,
+}: Props) {
     return (
         <>
             <Head title="Register" />
+            {canSignInWithGoogle && (
+                <>
+                    <GoogleSignInButton label="Sign up with Google" />
+                    <p className="-mt-1 mb-2 text-center text-xs text-muted-foreground">
+                        Your Google name and picture are used. No password
+                        needed.
+                    </p>
+                    <OrDivider />
+                </>
+            )}
             <Form
                 {...store.form()}
                 resetOnSuccess={['password', 'password_confirmation']}
@@ -111,6 +126,16 @@ export default function Register({ passwordRules }: Props) {
                 )}
             </Form>
         </>
+    );
+}
+
+function OrDivider() {
+    return (
+        <div className="my-2 flex items-center gap-3 text-xs text-muted-foreground uppercase">
+            <span className="h-px flex-1 bg-border" />
+            or
+            <span className="h-px flex-1 bg-border" />
+        </div>
     );
 }
 

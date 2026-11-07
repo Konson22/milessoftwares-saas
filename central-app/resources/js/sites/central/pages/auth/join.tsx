@@ -1,4 +1,5 @@
 import { Form, Head } from '@inertiajs/react';
+import GoogleSignInButton from '@/shared/components/google-sign-in-button';
 import InputError from '@/shared/components/input-error';
 import PasswordInput from '@/shared/components/password-input';
 import { Button } from '@/shared/components/ui/button';
@@ -13,6 +14,7 @@ type Props =
           email: string;
           organization: string | null;
           passwordRules: string;
+          canJoinWithGoogle: boolean;
       }
     | { status: 'invalid' | 'accepted' | 'revoked' | 'expired' };
 
@@ -36,7 +38,8 @@ export default function Join(props: Props) {
         );
     }
 
-    const { token, email, organization, passwordRules } = props;
+    const { token, email, organization, passwordRules, canJoinWithGoogle } =
+        props;
 
     return (
         <>
@@ -46,6 +49,22 @@ export default function Join(props: Props) {
                     ? `You were invited to ${organization}. Choose your name and password to join.`
                     : 'Choose your name and password to join.'}
             </p>
+            {canJoinWithGoogle && (
+                <>
+                    <GoogleSignInButton
+                        href={`/join/${token}/google`}
+                        label="Join with Google"
+                    />
+                    <p className="-mt-1 mb-2 text-center text-xs text-muted-foreground">
+                        Use the Google account for {email}. No password needed.
+                    </p>
+                    <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground uppercase">
+                        <span className="h-px flex-1 bg-border" />
+                        or
+                        <span className="h-px flex-1 bg-border" />
+                    </div>
+                </>
+            )}
             <Form action={`/join/${token}`} method="post">
                 {({ processing, errors }) => (
                     <div className="grid gap-6">

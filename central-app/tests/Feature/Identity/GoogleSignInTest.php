@@ -19,12 +19,13 @@ beforeEach(function () {
     ]);
 });
 
-function fakeGoogleUser(string $id = 'google-123', string $email = 'person@example.com', bool $verified = true): void
+function fakeGoogleUser(string $id = 'google-123', string $email = 'person@example.com', bool $verified = true, ?string $avatar = 'https://lh3.googleusercontent.com/a/pat'): void
 {
     $user = (new SocialiteUser)->setRaw(['email_verified' => $verified])->map([
         'id' => $id,
         'name' => 'Pat Person',
         'email' => $email,
+        'avatar' => $avatar,
     ]);
 
     $provider = Mockery::mock(Provider::class);
@@ -79,7 +80,26 @@ it('creates a verified account for a new address', function () {
     $user = User::query()->where('email', 'new@example.com')->sole();
     $this->assertAuthenticatedAs($user);
     expect($user->email_verified_at)->not->toBeNull()
-        ->and($user->name)->toBe('Pat Person');
+        ->and($user->name)->toBe('Pat Person')
+        ->and($user->avatar_url)->toBe('https://lh3.googleusercontent.com/a/pat')
+        ->and($user->toArray()['avatar'])->toBe('https://lh3.googleusercontent.com/a/pat');
+});
+
+it('follows the Google picture on later sign-ins, and ignores unsafe ones', function () {
+    $user = User::factory()->create(['email' => 'person@example.com']);
+
+    fakeGoogleUser(avatar: 'https://lh3.googleusercontent.com/a/new');
+    $this->get(route('google.callback'));
+    expect($user->refresh()->avatar_url)->toBe('https://lh3.googleusercontent.com/a/new');
+
+    auth()->logout();
+    fakeGoogleUser(avatar: 'javascript:alert(1)');
+    $this->get(route('google.callback'));
+    expect($user->refresh()->avatar_url)->toBe('https://lh3.googleusercontent.com/a/new');
+});
+
+it('offers signing up with Google on the register page', function () {
+    $this->get(route('register'))->assertInertia(fn ($page) => $page->where('canSignInWithGoogle', true));
 });
 
 it('refuses an unverified Google address', function () {

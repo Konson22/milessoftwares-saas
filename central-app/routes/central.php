@@ -74,6 +74,8 @@ Route::domain(PlatformHosts::auth())->group(function () {
         ->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:30,1')->name('join.show');
     Route::post('join/{token}', [JoinController::class, 'store'])
         ->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:10,1')->name('join.store');
+    Route::get('join/{token}/google', [JoinController::class, 'google'])
+        ->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:10,1')->name('join.google');
 
     // The account's businesses. Everything about one business lives on its
     // own host; here they are listed, created, joined and tried.

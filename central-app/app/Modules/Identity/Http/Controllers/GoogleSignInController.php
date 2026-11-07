@@ -6,6 +6,10 @@ use App\Models\User;
 use App\Modules\Identity\Models\SocialAccount;
 use App\Modules\Identity\Support\AuthenticationEventRecorder;
 use App\Modules\Identity\Support\SessionTracker;
+use App\Modules\Memberships\Actions\Invitations;
+use App\Modules\Memberships\Actions\MembershipActionDenied;
+use App\Modules\Memberships\Models\Invitation;
+use App\Support\Hosts\PlatformHosts;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,15 +32,22 @@ use Throwable;
  * on first use) or, when registration is open, creates one. The account's own
  * rules still apply afterwards: suspended accounts are refused, two-factor
  * authentication is challenged, and the session is tracked like a password
- * sign-in (Login event).
+ * sign-in (Login event). The Google profile picture becomes the account's.
+ *
+ * Started from an invitation (join/{token}/google), the invitation is accepted
+ * right after: the invited person needs no password of their own.
  */
 class GoogleSignInController
 {
     private const PROVIDER = 'google';
 
+    /** The invitation token a "Join with Google" started from. */
+    public const JOIN_SESSION_KEY = 'google.join_invitation';
+
     public function __construct(
         private readonly AuthenticationEventRecorder $recorder,
         private readonly SessionTracker $sessions,
+        private readonly Invitations $invitations,
     ) {}
 
     public function redirect(): Response
@@ -84,13 +95,28 @@ class GoogleSignInController
         $email = Str::lower(trim((string) $google->getEmail()));
         $emailVerified = filter_var($google->user['email_verified'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
-        $user = $this->resolveUser($subject, $email, $emailVerified, (string) ($google->getName() ?: $email));
+        $joinToken = $request->session()->pull(self::JOIN_SESSION_KEY);
+        $invitation = is_string($joinToken) ? $this->pendingInvitationFor($joinToken, $email) : null;
+
+        $user = $this->resolveUser(
+            $subject,
+            $email,
+            $emailVerified,
+            (string) ($google->getName() ?: $email),
+            $google->getAvatar(),
+            invited: $invitation !== null,
+        );
 
         if ($user === null || $user->status !== 'active') {
             $this->recorder->record('login_failed', $user, $email ?: null, ['provider' => self::PROVIDER]);
 
             // Same wording for unknown and suspended accounts, as with passwords.
             return $this->failed(__('We could not sign you in with that Google account.'));
+        }
+
+        if (is_string($joinToken)) {
+            // After any second factor: the invitation page, to accept there.
+            $request->session()->put('url.intended', PlatformHosts::url(PlatformHosts::auth(), 'invitations/'.$joinToken));
         }
 
         if ($user->hasEnabledTwoFactorAuthentication()) {
@@ -107,7 +133,35 @@ class GoogleSignInController
         Auth::guard(config('fortify.guard'))->login($user);
         $request->session()->regenerate();
 
+        if ($invitation !== null) {
+            try {
+                $organization = $this->invitations->accept($user, (string) $joinToken)['organization'];
+                $request->session()->forget('url.intended');
+
+                return redirect()->away((string) $organization->workspaceUrl());
+            } catch (MembershipActionDenied $e) {
+                // The invitation page explains what went wrong.
+                return redirect()->intended(Fortify::redirects('login'))->withErrors(['invitation' => $e->getMessage()]);
+            }
+        }
+
         return redirect()->intended(Fortify::redirects('login'));
+    }
+
+    /**
+     * The invitation behind "Join with Google", when it is still pending and
+     * was sent to the address Google proved.
+     */
+    private function pendingInvitationFor(string $token, string $email): ?Invitation
+    {
+        $invitation = $this->invitations->findByToken($token);
+
+        return $invitation !== null
+            && $invitation->effectiveStatus() === 'pending'
+            && $email !== ''
+            && mb_strtolower($invitation->email) === $email
+            ? $invitation
+            : null;
     }
 
     public static function configured(): bool
@@ -120,12 +174,15 @@ class GoogleSignInController
     /**
      * The linked account first; otherwise the account with this verified
      * address, which is then linked; otherwise a new account if registration
-     * is open. An unverified Google address never matches or creates anything.
+     * is open or the person was invited at this address. An unverified
+     * Google address never matches or creates anything.
      * An account still waiting for its email link was registered by someone
      * who never proved this address, so the Google owner takes it over clean.
      */
-    public function resolveUser(string $subject, string $email, bool $emailVerified, string $name): ?User
+    public function resolveUser(string $subject, string $email, bool $emailVerified, string $name, ?string $avatar = null, bool $invited = false): ?User
     {
+        $avatar = self::usableAvatar($avatar);
+
         $linked = SocialAccount::query()
             ->where('provider', self::PROVIDER)
             ->where('provider_user_id', $subject)
@@ -133,6 +190,7 @@ class GoogleSignInController
 
         if ($linked !== null) {
             $linked->forceFill(['email' => $email ?: $linked->email, 'last_used_at' => now()])->save();
+            $this->refreshAvatar($linked->user, $avatar);
 
             return $linked->user;
         }
@@ -141,11 +199,11 @@ class GoogleSignInController
             return null;
         }
 
-        return DB::transaction(function () use ($subject, $email, $name): ?User {
+        return DB::transaction(function () use ($subject, $email, $name, $avatar, $invited): ?User {
             $user = User::query()->whereRaw('lower(email) = ?', [$email])->first();
 
             if ($user === null) {
-                if (! Features::enabled(Features::registration())) {
+                if (! $invited && ! Features::enabled(Features::registration())) {
                     return null;
                 }
 
@@ -155,6 +213,7 @@ class GoogleSignInController
                 $user->forceFill([
                     'name' => Str::limit($name, 255, ''),
                     'email' => $email,
+                    'avatar_url' => $avatar,
                     'password' => Str::random(64),
                     'email_verified_at' => now(),
                 ])->save();
@@ -182,9 +241,28 @@ class GoogleSignInController
             ])->save();
 
             $this->recorder->record('social_account_linked', $user, context: ['provider' => self::PROVIDER]);
+            $this->refreshAvatar($user, $avatar);
 
             return $user;
         });
+    }
+
+    /**
+     * Only an https address of reasonable length is shown as a picture.
+     */
+    private static function usableAvatar(?string $avatar): ?string
+    {
+        $avatar = trim((string) $avatar);
+
+        return str_starts_with($avatar, 'https://') && strlen($avatar) <= 2048 ? $avatar : null;
+    }
+
+    /** Google's picture follows the Google account; none from Google keeps the old one. */
+    private function refreshAvatar(?User $user, ?string $avatar): void
+    {
+        if ($user !== null && $avatar !== null && $user->avatar_url !== $avatar) {
+            $user->forceFill(['avatar_url' => $avatar])->save();
+        }
     }
 
     /**

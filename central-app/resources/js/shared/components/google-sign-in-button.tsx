@@ -3,18 +3,24 @@ import { redirect } from '@/routes/google';
 
 /**
  * Full-page navigation to Google: the OAuth redirect must not be an Inertia
- * visit.
+ * visit. `href` starts it from somewhere else (an invitation).
  */
-export default function GoogleSignInButton() {
+export default function GoogleSignInButton({
+    href,
+    label = 'Continue with Google',
+}: {
+    href?: string;
+    label?: string;
+}) {
     return (
         <Button
             asChild
             variant="outline"
             className="mb-2 w-full in-[.site-public]:h-10 in-[.site-public]:border-site-line in-[.site-public]:bg-white in-[.site-public]:shadow-sm in-[.site-public]:shadow-site-navy/5 in-[.site-public]:hover:border-site-accent/50 in-[.site-public]:hover:bg-white in-[.site-public]:hover:text-site-accent-ink"
         >
-            <a href={redirect().url}>
+            <a href={href ?? redirect().url}>
                 <GoogleLogo />
-                Continue with Google
+                {label}
             </a>
         </Button>
     );

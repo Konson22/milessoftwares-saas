@@ -6,6 +6,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -19,6 +20,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string $id
  * @property string $name
  * @property string $email
+ * @property string|null $avatar_url the Google profile picture, refreshed on each Google sign-in
  * @property string $status
  * @property Carbon|null $suspended_at
  * @property Carbon|null $email_verified_at
@@ -48,6 +50,21 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     protected $attributes = [
         'status' => 'active',
     ];
+
+    /**
+     * The frontend's name for the profile picture (auth.user.avatar).
+     *
+     * @var list<string>
+     */
+    protected $appends = ['avatar'];
+
+    /**
+     * @return Attribute<string|null, never>
+     */
+    protected function avatar(): Attribute
+    {
+        return Attribute::get(fn (): ?string => $this->avatar_url);
+    }
 
     /**
      * Get the attributes that should be cast.

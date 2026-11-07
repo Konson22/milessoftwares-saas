@@ -49,6 +49,7 @@ class NativeGoogleSignInController
             $email,
             filter_var($claims['email_verified'] ?? false, FILTER_VALIDATE_BOOLEAN),
             (string) (($claims['name'] ?? '') ?: $email),
+            is_string($claims['picture'] ?? null) ? $claims['picture'] : null,
         );
 
         if ($user === null || $user->status !== 'active') {
