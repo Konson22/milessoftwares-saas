@@ -29,7 +29,7 @@
             "name": "Restaurant ERP",
             "tagline": "Tables, orders and the kitchen, with bills and tills.",
             "description": "For restaurants, cafés, bars and hotel kitchens: the menu, table orders, kitchen tickets, bills and tills, and drinks stock. Finance & Accounting can be added for the books.",
-            "status": "planned",
+            "status": "pilot",
             "sort_order": 25,
             "applications": [
                 { "code": "restaurant", "requirement": "required" },
