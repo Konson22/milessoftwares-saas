@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 
 /**
- * The page title, what it is about, and its main actions on the right.
+ * The page title and its main actions on the right.
+ * `description` is still accepted so existing pages compile; it is not shown.
  */
 export function PageHeader({
     title,
-    description,
     badges,
     actions,
 }: {
@@ -24,11 +24,6 @@ export function PageHeader({
                     </h1>
                     {badges}
                 </div>
-                {description && (
-                    <p className="mt-0.5 text-sm text-muted-foreground">
-                        {description}
-                    </p>
-                )}
             </div>
             {actions && (
                 <div className="flex flex-wrap items-center gap-2">

@@ -1,5 +1,5 @@
 import { Form, Head, router } from '@inertiajs/react';
-import { Building2, Pencil, Plus, Search } from 'lucide-react';
+import { Pencil, Plus, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { EmptyState } from '@/shared/components/empty-state';
@@ -124,8 +124,6 @@ export default function Structure({ branches, departments, positions }: Props) {
             <div className="space-y-3">
                 <PageHeader
                     title="Organization structure"
-                    description="Manage branches, departments, and positions"
-                    icon={Building2}
                     actions={
                         <Button
                             size="sm"

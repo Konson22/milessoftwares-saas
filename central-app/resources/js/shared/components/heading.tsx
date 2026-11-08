@@ -7,6 +7,8 @@ export default function Heading({
     description?: string;
     variant?: 'default' | 'small';
 }) {
+    const subtitle = variant === 'small' ? description : undefined;
+
     return (
         <header className={variant === 'small' ? '' : 'mb-8 space-y-0.5'}>
             <h2
@@ -18,8 +20,8 @@ export default function Heading({
             >
                 {title}
             </h2>
-            {description && (
-                <p className="text-sm text-muted-foreground">{description}</p>
+            {subtitle && (
+                <p className="text-sm text-muted-foreground">{subtitle}</p>
             )}
         </header>
     );

@@ -39,11 +39,7 @@ export default defineConfig({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],
             refresh: true,
             fonts: [
-                // Signed-in apps (@miles/ui theme).
-                bunny('Inter', {
-                    weights: [400, 500, 600, 700],
-                }),
-                // Public site.
+                // Public site. Signed-in apps use Segoe UI from the system.
                 bunny('IBM Plex Sans', {
                     weights: [400, 500, 600, 700],
                 }),

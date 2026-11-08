@@ -4,7 +4,6 @@ import babel from '@rolldown/plugin-babel';
 import tailwindcss from '@tailwindcss/vite';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import laravel from 'laravel-vite-plugin';
-import { bunny } from 'laravel-vite-plugin/fonts';
 import { loadEnv } from 'vite';
 import { defineConfig, lazyPlugins } from 'vite-plus';
 
@@ -39,11 +38,6 @@ export default defineConfig({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],
             buildDirectory: `${path}/build`,
             refresh: true,
-            fonts: [
-                bunny('Inter', {
-                    weights: [400, 500, 600],
-                }),
-            ],
         }),
         inertia(),
         react(),
