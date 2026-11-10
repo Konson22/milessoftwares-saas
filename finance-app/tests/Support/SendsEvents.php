@@ -2,6 +2,8 @@
 
 namespace Tests\Support;
 
+use App\Models\PaymentRequest;
+use App\Models\Workspace;
 use App\Platform\SetUpWorkspace;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
@@ -26,6 +28,38 @@ trait SendsEvents
     {
         $organization = Organization::fromArray($this->platform()->organization($slug));
         $this->asTenant($slug, fn () => app(SetUpWorkspace::class)->provision($organization));
+    }
+
+    /**
+     * Sets the payment approval limit. Money leaving a bank below it posts
+     * directly (journals, reversals, tax settlements); from it up it is held
+     * as a payment request. For tests about something else than payment
+     * approval, which set up their books with bank-crediting journals.
+     */
+    protected function paymentLimit(string $slug = 'acme', ?int $minor = 1_000_000_000_00): void
+    {
+        $this->asTenant($slug, fn () => Workspace::query()->sole()->forceFill(['payment_approval_threshold_minor' => $minor])->save());
+    }
+
+    /**
+     * Pays the way every payment is made: a payment request (kind, account_id,
+     * amount, pay_on, ...), then its disbursement on pay_on. Below the approval
+     * limit the request is approved as it is raised, so whoever prepared it may
+     * pay it out; the member needs payments.prepare and payments.disburse.
+     * Returns the request's response when it is refused, else the disbursement's.
+     *
+     * @param  array<string, mixed>  $request
+     */
+    protected function payThroughRequest(array $request, string $slug = 'acme'): TestResponse
+    {
+        $raised = $this->post($this->workspaceUrl($slug, 'payment-requests'), $request);
+        if ($raised->getSession()?->has('errors')) {
+            return $raised;
+        }
+
+        $id = $this->asTenant($slug, fn () => PaymentRequest::query()->orderByDesc('number')->firstOrFail()->id);
+
+        return $this->post($this->workspaceUrl($slug, "payment-requests/{$id}/disburse"), ['paid_on' => $request['pay_on']]);
     }
 
     /**

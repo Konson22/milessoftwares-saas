@@ -18,7 +18,7 @@ import {
 import { useCan } from '@/lib/access';
 import { sourceLabel, statusLabel, statusTone } from '@/lib/format';
 import { show as showJournal } from '@/routes/journals';
-import { create as pay } from '@/routes/supplier-payments';
+import { create as pay } from '@/routes/payment-requests';
 import { show as showSupplier } from '@/routes/suppliers';
 
 type Props = {
@@ -104,15 +104,18 @@ export default function ShowBill({ bill, payments, credits }: Props) {
                 }
                 actions={
                     bill.outstandingMinor > 0 &&
-                    can('finance.payables.manage') && (
+                    can('finance.payments.prepare') && (
                         <Button asChild>
                             <Link
                                 href={pay({
-                                    query: { supplier: bill.supplierId },
+                                    query: {
+                                        kind: 'supplier',
+                                        supplier: bill.supplierId,
+                                    },
                                 })}
                             >
                                 <Banknote className="size-4" aria-hidden />
-                                Pay supplier
+                                Request payment
                             </Link>
                         </Button>
                     )

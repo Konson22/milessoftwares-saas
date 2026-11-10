@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Finance\Audit;
 use App\Finance\JournalApprovals;
 use App\Finance\Ledger;
 use App\Finance\Money;
@@ -15,6 +16,7 @@ use App\Models\Workspace;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -116,7 +118,7 @@ class JournalController extends Controller
         ]);
     }
 
-    public function store(Request $request, Ledger $ledger, JournalApprovals $approvals, PaymentRequests $requests): RedirectResponse
+    public function store(Request $request, Ledger $ledger, JournalApprovals $approvals, PaymentRequests $requests, Audit $audit): RedirectResponse
     {
         $data = $request->validate([
             'entry_date' => ['required', 'date_format:Y-m-d'],
@@ -138,7 +140,7 @@ class JournalController extends Controller
             return redirect()->route('journal-approvals.index')->with('success', "{$draft->number} is waiting for approval; it posts once someone else approves it.");
         }
 
-        // Money leaving a bank while payments are held: a payment like any other.
+        // Money leaving a bank from the approval limit up: a payment like any other.
         if ($approvals->heldAsPayment($stored)) {
             $held = $requests->holdJournal(CarbonImmutable::parse($data['entry_date']), $data['memo'], $stored, $this->user($request));
 
@@ -160,12 +162,17 @@ class JournalController extends Controller
             $lines[] = ['account' => $account, 'debit' => $debit, 'credit' => $credit, 'description' => $line['description'] ?? null] + $this->lineDimensions($line, $dimensions);
         }
 
-        $journal = $ledger->post(CarbonImmutable::parse($data['entry_date']), $data['memo'], $lines, ['require_dimensions' => true], $this->user($request));
+        $journal = DB::transaction(function () use ($ledger, $data, $lines, $request, $audit, $stored) {
+            $journal = $ledger->post(CarbonImmutable::parse($data['entry_date']), $data['memo'], $lines, ['require_dimensions' => true], $this->user($request));
+            $audit->record('journal.posted', $journal, null, ['entry_date' => $journal->entry_date->toDateString(), 'total_minor' => StoredLines::total($stored), 'manual' => true]);
+
+            return $journal;
+        });
 
         return redirect()->route('journals.show', $journal)->with('success', "Journal {$journal->number} posted.");
     }
 
-    public function reverse(Request $request, Journal $journal, Ledger $ledger, PaymentPolicy $policy, PaymentRequests $requests): RedirectResponse
+    public function reverse(Request $request, Journal $journal, Ledger $ledger, PaymentPolicy $policy, PaymentRequests $requests, Audit $audit): RedirectResponse
     {
         $data = $request->validate([
             'entry_date' => ['required', 'date_format:Y-m-d'],
@@ -186,7 +193,12 @@ class JournalController extends Controller
             return redirect()->route('payment-requests.index')->with('success', "{$held->number} is waiting for approval; {$journal->number} is reversed once it is approved and disbursed.");
         }
 
-        $reversal = $ledger->reverse($journal, CarbonImmutable::parse($data['entry_date']), $memo, $this->user($request));
+        $reversal = DB::transaction(function () use ($ledger, $journal, $data, $memo, $request, $audit) {
+            $reversal = $ledger->reverse($journal, CarbonImmutable::parse($data['entry_date']), $memo, $this->user($request));
+            $audit->record('journal.reversed', $journal, null, ['reversal' => $reversal->number, 'entry_date' => $reversal->entry_date->toDateString(), 'reason' => $data['reason']]);
+
+            return $reversal;
+        });
 
         return redirect()->route('journals.show', $reversal)->with('success', "{$journal->number} reversed by {$reversal->number}.");
     }

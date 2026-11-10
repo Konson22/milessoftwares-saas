@@ -16,6 +16,11 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "C:/Users/konak/Downloads/milesoftwares-4209776fb798.json",
+        "track": "internal"
+      }
+    }
   }
 }

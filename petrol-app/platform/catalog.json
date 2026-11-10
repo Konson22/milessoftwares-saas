@@ -1,0 +1,717 @@
+{
+    "application": {
+        "code": "petrol",
+        "name": "Petrol Station",
+        "category": "products",
+        "kind": "standalone",
+        "status": "beta"
+    },
+    "version": "1.5.0",
+    "permissions": [
+        {
+            "key": "petrol.sales.view",
+            "name": "View fuel sales",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.sales.create",
+            "name": "Record fuel sales",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.sales.void",
+            "name": "Void fuel sales",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.shifts.view",
+            "name": "View shifts and meter readings",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.shifts.open",
+            "name": "Open a shift and assign nozzles",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.shifts.close",
+            "name": "Submit a shift closing",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.shifts.approve",
+            "name": "Approve shift closing",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.assignments.view",
+            "name": "View pump assignments",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.assignments.create",
+            "name": "Create pump assignment",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.assignments.reassign",
+            "name": "Reassign attendant",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.handovers.initiate",
+            "name": "Initiate handover",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.handovers.confirm",
+            "name": "Confirm handover",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.handovers.approve",
+            "name": "Approve handover",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.meters.record",
+            "name": "Record meter readings",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.exceptions.review",
+            "name": "Review shift exceptions",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.exceptions.resolve",
+            "name": "Resolve shift exceptions",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.attendants.view",
+            "name": "View attendants",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.attendants.manage",
+            "name": "Add and change attendants",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.pumps.view",
+            "name": "View pumps and nozzles",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.pumps.manage",
+            "name": "Add and change pumps and nozzles",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.tanks.view",
+            "name": "View tanks",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.tanks.manage",
+            "name": "Add tanks",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.stock.adjust",
+            "name": "Record opening stock and approved dip adjustments",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.measurements.view",
+            "name": "View tank measurements",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.measurements.record",
+            "name": "Record tank measurements",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.measurements.verify",
+            "name": "Verify tank measurements",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.charts.manage",
+            "name": "Manage calibration charts",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.receiving.record",
+            "name": "Record fuel receiving",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.receiving.approve",
+            "name": "Approve fuel receiving",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.calibration.record",
+            "name": "Record pump calibration",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.calibration.approve",
+            "name": "Approve test dispensing",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.equipment.manage",
+            "name": "Manage equipment events",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.reconciliation.view",
+            "name": "View fuel reconciliation",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.variances.review",
+            "name": "Review fuel variances",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.meters.correct",
+            "name": "Correct a meter reading before approval",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.products.manage",
+            "name": "Add and change fuel grades",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.prices.manage",
+            "name": "Set station selling prices",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.purchases.view",
+            "name": "View suppliers, orders and receipts",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.purchases.manage",
+            "name": "Place orders and receive fuel",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.customers.view",
+            "name": "View customers and credit",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.customers.manage",
+            "name": "Add customers and collect credit payments",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.expenses.manage",
+            "name": "Record expenses",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.expenses.categories",
+            "name": "Create expense categories",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "petrol.rates.manage",
+            "name": "Manage station exchange rates",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.currencies.view",
+            "name": "View currencies",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.currencies.manage",
+            "name": "Manage currencies",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "petrol.currencies.enable",
+            "name": "Enable station currency",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.cash.report",
+            "name": "View multi-currency cash reports",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.service.manage",
+            "name": "Set up service bays and services",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.service.work",
+            "name": "Open and complete work orders",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.store.manage",
+            "name": "Set up stores and products",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.store.move",
+            "name": "Receive and issue store stock",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.transfers.manage",
+            "name": "Request and move inter-branch stock",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.transfers.approve",
+            "name": "Approve inter-branch transfers",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.cash.manage",
+            "name": "Handle the drawer and petty cash",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.cash.view",
+            "name": "View cash custody",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.cash.submit",
+            "name": "Submit a cash remittance",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.cash.confirm",
+            "name": "Confirm a cash receipt",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.cash.reject",
+            "name": "Reject a cash remittance",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.cash.transfer",
+            "name": "Transfer cash",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.cash.safes",
+            "name": "Manage station safes",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.cash.deposit",
+            "name": "Prepare a bank deposit",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.cash.deposit_confirm",
+            "name": "Confirm a bank deposit",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.cash.reconcile",
+            "name": "Reconcile cash",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.cash.adjust",
+            "name": "Approve a cash adjustment",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.finance.view",
+            "name": "View the station finance overview",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.reports.view",
+            "name": "View station reports",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.stations.manage",
+            "name": "Set up the station, schedules and payment methods",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.audit.view",
+            "name": "View the station audit log",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "petrol.payables.pay",
+            "name": "Record a payment to a fuel supplier",
+            "sensitivity": 3,
+            "scopes": ["organization", "branch"]
+        }
+    ],
+    "roles": [
+        {
+            "key": "manager",
+            "name": "Station manager",
+            "sensitivity": 3,
+            "delegable": true,
+            "scopes": ["organization", "branch"],
+            "permissions": [
+                "petrol.sales.view",
+                "petrol.sales.create",
+                "petrol.sales.void",
+                "petrol.shifts.view",
+                "petrol.shifts.open",
+                "petrol.shifts.close",
+                "petrol.shifts.approve",
+                "petrol.assignments.view",
+                "petrol.assignments.create",
+                "petrol.assignments.reassign",
+                "petrol.handovers.initiate",
+                "petrol.handovers.confirm",
+                "petrol.handovers.approve",
+                "petrol.meters.record",
+                "petrol.exceptions.review",
+                "petrol.exceptions.resolve",
+                "petrol.attendants.view",
+                "petrol.attendants.manage",
+                "petrol.pumps.view",
+                "petrol.pumps.manage",
+                "petrol.tanks.view",
+                "petrol.tanks.manage",
+                "petrol.stock.adjust",
+                "petrol.measurements.view",
+                "petrol.measurements.record",
+                "petrol.measurements.verify",
+                "petrol.charts.manage",
+                "petrol.receiving.record",
+                "petrol.receiving.approve",
+                "petrol.calibration.record",
+                "petrol.calibration.approve",
+                "petrol.equipment.manage",
+                "petrol.reconciliation.view",
+                "petrol.variances.review",
+                "petrol.meters.correct",
+                "petrol.products.manage",
+                "petrol.prices.manage",
+                "petrol.purchases.view",
+                "petrol.purchases.manage",
+                "petrol.customers.view",
+                "petrol.customers.manage",
+                "petrol.expenses.manage",
+                "petrol.expenses.categories",
+                "petrol.rates.manage",
+                "petrol.currencies.view",
+                "petrol.currencies.manage",
+                "petrol.currencies.enable",
+                "petrol.cash.report",
+                "petrol.service.manage",
+                "petrol.service.work",
+                "petrol.store.manage",
+                "petrol.store.move",
+                "petrol.transfers.manage",
+                "petrol.transfers.approve",
+                "petrol.cash.manage",
+                "petrol.cash.view",
+                "petrol.cash.submit",
+                "petrol.cash.confirm",
+                "petrol.cash.reject",
+                "petrol.cash.transfer",
+                "petrol.cash.safes",
+                "petrol.cash.deposit",
+                "petrol.cash.deposit_confirm",
+                "petrol.cash.reconcile",
+                "petrol.cash.adjust",
+                "petrol.finance.view",
+                "petrol.reports.view",
+                "petrol.stations.manage",
+                "petrol.audit.view",
+                "petrol.payables.pay"
+            ]
+        },
+        {
+            "key": "supervisor",
+            "name": "Supervisor",
+            "sensitivity": 3,
+            "delegable": true,
+            "scopes": ["organization", "branch"],
+            "permissions": [
+                "petrol.sales.view",
+                "petrol.shifts.view",
+                "petrol.shifts.open",
+                "petrol.shifts.close",
+                "petrol.shifts.approve",
+                "petrol.assignments.view",
+                "petrol.assignments.reassign",
+                "petrol.handovers.approve",
+                "petrol.exceptions.review",
+                "petrol.exceptions.resolve",
+                "petrol.attendants.view",
+                "petrol.pumps.view",
+                "petrol.tanks.view",
+                "petrol.meters.correct",
+                "petrol.measurements.view",
+                "petrol.measurements.verify",
+                "petrol.receiving.approve",
+                "petrol.calibration.record",
+                "petrol.equipment.manage",
+                "petrol.reconciliation.view",
+                "petrol.variances.review",
+                "petrol.reports.view",
+                "petrol.purchases.view",
+                "petrol.currencies.view",
+                "petrol.currencies.enable",
+                "petrol.cash.report"
+            ]
+        },
+        {
+            "key": "cashier",
+            "name": "Cashier",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization", "branch"],
+            "permissions": [
+                "petrol.sales.view",
+                "petrol.sales.create",
+                "petrol.customers.view",
+                "petrol.customers.manage",
+                "petrol.cash.manage",
+                "petrol.cash.view",
+                "petrol.cash.confirm",
+                "petrol.cash.reject",
+                "petrol.cash.transfer",
+                "petrol.cash.deposit",
+                "petrol.cash.reconcile",
+                "petrol.shifts.view",
+                "petrol.currencies.view",
+                "petrol.assignments.view"
+            ]
+        },
+        {
+            "key": "attendant",
+            "name": "Attendant",
+            "sensitivity": 1,
+            "delegable": true,
+            "scopes": ["organization", "branch"],
+            "permissions": [
+                "petrol.sales.view",
+                "petrol.sales.create",
+                "petrol.shifts.view",
+                "petrol.cash.view",
+                "petrol.cash.submit",
+                "petrol.currencies.view",
+                "petrol.assignments.view",
+                "petrol.handovers.initiate",
+                "petrol.handovers.confirm",
+                "petrol.meters.record",
+                "petrol.measurements.record"
+            ]
+        },
+        {
+            "key": "accountant",
+            "name": "Accountant",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization", "branch"],
+            "permissions": [
+                "petrol.purchases.view",
+                "petrol.payables.pay",
+                "petrol.expenses.manage",
+                "petrol.finance.view",
+                "petrol.reports.view",
+                "petrol.customers.view",
+                "petrol.audit.view",
+                "petrol.cash.view",
+                "petrol.cash.reconcile",
+                "petrol.cash.deposit_confirm",
+                "petrol.cash.adjust",
+                "petrol.currencies.view",
+                "petrol.cash.report"
+            ]
+        },
+        {
+            "key": "inventory_officer",
+            "name": "Inventory officer",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization", "branch"],
+            "permissions": [
+                "petrol.tanks.view",
+                "petrol.stock.adjust",
+                "petrol.measurements.view",
+                "petrol.measurements.record",
+                "petrol.charts.manage",
+                "petrol.receiving.record",
+                "petrol.reconciliation.view",
+                "petrol.purchases.view",
+                "petrol.store.manage",
+                "petrol.store.move",
+                "petrol.transfers.manage"
+            ]
+        },
+        {
+            "key": "storekeeper",
+            "name": "Storekeeper",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["branch"],
+            "permissions": ["petrol.store.manage", "petrol.store.move"]
+        },
+        {
+            "key": "service_supervisor",
+            "name": "Service bay supervisor",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization", "branch"],
+            "permissions": [
+                "petrol.service.manage",
+                "petrol.service.work",
+                "petrol.customers.view"
+            ]
+        },
+        {
+            "key": "technician",
+            "name": "Technician",
+            "sensitivity": 1,
+            "delegable": true,
+            "scopes": ["branch"],
+            "permissions": ["petrol.service.work"]
+        },
+        {
+            "key": "auditor",
+            "name": "Auditor",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization", "branch"],
+            "permissions": [
+                "petrol.reports.view",
+                "petrol.audit.view",
+                "petrol.finance.view",
+                "petrol.cash.view",
+                "petrol.currencies.view",
+                "petrol.cash.report"
+            ]
+        }
+    ],
+    "separation_of_duties": [
+        {
+            "permissions": ["petrol.sales.create", "petrol.sales.void"],
+            "mode": "warn",
+            "description": "Voiding a sale you recorded yourself needs a second look."
+        },
+        {
+            "permissions": ["petrol.sales.create", "petrol.stock.adjust"],
+            "mode": "warn",
+            "description": "One person selling and adjusting stock can hide shortages."
+        },
+        {
+            "permissions": ["petrol.purchases.manage", "petrol.payables.pay"],
+            "mode": "warn",
+            "description": "Ordering fuel and paying the supplier should not rest with one person."
+        },
+        {
+            "permissions": ["petrol.shifts.close", "petrol.shifts.approve"],
+            "mode": "warn",
+            "description": "Approving a closing you submitted needs a second look."
+        },
+        {
+            "permissions": ["petrol.cash.submit", "petrol.cash.confirm"],
+            "mode": "warn",
+            "description": "The person who hands over cash does not confirm receiving it."
+        }
+    ],
+    "features": [
+        {
+            "key": "petrol.stations",
+            "name": "Stations",
+            "description": "How many stations the plan includes.",
+            "limit_unit": "stations"
+        },
+        {
+            "key": "petrol.attendants",
+            "name": "Attendants",
+            "description": "How many attendants the plan includes.",
+            "limit_unit": "attendants"
+        }
+    ]
+}

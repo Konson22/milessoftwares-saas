@@ -47,6 +47,8 @@ PRODUCTS="${PRODUCTS-pharmacy finance}"
 
 # env_value KEY [env file]: a value from the platform's (or a product's) .env.
 env_value() { grep -E "^$1=" "${2:-$BASE/shared/.env}" | tail -n 1 | cut -d= -f2- | tr -d "\"'"; }
+# product_dir CODE: the folder a product lives in (code-app, except Projects).
+product_dir() { case "$1" in projects) echo project-management ;; *) echo "$1-app" ;; esac; }
 
 for code in $PRODUCTS; do
     if [[ ! -f "$BASE/shared/products/$code/.env" ]]; then
@@ -78,9 +80,9 @@ npm run build:ssr
 
 # Products: install and build each in its own folder of the release.
 for code in $PRODUCTS; do
-    product="$release/$code-app"
+    product="$release/$(product_dir "$code")"
     if [[ ! -f "$product/artisan" ]]; then
-        echo "no product $code-app in $ref" >&2
+        echo "no product $(product_dir "$code") in $ref" >&2
         exit 1
     fi
     ln -sfn "$BASE/shared/products/$code/.env" "$product/.env"
@@ -125,7 +127,7 @@ migrate_and_grant
 for code in $PRODUCTS; do
     product_env="$BASE/shared/products/$code/.env"
     (
-        cd "$release/$code-app"
+        cd "$release/$(product_dir "$code")"
         DB_USERNAME="$MIGRATION_DB_USERNAME" DB_PASSWORD="$MIGRATION_DB_PASSWORD" "$PHP" artisan migrate --force --no-ansi
         PGPASSWORD="$MIGRATION_DB_PASSWORD" psql --no-psqlrc -v ON_ERROR_STOP=1 -q \
             -h "$(env_value DB_HOST "$product_env")" \
@@ -142,7 +144,7 @@ done
 # serves retail too, platform/retail.json).
 catalogs=(database/catalogs/*.json)
 for code in $PRODUCTS; do
-    catalogs+=("../$code-app/platform/"*.json)
+    catalogs+=("../$(product_dir "$code")/platform/"*.json)
 done
 "$PHP" artisan platform:catalog-import "${catalogs[@]}" --no-ansi
 # The ERP products sold on the site and the applications they are made of.
@@ -156,7 +158,7 @@ mv -T "$BASE/current.tmp" "$BASE/current"
 sudo systemctl reload "$PHP_FPM_SERVICE"
 "$PHP" "$BASE/current/central-app/artisan" queue:restart --no-ansi
 for code in $PRODUCTS; do
-    "$PHP" "$BASE/current/$code-app/artisan" queue:restart --no-ansi
+    "$PHP" "$BASE/current/$(product_dir "$code")/artisan" queue:restart --no-ansi
 done
 # systemd restarts the SSR server from the new release.
 "$PHP" "$BASE/current/central-app/artisan" inertia:stop-ssr --no-ansi || true

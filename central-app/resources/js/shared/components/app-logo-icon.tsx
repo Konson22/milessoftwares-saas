@@ -1,6 +1,6 @@
 import type { ImgHTMLAttributes } from 'react';
 
-/** The Miles mark alone; its navy link turns white in dark mode. */
+/** The Miles mark alone; the charcoal shape turns white in dark mode. */
 export default function AppLogoIcon({
     className,
     alt = 'Miles Global Softwares',

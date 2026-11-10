@@ -16,14 +16,17 @@ use Inertia\Testing\AssertableInertia as Assert;
 // The books are in SSP (the fake platform's currency); documents and one bank in USD.
 const FX_KEEPER = [
     'finance.accounts.view', 'finance.accounts.manage', 'finance.journals.view', 'finance.journals.post',
-    'finance.payables.view', 'finance.payables.manage', 'finance.receivables.view', 'finance.receivables.manage',
-    'finance.banking.view', 'finance.banking.manage', 'finance.reports.view', 'finance.currencies.manage',
+    'finance.payables.view', 'finance.bills.manage', 'finance.receivables.view', 'finance.receivables.manage',
+    'finance.banking.view', 'finance.receipts.record', 'finance.reports.view', 'finance.currencies.manage',
+    'finance.payments.view', 'finance.payments.prepare', 'finance.payments.disburse',
 ];
 
 beforeEach(function () {
     $this->platform()->organization('acme');
     $this->publishEventKeys();
     $this->setUpFinance('acme');
+    // Below the limit, money leaving a bank posts directly: these books are set up with it.
+    $this->paymentLimit('acme');
     $this->actingAsMember('acme', FX_KEEPER, features: [Currencies::FEATURE]);
 });
 
@@ -156,8 +159,8 @@ it('pays a dollar bill from the dollar account, with the loss on the rate', func
     $supplier = $this->asTenant('acme', fn () => Supplier::query()->create(['name' => 'Importer']));
 
     // Shillings into dollars: 66,000 SSP becomes 60 USD at 1,100, no difference.
-    $this->post(fxUrl('banking/transfers'), ['account_id' => fxAccount('1010')->id, 'to_account_id' => $dollars->id, 'amount' => '66000', 'entry_date' => '2026-10-15', 'description' => 'Buy dollars'])->assertSessionHasErrors('received');
-    $this->post(fxUrl('banking/transfers'), ['account_id' => fxAccount('1010')->id, 'to_account_id' => $dollars->id, 'amount' => '66000', 'received' => '60', 'entry_date' => '2026-10-15', 'description' => 'Buy dollars'])->assertSessionHasNoErrors();
+    $this->payThroughRequest(['kind' => 'transfer', 'account_id' => fxAccount('1010')->id, 'to_account_id' => $dollars->id, 'amount' => '66000', 'pay_on' => '2026-10-15', 'description' => 'Buy dollars'])->assertSessionHasErrors('received');
+    $this->payThroughRequest(['kind' => 'transfer', 'account_id' => fxAccount('1010')->id, 'to_account_id' => $dollars->id, 'amount' => '66000', 'received' => '60', 'pay_on' => '2026-10-15', 'description' => 'Buy dollars'])->assertSessionHasNoErrors();
     expect(fxBalance('1050'))->toBe(6600000)->and(fxForeignBalance('1050'))->toBe(6000)->and(fxBalance('6950'))->toBe(0);
 
     $this->post(fxUrl('bills'), [
@@ -167,9 +170,10 @@ it('pays a dollar bill from the dollar account, with the loss on the rate', func
     $bill = $this->asTenant('acme', fn () => Bill::query()->sole());
     expect($bill->total_minor)->toBe(5000000)->and(fxBalance('2000'))->toBe(5000000);
 
-    $this->post(fxUrl('supplier-payments'), [
+    $this->payThroughRequest([
+        'kind' => 'supplier',
         'supplier_id' => $supplier->id, 'account_id' => $dollars->id, 'amount' => '50',
-        'paid_on' => '2026-10-15', 'allocations' => [$bill->id => '50'],
+        'pay_on' => '2026-10-15', 'allocations' => [$bill->id => '50'],
     ])->assertSessionHasNoErrors();
 
     expect($this->asTenant('acme', fn () => $bill->refresh()->status()))->toBe('paid')
@@ -180,7 +184,7 @@ it('pays a dollar bill from the dollar account, with the loss on the rate', func
     fxBooksBalance();
 
     // Dollars out at a better rate than the books carry: the difference is a gain.
-    $this->post(fxUrl('banking/transfers'), ['account_id' => $dollars->id, 'to_account_id' => fxAccount('1010')->id, 'amount' => '5', 'received' => '5600', 'entry_date' => '2026-10-15', 'description' => 'Sell dollars'])->assertSessionHasNoErrors();
+    $this->payThroughRequest(['kind' => 'transfer', 'account_id' => $dollars->id, 'to_account_id' => fxAccount('1010')->id, 'amount' => '5', 'received' => '5600', 'pay_on' => '2026-10-15', 'description' => 'Sell dollars'])->assertSessionHasNoErrors();
     expect(fxBalance('6950'))->toBe(490000)->and(fxForeignBalance('1050'))->toBe(500);
 
     // The dollar account is posted to from Banking and documents only.
@@ -194,7 +198,7 @@ it('pays a dollar bill from the dollar account, with the loss on the rate', func
 it('revalues open balances at a day\'s rate and reverses the next day', function () {
     fxRate('2026-10-01', '1000');
     $dollars = fxDollarBank();
-    $this->post(fxUrl('banking/transfers'), ['account_id' => fxAccount('1010')->id, 'to_account_id' => $dollars->id, 'amount' => '10000', 'received' => '10', 'entry_date' => '2026-10-01', 'description' => 'Buy dollars'])->assertSessionHasNoErrors();
+    $this->payThroughRequest(['kind' => 'transfer', 'account_id' => fxAccount('1010')->id, 'to_account_id' => $dollars->id, 'amount' => '10000', 'received' => '10', 'pay_on' => '2026-10-01', 'description' => 'Buy dollars'])->assertSessionHasNoErrors();
     $this->post(fxUrl('invoices'), [
         'customer_name' => 'Aid agency', 'issued_on' => '2026-10-01', 'currency' => 'USD',
         'lines' => [['account_id' => fxAccount('4000')->id, 'description' => 'Supplies', 'amount' => '20']],

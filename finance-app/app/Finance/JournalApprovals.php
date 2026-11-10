@@ -20,13 +20,15 @@ use Illuminate\Validation\ValidationException;
  * creator and the approver recorded. Nobody approves their own entry, owners
  * included.
  *
- * A journal that takes money out of a bank while payments are held does not
- * post here: it goes on to payment approval and disbursement like any other
- * payment (PaymentRequests), since approving journals is not approving payments.
+ * A journal that takes money out of a bank from the payment approval limit
+ * up does not post here: it goes on to payment approval and disbursement like
+ * any other payment (PaymentRequests), since approving journals is not
+ * approving payments.
  *
  * A recurring journal is approved once each time it is added or changed;
  * until then it does not post (RecurringJournals). One that takes money out of
- * a bank while payments are held needs a payment approver instead.
+ * a bank from the limit up needs a payment approver instead: a journal
+ * approver's approval does not count as permission to pay.
  *
  * Journals from documents (invoices, bills, payments, banking) and products'
  * events are not held: the documents are their own record. Money leaving a
@@ -42,6 +44,7 @@ class JournalApprovals
         private readonly DocumentNumbers $numbers,
         private readonly PaymentPolicy $payments,
         private readonly PaymentRequests $requests,
+        private readonly Audit $audit,
     ) {}
 
     /**
@@ -80,12 +83,17 @@ class JournalApprovals
     public function configure(bool $enabled, ?int $thresholdMinor): Workspace
     {
         $workspace = Workspace::current() ?? throw ValidationException::withMessages(['journal_approval' => 'This organization is not set up yet.']);
-        $workspace->forceFill([
-            'journal_approval' => $enabled,
-            'journal_approval_threshold_minor' => $enabled ? $thresholdMinor : null,
-        ])->save();
 
-        return $workspace;
+        return DB::transaction(function () use ($workspace, $enabled, $thresholdMinor) {
+            $before = ['enabled' => $workspace->journal_approval, 'threshold_minor' => $workspace->journal_approval_threshold_minor];
+            $workspace->forceFill([
+                'journal_approval' => $enabled,
+                'journal_approval_threshold_minor' => $enabled ? $thresholdMinor : null,
+            ])->save();
+            $this->audit->record('approval_rules.journals_changed', $workspace, $before, ['enabled' => $enabled, 'threshold_minor' => $workspace->journal_approval_threshold_minor]);
+
+            return $workspace;
+        });
     }
 
     /**
@@ -101,15 +109,21 @@ class JournalApprovals
         $this->ledger->check(StoredLines::toLedger($lines), requireDimensions: true);
         $this->periods->postingDate($date);
 
-        return DB::transaction(fn () => JournalDraft::query()->create([
-            'number' => $this->numbers->next('journal_draft', 'JD', 5),
-            'entry_date' => $date,
-            'memo' => $memo,
-            'lines' => $lines,
-            'total_minor' => StoredLines::total($lines),
-            'status' => JournalDraft::PENDING,
-            'submitted_by' => $by->id,
-        ]));
+        return DB::transaction(function () use ($date, $memo, $lines, $by) {
+            $draft = JournalDraft::query()->create([
+                'number' => $this->numbers->next('journal_draft', 'JD', 5),
+                'entry_date' => $date,
+                'memo' => $memo,
+                'lines' => $lines,
+                'total_minor' => StoredLines::total($lines),
+                'status' => JournalDraft::PENDING,
+                'submitted_by' => $by->id,
+                'policy' => $this->payments->snapshot(),
+            ]);
+            $this->audit->record('journal_draft.submitted', $draft, null, ['total_minor' => $draft->total_minor, 'entry_date' => $date->toDateString()], $by);
+
+            return $draft;
+        });
     }
 
     /**
@@ -129,6 +143,7 @@ class JournalApprovals
             if ($this->heldAsPayment($locked->lines)) {
                 $request = $this->requests->holdJournal($locked->entry_date, $locked->memo, $locked->lines, $locked->submitter, $locked->number);
                 $locked->forceFill(['status' => JournalDraft::APPROVED, 'reviewed_by' => $by->id, 'reviewed_at' => now()])->save();
+                $this->audit->record('journal_draft.approved', $locked, ['status' => JournalDraft::PENDING], ['status' => JournalDraft::APPROVED, 'payment_request' => $request->number], $by);
 
                 return $request;
             }
@@ -140,6 +155,7 @@ class JournalApprovals
             $journal->forceFill(['approved_by' => $by->id, 'approved_at' => now()])->save();
 
             $locked->forceFill(['status' => JournalDraft::APPROVED, 'reviewed_by' => $by->id, 'reviewed_at' => now(), 'journal_id' => $journal->id])->save();
+            $this->audit->record('journal_draft.approved', $locked, ['status' => JournalDraft::PENDING], ['status' => JournalDraft::APPROVED, 'journal' => $journal->number], $by);
 
             return $journal;
         });
@@ -157,6 +173,7 @@ class JournalApprovals
             }
 
             $locked->forceFill(['status' => JournalDraft::REJECTED, 'reviewed_by' => $by->id, 'reviewed_at' => now(), 'review_note' => $reason])->save();
+            $this->audit->record('journal_draft.rejected', $locked, ['status' => JournalDraft::PENDING], ['status' => JournalDraft::REJECTED, 'note' => $reason], $by);
 
             return $locked;
         });
@@ -176,6 +193,7 @@ class JournalApprovals
             }
 
             $locked->forceFill(['status' => JournalDraft::WITHDRAWN, 'reviewed_by' => $by->id, 'reviewed_at' => now()])->save();
+            $this->audit->record('journal_draft.withdrawn', $locked, ['status' => JournalDraft::PENDING], ['status' => JournalDraft::WITHDRAWN], $by);
 
             return $locked;
         });
@@ -238,6 +256,7 @@ class JournalApprovals
             }
 
             $locked->forceFill(['approved_by' => $by->id, 'approved_at' => now(), 'approved_for_payment' => $held])->save();
+            $this->audit->record('recurring_journal.approved', $locked, null, ['as_payment' => $held, 'total_minor' => StoredLines::total($locked->lines), 'frequency' => $locked->frequency], $by);
 
             return $locked;
         });

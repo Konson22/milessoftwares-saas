@@ -1,0 +1,13 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milesoftwares.com/contracts/events/payroll.employee.left.v1.schema.json",
+    "title": "payroll.employee.left, schema_version 1",
+    "description": "Someone's last working day: Payroll pays them up to it (pro-rated) and not after.",
+    "type": "object",
+    "required": ["employee_reference", "left_on"],
+    "additionalProperties": false,
+    "properties": {
+        "employee_reference": { "type": "string", "maxLength": 64 },
+        "left_on": { "type": "string", "format": "date" }
+    }
+}

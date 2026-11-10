@@ -25,6 +25,7 @@
 | HR H1 Staff records | Done 2026-10-19 |
 | HR H2 Documents | Done 2026-10-19 |
 | HR H3 Leave | Done 2026-10-23 |
+| Payroll P1 `payroll-app` (people, pay, rules, runs, payslips, events to Finance, from HR) | Built 2026-11-09, tests green; not yet run in a browser or registered on the platform |
 | Finance F1 Periods and close | Done 2026-10-20 |
 | Finance F2 Reports | Done 2026-10-20 |
 | Finance F3 Bank reconciliation | Done 2026-10-20 |
@@ -33,13 +34,57 @@
 | Finance F6 Multicurrency | Done 2026-10-20 |
 | Finance F7 Budgets | Done 2026-10-20 |
 | Finance F8 Fixed assets | Done 2026-10-20 |
-| Finance F11 Roles and approvals | Built 2026-11-04, not yet checked in a browser |
+| Finance F11 Roles and approvals | Built 2026-11-04, not yet checked in a browser. Catalog 1.10.0 (Bookkeeper retired, requests only, audit trail, admin dashboard) built 2026-11-10, uncommitted, not run live |
+| Finance F12 Petty cash (imprest funds, vouchers with receipts, checks, counts, top-ups through payment requests; catalog 1.11.0). Projects' boxes move in (`finance.petty_cash.transferred`, `petty-cash:move-to-finance`); no feed back to project budgets | Built 2026-11-10, tests green; uncommitted, not migrated, not run in a browser |
 | Restaurant T0 Application | Done 2026-10-25 |
 | Restaurant T1 Menu, tables, orders, kitchen and bills | Done 2026-10-25 |
 
 Decisions accepted 2026-10-16: D1 → `docs/adr/0003-erp-workspace-application.md`,
 D2 → `docs/adr/0004-companies-as-organizations.md`. Accepted 2026-10-19: D3 →
-`docs/adr/0005-hr-and-payroll-application.md` (HR phases: `hr-roadmap.md`).
+`docs/adr/0005-hr-and-payroll-application.md` (HR phases: `hr-roadmap.md`). Accepted
+2026-11-09: Payroll as its own module, `docs/adr/0008-payroll-separate-application.md`.
+
+## Payroll P1 — 2026-11-09 (local, Windows)
+
+**Implemented:**
+- `payroll-app` from `templates/product-app` (port 9200), registry `payroll`, kind `shared_module`,
+  status `beta`; catalog 1.0.0: 8 permissions, roles Payroll clerk / officer / approver / manager,
+  SoD prepare ↔ approve (`warn`; refused in code for the same run).
+- Migration `2026_11_09_100000_create_payroll_tables`: employees (encrypted payment details),
+  employee_pay (append-only by use), pay_components, employee_components, statutory_rules,
+  timesheet_entries, payroll_runs (PostgreSQL CHECK: earnings = net + tax + employee social
+  security + deductions), payslips (PostgreSQL trigger: no change once the run is approved),
+  shared_module_inbox, document_numbers.
+- `App\Payroll\Calculator` (progressive bands, social security with cap, half-up rounding once
+  per figure), `Runs` (prepare, recalculate, discard, approve, paid; outbox to Finance), `Staff`,
+  `ApplyEvent` (`payroll.employee.joined`/`.left`, `payroll.timesheet.submitted`), `Presets`
+  (South Sudan, to confirm locally).
+- Pages: home, people (list, add, person: work, pay history, allowances and deductions, paid
+  into), payroll runs (prepare, run with approval and payment, printable payslip), settings.
+- Finance: `finance.payroll.posted` / `.paid` in `PostEvent`; system accounts 2210, 2300, 2310,
+  2320, 6100 (key added), 6110; `ChartOfAccounts::payrollAccount()` adopts an older chart's 6100.
+- HR: `App\Support\PayrollSync` records `payroll.employee.joined` on hire, work-detail change and
+  move, `payroll.employee.left` on leaving, only while `PLATFORM_PAYROLL_EVENTS_URL` is set.
+- Central: `erp-products.json` product `payroll` (Payroll required; HR, Finance optional),
+  Payroll optional in Education and NGO. Contracts: four new schemas. Ops: nginx, php-fpm, local
+  proxy, CI job (PostgreSQL).
+
+**Verified:**
+- Payroll: Pest 28 passed on SQLite (1 PostgreSQL-only skipped), 29 passed on PostgreSQL;
+  PHPStan 0; Pint; `vp check`; `tsc`; build. PostgreSQL `migrate`, `migrate:rollback --step=1`,
+  `migrate`.
+- Finance: Pest 204 passed, 1 skipped (3 new). PHPStan reports one error that was there before:
+  `routes/console.php:26` reads `Workspace::$slug`, dropped 2026-11-01.
+- HR: Pest 42 (2 new); PHPStan 0. Central: Products and Marketing tests, 103 passed.
+
+**Known limitations / next slices:**
+- Not registered on the platform or run in a browser yet (`platform:local-product payroll-app`).
+- South Sudan tax bands and pension rates come from published summaries, not the Act: confirm
+  locally before a live run.
+- Pharmacy, Retail and Restaurant do not list Payroll as optional yet (the product sync would keep
+  them planned on a server without Payroll); add it once Payroll is deployed.
+- No payslip PDF, salary advances or loans, adjustment runs, bank files, self-service, or branch
+  split of the journal.
 
 ## Phase 1.1 — 2026-10-16 (local, Windows)
 

@@ -1,0 +1,62 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milesoftwares.com/contracts/events/finance.grant.received.v1.schema.json",
+    "title": "finance.grant.received, schema_version 1",
+    "description": "A payment received from a funder under a grant: Dr bank (or where it was paid into), Cr Grant income. Amounts are integers in the currency's minor unit.",
+    "type": "object",
+    "required": [
+        "reference",
+        "grant_reference",
+        "received_on",
+        "currency",
+        "amount_minor"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "reference": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "The product's id for the payment."
+        },
+        "grant_reference": {
+            "type": "string",
+            "maxLength": 64
+        },
+        "grant_title": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "maxLength": 255
+        },
+        "funder": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "maxLength": 255
+        },
+        "received_on": {
+            "type": "string",
+            "format": "date"
+        },
+        "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$",
+            "description": "Any currency: Finance converts it at its rate for the day, and the event waits for one."
+        },
+        "amount_minor": {
+            "type": "integer",
+            "minimum": 1
+        },
+        "method": {
+            "enum": [
+                "bank_transfer",
+                "cash",
+                "mobile_money",
+                null
+            ],
+            "description": "Bank transfer when null."
+        }
+    }
+}

@@ -33,9 +33,11 @@ class SyncProducts extends Command
         foreach ($products as $index => $definition) {
             $label = is_array($definition) && is_string($definition['code'] ?? null) ? $definition['code'] : "#{$index}";
 
-            // A released product whose applications this deployment does not
-            // run (yet) stays coming soon here instead of failing the sync.
-            $missing = is_array($definition) ? $this->unregistered($definition) : [];
+            // A released product whose required applications this deployment
+            // does not run (yet) stays coming soon here instead of failing the
+            // sync. A missing optional one (an add-on such as Payroll) is only
+            // left out: the product stays on sale without it.
+            $missing = is_array($definition) ? $this->unregisteredRequired($definition) : [];
             if ($missing !== [] && ($definition['status'] ?? null) !== ProductStatus::Planned->value) {
                 $this->line("  {$label}: ".implode(', ', $missing).' not registered here, kept planned.');
                 $definition['status'] = ProductStatus::Planned->value;
@@ -64,9 +66,10 @@ class SyncProducts extends Command
      * @param  array<mixed>  $definition
      * @return list<string>
      */
-    private function unregistered(array $definition): array
+    private function unregisteredRequired(array $definition): array
     {
-        $codes = array_values(array_filter(array_column(is_array($definition['applications'] ?? null) ? $definition['applications'] : [], 'code'), 'is_string'));
+        $entries = array_filter(is_array($definition['applications'] ?? null) ? $definition['applications'] : [], fn ($entry) => is_array($entry) && ($entry['requirement'] ?? null) === 'required');
+        $codes = array_values(array_filter(array_column($entries, 'code'), 'is_string'));
 
         return array_values(array_diff($codes, Application::query()->whereIn('code', $codes)->pluck('code')->all()));
     }

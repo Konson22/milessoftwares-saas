@@ -5,17 +5,20 @@ namespace App\Finance;
 use App\Enums\AccountType;
 use App\Enums\BankKind;
 use App\Models\Account;
+use App\Models\AuditEvent;
 use App\Models\BankStatement;
 use App\Models\BankStatementLine;
 use App\Models\Budget;
 use App\Models\DepreciationRun;
 use App\Models\DimensionValue;
 use App\Models\FiscalPeriod;
+use App\Models\FiscalYear;
 use App\Models\Journal;
 use App\Models\JournalDraft;
 use App\Models\JournalLine;
 use App\Models\PaymentRequest;
 use App\Models\RecurringJournal;
+use App\Models\Workspace;
 use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
@@ -91,6 +94,46 @@ class Dashboards
             'ledger' => $journals ? $this->ledgerActivity($today->startOfMonth(), $today) : null,
             'advances' => $reports ? $this->advances() : null,
             'close' => $journals ? $this->closingTasks($today, $fixedAssets) : null,
+        ];
+    }
+
+    /**
+     * Setup and controls, for administrators: no balances, no transactions.
+     *
+     * @param  Closure(string): bool  $can
+     * @return array<string, mixed>
+     */
+    public function admin(Closure $can): array
+    {
+        $workspace = Workspace::current();
+        $rules = $can('finance.approvals.view') || $can('finance.approvals.configure');
+        $accounts = $can('finance.accounts.view');
+
+        return [
+            'rules' => $rules ? [
+                'paymentThresholdMinor' => $workspace?->payment_approval_threshold_minor,
+                'paymentReview' => $workspace->payment_review ?? false,
+                'journalApproval' => $workspace->journal_approval ?? false,
+                'journalThresholdMinor' => $workspace?->journal_approval_threshold_minor,
+            ] : null,
+            'chart' => $accounts ? [
+                'active' => Account::query()->where('active', true)->count(),
+                'inactive' => Account::query()->where('active', false)->count(),
+                'banks' => Account::query()->banks()->count(),
+                'dimensions' => DimensionValue::query()->count(),
+            ] : null,
+            'books' => [
+                'years' => FiscalYear::query()->count(),
+                'lockedUntil' => FiscalPeriod::query()->whereNotNull('locked_at')->max('ends_on'),
+            ],
+            'audit' => $can('finance.audit.view') ? AuditEvent::query()->with('actor')->orderByDesc('created_at')->limit(8)->get()
+                ->map(fn (AuditEvent $event) => [
+                    'id' => $event->id,
+                    'at' => $event->created_at->toIso8601String(),
+                    'by' => $event->actor?->name,
+                    'action' => $event->action,
+                    'subject' => $event->subject_label ?? $event->subject_type,
+                ])->values()->all() : null,
         ];
     }
 

@@ -4,17 +4,16 @@ import { trial } from '@/routes';
  * Buttons shared by links across the public site. Links, not <Button>,
  * because most of them navigate (some to another host).
  *
- * Clean and light, in the logo's colours only (no gradients): white and
- * soft-blue surfaces, the logo blue for the main action, links and
- * icons, deep navy for the closing band (see the site-* colours in
- * resources/css/app.css). Squarer corners than pills, so they line up with
- * the rest of the layout.
+ * Clean and light, in the logo's colours: white surfaces, charcoal type,
+ * the logo cyan for shapes, and that cyan darkened for the main action
+ * so the label stays readable. Squarer corners than pills, so they line
+ * up with the rest of the layout.
  */
 const base =
     'inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold transition-[color,background-color,border-color,box-shadow] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2';
 
 export const button = {
-    /** Main action: solid blue (the logo blue, darkened to 5.3:1 for white text). */
+    /** Main action: the logo cyan, darkened so white text clears 4.5:1. */
     primary: `${base} bg-site-accent-ink text-white shadow-sm shadow-site-accent-ink/25 hover:bg-site-accent-deep focus-visible:outline-site-highlight`,
     /** Strong secondary action on light. */
     dark: `${base} bg-site-navy text-white hover:bg-site-night focus-visible:outline-site-navy`,
@@ -62,14 +61,13 @@ export const railItem =
 export const iconChip =
     'bg-site-accent-ink inline-flex shrink-0 items-center justify-center rounded-xl text-white';
 
-/** A solid navy band: headings, labels and links inside switch to their light forms. */
+/** A solid charcoal band: headings, labels and links inside switch to their light forms. */
 export const darkBand =
     'site-dark relative isolate overflow-hidden bg-site-navy text-slate-300';
 
 /**
  * Colour pairs for icon boxes, taken in turn by a row of features: the
- * logo blue on two tints (a navy tint read
- * as grey); the icon keeps 3:1 on it.
+ * logo cyan on a pale wash. The icon keeps 3:1 on it.
  */
 export const tints = [
     'bg-site-accent/10 text-site-accent-ink in-[.site-dark]:bg-white/10 in-[.site-dark]:text-white',

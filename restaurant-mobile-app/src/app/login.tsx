@@ -8,19 +8,22 @@ import { ArtBackground, BrandMark } from '@/components/art-background';
 import { KeyboardScroll } from '@/components/keyboard-scroll';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { GoogleButton } from '@/components/ui/google-button';
 import { Banner } from '@/components/ui/misc';
 import { useKeyboardHeight } from '@/hooks/use-keyboard';
 import { errorMessage } from '@/lib/api/client';
-import { NeedsBrowser, SignInCancelled } from '@/lib/auth/tokens';
+import { googleAvailable, NeedsBrowser, SignInCancelled } from '@/lib/auth/tokens';
 import { colors } from '@/lib/theme';
 import { useAuth, type SignInWith } from '@/store/auth';
 
 /**
  * Online: sign in with the platform, email and password here (and a
  * two-step code when the account has one), no workspace address. The
- * person's restaurant opens; in more than one, they choose which next. The
- * platform's own page in the browser stays for Google and for accounts that
- * need something done there first.
+ * person's restaurant opens; in more than one, they choose which next; with
+ * none yet, they create one, still signed in. Google signs in natively (the
+ * device's account picker). The platform's own page in the browser stays for
+ * accounts that need something done there first, and for Google in a build
+ * without Google's client IDs.
  */
 export default function LoginScreen() {
   const signIn = useAuth((s) => s.signIn);
@@ -186,14 +189,19 @@ export default function LoginScreen() {
                 loading={busy === 'password'}
                 disabled={!!busy}
               />
-              <Button
-                title={needsBrowser ? 'Continue in the browser' : 'Google or the browser'}
-                variant="glass"
-                icon="globe-outline"
-                onPress={() => submit({ with: 'browser' })}
-                loading={busy === 'browser'}
-                disabled={!!busy}
-              />
+              {googleAvailable() && (
+                <GoogleButton onPress={() => submit({ with: 'google' })} loading={busy === 'google'} disabled={!!busy} />
+              )}
+              {(needsBrowser || !googleAvailable()) && (
+                <Button
+                  title={needsBrowser ? 'Continue in the browser' : 'Google or the browser'}
+                  variant="glass"
+                  icon="globe-outline"
+                  onPress={() => submit({ with: 'browser' })}
+                  loading={busy === 'browser'}
+                  disabled={!!busy}
+                />
+              )}
               <View className="flex-row flex-wrap justify-center pt-1">
                 <Text className="text-sm text-brand-100">New to Miles? </Text>
                 <Pressable accessibilityRole="link" hitSlop={8} disabled={!!busy} onPress={() => router.push('/create-business')}>

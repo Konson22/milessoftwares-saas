@@ -20,7 +20,17 @@ JSON Schemas in `contracts/events/`:
 | `finance.stock.adjusted.v1.schema.json`      | opening stock, count, write-off at cost |
 | `finance.cash.counted.v1.schema.json`        | till over or short            |
 | `finance.cash.moved.v1.schema.json`          | till cash banked, from the bank, paid out |
+| `finance.payroll.posted.v1.schema.json`      | approved payroll run, totals only (from Payroll) |
+| `finance.payroll.paid.v1.schema.json`        | payroll net pay paid out (from Payroll) |
+| `finance.project_expense.paid.v1.schema.json` | spending paid, by cost category and project (from Projects) |
+| `finance.project_expense.voided.v1.schema.json` | that payment taken back (from Projects) |
+| `finance.petty_cash.transferred.v1.schema.json` | a petty cash box moved into a Finance fund (from Projects) |
+| `finance.grant.received.v1.schema.json`      | grant payment from a funder (from Projects) |
+| `finance.staff_advance.issued.v1.schema.json` | advance paid out to staff (from Projects) |
+| `finance.staff_advance.settled.v1.schema.json` | advance returned or written off (from Projects) |
 | `hr.employee.joined.v1.schema.json`          | a person starts working       |
+| `payroll.employee.joined.v1.schema.json`     | someone to pay, or their work details changed |
+| `payroll.employee.left.v1.schema.json`       | their last working day        |
 | `payroll.timesheet.submitted.v1.schema.json` | hours worked                  |
 
 ```json
@@ -47,8 +57,13 @@ JSON Schemas in `contracts/events/`:
 - **Sensitive HR and payroll data never travels in events**: pay, rates, bank details, identity
   numbers, dates of birth, health. The envelope validator rejects these keys at any depth
   (`Envelope::SENSITIVE_KEYS`); such data is entered inside the HR or Payroll module itself.
-- HR and Payroll are one module (`hr-app`, ADR-0005): `hr.*` and `payroll.*` events go to
-  audience `hr`.
+- Each module is its own audience: `finance.*` to `finance`, `hr.*` to `hr`, `payroll.*` to
+  `payroll` (`payroll-app`, [ADR-0008](adr/0008-payroll-separate-application.md), which replaced
+  ADR-0005's single HR & Payroll module). Payroll is a sender too: approved runs reach Finance as
+  `finance.payroll.posted`. HR sends `payroll.employee.joined` / `.left` on every hire, change
+  and leaving when `PLATFORM_PAYROLL_EVENTS_URL` is set; any product that keeps staff may send the
+  same events and `payroll.timesheet.submitted` (with `employee_reference` its own id for the
+  person, or their Payroll number).
 - A breaking payload change is a new `schema_version`; receivers support old versions for a
   published deprecation period.
 

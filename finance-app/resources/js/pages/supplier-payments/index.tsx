@@ -17,7 +17,8 @@ import {
 } from '@miles/ui/components/ui/table';
 import { useCan } from '@/lib/access';
 import { show as showJournal } from '@/routes/journals';
-import { create, index } from '@/routes/supplier-payments';
+import { create } from '@/routes/payment-requests';
+import { index } from '@/routes/supplier-payments';
 import { show as showSupplier } from '@/routes/suppliers';
 
 type Props = {
@@ -54,11 +55,13 @@ export default function SupplierPayments({
             <PageHeader
                 title="Supplier payments"
                 actions={
-                    can('finance.payables.manage') && (
+                    can('finance.payments.prepare') && (
                         <Button asChild>
-                            <Link href={create()}>
+                            <Link
+                                href={create({ query: { kind: 'supplier' } })}
+                            >
                                 <Banknote className="size-4" aria-hidden />
-                                Pay a supplier
+                                Request a supplier payment
                             </Link>
                         </Button>
                     )

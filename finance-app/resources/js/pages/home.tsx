@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { AccountingDashboard } from '@/components/accounting-dashboard';
 import type { AccountingDashboardData } from '@/components/accounting-dashboard';
+import { AdminDashboard } from '@/components/admin-dashboard';
+import type { AdminDashboardData } from '@/components/admin-dashboard';
 import { Amount } from '@/components/amount';
 import { FinanceDashboard } from '@/components/finance-dashboard';
 import type { FinanceDashboardData } from '@/components/finance-dashboard';
@@ -38,11 +40,12 @@ import {
 } from '@/routes/journals';
 import { profitAndLoss } from '@/routes/reports';
 
-type DashboardView = 'finance' | 'accounting';
+type DashboardView = 'finance' | 'accounting' | 'admin';
 
 const VIEW_LABELS: Record<DashboardView, string> = {
     finance: 'Finance',
     accounting: 'Accounting',
+    admin: 'Administration',
 };
 
 type Props = {
@@ -50,6 +53,7 @@ type Props = {
     view: DashboardView | null;
     finance: FinanceDashboardData | null;
     accounting: AccountingDashboardData | null;
+    admin: AdminDashboardData | null;
     cash: { id: string; name: string; balanceMinor: number }[] | null;
     receivable: { outstandingMinor: number; overdue: number } | null;
     payable: {
@@ -82,6 +86,7 @@ export default function Home({
     view,
     finance,
     accounting,
+    admin,
     cash,
     receivable,
     payable,
@@ -146,6 +151,7 @@ export default function Home({
                     payable={payable}
                 />
             )}
+            {view === 'admin' && admin && <AdminDashboard data={admin} />}
 
             {view === null && (
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

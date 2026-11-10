@@ -52,6 +52,19 @@ class Account extends Model
 
     public const INVENTORY = 'inventory';
 
+    // Payroll (finance.payroll.posted, finance.payroll.paid).
+    public const SALARIES = 'salaries';
+
+    public const EMPLOYER_CONTRIBUTIONS = 'employer_contributions';
+
+    public const PAYE = 'paye';
+
+    public const SALARIES_PAYABLE = 'salaries_payable';
+
+    public const SOCIAL_SECURITY_PAYABLE = 'social_security_payable';
+
+    public const PAYROLL_DEDUCTIONS = 'payroll_deductions';
+
     public const PAYABLE = 'payable';
 
     public const TAX = 'tax';
@@ -79,6 +92,21 @@ class Account extends Model
 
     /** Takes cash paid out of a till for an expense when no account is named. */
     public const OTHER_EXPENSES = 'other_expenses';
+
+    /** Grants received (from Projects): made on first use (ChartOfAccounts::onDemand). */
+    public const GRANT_INCOME = 'grant_income';
+
+    /** Project costs by category (from Projects), made on first use. */
+    public const PROJECT_MATERIALS = 'project_materials';
+
+    public const PROJECT_EQUIPMENT = 'project_equipment';
+
+    public const PROJECT_TRAVEL = 'project_travel';
+
+    public const PROJECT_SUBCONTRACT = 'project_subcontract';
+
+    /** Staff advances nobody will account for (from Projects), made on first use. */
+    public const ADVANCES_WRITTEN_OFF = 'advances_written_off';
 
     protected $guarded = ['organization_id', 'system_key'];
 
@@ -150,5 +178,18 @@ class Account extends Model
     public function lines(): HasMany
     {
         return $this->hasMany(JournalLine::class);
+    }
+
+    /**
+     * What a bank or cash account holds, in its own currency: the books'
+     * debits less credits, or the foreign amounts of its lines.
+     */
+    public function heldMinor(): int
+    {
+        if ($this->currency !== null) {
+            return (int) $this->lines()->sum('currency_minor');
+        }
+
+        return (int) $this->lines()->sum('debit_minor') - (int) $this->lines()->sum('credit_minor');
     }
 }

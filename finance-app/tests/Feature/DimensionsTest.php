@@ -9,13 +9,15 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 const DIMENSION_KEEPER = [
     'finance.accounts.view', 'finance.accounts.manage', 'finance.journals.view', 'finance.journals.post', 'finance.journals.reverse',
-    'finance.payables.view', 'finance.payables.manage', 'finance.reports.view',
+    'finance.payables.view', 'finance.bills.manage', 'finance.reports.view',
 ];
 
 beforeEach(function () {
     $this->platform()->organization('acme');
     $this->publishEventKeys();
     $this->setUpFinance('acme');
+    // Below the limit, money leaving a bank posts directly: these books are set up with it.
+    $this->paymentLimit('acme');
     $this->actingAsMember('acme', DIMENSION_KEEPER);
 });
 

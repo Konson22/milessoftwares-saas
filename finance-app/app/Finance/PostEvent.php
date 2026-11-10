@@ -3,16 +3,22 @@
 namespace App\Finance;
 
 use App\Enums\AccountType;
+use App\Enums\BankKind;
 use App\Enums\PaymentMethod;
 use App\Models\Account;
 use App\Models\Bill;
 use App\Models\CustomerPayment;
+use App\Models\DimensionValue;
 use App\Models\Invoice;
 use App\Models\Journal;
 use App\Models\JournalLine;
+use App\Models\PettyCashFund;
 use App\Models\Supplier;
 use App\Models\SupplierCredit;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Miles\SharedModuleKit\Envelope;
 
 /**
@@ -37,12 +43,39 @@ use Miles\SharedModuleKit\Envelope;
  *   finance.credit_note.received
  *                             Dr payable           Cr inventory (or the line's account) (+ tax),
  *                                                  set against its bill
+ *   finance.payroll.posted    Dr salaries, employer social security
+ *                             Cr PAYE, social security payable, other deductions
+ *                             payable, salaries payable (run totals only)
+ *   finance.payroll.paid      Dr salaries payable  Cr bank/cash/mobile money
+ *   finance.project_expense.paid
+ *                             Dr the cost category (project dimension)
+ *                                                  Cr bank/cash/mobile money/employee advances
+ *   finance.project_expense.voided  the mirror of that journal
+ *   finance.grant.received    Dr bank/cash/mobile money  Cr grant income
+ *   finance.staff_advance.issued   Dr employee advances  Cr bank/cash/mobile money
+ *   finance.staff_advance.settled  returned: Dr bank/cash/mobile money  Cr employee advances;
+ *                             written off: Dr advances written off  Cr employee advances
+ *   finance.petty_cash.transferred  a Projects petty cash box becomes a Finance fund on
+ *                             an account of its own: Dr that account  Cr cash (where its
+ *                             till events had gone)
  *
  * Sales carrying a cost also move it: Dr cost of goods sold / Cr inventory
  * (returns put back on the shelf, the other way round).
  */
 class PostEvent
 {
+    /**
+     * Events whose amounts may be in another currency than the books': each
+     * is converted at Finance's rate for its day (and waits for one).
+     */
+    public const CONVERTED = [
+        'finance.project_expense.paid',
+        'finance.grant.received',
+        'finance.staff_advance.issued',
+        'finance.staff_advance.settled',
+        'finance.petty_cash.transferred',
+    ];
+
     public function __construct(
         private readonly Ledger $ledger,
         private readonly ChartOfAccounts $chart,
@@ -67,6 +100,14 @@ class PostEvent
             'finance.cash.moved.v1' => $this->cashMoved($event),
             'finance.bill.received.v1' => $this->billReceived($event),
             'finance.credit_note.received.v1' => $this->creditNoteReceived($event),
+            'finance.payroll.posted.v1' => $this->payrollPosted($event),
+            'finance.payroll.paid.v1' => $this->payrollPaid($event),
+            'finance.project_expense.paid.v1' => $this->projectExpensePaid($event),
+            'finance.project_expense.voided.v1' => $this->projectExpenseVoided($event),
+            'finance.grant.received.v1' => $this->grantReceived($event),
+            'finance.staff_advance.issued.v1' => $this->staffAdvanceIssued($event),
+            'finance.staff_advance.settled.v1' => $this->staffAdvanceSettled($event),
+            'finance.petty_cash.transferred.v1' => $this->pettyCashTransferred($event),
             default => throw new UnsupportedEvent("Finance does not handle {$event->eventType} v{$event->schemaVersion}."),
         };
     }
@@ -338,6 +379,94 @@ class PostEvent
         ], $this->source($event, $p['reference']));
     }
 
+    /**
+     * A petty cash box Projects kept, moved into a Finance fund
+     * (App\Finance\PettyCash): a petty cash account of its own, the fund with
+     * no custodian until a manager names one after counting the cash, and what
+     * the box held moved out of Cash, where Projects' till events had put it.
+     * Its history (payments and receipts) stays in Projects.
+     */
+    private function pettyCashTransferred(Envelope $event): void
+    {
+        $p = Validator::validate($event->payload, [
+            'reference' => ['required', 'string', 'max:64'],
+            'name' => ['required', 'string', 'max:255'],
+            'currency' => ['required', 'string', 'size:3'],
+            'float_minor' => ['required', 'integer', 'min:1'],
+            'held_minor' => ['required', 'integer', 'min:0'],
+            'moved_on' => ['required', 'date_format:Y-m-d'],
+            'custodian' => ['nullable', 'string', 'max:255'],
+        ]);
+        $p['currency'] = strtoupper((string) $p['currency']);
+        $reference = "projects:petty-cash:{$p['reference']}";
+        if (PettyCashFund::query()->where('source_reference', $reference)->exists()) {
+            return;
+        }
+
+        $currency = $p['currency'] === Money::currency() ? null : (string) $p['currency'];
+        $name = mb_substr((string) $p['name'], 0, 100);
+        if (PettyCashFund::query()->where('name', $name)->exists()) {
+            $name .= ' (Projects)';
+        }
+
+        $account = new Account([
+            'code' => $this->freePettyCashCode(),
+            'name' => mb_substr("Petty cash: {$name}", 0, 255),
+            'type' => AccountType::Asset,
+            'bank_kind' => BankKind::PettyCash,
+            'currency' => $currency,
+            'description' => 'Moved in from Projects.',
+            'active' => true,
+        ]);
+        $account->save();
+
+        $fund = PettyCashFund::query()->create([
+            'name' => $name,
+            'account_id' => $account->id,
+            'custodian_id' => null,
+            'float_minor' => (int) $p['float_minor'],
+            'status' => PettyCashFund::ACTIVE,
+            'created_by' => null,
+            'source_reference' => $reference,
+        ]);
+
+        $held = (int) $p['held_minor'];
+        $journal = null;
+        if ($held > 0) {
+            $on = CarbonImmutable::parse($p['moved_on']);
+            $books = $this->inBooks($held, (string) $p['currency'], $on);
+            $journal = $this->ledger->post($on, mb_substr("Petty cash {$name}: moved from Projects", 0, 255), [
+                ['account' => $account, 'debit' => $books, 'currency' => $currency === null ? null : ['code' => $currency, 'amount' => $held]],
+                ['account' => Account::system(Account::CASH), 'credit' => $books],
+            ], $this->source($event, (string) $p['reference']));
+        }
+
+        app(Audit::class)->record('petty_cash.fund_moved_in', $fund, null, [
+            'name' => $name,
+            'account' => $account->code,
+            'currency' => $currency,
+            'float_minor' => $fund->float_minor,
+            'held_minor' => $held,
+            'custodian_in_projects' => $p['custodian'] ?? null,
+            'journal' => $journal?->number,
+        ]);
+    }
+
+    /**
+     * The first free code from 1041 for a new petty cash account.
+     */
+    private function freePettyCashCode(): string
+    {
+        $taken = Account::query()->whereBetween('code', ['1041', '1099'])->pluck('code')->all();
+        for ($code = 1041; $code <= 1099; $code++) {
+            if (! in_array((string) $code, $taken, true)) {
+                return (string) $code;
+            }
+        }
+
+        throw new UnsupportedEvent('No free account code from 1041 to 1099 for a petty cash account.');
+    }
+
     private function cashMoved(Envelope $event): void
     {
         $p = $event->payload;
@@ -487,6 +616,290 @@ class PostEvent
     /**
      * Which account takes a payment made this way.
      */
+    /**
+     * One summarised journal for an approved payroll run: totals only, never
+     * one person's pay (the shared-module kit refuses pay keys).
+     */
+    private function payrollPosted(Envelope $event): void
+    {
+        $p = Validator::validate($event->payload, [
+            'run_reference' => ['required', 'string', 'max:64'],
+            'period_start' => ['required', 'date_format:Y-m-d'],
+            'period_end' => ['required', 'date_format:Y-m-d'],
+            'earnings_minor' => ['required', 'integer', 'min:0'],
+            'employer_contributions_minor' => ['required', 'integer', 'min:0'],
+            'income_tax_minor' => ['required', 'integer', 'min:0'],
+            'social_security_minor' => ['required', 'integer', 'min:0'],
+            'other_deductions_minor' => ['required', 'integer', 'min:0'],
+            'payable_minor' => ['required', 'integer', 'min:0'],
+        ]);
+
+        $debits = [
+            [Account::SALARIES, (int) $p['earnings_minor']],
+            [Account::EMPLOYER_CONTRIBUTIONS, (int) $p['employer_contributions_minor']],
+        ];
+        $credits = [
+            [Account::PAYE, (int) $p['income_tax_minor']],
+            [Account::SOCIAL_SECURITY_PAYABLE, (int) $p['social_security_minor']],
+            [Account::PAYROLL_DEDUCTIONS, (int) $p['other_deductions_minor']],
+            [Account::SALARIES_PAYABLE, (int) $p['payable_minor']],
+        ];
+        if (array_sum(array_column($debits, 1)) !== array_sum(array_column($credits, 1))) {
+            throw ValidationException::withMessages(['payable_minor' => 'Earnings and employer contributions must equal what is withheld plus what is payable.']);
+        }
+
+        $lines = [];
+        foreach ($debits as [$key, $amount]) {
+            if ($amount > 0) {
+                $lines[] = ['account' => $this->chart->payrollAccount($key), 'debit' => $amount];
+            }
+        }
+        foreach ($credits as [$key, $amount]) {
+            if ($amount > 0) {
+                $lines[] = ['account' => $this->chart->payrollAccount($key), 'credit' => $amount];
+            }
+        }
+        if ($lines === []) {
+            return;
+        }
+
+        $date = CarbonImmutable::parse($p['period_end']);
+        $this->ledger->post($date, "Payroll {$p['run_reference']} ({$date->format('F Y')})", $lines, $this->source($event, $p['run_reference']));
+    }
+
+    private function payrollPaid(Envelope $event): void
+    {
+        $p = Validator::validate($event->payload, [
+            'run_reference' => ['required', 'string', 'max:64'],
+            'amount_minor' => ['required', 'integer', 'min:0'],
+            'method' => ['required', Rule::enum(PaymentMethod::class)],
+        ]);
+        if ((int) $p['amount_minor'] === 0) {
+            return;
+        }
+
+        $this->ledger->post(CarbonImmutable::instance($event->occurredAt)->startOfDay(), "Net pay for payroll {$p['run_reference']}", [
+            ['account' => $this->chart->payrollAccount(Account::SALARIES_PAYABLE), 'debit' => (int) $p['amount_minor']],
+            ['account' => $this->moneyAccount(PaymentMethod::from($p['method'])), 'credit' => (int) $p['amount_minor']],
+        ], $this->source($event, "{$p['run_reference']}-PAID"));
+    }
+
+    /**
+     * Spending on a project paid (or any NGO spending: the project is
+     * optional): Dr the category's account, tagged with the project, Cr where
+     * the money came from. Paid from a staff advance, it comes out of
+     * Employee advances.
+     */
+    private function projectExpensePaid(Envelope $event): void
+    {
+        $p = Validator::validate($event->payload, [
+            'reference' => ['required', 'string', 'max:64'],
+            'paid_on' => ['required', 'date_format:Y-m-d'],
+            'currency' => ['required', 'string', 'size:3'],
+            'amount_minor' => ['required', 'integer', 'min:1'],
+            'description' => ['required', 'string', 'max:255'],
+            'category' => ['required', Rule::in(array_keys(self::PROJECT_CATEGORIES))],
+            'method' => ['required', Rule::in(self::PROJECT_METHODS)],
+            'supplier' => ['nullable', 'string', 'max:255'],
+            'payment_reference' => ['nullable', 'string', 'max:255'],
+            'expense_account' => ['nullable', 'string', 'max:32'],
+            'project' => ['nullable', 'array'],
+            'project.code' => ['required_with:project', 'string', 'max:32'],
+            'project.name' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $on = CarbonImmutable::parse($p['paid_on']);
+        $amount = $this->inBooks((int) $p['amount_minor'], strtoupper($p['currency']), $on);
+        $project = $this->projectDimension($p['project'] ?? null);
+        $memo = ($project !== null ? "{$project->code}: " : '').$p['description'];
+
+        $this->ledger->post($on, mb_substr($memo, 0, 255), [
+            ['account' => $this->projectCostAccount($p['category'], $p['expense_account'] ?? null), 'debit' => $amount, 'description' => $p['supplier'] ?? null, 'project' => $project],
+            ['account' => $this->projectMoneyAccount($p['method']), 'credit' => $amount, 'description' => $p['payment_reference'] ?? null, 'project' => $project],
+        ], $this->source($event, $p['reference']));
+    }
+
+    /**
+     * The payment taken back out: the mirror of its journal. A void that
+     * arrives before its payment waits for it.
+     */
+    private function projectExpenseVoided(Envelope $event): void
+    {
+        $p = Validator::validate($event->payload, [
+            'reference' => ['required', 'string', 'max:64'],
+            'voided_on' => ['required', 'date_format:Y-m-d'],
+            'reason' => ['required', 'string', 'max:255'],
+        ]);
+
+        $journal = Journal::query()
+            ->where('source_app', $event->sourceApp)
+            ->where('source_type', 'finance.project_expense.paid')
+            ->where('source_reference', $p['reference'])
+            ->first();
+        if ($journal === null) {
+            throw new NotYetPostable("The payment {$p['reference']} has not reached Finance yet.");
+        }
+        if ($journal->reversed_by_id !== null) {
+            return;
+        }
+
+        $this->ledger->reverse($journal, CarbonImmutable::parse($p['voided_on']), mb_substr("Void of {$journal->number}: {$p['reason']}", 0, 255), periods: Periods::MOVE);
+    }
+
+    /**
+     * A grant payment received from a funder: Dr the bank (or where it was
+     * paid into), Cr grant income.
+     */
+    private function grantReceived(Envelope $event): void
+    {
+        $p = Validator::validate($event->payload, [
+            'reference' => ['required', 'string', 'max:64'],
+            'grant_reference' => ['required', 'string', 'max:64'],
+            'grant_title' => ['nullable', 'string', 'max:255'],
+            'funder' => ['nullable', 'string', 'max:255'],
+            'received_on' => ['required', 'date_format:Y-m-d'],
+            'currency' => ['required', 'string', 'size:3'],
+            'amount_minor' => ['required', 'integer', 'min:1'],
+            'method' => ['nullable', Rule::in(['bank_transfer', 'cash', 'mobile_money'])],
+        ]);
+
+        $on = CarbonImmutable::parse($p['received_on']);
+        $amount = $this->inBooks((int) $p['amount_minor'], strtoupper($p['currency']), $on);
+
+        $this->ledger->post($on, mb_substr("Grant {$p['grant_reference']}: payment received".(isset($p['funder']) ? " from {$p['funder']}" : ''), 0, 255), [
+            ['account' => $this->projectMoneyAccount($p['method'] ?? 'bank_transfer'), 'debit' => $amount],
+            ['account' => $this->chart->onDemand(Account::GRANT_INCOME), 'credit' => $amount, 'description' => $p['grant_title'] ?? null],
+        ], $this->source($event, $p['reference']));
+    }
+
+    /**
+     * An advance paid out to a member of staff: an asset until they account
+     * for it. Dr Employee advances, Cr where it was paid from.
+     */
+    private function staffAdvanceIssued(Envelope $event): void
+    {
+        $p = Validator::validate($event->payload, [
+            'advance_reference' => ['required', 'string', 'max:64'],
+            'issued_on' => ['required', 'date_format:Y-m-d'],
+            'currency' => ['required', 'string', 'size:3'],
+            'amount_minor' => ['required', 'integer', 'min:1'],
+            'method' => ['required', Rule::in(['bank_transfer', 'cash', 'mobile_money'])],
+            'held_by' => ['nullable', 'string', 'max:255'],
+            'purpose' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $on = CarbonImmutable::parse($p['issued_on']);
+        $amount = $this->inBooks((int) $p['amount_minor'], strtoupper($p['currency']), $on);
+
+        $this->ledger->post($on, mb_substr("Advance {$p['advance_reference']}".(isset($p['held_by']) ? " to {$p['held_by']}" : ''), 0, 255), [
+            ['account' => $this->chart->advances(), 'debit' => $amount, 'description' => $p['purpose'] ?? null],
+            ['account' => $this->projectMoneyAccount($p['method']), 'credit' => $amount],
+        ], $this->source($event, $p['advance_reference']));
+    }
+
+    /**
+     * What is left of an advance, settled without receipts: cash handed
+     * back (Dr where it went, Cr Employee advances) or written off (Dr Staff
+     * advances written off, Cr Employee advances). Receipts come as
+     * finance.project_expense.paid with method staff_advance.
+     */
+    private function staffAdvanceSettled(Envelope $event): void
+    {
+        $p = Validator::validate($event->payload, [
+            'reference' => ['required', 'string', 'max:64'],
+            'advance_reference' => ['required', 'string', 'max:64'],
+            'settled_on' => ['required', 'date_format:Y-m-d'],
+            'currency' => ['required', 'string', 'size:3'],
+            'amount_minor' => ['required', 'integer', 'min:1'],
+            'kind' => ['required', Rule::in(['returned', 'written_off'])],
+            'method' => ['required_if:kind,returned', 'nullable', Rule::in(['bank_transfer', 'cash', 'mobile_money'])],
+            'note' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $on = CarbonImmutable::parse($p['settled_on']);
+        $amount = $this->inBooks((int) $p['amount_minor'], strtoupper($p['currency']), $on);
+        [$debit, $label] = $p['kind'] === 'returned'
+            ? [$this->projectMoneyAccount((string) $p['method']), 'returned']
+            : [$this->chart->onDemand(Account::ADVANCES_WRITTEN_OFF), 'written off'];
+
+        $this->ledger->post($on, "Advance {$p['advance_reference']}: {$label}", [
+            ['account' => $debit, 'debit' => $amount, 'description' => $p['note'] ?? null],
+            ['account' => $this->chart->advances(), 'credit' => $amount],
+        ], $this->source($event, $p['reference']));
+    }
+
+    /** Projects' cost categories and the accounts they post to. */
+    private const PROJECT_CATEGORIES = [
+        'labour' => Account::SALARIES,
+        'materials' => Account::PROJECT_MATERIALS,
+        'equipment' => Account::PROJECT_EQUIPMENT,
+        'travel' => Account::PROJECT_TRAVEL,
+        'subcontract' => Account::PROJECT_SUBCONTRACT,
+        'other' => Account::OTHER_EXPENSES,
+    ];
+
+    private const PROJECT_METHODS = ['bank_transfer', 'cash', 'mobile_money', 'staff_advance'];
+
+    /**
+     * The account the product named (an active expense or asset account),
+     * else the category's.
+     */
+    private function projectCostAccount(string $category, ?string $code): Account
+    {
+        $named = $code === null ? null : Account::query()
+            ->where('code', $code)
+            ->whereIn('type', [AccountType::Expense, AccountType::Asset])
+            ->where('active', true)
+            ->first();
+
+        return $named ?? $this->chart->onDemand(self::PROJECT_CATEGORIES[$category]);
+    }
+
+    private function projectMoneyAccount(string $method): Account
+    {
+        return $method === 'staff_advance'
+            ? $this->chart->advances()
+            : $this->moneyAccount(PaymentMethod::from($method));
+    }
+
+    /**
+     * The project as an accounting dimension, made on first use (or the one
+     * the accountant already made under that code).
+     *
+     * @param  array<string, mixed>|null  $project
+     */
+    private function projectDimension(?array $project): ?DimensionValue
+    {
+        $code = mb_substr(strtoupper((string) preg_replace('/[^A-Za-z0-9_-]/', '', (string) ($project['code'] ?? ''))), 0, 16);
+        if ($code === '') {
+            return null;
+        }
+
+        return DimensionValue::query()->firstOrCreate(
+            ['kind' => DimensionValue::PROJECT, 'code' => $code],
+            ['name' => mb_substr((string) ($project['name'] ?? $code), 0, 255), 'active' => true],
+        );
+    }
+
+    /**
+     * An amount in the books' currency, at Finance's rate for the day. With
+     * no rate yet the event waits: the product retries once one is added.
+     */
+    private function inBooks(int $minor, string $currency, CarbonImmutable $on): int
+    {
+        if ($currency === Money::currency()) {
+            return $minor;
+        }
+
+        try {
+            $rate = app(Currencies::class)->rate($currency, $on);
+        } catch (ValidationException) {
+            throw new NotYetPostable("No {$currency} rate on or before {$on->toDateString()}: add one under Currencies.");
+        }
+
+        return Currencies::toBooks($minor, $currency, $rate);
+    }
+
     public function moneyAccount(PaymentMethod $method): Account
     {
         return Account::system(match ($method) {

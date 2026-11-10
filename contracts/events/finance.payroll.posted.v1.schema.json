@@ -1,0 +1,50 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milesoftwares.com/contracts/events/finance.payroll.posted.v1.schema.json",
+    "title": "finance.payroll.posted, schema_version 1",
+    "description": "An approved payroll run, as one summarised journal: run totals only, never one person's pay. earnings + employer_contributions = income_tax + social_security + other_deductions + payable. Finance posts Dr Salaries and wages, Dr Employer social security; Cr PAYE, Social security payable, Other payroll deductions payable, Salaries payable, dated the last day of the period.",
+    "type": "object",
+    "required": [
+        "run_reference",
+        "period_start",
+        "period_end",
+        "currency",
+        "headcount",
+        "earnings_minor",
+        "employer_contributions_minor",
+        "income_tax_minor",
+        "social_security_minor",
+        "other_deductions_minor",
+        "payable_minor"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "run_reference": { "type": "string", "maxLength": 64 },
+        "period_start": { "type": "string", "format": "date" },
+        "period_end": { "type": "string", "format": "date" },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "headcount": { "type": "integer", "minimum": 1 },
+        "earnings_minor": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Basic pay and allowances of everyone on the run."
+        },
+        "employer_contributions_minor": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The employer's social security, on top of earnings."
+        },
+        "income_tax_minor": { "type": "integer", "minimum": 0 },
+        "social_security_minor": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Employee and employer shares together: what is owed to the fund."
+        },
+        "other_deductions_minor": { "type": "integer", "minimum": 0 },
+        "payable_minor": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Net pay owed to staff."
+        }
+    }
+}

@@ -22,7 +22,7 @@ import { useCan } from '@/lib/access';
 import { sourceLabel, useMoney } from '@/lib/format';
 import { create as newBill, show as showBill } from '@/routes/bills';
 import { show as showJournal } from '@/routes/journals';
-import { create as pay } from '@/routes/supplier-payments';
+import { create as pay } from '@/routes/payment-requests';
 import { update } from '@/routes/suppliers';
 
 type Props = {
@@ -77,9 +77,9 @@ export default function ShowSupplier({
 }: Props) {
     const can = useCan();
     const money = useMoney();
-    const canManage =
-        can('finance.payables.manage') || can('finance.bills.manage');
-    const canPay = can('finance.payables.manage');
+    const canManage = can('finance.bills.manage');
+    // Paying is a separate duty: a payment request, approved and disbursed.
+    const canPay = can('finance.payments.prepare');
     const [editing, setEditing] = useState(false);
 
     return (
@@ -96,37 +96,54 @@ export default function ShowSupplier({
                 }
                 description={`Owed: ${money(supplier.outstandingMinor)}${supplier.phone ? ` · ${supplier.phone}` : ''}${supplier.email ? ` · ${supplier.email}` : ''}`}
                 actions={
-                    canManage && (
+                    (canManage || canPay) && (
                         <>
-                            <Button
-                                variant="outline"
-                                onClick={() => setEditing((value) => !value)}
-                            >
-                                <Pencil className="size-4" aria-hidden />
-                                Edit
-                            </Button>
-                            <Button variant="outline" asChild>
-                                <Link
-                                    href={newBill({
-                                        query: { supplier: supplier.id },
-                                    })}
-                                >
-                                    <Plus className="size-4" aria-hidden />
-                                    New bill
-                                </Link>
-                            </Button>
+                            {canManage && (
+                                <>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() =>
+                                            setEditing((value) => !value)
+                                        }
+                                    >
+                                        <Pencil
+                                            className="size-4"
+                                            aria-hidden
+                                        />
+                                        Edit
+                                    </Button>
+                                    <Button variant="outline" asChild>
+                                        <Link
+                                            href={newBill({
+                                                query: {
+                                                    supplier: supplier.id,
+                                                },
+                                            })}
+                                        >
+                                            <Plus
+                                                className="size-4"
+                                                aria-hidden
+                                            />
+                                            New bill
+                                        </Link>
+                                    </Button>
+                                </>
+                            )}
                             {canPay && (
                                 <Button asChild>
                                     <Link
                                         href={pay({
-                                            query: { supplier: supplier.id },
+                                            query: {
+                                                kind: 'supplier',
+                                                supplier: supplier.id,
+                                            },
                                         })}
                                     >
                                         <Banknote
                                             className="size-4"
                                             aria-hidden
                                         />
-                                        Pay
+                                        Request payment
                                     </Link>
                                 </Button>
                             )}

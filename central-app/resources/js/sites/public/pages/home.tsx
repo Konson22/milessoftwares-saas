@@ -25,7 +25,6 @@ import Seo, { organization, siteName } from '@/sites/public/components/seo';
 import {
     button,
     container,
-    darkBand,
     display,
     textLink,
 } from '@/sites/public/components/styles';
@@ -86,8 +85,8 @@ export default function MarketingHome({
     return (
         <>
             <Seo
-                title="Business software that works together"
-                description="Miles Global Softwares builds business applications that share one workspace, and tailored software, helping organizations manage operations, connect teams and grow with confidence."
+                title="Run your whole business in one place"
+                description="Pharmacy, retail, finance and HR, connected under one Miles Global Softwares account."
                 canonical={canonical}
                 jsonLd={{
                     '@context': 'https://schema.org',
@@ -105,29 +104,31 @@ export default function MarketingHome({
             />
 
             {/*
-              Sections sit on solid bands, no patterns or gradients: navy,
-              white and soft blue in turn.
+              Full-bleed dark hero. The ground matches the illustration's
+              edges so the picture sits in the page, not in a card. Copy is
+              the left 48%; the picture is the right 52% from the tablet up.
             */}
-            {/* 1. Hero: solid navy, the copy centred. */}
-            <section className={darkBand}>
+            <section className="site-dark relative overflow-hidden bg-[#102d3d]">
                 <div
-                    className={`site-rise ${container} flex flex-col items-center pt-28 pb-16 text-center sm:pt-36 sm:pb-24`}
+                    aria-hidden
+                    className="pointer-events-none absolute top-1/2 right-0 size-[36rem] -translate-y-1/2 rounded-full bg-site-accent/15 blur-3xl"
+                />
+                <div
+                    className={`${container} relative grid items-center gap-8 pt-24 pb-12 sm:pt-28 sm:pb-14 md:grid-cols-[46fr_54fr] md:gap-6 lg:grid-cols-[48fr_52fr] lg:gap-10 lg:pt-32 lg:pb-16`}
                 >
-                    <div className="flex flex-col items-center">
+                    <div>
                         <h1
-                            className={`max-w-3xl text-[2.25rem] leading-[1.05] min-[400px]:text-[2.625rem] sm:text-6xl lg:text-[4rem] ${display}`}
+                            className={`site-rise max-w-xl text-[2.125rem] leading-[1.08] sm:text-[2.625rem] md:text-[2rem] lg:text-[2.75rem] xl:text-[3.5rem] ${display}`}
                         >
-                            Business software{' '}
-                            <Accent>that works together.</Accent>
+                            <span className="block">Run your whole business</span>
+                            <Accent>in one place</Accent>
                         </h1>
-                        <p className="mt-6 max-w-2xl text-base leading-relaxed text-pretty text-slate-300 sm:text-lg">
-                            Miles Global Softwares builds powerful business
-                            applications and tailored software solutions to help
-                            organizations manage operations, connect teams and
-                            grow with confidence.
+                        <p className="site-rise mt-5 max-w-[35rem] text-base leading-relaxed text-pretty text-slate-300 [animation-delay:120ms] sm:text-[1.0625rem] lg:text-lg">
+                            Pharmacy, retail, finance and HR, connected under
+                            one Miles Global Softwares account.
                         </p>
-                        <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-                            <a href="#products" className={button.light}>
+                        <div className="site-rise mt-8 flex flex-wrap items-center gap-3 [animation-delay:220ms]">
+                            <a href="#products" className={button.primary}>
                                 Explore Products
                                 <ArrowRight className="size-4" aria-hidden />
                             </a>
@@ -139,6 +140,16 @@ export default function MarketingHome({
                             </Link>
                         </div>
                     </div>
+                    <img
+                        src="/images/home/software-ecosystem.webp"
+                        alt="Connected business software: analytics, cloud, operations, workflows, security, and desktop and mobile apps around one hub."
+                        width={1024}
+                        height={768}
+                        decoding="async"
+                        fetchPriority="high"
+                        sizes="(min-width: 768px) 52vw, 100vw"
+                        className="site-rise order-first mx-auto w-full max-w-lg [animation-delay:160ms] [mask-image:radial-gradient(ellipse_at_center,black_86%,transparent_100%)] md:order-none md:max-w-none"
+                    />
                 </div>
             </section>
 

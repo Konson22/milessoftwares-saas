@@ -9,6 +9,7 @@ import ComingSoon from './coming-soon';
 import Contact from './contact';
 import Downloads from './downloads';
 import MarketingHome from './home';
+import FinancePage from './finance';
 import LandingPage from './landing';
 import Platform from './platform';
 import Pricing from './pricing';
@@ -201,6 +202,32 @@ const pages: [string, ReactNode][] = [
             plans={[plan]}
             trialDays={60}
             canonical="https://example.test/products/retail"
+        />,
+    ],
+    [
+        'finance',
+        <FinancePage
+            key="finance"
+            product={{
+                ...entry,
+                slug: 'finance',
+                category: 'application',
+                name: 'Finance & Accounting',
+                url: 'apps/finance',
+                status: 'available',
+                includes: [],
+                trial: 'finance',
+                offering: {
+                    platforms: ['web'],
+                    connectivity: ['online'],
+                    licensing: ['subscription'],
+                    desktop: [],
+                    mobile: [],
+                },
+            }}
+            plans={[plan, { ...plan, code: 'bundle', name: 'Bundle', isBundle: true }]}
+            trialDays={60}
+            canonical="https://example.test/apps/finance"
         />,
     ],
     [

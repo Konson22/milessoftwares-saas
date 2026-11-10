@@ -1,0 +1,57 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milesoftwares.com/contracts/events/finance.staff_advance.issued.v1.schema.json",
+    "title": "finance.staff_advance.issued, schema_version 1",
+    "description": "An advance paid out to a member of staff, an asset until they account for it: Dr Employee advances, Cr bank, cash or mobile money. Receipts come as finance.project_expense.paid with method staff_advance. Amounts are integers in the currency's minor unit.",
+    "type": "object",
+    "required": [
+        "advance_reference",
+        "issued_on",
+        "currency",
+        "amount_minor",
+        "method"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "advance_reference": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "The product's number for the advance."
+        },
+        "issued_on": {
+            "type": "string",
+            "format": "date"
+        },
+        "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$",
+            "description": "Any currency: Finance converts it at its rate for the day, and the event waits for one."
+        },
+        "amount_minor": {
+            "type": "integer",
+            "minimum": 1
+        },
+        "method": {
+            "enum": [
+                "bank_transfer",
+                "cash",
+                "mobile_money"
+            ]
+        },
+        "held_by": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "maxLength": 255,
+            "description": "Who holds it, by name."
+        },
+        "purpose": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "maxLength": 255
+        }
+    }
+}

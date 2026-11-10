@@ -91,3 +91,12 @@ it('has no API without a mobile client', function () {
 
     $this->withToken($this->platform->accessToken())->getJson($this->url('acme', 'api/whoami'))->assertNotFound();
 });
+
+it('accepts tokens of every mobile client listed, for older app builds', function () {
+    config(['platform-client.mobile.client_id' => 'mobile-client, older-build-client']);
+
+    startSession($this, $this->platform, idToken: ['aud' => 'older-build-client'], accessToken: ['aud' => 'older-build-client'])->assertOk();
+    $this->withToken($this->platform->accessToken(['aud' => 'older-build-client']))->get($this->url('acme', 'api/whoami'))->assertOk();
+    $this->withToken($this->platform->accessToken(['aud' => 'mobile-client']))->get($this->url('acme', 'api/whoami'))->assertOk();
+    $this->withToken($this->platform->accessToken(['aud' => 'sign-in-client']))->getJson($this->url('acme', 'api/whoami'))->assertUnauthorized();
+});

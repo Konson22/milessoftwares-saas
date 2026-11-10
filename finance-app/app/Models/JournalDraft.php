@@ -25,6 +25,7 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property CarbonImmutable|null $reviewed_at
  * @property string|null $review_note
  * @property string|null $journal_id the journal posted when approved
+ * @property array<string, mixed>|null $policy the approval rules in force when it was submitted (PaymentPolicy::snapshot)
  * @property CarbonImmutable $created_at
  * @property-read User $submitter
  * @property-read User|null $reviewer
@@ -53,6 +54,7 @@ class JournalDraft extends Model
             'reviewed_at' => 'immutable_datetime',
             'created_at' => 'immutable_datetime',
             'lines' => 'array',
+            'policy' => 'array',
             'total_minor' => 'integer',
         ];
     }

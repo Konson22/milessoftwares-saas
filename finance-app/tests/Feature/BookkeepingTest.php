@@ -12,13 +12,16 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 const ACCOUNTANT = [
     'finance.accounts.view', 'finance.accounts.manage', 'finance.journals.view', 'finance.journals.post', 'finance.journals.reverse',
-    'finance.payables.view', 'finance.payables.manage', 'finance.receivables.view', 'finance.receivables.manage',
-    'finance.banking.view', 'finance.banking.manage', 'finance.reports.view',
+    'finance.payables.view', 'finance.bills.manage', 'finance.receivables.view', 'finance.receivables.manage',
+    'finance.banking.view', 'finance.receipts.record', 'finance.reports.view',
+    'finance.payments.view', 'finance.payments.prepare', 'finance.payments.disburse',
 ];
 
 beforeEach(function () {
     $this->platform()->organization('acme');
     $this->setUpFinance('acme');
+    // Below the limit, money leaving a bank posts directly: these books are set up with it.
+    $this->paymentLimit('acme');
 });
 
 function account(string $key): Account
@@ -106,14 +109,14 @@ it('records a bill and pays it, in part and then in full', function () {
     $bill = $this->asTenant('acme', fn () => Bill::query()->sole());
     expect($bill->total_minor)->toBe(13000)->and(balance(Account::PAYABLE))->toBe(13000);
 
-    $pay = fn (string $amount, string $allocated) => $this->post(acme('supplier-payments'), [
-        'supplier_id' => $supplier->id, 'account_id' => account(Account::BANK)->id, 'amount' => $amount,
-        'paid_on' => '2026-10-15', 'allocations' => [$bill->id => $allocated],
+    $pay = fn (string $amount, string $allocated) => $this->payThroughRequest([
+        'kind' => 'supplier', 'supplier_id' => $supplier->id, 'account_id' => account(Account::BANK)->id, 'amount' => $amount,
+        'pay_on' => '2026-10-15', 'allocations' => [$bill->id => $allocated],
     ]);
 
-    $pay('100', '100')->assertRedirect();
+    $pay('100', '100')->assertSessionHasNoErrors();
     $pay('50', '50')->assertSessionHasErrors('allocations'); // only 30 left
-    $pay('30', '30')->assertRedirect();
+    $pay('30', '30')->assertSessionHasNoErrors();
 
     expect($this->asTenant('acme', fn () => $bill->refresh()->status()))->toBe('paid')
         ->and(balance(Account::PAYABLE))->toBe(0)
@@ -129,14 +132,14 @@ it('refuses to set a payment against another supplier\'s bill', function () {
     ]);
     $bill = $this->asTenant('acme', fn () => Bill::query()->sole());
 
-    $this->post(acme('supplier-payments'), [
-        'supplier_id' => $mine->id, 'account_id' => account(Account::CASH)->id, 'amount' => '10',
-        'paid_on' => '2026-10-15', 'allocations' => [$bill->id => '10'],
+    $this->post(acme('payment-requests'), [
+        'kind' => 'supplier', 'supplier_id' => $mine->id, 'account_id' => account(Account::CASH)->id, 'amount' => '10',
+        'pay_on' => '2026-10-15', 'allocations' => [$bill->id => '10'],
     ])->assertSessionHasErrors('allocations');
 
-    $this->post(acme('supplier-payments'), [
-        'supplier_id' => $mine->id, 'account_id' => account(Account::CASH)->id, 'amount' => '10',
-        'paid_on' => '2026-10-15', 'allocations' => ['not-a-bill' => '10'],
+    $this->post(acme('payment-requests'), [
+        'kind' => 'supplier', 'supplier_id' => $mine->id, 'account_id' => account(Account::CASH)->id, 'amount' => '10',
+        'pay_on' => '2026-10-15', 'allocations' => ['not-a-bill' => '10'],
     ])->assertSessionHasErrors('allocations');
 });
 
@@ -207,12 +210,25 @@ it('moves money in, out and between accounts', function () {
     $income = $this->asTenant('acme', fn () => Account::query()->where('code', '4900')->sole());
 
     $this->post(acme('banking/money-in'), ['account_id' => account(Account::CASH)->id, 'other_account_id' => $income->id, 'amount' => '100', 'entry_date' => '2026-10-01', 'description' => 'Sold old shelf'])->assertRedirect();
-    $this->post(acme('banking/transfers'), ['account_id' => account(Account::CASH)->id, 'to_account_id' => account(Account::BANK)->id, 'amount' => '80', 'entry_date' => '2026-10-02', 'description' => 'Banked'])->assertRedirect();
-    $this->post(acme('banking/money-out'), ['account_id' => account(Account::BANK)->id, 'other_account_id' => $charges->id, 'amount' => '2', 'entry_date' => '2026-10-03', 'description' => 'Fee'])->assertRedirect();
-    $this->post(acme('banking/transfers'), ['account_id' => account(Account::BANK)->id, 'to_account_id' => account(Account::BANK)->id, 'amount' => '1', 'entry_date' => '2026-10-03', 'description' => 'Loop'])->assertSessionHasErrors('to_account_id');
-    $this->post(acme('banking/money-out'), ['account_id' => $charges->id, 'other_account_id' => $income->id, 'amount' => '1', 'entry_date' => '2026-10-03', 'description' => 'Not a bank'])->assertSessionHasErrors('account_id');
+    // Money out and transfers: payment requests, below the limit approved as raised.
+    $this->payThroughRequest(['kind' => 'transfer', 'account_id' => account(Account::CASH)->id, 'to_account_id' => account(Account::BANK)->id, 'amount' => '80', 'pay_on' => '2026-10-02', 'description' => 'Banked'])->assertSessionHasNoErrors();
+    $this->payThroughRequest(['kind' => 'expense', 'account_id' => account(Account::BANK)->id, 'other_account_id' => $charges->id, 'amount' => '2', 'pay_on' => '2026-10-03', 'description' => 'Fee'])->assertSessionHasNoErrors();
+    $this->post(acme('payment-requests'), ['kind' => 'transfer', 'account_id' => account(Account::BANK)->id, 'to_account_id' => account(Account::BANK)->id, 'amount' => '1', 'pay_on' => '2026-10-03', 'description' => 'Loop'])->assertSessionHasErrors('to_account_id');
+    $this->post(acme('payment-requests'), ['kind' => 'expense', 'account_id' => $charges->id, 'other_account_id' => $income->id, 'amount' => '1', 'pay_on' => '2026-10-03', 'description' => 'Not a bank'])->assertSessionHasErrors('account_id');
 
     expect(balance(Account::CASH))->toBe(2000)->and(balance(Account::BANK))->toBe(7800);
+});
+
+it('has no way to pay or move money other than a payment request', function () {
+    $this->actingAsMember('acme', owner: true);
+    $charges = $this->asTenant('acme', fn () => Account::query()->where('code', '6300')->sole());
+
+    $this->post(acme('banking/money-out'), ['account_id' => account(Account::BANK)->id, 'other_account_id' => $charges->id, 'amount' => '2', 'entry_date' => '2026-10-03', 'description' => 'Fee'])->assertNotFound();
+    $this->post(acme('banking/transfers'), ['account_id' => account(Account::CASH)->id, 'to_account_id' => account(Account::BANK)->id, 'amount' => '1', 'entry_date' => '2026-10-03', 'description' => 'Banked'])->assertNotFound();
+    $this->post(acme('supplier-payments'), [])->assertStatus(405);
+    $this->get(acme('supplier-payments/create'))->assertNotFound();
+
+    expect(balance(Account::BANK))->toBe(0);
 });
 
 it('produces statements that balance', function () {
@@ -260,7 +276,7 @@ it('shows every page to an accountant', function (string $path, string $componen
     ['bills', 'bills/index'],
     ['bills/create', 'bills/create'],
     ['supplier-payments', 'supplier-payments/index'],
-    ['supplier-payments/create', 'supplier-payments/create'],
+    ['payment-requests/create', 'payment-requests/create'],
     ['invoices', 'invoices/index'],
     ['invoices/create', 'invoices/create'],
     ['customer-payments', 'customer-payments/index'],

@@ -9,12 +9,14 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 const RECONCILER = [
     'finance.accounts.view', 'finance.journals.view', 'finance.journals.post', 'finance.journals.reverse',
-    'finance.banking.view', 'finance.banking.manage', 'finance.banking.reconcile',
+    'finance.banking.view', 'finance.receipts.record', 'finance.banking.reconcile',
 ];
 
 beforeEach(function () {
     $this->platform()->organization('acme');
     $this->setUpFinance('acme');
+    // Below the limit, money leaving a bank posts directly: these books are set up with it.
+    $this->paymentLimit('acme');
     $this->actingAsMember('acme', RECONCILER);
 });
 

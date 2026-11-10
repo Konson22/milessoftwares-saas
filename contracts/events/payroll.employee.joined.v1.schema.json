@@ -1,0 +1,28 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milesoftwares.com/contracts/events/payroll.employee.joined.v1.schema.json",
+    "title": "payroll.employee.joined, schema_version 1",
+    "description": "Someone Payroll should pay: added the first time, work details refreshed when sent again (HR sends it on hire and on every change; any product that keeps staff may send it). Organizational facts only: pay, bank details and identity numbers are entered in Payroll itself.",
+    "type": "object",
+    "required": ["employee_reference", "first_name", "last_name", "started_on"],
+    "additionalProperties": false,
+    "properties": {
+        "employee_reference": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "The sender's own id for the person; later events name them by it."
+        },
+        "employee_number": {
+            "type": ["string", "null"],
+            "maxLength": 32,
+            "description": "Kept as Payroll's number when free (HR's E-00001)."
+        },
+        "first_name": { "type": "string", "maxLength": 100 },
+        "last_name": { "type": "string", "maxLength": 100 },
+        "work_email": { "type": ["string", "null"], "format": "email" },
+        "branch_id": { "type": ["string", "null"], "format": "uuid" },
+        "department_id": { "type": ["string", "null"], "format": "uuid" },
+        "job_title": { "type": ["string", "null"], "maxLength": 255 },
+        "started_on": { "type": "string", "format": "date" }
+    }
+}

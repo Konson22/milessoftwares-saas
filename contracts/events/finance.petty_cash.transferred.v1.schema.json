@@ -1,0 +1,34 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milesoftwares.com/contracts/events/finance.petty_cash.transferred.v1.schema.json",
+    "title": "finance.petty_cash.transferred, schema_version 1",
+    "description": "A petty cash box a product kept is moved into a Finance petty cash fund, which keeps it from then on. Finance opens a petty cash account for it, sets up the fund at the same float with no custodian until a manager names one after counting the cash, and moves what the box held out of Cash (where the product's till events had put it): Dr the new account / Cr cash. Sent once per box. Amounts are integers in the currency's minor unit; another currency than the books' is converted at Finance's rate for the day.",
+    "type": "object",
+    "required": ["reference", "name", "currency", "float_minor", "held_minor", "moved_on"],
+    "additionalProperties": false,
+    "properties": {
+        "reference": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "The product's own id for the box."
+        },
+        "name": { "type": "string", "maxLength": 255 },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "float_minor": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The amount the box was kept at."
+        },
+        "held_minor": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "What the box held when it was moved, by the product's records."
+        },
+        "moved_on": { "type": "string", "format": "date" },
+        "custodian": {
+            "type": ["string", "null"],
+            "maxLength": 255,
+            "description": "Who kept it in the product, for the record; Finance names its own custodian."
+        }
+    }
+}

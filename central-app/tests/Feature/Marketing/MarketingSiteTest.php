@@ -358,7 +358,7 @@ it('lists every product of the brief on the products page', function () {
             $slugs = fn (string $category) => collect($catalog)->where('category', $category)->pluck('slug')->values()->all();
 
             return $slugs('erp') === ['pharmacy', 'retail', 'restaurant', 'school', 'logistics', 'ngo']
-                && $slugs('application') === ['finance', 'projects', 'hr', 'procurement', 'inventory', 'crm', 'assets', 'documents'];
+                && $slugs('application') === ['finance', 'petrol', 'projects', 'hr', 'payroll', 'procurement', 'inventory', 'crm', 'assets', 'documents'];
         }));
 });
 
@@ -398,6 +398,11 @@ it('shows only unreleased catalog products on the coming-soon page', function ()
 });
 
 it('gives each catalog product its own page, and 404s anything else', function () {
+    $this->get(site('apps/finance'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+        ->component('public/finance')
+        ->where('product.name', 'Finance & Accounting')
+        ->where('canonical', site('apps/finance')));
+
     $this->get(site('apps/projects'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
         ->component('public/landing')
         ->where('product.name', 'Project Management')

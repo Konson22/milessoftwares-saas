@@ -10,6 +10,7 @@ use App\Modules\Employees\Models\Contract;
 use App\Modules\Employees\Models\Employee;
 use App\Modules\Employees\Models\EmploymentRecord;
 use App\Modules\Leave\Actions\LeaveRequests;
+use App\Support\PayrollSync;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -21,7 +22,10 @@ use Illuminate\Validation\ValidationException;
  */
 class Employment
 {
-    public function __construct(private readonly LeaveRequests $leave) {}
+    public function __construct(
+        private readonly LeaveRequests $leave,
+        private readonly PayrollSync $payroll,
+    ) {}
 
     /**
      * Moves someone to another branch, department or position from a date.
@@ -62,6 +66,7 @@ class Employment
                 'job_title' => $jobTitle,
             ])->save();
             $employee->setRawAttributes($locked->getAttributes(), true);
+            $this->payroll->joined($locked);
 
             return $record;
         });
@@ -143,6 +148,7 @@ class Employment
             Employee::query()->where('manager_id', $locked->id)->update(['manager_id' => null]);
             $this->leave->cancelOnLeaving($locked, $date, $by);
             $employee->setRawAttributes($locked->getAttributes(), true);
+            $this->payroll->left($locked);
 
             return $record;
         });

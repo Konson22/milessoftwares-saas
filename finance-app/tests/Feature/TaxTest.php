@@ -13,7 +13,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 const TAX_OFFICER = [
     'finance.accounts.view', 'finance.journals.view', 'finance.journals.post',
-    'finance.receivables.view', 'finance.receivables.manage', 'finance.payables.view', 'finance.payables.manage',
+    'finance.receivables.view', 'finance.receivables.manage', 'finance.payables.view', 'finance.bills.manage',
     'finance.banking.view', 'finance.reports.view', 'finance.tax.manage',
 ];
 
@@ -21,6 +21,8 @@ beforeEach(function () {
     $this->platform()->organization('acme');
     $this->publishEventKeys();
     $this->setUpFinance('acme');
+    // Below the limit, money leaving a bank posts directly: these books are set up with it.
+    $this->paymentLimit('acme');
     $this->actingAsMember('acme', TAX_OFFICER);
 });
 

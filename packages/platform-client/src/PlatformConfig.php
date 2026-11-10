@@ -164,11 +164,27 @@ final class PlatformConfig
      *
      * @return non-empty-string|null
      */
+    /**
+     * The mobile app's client: the first of mobile.client_id, which may list
+     * several (comma-separated) while older app builds still carry another.
+     */
     public function mobileClientId(): ?string
+    {
+        return $this->mobileClientIds()[0] ?? null;
+    }
+
+    /**
+     * Every mobile client whose tokens this product accepts.
+     *
+     * @return list<string>
+     */
+    public function mobileClientIds(): array
     {
         $value = $this->config->get($this->key('mobile.client_id'));
 
-        return is_string($value) && $value !== '' ? $value : null;
+        return is_string($value)
+            ? array_values(array_filter(array_map('trim', explode(',', $value)), fn (string $id) => $id !== ''))
+            : [];
     }
 
     public function serviceClientId(): string

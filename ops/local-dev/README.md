@@ -41,3 +41,30 @@ winget uninstall Mayakron.AcrylicDNS
 ```
 
 The old per-subdomain lines in `C:\Windows\System32\drivers\etc\hosts` still work without Acrylic.
+
+## Reaching the platform from a phone
+
+`composer run dev` in `central-app` serves both addresses at once, with no extra setup:
+
+- This PC's browser: `http://milesoftwares.localhost` (and `auth.`, `app.`, `{slug}.`).
+- A phone on the same Wi-Fi: this PC's LAN IP on port 80, naming the platform host in the `Host` header.
+
+Use port 80, not :8100. The firewall allows Apache but not `php artisan serve`, and only Apache
+routes workspace paths such as `/pharmacy/` to the product apps.
+
+The mobile apps do the `Host` part themselves (`reach()` in `src/lib/config.ts`). Point them at the PC
+in the app's `.env`, then restart Metro:
+
+```
+EXPO_PUBLIC_DEV_SERVER=http://192.168.88.30
+```
+
+Find the current address with `ipconfig`; it changes with the network. Check it from the PC:
+
+```
+curl -H "Host: auth.milesoftwares.localhost" http://192.168.88.30/.well-known/openid-configuration
+```
+
+The bare IP does not serve the platform: Apache sends it to the staging site, and routes are matched by
+host name. So pages opened in a browser on the phone (the web sign-in, back-office links) still need
+`adb reverse tcp:80 tcp:80` over USB, where the phone's browser sends `*.localhost` to loopback.

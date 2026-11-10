@@ -2,17 +2,21 @@
 
 namespace App\Finance;
 
+use App\Enums\BankKind;
 use App\Models\Account;
 use App\Models\Bill;
 use App\Models\DimensionValue;
 use App\Models\Journal;
 use App\Models\PaymentRequest;
+use App\Models\PettyCashFund;
+use App\Models\PettyCashVoucher;
 use App\Models\Supplier;
 use App\Models\TaxReturn;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 
 /**
  * Prepare, (review,) approve, disburse. A request moves no balance until it
@@ -20,17 +24,22 @@ use Illuminate\Validation\ValidationException;
  * ledger, and an approved payment reaches the books like any other.
  *
  * Each step is checked here, whichever route called it: a request cannot be
- * approved before its review or disbursed before its approval. While the
- * organization keeps duties separate, nobody approves what they prepared or
- * reviewed, or disburses what they prepared, reviewed or approved. Owners are
- * held to this too.
+ * approved before its review or disbursed before its approval, and one person
+ * never acts twice on it (refusal()). Owners are held to this too. A request
+ * is never edited: to change what is paid, withdraw it and raise another.
  *
  * Besides what is asked for on the form, anything else that would take money
- * out of a bank while payments are held waits here too: a tax settlement, a
- * manual journal, a journal's reversal.
+ * out of a bank from the approval limit up waits here too: a tax settlement,
+ * a manual journal, a journal's reversal.
  */
 class PaymentRequests
 {
+    /**
+     * The permissions that raise requests: the form, journals that take money
+     * out of a bank (prepared, posted or reversed) and tax settlements.
+     */
+    public const RAISED_BY = 'finance.payments.prepare,finance.journals.prepare,finance.journals.post,finance.journals.reverse,finance.tax.manage,finance.pettycash.record,finance.pettycash.manage';
+
     public function __construct(
         private readonly PaymentPolicy $policy,
         private readonly Payables $payables,
@@ -39,6 +48,7 @@ class PaymentRequests
         private readonly DocumentNumbers $numbers,
         private readonly Ledger $ledger,
         private readonly Tax $tax,
+        private readonly Audit $audit,
     ) {}
 
     /**
@@ -81,6 +91,31 @@ class PaymentRequests
             'supplier_id' => $supplier?->id,
             'cost_centre_id' => ($extra['cost_centre'] ?? null)?->id,
             'project_id' => ($extra['project'] ?? null)?->id,
+        ]);
+    }
+
+    /**
+     * Money for a petty cash fund (AppFinancePettyCash::replenish): a
+     * transfer from $bank, approved and disbursed like any other. The
+     * vouchers it pays back are marked when it is disbursed.
+     *
+     * @param  list<string>  $voucherIds
+     *
+     * @throws ValidationException when one is already on its way
+     */
+    public function replenish(PettyCashFund $fund, Account $bank, Account $box, int $amountMinor, CarbonImmutable $payOn, array $voucherIds, User $by): PaymentRequest
+    {
+        if (($open = $this->openFor(PaymentRequest::TRANSFER, 'petty_cash_fund_id', $fund->id)) !== null) {
+            throw ValidationException::withMessages(['fund' => "{$open->number} is already on its way to {$fund->name}."]);
+        }
+
+        return $this->record(PaymentRequest::TRANSFER, $bank, $amountMinor, $bank->currency, $this->policy->booksAmount($amountMinor, $bank->currency, $payOn), $payOn, "Petty cash {$fund->name}: ".($voucherIds === [] ? 'float' : 'replenishment'), $by, [
+            'received_minor' => null,
+            'petty_cash_fund_id' => $fund->id,
+            'voucher_ids' => $voucherIds,
+        ], $this->policy->approvalNeeded($amountMinor, $bank->currency, $payOn, null), [
+            'payee' => $fund->name,
+            'other_account_id' => $box->id,
         ]);
     }
 
@@ -172,19 +207,25 @@ class PaymentRequests
             default => PaymentRequest::PENDING_APPROVAL,
         };
 
-        return DB::transaction(fn () => PaymentRequest::query()->create($attributes + [
-            'number' => $this->numbers->next('payment_request', 'PR', 5),
-            'kind' => $kind,
-            'status' => $status,
-            'description' => mb_substr($description, 0, 255),
-            'account_id' => $from->id,
-            'amount_minor' => $amountMinor,
-            'currency' => $currency,
-            'books_minor' => $booksMinor,
-            'pay_on' => $payOn,
-            'details' => $details,
-            'prepared_by' => $by->id,
-        ]));
+        return DB::transaction(function () use ($attributes, $kind, $status, $description, $from, $amountMinor, $currency, $booksMinor, $payOn, $details, $by) {
+            $request = PaymentRequest::query()->create($attributes + [
+                'number' => $this->numbers->next('payment_request', 'PR', 5),
+                'kind' => $kind,
+                'status' => $status,
+                'description' => mb_substr($description, 0, 255),
+                'account_id' => $from->id,
+                'amount_minor' => $amountMinor,
+                'currency' => $currency,
+                'books_minor' => $booksMinor,
+                'pay_on' => $payOn,
+                'details' => $details,
+                'prepared_by' => $by->id,
+                'policy' => $this->policy->snapshot(),
+            ]);
+            $this->audit->record('payment_request.prepared', $request, null, $this->terms($request) + ['status' => $status], $by);
+
+            return $request;
+        });
     }
 
     private function openFor(string $kind, string $key, string $value): ?PaymentRequest
@@ -203,11 +244,12 @@ class PaymentRequests
             if ($locked->status !== PaymentRequest::PENDING_REVIEW) {
                 throw $this->refused("{$locked->number} is not waiting for review.");
             }
-            if ($this->policy->separated() && $locked->prepared_by === $by->id) {
-                throw $this->refused("{$locked->number} is your own request: someone else reviews it.");
+            if (($why = self::refusal($locked, 'review', $by->id)) !== null) {
+                throw $this->refused($why);
             }
 
             $locked->forceFill(['status' => PaymentRequest::PENDING_APPROVAL, 'reviewed_by' => $by->id, 'reviewed_at' => now()])->save();
+            $this->audit->record('payment_request.reviewed', $locked, ['status' => PaymentRequest::PENDING_REVIEW], ['status' => $locked->status], $by);
 
             return $locked;
         });
@@ -226,14 +268,12 @@ class PaymentRequests
             if ($locked->status !== PaymentRequest::PENDING_APPROVAL) {
                 throw $this->refused("{$locked->number} is not waiting for approval.");
             }
-            if ($this->policy->separated() && $locked->prepared_by === $by->id) {
-                throw $this->refused("{$locked->number} is your own request: someone else approves it.");
-            }
-            if ($this->policy->separated() && $locked->reviewed_by === $by->id) {
-                throw $this->refused("You reviewed {$locked->number}: someone else approves it.");
+            if (($why = self::refusal($locked, 'approve', $by->id)) !== null) {
+                throw $this->refused($why);
             }
 
             $locked->forceFill(['status' => PaymentRequest::APPROVED, 'approved_by' => $by->id, 'approved_at' => now()])->save();
+            $this->audit->record('payment_request.approved', $locked, ['status' => PaymentRequest::PENDING_APPROVAL], $this->terms($locked) + ['status' => $locked->status], $by);
 
             return $locked;
         });
@@ -287,17 +327,14 @@ class PaymentRequests
             if ($locked->status !== PaymentRequest::APPROVED) {
                 throw $this->refused("{$locked->number} is no longer waiting to be paid.");
             }
-            if ($this->policy->separated() && $locked->approved_by === $by->id) {
-                throw $this->refused("You approved {$locked->number}: someone else disburses it.");
-            }
-            if ($this->policy->separated() && $locked->prepared_by === $by->id) {
-                throw $this->refused("{$locked->number} is your own request: someone else disburses it.");
-            }
-            if ($this->policy->separated() && $locked->reviewed_by === $by->id) {
-                throw $this->refused("You reviewed {$locked->number}: someone else disburses it.");
+            if (($why = self::refusal($locked, 'disburse', $by->id)) !== null) {
+                throw $this->refused($why);
             }
 
             $paid = $this->pay($locked, $on, $reference ?? ($locked->details['reference'] ?? null), $by);
+            if (is_string($locked->details['petty_cash_fund_id'] ?? null)) {
+                PettyCashVoucher::query()->where('fund_id', $locked->details['petty_cash_fund_id'])->whereIn('id', $locked->details['voucher_ids'] ?? [])->whereNull('replenished_by_id')->update(['replenished_by_id' => $locked->id]);
+            }
             if ($locked->approved_by !== null) {
                 $paid['journal']->forceFill(['approved_by' => $locked->approved_by, 'approved_at' => $locked->approved_at])->save();
             }
@@ -309,6 +346,7 @@ class PaymentRequests
                 'journal_id' => $paid['journal']->id,
                 'supplier_payment_id' => $paid['supplierPaymentId'],
             ])->save();
+            $this->audit->record('payment_request.disbursed', $locked, ['status' => PaymentRequest::APPROVED], $this->terms($locked) + ['status' => $locked->status, 'journal_id' => $locked->journal_id, 'paid_on' => $on->toDateString()], $by);
 
             return $locked;
         });
@@ -320,6 +358,26 @@ class PaymentRequests
     private function pay(PaymentRequest $request, CarbonImmutable $on, ?string $reference, User $by): array
     {
         $from = Account::query()->findOrFail($request->account_id);
+        if (! in_array($from->bank_kind, [BankKind::Cash, BankKind::PettyCash], true)) {
+            return $this->post($request, $from, $on, $reference, $by);
+        }
+
+        // Cash cannot go below nothing (a bank may, on an overdraft). Locked,
+        // so two payments out of one box cannot both see the same cash.
+        $from = Account::query()->whereKey($from->id)->lockForUpdate()->firstOrFail();
+        $paid = $this->post($request, $from, $on, $reference, $by);
+        if (($held = $from->heldMinor()) < 0) {
+            throw $this->refused("{$from->name} does not hold enough cash for {$request->number}; it stays ready to disburse.");
+        }
+
+        return $paid;
+    }
+
+    /**
+     * @return array{journal: Journal, supplierPaymentId: string|null}
+     */
+    private function post(PaymentRequest $request, Account $from, CarbonImmutable $on, ?string $reference, User $by): array
+    {
         // A journal's memo holds 255 characters, and the number must survive.
         $suffix = " ({$request->number})";
         $description = mb_substr($request->description, 0, 255 - mb_strlen($suffix)).$suffix;
@@ -421,9 +479,64 @@ class PaymentRequests
 
     private function close(PaymentRequest $locked, string $status, User $by, ?string $note = null): PaymentRequest
     {
+        $before = $locked->status;
         $locked->forceFill(['status' => $status, 'closed_by' => $by->id, 'closed_at' => now(), 'close_note' => $note])->save();
+        $this->audit->record("payment_request.{$status}", $locked, ['status' => $before], ['status' => $status, 'note' => $note], $by);
 
         return $locked;
+    }
+
+    /**
+     * Why this member may not take this step on this request, or null when
+     * nothing about them stands in the way (their permission is checked on the
+     * route). Not a setting, and owners are held to it: nobody reviews or
+     * approves their own request, approves what they reviewed, or pays out a
+     * request they prepared, reviewed or approved. A request below the
+     * approval limit was never approved by anyone, so whoever prepared it may
+     * also pay it out.
+     */
+    public static function refusal(PaymentRequest $request, string $step, string $userId): ?string
+    {
+        $number = $request->number;
+
+        return match ($step) {
+            'review' => $request->prepared_by === $userId ? "{$number} is your own request: someone else reviews it." : null,
+            'approve' => match (true) {
+                $request->prepared_by === $userId => "{$number} is your own request: someone else approves it.",
+                $request->reviewed_by === $userId => "You reviewed {$number}: someone else approves it.",
+                default => null,
+            },
+            'disburse' => match (true) {
+                $request->approved_by === null => null,
+                $request->approved_by === $userId => "You approved {$number}: someone else disburses it.",
+                $request->prepared_by === $userId => "{$number} is your own request: someone else disburses it.",
+                $request->reviewed_by === $userId => "You reviewed {$number}: someone else disburses it.",
+                default => null,
+            },
+            default => throw new InvalidArgumentException("Not a step: {$step}"),
+        };
+    }
+
+    /**
+     * What was approved and paid: who, how much, from where, to whom.
+     *
+     * @return array<string, mixed>
+     */
+    private function terms(PaymentRequest $request): array
+    {
+        return [
+            'kind' => $request->kind,
+            'amount_minor' => $request->amount_minor,
+            'currency' => $request->currency,
+            'books_minor' => $request->books_minor,
+            'account_id' => $request->account_id,
+            'other_account_id' => $request->other_account_id,
+            'supplier_id' => $request->supplier_id,
+            'payee' => $request->payee,
+            'prepared_by' => $request->prepared_by,
+            'reviewed_by' => $request->reviewed_by,
+            'approved_by' => $request->approved_by,
+        ];
     }
 
     private function locked(PaymentRequest $request): PaymentRequest

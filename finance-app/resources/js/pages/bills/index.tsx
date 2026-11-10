@@ -54,8 +54,7 @@ export default function Bills({
                 title="Bills"
                 description={`Owed to suppliers: ${money(outstandingMinor)}. Goods received in your products arrive here as bills.`}
                 actions={
-                    (can('finance.payables.manage') ||
-                        can('finance.bills.manage')) && (
+                    can('finance.bills.manage') && (
                         <Button asChild>
                             <Link href={create()}>
                                 <Plus className="size-4" aria-hidden />

@@ -1,0 +1,74 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milesoftwares.com/contracts/events/finance.staff_advance.settled.v1.schema.json",
+    "title": "finance.staff_advance.settled, schema_version 1",
+    "description": "What is left of an advance, settled without receipts: cash handed back (Dr bank, cash or mobile money, Cr Employee advances) or written off (Dr Staff advances written off, Cr Employee advances). Amounts are integers in the currency's minor unit.",
+    "type": "object",
+    "required": [
+        "reference",
+        "advance_reference",
+        "settled_on",
+        "currency",
+        "amount_minor",
+        "kind"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "reference": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "The product's id for this settlement."
+        },
+        "advance_reference": {
+            "type": "string",
+            "maxLength": 64
+        },
+        "settled_on": {
+            "type": "string",
+            "format": "date"
+        },
+        "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$",
+            "description": "Any currency: Finance converts it at its rate for the day, and the event waits for one."
+        },
+        "amount_minor": {
+            "type": "integer",
+            "minimum": 1
+        },
+        "kind": {
+            "enum": [
+                "returned",
+                "written_off"
+            ]
+        },
+        "method": {
+            "enum": [
+                "bank_transfer",
+                "cash",
+                "mobile_money",
+                null
+            ],
+            "description": "Where returned cash went; required when kind is returned."
+        },
+        "note": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "maxLength": 255
+        }
+    },
+    "if": {
+        "properties": {
+            "kind": {
+                "const": "returned"
+            }
+        }
+    },
+    "then": {
+        "required": [
+            "method"
+        ]
+    }
+}

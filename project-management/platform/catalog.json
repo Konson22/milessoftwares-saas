@@ -1,0 +1,473 @@
+{
+    "application": {
+        "code": "projects",
+        "name": "Projects",
+        "category": "products",
+        "kind": "standalone",
+        "status": "beta"
+    },
+    "version": "2.0.0",
+    "permissions": [
+        {
+            "key": "projects.view",
+            "name": "View projects, tasks, timelines, risks and the team",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.manage",
+            "name": "Set up and change projects, their team, milestones, risks and budget",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.tasks.manage",
+            "name": "Add and change tasks, move them on the board, comment",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.time.log",
+            "name": "Log your own time",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.time.manage",
+            "name": "Log and remove anyone's time",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.finance.view",
+            "name": "See budgets, costs and hourly rates",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.people.manage",
+            "name": "Add people and set what their time costs",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.expenses.request",
+            "name": "Request spending on projects they work on, and attach receipts",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.changes.approve",
+            "name": "Approve or reject requests to change a project, except their own",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "work.structure.manage",
+            "name": "Organize work: workspaces, spaces, folders and lists",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.pettycash.view",
+            "name": "See petty cash boxes, their payments and receipts",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.pettycash.record",
+            "name": "Hold a petty cash box, and pay from one they hold",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.pettycash.manage",
+            "name": "Set up, count and close petty cash boxes, and change who holds them",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.pettycash.approve",
+            "name": "Check receipts and approve petty cash top-ups, except their own",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.advances.request",
+            "name": "Ask for a staff advance, and account for it",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.advances.view",
+            "name": "See everyone's staff advances and how late they are",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.advances.approve",
+            "name": "Approve advances, their receipts and write-offs, except their own",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.advances.disburse",
+            "name": "Pay out advances, record cash returned, and ask for write-offs",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.commitments.view",
+            "name": "See all spending approved and not yet paid, across projects",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.budgets.approve",
+            "name": "Approve or return submitted budget versions",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.expenses.approve",
+            "name": "Approve or reject spending requests against the budget and grants",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.payments.record",
+            "name": "Record payments of approved spending, and void payments",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "grants.view",
+            "name": "See funders and grants: amounts, allocations, payments and reports",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "grants.manage",
+            "name": "Record funders and grants: awards, amendments, allocations, payments, reports, closeout",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "procurement.view",
+            "name": "See everyone's purchase requests, quotes and orders",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "procurement.request",
+            "name": "Ask to buy something for a project, and follow their own requests",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "procurement.approve",
+            "name": "Approve or reject other people's purchase requests",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "procurement.manage",
+            "name": "Compare quotes, raise purchase orders, receive goods and record invoices",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "documents.view",
+            "name": "See the organization's documents, other than confidential or archived ones",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "documents.manage",
+            "name": "Add, change and archive documents, and see confidential ones",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "organization.manage",
+            "name": "Manage the organization in Projects: settings, modules, approval rules, funders' contacts and connections",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "organization.audit.view",
+            "name": "See the organization's audit log",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "marketplace.publish",
+            "name": "Edit and publish the public profile and the projects listed as seeking funding",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.donor.view",
+            "name": "Open the donor portal: what a funder is shown of the grants they fund",
+            "description": "For people who act for a funder. Someone who holds only this sees nothing else.",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        }
+    ],
+    "roles": [
+        {
+            "key": "accountant",
+            "name": "Accountant",
+            "sensitivity": 3,
+            "delegable": false,
+            "scopes": ["organization"],
+            "permissions": [
+                "finance.commitments.view",
+                "finance.advances.request",
+                "finance.advances.view",
+                "finance.advances.approve",
+                "finance.advances.disburse",
+                "finance.pettycash.view",
+                "finance.pettycash.manage",
+                "finance.pettycash.approve",
+                "documents.view"
+            ]
+        },
+        {
+            "key": "bookkeeper",
+            "name": "Bookkeeper",
+            "sensitivity": 3,
+            "delegable": false,
+            "scopes": ["organization"],
+            "permissions": [
+                "finance.commitments.view",
+                "finance.advances.request",
+                "finance.advances.view",
+                "finance.advances.disburse",
+                "finance.pettycash.view",
+                "finance.pettycash.record",
+                "documents.view"
+            ]
+        },
+        {
+            "key": "auditor",
+            "name": "Auditor (read only)",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "finance.commitments.view",
+                "finance.advances.view",
+                "finance.pettycash.view",
+                "documents.view"
+            ]
+        },
+        {
+            "key": "admin",
+            "name": "Organization Administrator",
+            "description": "Runs the organization: members, roles and settings, and every project.",
+            "sensitivity": 3,
+            "delegable": false,
+            "scopes": ["organization"],
+            "permissions": [
+                "finance.commitments.view",
+                "finance.advances.request",
+                "finance.advances.view",
+                "finance.advances.approve",
+                "finance.advances.disburse",
+                "finance.pettycash.view",
+                "finance.pettycash.manage",
+                "finance.pettycash.approve",
+                "documents.view",
+                "documents.manage",
+                "projects.view",
+                "projects.manage",
+                "projects.tasks.manage",
+                "projects.time.log",
+                "projects.time.manage",
+                "projects.finance.view",
+                "projects.people.manage",
+                "projects.expenses.request",
+                "projects.changes.approve",
+                "finance.budgets.approve",
+                "finance.expenses.approve",
+                "finance.payments.record",
+                "work.structure.manage",
+                "grants.view",
+                "grants.manage",
+                "procurement.view",
+                "procurement.request",
+                "procurement.approve",
+                "procurement.manage",
+                "organization.manage",
+                "organization.audit.view",
+                "marketplace.publish"
+            ]
+        },
+        {
+            "key": "manager",
+            "name": "Project Manager",
+            "description": "Everything on projects; sees the grants funding them.",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "finance.commitments.view",
+                "finance.advances.request",
+                "documents.view",
+                "projects.view",
+                "projects.manage",
+                "projects.tasks.manage",
+                "projects.time.log",
+                "projects.time.manage",
+                "projects.finance.view",
+                "projects.people.manage",
+                "projects.expenses.request",
+                "projects.changes.approve",
+                "work.structure.manage",
+                "grants.view",
+                "procurement.view",
+                "procurement.request",
+                "procurement.approve"
+            ]
+        },
+        {
+            "key": "member",
+            "name": "Team Member",
+            "description": "Views projects, works tasks, logs their own time, requests spending.",
+            "sensitivity": 1,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "finance.advances.request",
+                "documents.view",
+                "projects.view",
+                "projects.tasks.manage",
+                "projects.time.log",
+                "projects.expenses.request",
+                "procurement.request"
+            ]
+        },
+        {
+            "key": "viewer",
+            "name": "Viewer",
+            "description": "Views projects only.",
+            "sensitivity": 1,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": ["documents.view", "projects.view"]
+        },
+        {
+            "key": "controller",
+            "name": "Finance Controller",
+            "description": "Views projects, budgets and costs; approves budgets and spending; records payments; sets people's costs; manages funders and grants.",
+            "sensitivity": 3,
+            "delegable": false,
+            "scopes": ["organization"],
+            "permissions": [
+                "finance.commitments.view",
+                "documents.view",
+                "documents.manage",
+                "projects.view",
+                "projects.finance.view",
+                "projects.people.manage",
+                "projects.changes.approve",
+                "finance.advances.request",
+                "finance.advances.view",
+                "finance.advances.approve",
+                "finance.pettycash.view",
+                "finance.pettycash.approve",
+                "finance.budgets.approve",
+                "finance.expenses.approve",
+                "finance.payments.record",
+                "grants.view",
+                "grants.manage",
+                "procurement.view",
+                "procurement.approve"
+            ]
+        },
+        {
+            "key": "finance_officer",
+            "name": "Finance Officer",
+            "description": "Views projects, budgets and grants; records payments of approved spending.",
+            "sensitivity": 3,
+            "delegable": false,
+            "scopes": ["organization"],
+            "permissions": [
+                "finance.commitments.view",
+                "finance.advances.request",
+                "finance.advances.view",
+                "finance.advances.disburse",
+                "finance.pettycash.view",
+                "finance.pettycash.record",
+                "documents.view",
+                "projects.view",
+                "projects.finance.view",
+                "finance.payments.record",
+                "grants.view",
+                "procurement.view"
+            ]
+        },
+        {
+            "key": "cash_custodian",
+            "name": "Petty Cash Custodian",
+            "description": "Holds a petty cash box: pays from it with receipts and asks for top-ups.",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "finance.advances.request",
+                "finance.pettycash.view",
+                "finance.pettycash.record"
+            ]
+        },
+        {
+            "key": "procurement_officer",
+            "name": "Procurement Officer",
+            "description": "Compares quotes, raises purchase orders, receives goods and records invoices. Finance still approves and pays.",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "finance.advances.request",
+                "documents.view",
+                "projects.view",
+                "procurement.view",
+                "procurement.request",
+                "procurement.manage"
+            ]
+        },
+        {
+            "key": "funder_contact",
+            "name": "Funder contact",
+            "description": "Acts for a funder: sees only the donor portal. Add them in Projects too (Funders → contacts).",
+            "sensitivity": 1,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": ["projects.donor.view"]
+        }
+    ],
+    "separation_of_duties": [
+        {
+            "permissions": [
+                "projects.expenses.request",
+                "finance.expenses.approve"
+            ],
+            "mode": "warn",
+            "description": "Whoever requests spending never approves it (enforced per request too)."
+        },
+        {
+            "permissions": [
+                "finance.expenses.approve",
+                "finance.payments.record"
+            ],
+            "mode": "warn",
+            "description": "Approving and paying the same spending."
+        },
+        {
+            "permissions": ["procurement.request", "procurement.approve"],
+            "mode": "warn",
+            "description": "Asking to buy and approving the purchase."
+        }
+    ]
+}

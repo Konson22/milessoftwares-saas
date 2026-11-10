@@ -1,8 +1,9 @@
 import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
 
-import { AUTH_URL, CLIENT_ID, reach } from '../config';
+import { AUTH_URL, CLIENT_ID, GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID, reach } from '../config';
 import { secureStorage } from '../storage';
 
 /**
@@ -158,14 +159,82 @@ export async function signInWithCode(code: string, recovery = false): Promise<Si
   return finish(auth, web);
 }
 
+/**
+ * Google on the device (the account picker, no browser): Google's ID token
+ * is posted to the platform's /auth/google/native in a session of this
+ * sign-in alone, as a password is posted to /login, with the same answer (a
+ * two-step code may come next) and the same finish.
+ */
+export async function signInWithGoogle(): Promise<SignInResult | 'twoFactor'> {
+  pending = null;
+  const idToken = await googleIdToken();
+  const auth = await authorization();
+  const web = new WebSession();
+
+  await reachable(web.get(`${AUTH_URL}/login`));
+  const response = await reachable(web.post('/auth/google/native', { id_token: idToken }));
+  if (response.status === 404) throw new Error('Google sign-in is not available yet. Use your email and password.');
+  await refusal(response);
+
+  const body = (await response.json().catch(() => null)) as { two_factor?: boolean } | null;
+  if (body?.two_factor === true) {
+    pending = { auth, web };
+    return 'twoFactor';
+  }
+  return finish(auth, web);
+}
+
+/** Whether this build can offer Google (its client IDs were set when it was built). */
+export const googleAvailable = () => googleSignIn() !== null;
+
+async function googleIdToken(): Promise<string> {
+  const google = googleSignIn();
+  if (!google) throw new Error('Google sign-in is not set up in this app.');
+  const { GoogleSignin, isCancelledResponse, isErrorWithCode, statusCodes } = google;
+
+  GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID, iosClientId: GOOGLE_IOS_CLIENT_ID || undefined });
+  try {
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    // Phones at the pass are shared: the account picker every time.
+    await GoogleSignin.signOut().catch(() => {});
+    const response = await GoogleSignin.signIn();
+    if (isCancelledResponse(response)) throw new SignInCancelled('Sign-in was cancelled.');
+    if (!response.data.idToken) throw new Error('Google sign-in failed. Try again.');
+    return response.data.idToken;
+  } catch (error) {
+    if (error instanceof SignInCancelled || !isErrorWithCode(error)) throw error;
+    if (error.code === statusCodes.SIGN_IN_CANCELLED) throw new SignInCancelled('Sign-in was cancelled.');
+    if (error.code === statusCodes.IN_PROGRESS) throw new SignInCancelled('Sign-in is already open.');
+    if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) throw new Error('Google Play services are needed to sign in with Google.');
+    // Google does not know this build: no OAuth client for its package and signing key.
+    if (error.code === '10') throw new Error('Google sign-in is not set up for this build of the app. Use your email and password.');
+    throw new Error('Google sign-in failed. Try again.');
+  } finally {
+    // Only the platform's tokens are kept; nothing of Google stays signed in here.
+    void GoogleSignin.signOut().catch(() => {});
+  }
+}
+
+type GoogleModule = typeof import('@react-native-google-signin/google-signin');
+let google: GoogleModule | null | undefined;
+
+/** The native module, or null on web, in Expo Go, or when the build has no Google client IDs. */
+function googleSignIn(): GoogleModule | null {
+  if (google !== undefined) return google;
+  google = null;
+  if (Platform.OS === 'web' || !GOOGLE_WEB_CLIENT_ID || (Platform.OS === 'ios' && !GOOGLE_IOS_CLIENT_ID)) return google;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    google = require('@react-native-google-signin/google-signin') as GoogleModule;
+  } catch {
+    // Not in this binary (Expo Go): the button stays hidden.
+  }
+  return google;
+}
+
 /** Signed in: the authorization request again, now answered with a redirect to the app. */
 async function finish(auth: Authorization, web: WebSession): Promise<SignInResult> {
-  let location = '';
-  try {
-    location = (await web.get(auth.url)).headers.get('location') ?? '';
-  } catch {
-    // A redirect to the platform's own pages is followed, and may not resolve here.
-  }
+  const location = (await reachable(web.get(auth.url))).headers.get('location') ?? '';
   if (location.startsWith(auth.redirect)) return redeem(auth, location);
   throw new NeedsBrowser('Your account needs something done on the web first. Sign in with the browser to finish.');
 }
@@ -197,8 +266,9 @@ async function refusal(response: Response) {
 /**
  * The cookies of one sign-in, kept here rather than in the app's shared
  * cookie store, so each sign-in starts fresh. Laravel's CSRF check takes the
- * XSRF-TOKEN cookie back as a header. A redirect to the app is not followed:
- * it comes back as the response, its Location carrying the code.
+ * XSRF-TOKEN cookie back as a header. Redirects are not followed: the one to
+ * the app comes back as the response, its Location carrying the code (a
+ * custom scheme is not something the native request can follow).
  */
 class WebSession {
   private readonly cookies = new Map<string, string>();
@@ -224,6 +294,7 @@ class WebSession {
     const response = await fetch(target.url, {
       ...init,
       credentials: 'omit',
+      redirect: 'manual',
       headers: {
         Origin: AUTH_URL,
         Referer: `${AUTH_URL}/login`,
@@ -243,7 +314,7 @@ class WebSession {
 }
 
 let current: Tokens | null = null;
-let refreshing: Promise<Tokens | null> | null = null;
+let refreshing: Promise<(Tokens & { idToken?: string }) | null> | null = null;
 
 export async function loadTokens(): Promise<Tokens | null> {
   const [access, refresh, expires] = await Promise.all([
@@ -277,20 +348,33 @@ export async function accessToken(force = false): Promise<string | null> {
   if (!current) return null;
   if (!force && current.expiresAt - Date.now() > 30_000) return current.access;
 
+  return (await refreshed())?.access ?? null;
+}
+
+/**
+ * A new ID token for whoever is signed in, to open another workspace with
+ * (the first one is not kept). The refresh answers with one.
+ */
+export async function freshIdToken(): Promise<string> {
+  const tokens = await refreshed();
+  if (!tokens?.idToken) throw new Error('Cannot reach Miles Softwares. Check the connection, or sign in again.');
+  return tokens.idToken;
+}
+
+function refreshed() {
   refreshing ??= refresh().finally(() => {
     refreshing = null;
   });
-  return (await refreshing)?.access ?? null;
+  return refreshing;
 }
 
-async function refresh(): Promise<Tokens | null> {
+async function refresh(): Promise<(Tokens & { idToken?: string }) | null> {
   if (!current?.refresh) return null;
   try {
-    const next = fromResponse(
-      await tokenRequest({ grant_type: 'refresh_token', client_id: CLIENT_ID, refresh_token: current.refresh, scope: 'openid profile email' }),
-    );
+    const response = await tokenRequest({ grant_type: 'refresh_token', client_id: CLIENT_ID, refresh_token: current.refresh, scope: 'openid profile email' });
+    const next = fromResponse(response);
     await saveTokens(next);
-    return next;
+    return { ...next, idToken: response.id_token };
   } catch (error) {
     // Offline: keep the tokens, the next call tries again. Refused: signed out.
     if (error instanceof TokenRefused) await saveTokens(null);

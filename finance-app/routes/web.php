@@ -3,9 +3,11 @@
 use App\Finance\Currencies;
 use App\Finance\FixedAssets;
 use App\Finance\JournalApprovals;
+use App\Finance\PaymentRequests;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\ApprovalRulesController;
 use App\Http\Controllers\AssetCategoryController;
+use App\Http\Controllers\AuditController;
 use App\Http\Controllers\BankingController;
 use App\Http\Controllers\BankRuleController;
 use App\Http\Controllers\BankStatementController;
@@ -23,6 +25,7 @@ use App\Http\Controllers\JournalController;
 use App\Http\Controllers\OpeningBalanceController;
 use App\Http\Controllers\PaymentRequestController;
 use App\Http\Controllers\PeriodController;
+use App\Http\Controllers\PettyCashController;
 use App\Http\Controllers\RecurringJournalController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SupplierController;
@@ -57,6 +60,11 @@ Route::prefix(app(PlatformConfig::class)->path())
     ->middleware(['web', 'platform'])
     ->group(function () {
         Route::get('/', HomeController::class)->name('home');
+
+        // The audit trail: read only, for everyone holding audit.view.
+        Route::middleware('can:finance.audit.view')->group(function () {
+            Route::get('audit', [AuditController::class, 'index'])->name('audit.index');
+        });
 
         // Chart of accounts and each account's ledger.
         Route::middleware('can:finance.accounts.view')->group(function () {
@@ -107,24 +115,30 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::post('recurring-journals/{recurringJournal}/approve', [RecurringJournalController::class, 'approve'])->whereUuid('recurringJournal')->name('recurring-journals.approve');
         });
 
-        // Who decides what needs approval: not the approvers themselves.
-        Route::middleware('can:finance.approvals.configure')->group(function () {
+        // The approval rules: approvals.view reads them (auditors among its
+        // holders); only approvals.configure changes them, not the approvers.
+        Route::middleware(RequireAnyPermission::class.':finance.approvals.view,finance.approvals.configure')->group(function () {
             Route::get('approval-rules', ApprovalRulesController::class)->name('approval-rules.index');
+        });
+        Route::middleware('can:finance.approvals.configure')->group(function () {
             Route::put('journal-approvals/settings', [JournalApprovalController::class, 'settings'])->name('journal-approvals.settings');
             Route::put('payment-requests/settings', [PaymentRequestController::class, 'settings'])->name('payment-requests.settings');
+            Route::put('petty-cash/settings', [PettyCashController::class, 'limit'])->name('petty-cash.settings');
         });
 
         // Payment requests: prepare, review, approve, disburse. Each step is
-        // checked again in App\Finance\PaymentRequests. Members who pay
-        // directly reach the list too, when approval turns theirs into requests.
-        Route::middleware(RequireAnyPermission::class.':finance.payments.view,finance.payments.prepare,finance.payables.manage,finance.banking.manage')->group(function () {
+        // checked again in App\Finance\PaymentRequests. Apart from products'
+        // events and opening balances, this is how money leaves a bank.
+        Route::middleware(RequireAnyPermission::class.':finance.payments.view,finance.payments.prepare')->group(function () {
             Route::get('payment-requests', [PaymentRequestController::class, 'index'])->name('payment-requests.index');
         });
         Route::middleware('can:finance.payments.prepare')->group(function () {
             Route::get('payment-requests/create', [PaymentRequestController::class, 'create'])->name('payment-requests.create');
             Route::post('payment-requests', [PaymentRequestController::class, 'store'])->name('payment-requests.store');
         });
-        Route::middleware(RequireAnyPermission::class.':finance.payments.prepare,finance.payables.manage,finance.banking.manage')->group(function () {
+        // Only the preparer withdraws (PaymentRequests::withdraw), whichever
+        // way their request was raised: the form, a held journal, reversal or tax settlement.
+        Route::middleware(RequireAnyPermission::class.':'.PaymentRequests::RAISED_BY)->group(function () {
             Route::post('payment-requests/{paymentRequest}/withdraw', [PaymentRequestController::class, 'withdraw'])->whereUuid('paymentRequest')->name('payment-requests.withdraw');
         });
         Route::middleware('can:finance.payments.review')->group(function () {
@@ -176,15 +190,11 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::get('bills/{bill}', [BillController::class, 'show'])->whereUuid('bill')->name('bills.show');
             Route::get('supplier-payments', [SupplierPaymentController::class, 'index'])->name('supplier-payments.index');
         });
-        Route::middleware(RequireAnyPermission::class.':finance.payables.manage,finance.bills.manage')->group(function () {
+        Route::middleware('can:finance.bills.manage')->group(function () {
             Route::post('suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
             Route::put('suppliers/{supplier}', [SupplierController::class, 'update'])->whereUuid('supplier')->name('suppliers.update');
             Route::get('bills/create', [BillController::class, 'create'])->name('bills.create');
             Route::post('bills', [BillController::class, 'store'])->name('bills.store');
-        });
-        Route::middleware('can:finance.payables.manage')->group(function () {
-            Route::get('supplier-payments/create', [SupplierPaymentController::class, 'create'])->name('supplier-payments.create');
-            Route::post('supplier-payments', [SupplierPaymentController::class, 'store'])->name('supplier-payments.store');
         });
 
         // Receivables.
@@ -206,13 +216,37 @@ Route::prefix(app(PlatformConfig::class)->path())
         Route::middleware('can:finance.banking.view')->group(function () {
             Route::get('banking', [BankingController::class, 'index'])->name('banking.index');
         });
-        Route::middleware('can:finance.banking.manage')->group(function () {
-            Route::post('banking/money-out', [BankingController::class, 'moneyOut'])->name('banking.money-out');
-            Route::post('banking/transfers', [BankingController::class, 'transfer'])->name('banking.transfer');
+        // Money out and transfers: payment requests, above.
+        Route::middleware('can:finance.receipts.record')->group(function () {
+            Route::post('banking/money-in', [BankingController::class, 'moneyIn'])->name('banking.money-in');
         });
 
-        Route::middleware(RequireAnyPermission::class.':finance.banking.manage,finance.receipts.record')->group(function () {
-            Route::post('banking/money-in', [BankingController::class, 'moneyIn'])->name('banking.money-in');
+        // Petty cash funds (App\Finance\PettyCash checks who may act on which
+        // fund: only its custodian pays from it, nobody else's checks or counts
+        // are theirs, and so on).
+        Route::middleware('can:finance.banking.view')->group(function () {
+            Route::get('petty-cash', [PettyCashController::class, 'index'])->name('petty-cash.index');
+            Route::get('petty-cash/{fund}', [PettyCashController::class, 'show'])->whereUuid('fund')->name('petty-cash.show');
+            Route::get('petty-cash/{fund}/vouchers/{voucher}/receipt', [PettyCashController::class, 'receipt'])->whereUuid(['fund', 'voucher'])->scopeBindings()->name('petty-cash.receipt');
+        });
+        Route::middleware('can:finance.pettycash.manage')->group(function () {
+            Route::post('petty-cash', [PettyCashController::class, 'store'])->name('petty-cash.store');
+            Route::put('petty-cash/{fund}', [PettyCashController::class, 'update'])->whereUuid('fund')->name('petty-cash.update');
+            Route::put('petty-cash/{fund}/custodian', [PettyCashController::class, 'custodian'])->whereUuid('fund')->name('petty-cash.custodian');
+            Route::post('petty-cash/{fund}/close', [PettyCashController::class, 'close'])->whereUuid('fund')->name('petty-cash.close');
+        });
+        Route::middleware('can:finance.pettycash.record')->group(function () {
+            Route::post('petty-cash/{fund}/vouchers', [PettyCashController::class, 'pay'])->whereUuid('fund')->name('petty-cash.vouchers.store');
+        });
+        Route::middleware(RequireAnyPermission::class.':finance.pettycash.record,finance.pettycash.manage')->group(function () {
+            Route::post('petty-cash/{fund}/replenish', [PettyCashController::class, 'replenish'])->whereUuid('fund')->name('petty-cash.replenish');
+        });
+        Route::middleware('can:finance.payments.review')->group(function () {
+            Route::post('petty-cash/{fund}/vouchers/{voucher}/verify', [PettyCashController::class, 'verify'])->whereUuid(['fund', 'voucher'])->scopeBindings()->name('petty-cash.vouchers.verify');
+            Route::post('petty-cash/{fund}/vouchers/{voucher}/reject', [PettyCashController::class, 'reject'])->whereUuid(['fund', 'voucher'])->scopeBindings()->name('petty-cash.vouchers.reject');
+        });
+        Route::middleware('can:finance.banking.reconcile')->group(function () {
+            Route::post('petty-cash/{fund}/counts', [PettyCashController::class, 'count'])->whereUuid('fund')->name('petty-cash.counts.store');
         });
 
         // Bank statements and reconciliation.

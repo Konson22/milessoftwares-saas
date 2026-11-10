@@ -20,8 +20,9 @@ use Illuminate\Validation\ValidationException;
  * A product can only be offered on software that is released enough for
  * it: a pilot needs every required application in beta or later, a
  * generally available product needs them all generally available. A
- * planned product may name applications that are not registered yet; they
- * are left out until they are.
+ * planned product may name applications that are not registered yet, and
+ * any product may name optional ones (an add-on this deployment does not
+ * run yet); they are left out until they are registered.
  */
 final class ProductCatalog
 {
@@ -44,7 +45,7 @@ final class ProductCatalog
             $application = Application::query()->where('code', $entry['code'])->first();
 
             if ($application === null) {
-                if ($status === ProductStatus::Planned) {
+                if ($status === ProductStatus::Planned || $entry['requirement'] === 'optional') {
                     $unregistered[] = $entry['code'];
                 } else {
                     $errors["applications.{$index}.code"] = "{$entry['code']} is not a registered application.";

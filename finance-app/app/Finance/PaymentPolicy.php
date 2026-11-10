@@ -5,24 +5,31 @@ namespace App\Finance;
 use App\Models\Account;
 use App\Models\Workspace;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
 /**
  * The organization's rules for money leaving its accounts.
  *
- * A payment request always needs approval from the limit up (with no limit,
- * always). Turning payment approval on also holds the ways of paying without
- * a request: direct supplier payments, money out, transfers, tax settlements,
- * bank-crediting manual journals and journal reversals, bank-crediting
- * recurring journals, and outgoing statement lines entered in reconciliation.
+ * Money leaves a bank or cash account through a payment request. A request
+ * needs approval from the limit up (with no limit, always), and so do the
+ * other ways money can leave, which are held as requests from the limit up
+ * whatever anyone's role: tax settlements, bank-crediting manual journals and
+ * journal reversals, bank-crediting recurring journals, and outgoing statement
+ * lines entered in reconciliation. There is no switch for this.
+ *
+ * Separation of duties is not a setting either: see PaymentRequests.
  */
 class PaymentPolicy
 {
     /** How many times above or below the rate on record a typed rate may be. */
     private const RATE_DRIFT = 2;
 
-    public function __construct(private readonly Currencies $currencies) {}
+    public function __construct(
+        private readonly Currencies $currencies,
+        private readonly Audit $audit,
+    ) {}
 
     public function needsApproval(int $booksMinor): bool
     {
@@ -40,24 +47,30 @@ class PaymentPolicy
     }
 
     /**
-     * Whether money leaving a bank, already in the books' currency, must wait.
+     * Whether money leaving a bank other than by a request, already in the
+     * books' currency, must become one (or, where it cannot, is refused).
      */
     public function holdsDirect(int $booksMinor): bool
     {
-        return (Workspace::current()->payment_approval ?? false) && $this->needsApproval($booksMinor);
+        return $this->needsApproval($booksMinor);
     }
 
     /**
-     * Whether a payment made without a request must become one. Judged like
-     * approvalNeeded(), so a typed rate cannot take it below the limit.
+     * The rules in force now, stored with each request and held journal so
+     * it is known later which rules applied when it was approved.
      *
-     * @throws ValidationException when the typed rate is out of line with the day's
+     * @return array{payment_threshold_minor: int|null, payment_review: bool, journal_approval: bool, journal_threshold_minor: int|null}
      */
-    public function holdsPayment(int $amountMinor, ?string $currency, CarbonImmutable $on, ?string $rate = null): bool
+    public function snapshot(): array
     {
-        $needed = $this->approvalNeeded($amountMinor, $currency, $on, $rate);
+        $workspace = Workspace::current();
 
-        return (Workspace::current()->payment_approval ?? false) && $needed;
+        return [
+            'payment_threshold_minor' => $workspace?->payment_approval_threshold_minor,
+            'payment_review' => $workspace->payment_review ?? false,
+            'journal_approval' => $workspace->journal_approval ?? false,
+            'journal_threshold_minor' => $workspace?->journal_approval_threshold_minor,
+        ];
     }
 
     /**
@@ -106,14 +119,6 @@ class PaymentPolicy
         $ids = Account::query()->banks()->when($among !== null, fn ($query) => $query->whereIn('id', $among))->pluck('id')->all();
 
         return $ids;
-    }
-
-    /**
-     * Whether one person is kept from acting twice on the same payment.
-     */
-    public function separated(): bool
-    {
-        return Workspace::current()->payment_separation ?? true;
     }
 
     /**
@@ -170,16 +175,19 @@ class PaymentPolicy
     /**
      * @throws ValidationException before the workspace is provisioned
      */
-    public function configure(bool $approval, ?int $thresholdMinor, bool $review, bool $separation): Workspace
+    public function configure(?int $thresholdMinor, bool $review): Workspace
     {
-        $workspace = Workspace::current() ?? throw ValidationException::withMessages(['payment_approval' => 'This organization is not set up yet.']);
-        $workspace->forceFill([
-            'payment_approval' => $approval,
-            'payment_approval_threshold_minor' => $thresholdMinor,
-            'payment_review' => $review,
-            'payment_separation' => $separation,
-        ])->save();
+        $workspace = Workspace::current() ?? throw ValidationException::withMessages(['threshold' => 'This organization is not set up yet.']);
 
-        return $workspace;
+        return DB::transaction(function () use ($workspace, $thresholdMinor, $review) {
+            $before = ['threshold_minor' => $workspace->payment_approval_threshold_minor, 'review' => $workspace->payment_review];
+            $workspace->forceFill([
+                'payment_approval_threshold_minor' => $thresholdMinor,
+                'payment_review' => $review,
+            ])->save();
+            $this->audit->record('approval_rules.payments_changed', $workspace, $before, ['threshold_minor' => $thresholdMinor, 'review' => $review]);
+
+            return $workspace;
+        });
     }
 }

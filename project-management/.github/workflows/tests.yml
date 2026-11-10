@@ -1,0 +1,49 @@
+name: tests
+
+on:
+    push:
+    pull_request:
+
+jobs:
+    tests:
+        runs-on: ubuntu-latest
+        services:
+            postgres:
+                image: postgres:17
+                env:
+                    POSTGRES_USER: projects
+                    POSTGRES_PASSWORD: projects
+                    POSTGRES_DB: projects_test
+                ports: ['5432:5432']
+                options: >-
+                    --health-cmd "pg_isready -U projects"
+                    --health-interval 5s
+                    --health-timeout 5s
+                    --health-retries 10
+        env:
+            DB_CONNECTION: pgsql
+            DB_HOST: 127.0.0.1
+            DB_PORT: 5432
+            DB_DATABASE: projects_test
+            DB_USERNAME: projects
+            DB_PASSWORD: projects
+        steps:
+            - uses: actions/checkout@v4
+            - uses: shivammathur/setup-php@v2
+              with:
+                  php-version: '8.4'
+                  extensions: bcmath, pdo_pgsql, pgsql
+                  coverage: none
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+                  cache: npm
+            - run: composer install --no-interaction --prefer-dist
+            - run: npm ci
+            - run: cp .env.example .env && php artisan key:generate
+            - run: php artisan wayfinder:generate --with-form
+            - run: vendor/bin/pint --test
+            - run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+            - run: npx tsc --noEmit
+            - run: php artisan test --compact
+            - run: composer audit --no-interaction

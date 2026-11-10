@@ -239,12 +239,15 @@ class PageController extends Controller
             default => [],
         };
 
-        return Inertia::render('public/landing', [
-            'product' => $entry,
-            'plans' => $entry['status'] === 'coming_soon' ? [] : $plans,
-            'trialDays' => $this->trialDays(),
-            'canonical' => PlatformHosts::url(PlatformHosts::root(), $entry['url']),
-        ]);
+        return Inertia::render(
+            $category === 'application' && $slug === 'finance' ? 'public/finance' : 'public/landing',
+            [
+                'product' => $entry,
+                'plans' => $entry['status'] === 'coming_soon' ? [] : $plans,
+                'trialDays' => $this->trialDays(),
+                'canonical' => PlatformHosts::url(PlatformHosts::root(), $entry['url']),
+            ],
+        );
     }
 
     private function moved(string $type, string $code): ?RedirectResponse

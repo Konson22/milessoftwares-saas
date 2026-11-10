@@ -6,7 +6,7 @@
         "kind": "shared_module",
         "status": "beta"
     },
-    "version": "1.9.0",
+    "version": "1.11.0",
     "permissions": [
         {
             "key": "finance.accounts.view",
@@ -45,12 +45,6 @@
             "scopes": ["organization"]
         },
         {
-            "key": "finance.payables.manage",
-            "name": "Record bills and pay suppliers without a payment request, unless approval holds the payment",
-            "sensitivity": 3,
-            "scopes": ["organization"]
-        },
-        {
             "key": "finance.receivables.view",
             "name": "View invoices and customer payments",
             "sensitivity": 2,
@@ -66,12 +60,6 @@
             "key": "finance.banking.view",
             "name": "View bank and cash accounts",
             "sensitivity": 2,
-            "scopes": ["organization"]
-        },
-        {
-            "key": "finance.banking.manage",
-            "name": "Record money in, money out and transfers without a payment request, unless approval holds them",
-            "sensitivity": 3,
             "scopes": ["organization"]
         },
         {
@@ -187,6 +175,36 @@
             "name": "Set when journals and payments need review and approval",
             "sensitivity": 3,
             "scopes": ["organization"]
+        },
+        {
+            "key": "finance.approvals.view",
+            "name": "See the approval rules, without changing them",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.audit.view",
+            "name": "See the audit trail: who approved, paid, reversed, locked or changed what",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.dashboard.admin",
+            "name": "See the administration dashboard",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.pettycash.record",
+            "name": "Keep a petty cash fund, and pay from the one they keep",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.pettycash.manage",
+            "name": "Set up, suspend and close petty cash funds, and hand them to another custodian",
+            "sensitivity": 3,
+            "scopes": ["organization"]
         }
     ],
     "features": [
@@ -217,7 +235,10 @@
                 "finance.reports.view",
                 "finance.budgets.manage",
                 "finance.payments.view",
-                "finance.payments.approve"
+                "finance.payments.approve",
+                "finance.accounts.view",
+                "finance.approvals.view",
+                "finance.audit.view"
             ]
         },
         {
@@ -233,7 +254,8 @@
                 "finance.banking.view",
                 "finance.reports.view",
                 "finance.payments.view",
-                "finance.payments.prepare"
+                "finance.payments.prepare",
+                "finance.pettycash.record"
             ]
         },
         {
@@ -249,7 +271,8 @@
                 "finance.banking.view",
                 "finance.receipts.record",
                 "finance.payments.view",
-                "finance.payments.disburse"
+                "finance.payments.disburse",
+                "finance.pettycash.record"
             ]
         },
         {
@@ -280,7 +303,10 @@
                 "finance.currencies.manage",
                 "finance.assets.manage",
                 "finance.payments.view",
-                "finance.payments.review"
+                "finance.payments.review",
+                "finance.approvals.view",
+                "finance.audit.view",
+                "finance.pettycash.manage"
             ]
         },
         {
@@ -308,24 +334,6 @@
             ]
         },
         {
-            "key": "bookkeeper",
-            "name": "Bookkeeper (small teams, pays directly)",
-            "sensitivity": 3,
-            "delegable": true,
-            "scopes": ["organization"],
-            "permissions": [
-                "finance.accounts.view",
-                "finance.journals.view",
-                "finance.payables.view",
-                "finance.payables.manage",
-                "finance.receivables.view",
-                "finance.receivables.manage",
-                "finance.banking.view",
-                "finance.banking.manage",
-                "finance.banking.reconcile"
-            ]
-        },
-        {
             "key": "auditor",
             "name": "Auditor (read only)",
             "sensitivity": 2,
@@ -340,7 +348,9 @@
                 "finance.receivables.view",
                 "finance.banking.view",
                 "finance.reports.view",
-                "finance.payments.view"
+                "finance.payments.view",
+                "finance.approvals.view",
+                "finance.audit.view"
             ]
         },
         {
@@ -351,8 +361,10 @@
             "scopes": ["organization"],
             "permissions": [
                 "finance.accounts.view",
-                "finance.accounts.manage",
-                "finance.approvals.configure"
+                "finance.approvals.configure",
+                "finance.dashboard.admin",
+                "finance.approvals.view",
+                "finance.audit.view"
             ]
         }
     ],
@@ -433,6 +445,22 @@
             ],
             "mode": "warn",
             "description": "An approver who sets the approval rules can switch off the check on themselves."
+        },
+        {
+            "permissions": [
+                "finance.pettycash.record",
+                "finance.banking.reconcile"
+            ],
+            "mode": "warn",
+            "description": "Whoever keeps petty cash should not also count and reconcile it."
+        },
+        {
+            "permissions": [
+                "finance.pettycash.record",
+                "finance.payments.review"
+            ],
+            "mode": "warn",
+            "description": "Whoever keeps petty cash should not also check its vouchers."
         }
     ]
 }

@@ -11,7 +11,6 @@ use Lcobucci\JWT\Signer\Rsa\Sha256;
 use Lcobucci\JWT\Token\Plain;
 use Lcobucci\JWT\Validation\Constraint\IssuedBy;
 use Lcobucci\JWT\Validation\Constraint\LooseValidAt;
-use Lcobucci\JWT\Validation\Constraint\PermittedFor;
 use Lcobucci\JWT\Validation\Constraint\SignedWith;
 use Lcobucci\JWT\Validation\RequiredConstraintsViolated;
 use Miles\PlatformClient\PlatformConfig;
@@ -69,8 +68,8 @@ final class AppTokens
 
     private function verify(string $jwt, bool $issued): Plain
     {
-        $client = $this->config->mobileClientId();
-        if ($client === null || $jwt === '') {
+        $clients = $this->config->mobileClientIds();
+        if ($clients === [] || $jwt === '') {
             throw new SignInFailed('No mobile client or no token.');
         }
 
@@ -88,7 +87,6 @@ final class AppTokens
 
             $constraints = [
                 new SignedWith($config->signer(), $config->verificationKey()),
-                new PermittedFor($client),
                 new LooseValidAt(self::clock(), new DateInterval('PT60S')),
             ];
             if ($issued) {
@@ -96,6 +94,12 @@ final class AppTokens
             }
 
             $config->validator()->assert($token, ...$constraints);
+
+            // For one of this product's mobile clients (older builds may carry another).
+            $permitted = array_filter($clients, fn (string $client) => $token->isPermittedFor($client));
+            if ($permitted === []) {
+                throw new SignInFailed('Token rejected: not issued for this app.');
+            }
 
             // Loose validity accepts a token without expiry; these always have one.
             if (! $token->claims()->has('exp')) {

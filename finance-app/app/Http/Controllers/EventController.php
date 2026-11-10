@@ -84,7 +84,8 @@ class EventController extends Controller
             }
 
             $currency = $envelope->payload['currency'] ?? null;
-            if (is_string($currency) && $currency !== $workspace->currency) {
+            // Projects' events are converted at Finance's own rates (PostEvent::CONVERTED).
+            if (is_string($currency) && $currency !== $workspace->currency && ! in_array($envelope->eventType, PostEvent::CONVERTED, true)) {
                 return response()->json(['error' => 'currency_mismatch', 'detail' => "Finance keeps the books in {$workspace->currency}, not {$currency}."], 422);
             }
 

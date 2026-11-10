@@ -8,6 +8,7 @@ use App\Modules\Employees\Enums\RecordKind;
 use App\Modules\Employees\Models\Contract;
 use App\Modules\Employees\Models\Employee;
 use App\Support\DocumentNumbers;
+use App\Support\PayrollSync;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -22,6 +23,7 @@ class Staff
     public function __construct(
         private readonly DocumentNumbers $numbers,
         private readonly Employment $employment,
+        private readonly PayrollSync $payroll,
     ) {}
 
     /**
@@ -74,6 +76,8 @@ class Staff
                 'recorded_by' => $by->id,
             ]);
 
+            $this->payroll->joined($employee);
+
             return $employee;
         });
     }
@@ -91,6 +95,7 @@ class Staff
         return DB::transaction(function () use ($employee, $work) {
             $employee->fill($this->names($work));
             $this->setManager($employee, $work['manager_id'] ?? null);
+            $this->payroll->joined($employee);
 
             return $employee;
         });

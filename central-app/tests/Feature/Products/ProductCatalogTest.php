@@ -159,8 +159,8 @@ describe('catalog', function () {
         'duplicate application' => [function (array &$d) {
             $d['applications'][1]['code'] = 'pharmacy';
         }, 'applications.0.code'],
-        'unregistered application in a pilot' => [function (array &$d) {
-            $d['applications'][] = ['code' => 'retail', 'requirement' => 'optional'];
+        'unregistered required application in a pilot' => [function (array &$d) {
+            $d['applications'][] = ['code' => 'retail', 'requirement' => 'required'];
         }, 'applications.2.code'],
         'platform application' => [function (array &$d) {
             registerApplication('workspace', kind: ApplicationKind::Platform);
@@ -195,6 +195,8 @@ describe('catalog', function () {
             'education' => 'planned',
             'ngo' => 'planned',
             'finance_accounting' => 'pilot',
+            // Payroll is not registered in this test: kept planned.
+            'payroll' => 'planned',
         ]);
     });
 
@@ -202,17 +204,43 @@ describe('catalog', function () {
         registerApplication('retail');
 
         $this->artisan('platform:erp-products')
-            ->expectsOutputToContain('education: school, hr not registered here, kept planned.')
+            ->expectsOutputToContain('education: school not registered here, kept planned.')
             ->assertSuccessful();
 
         expect(ErpProduct::query()->where('code', 'education')->value('status')->value)->toBe('planned');
 
         registerApplication('school');
         registerApplication('hr', ApplicationStatus::Planned);
+        registerApplication('payroll', kind: ApplicationKind::SharedModule);
 
         $this->artisan('platform:erp-products')->assertSuccessful();
 
         expect(ErpProduct::query()->where('code', 'education')->value('status')->value)->toBe('pilot');
+    });
+
+    it('keeps a released product on sale without an optional add-on that is not registered', function () {
+        $result = app(ProductCatalog::class)->sync(pharmacyProduct([
+            'applications' => [
+                ['code' => 'pharmacy', 'requirement' => 'required'],
+                ['code' => 'finance', 'requirement' => 'optional'],
+                ['code' => 'payroll', 'requirement' => 'optional'],
+            ],
+        ]));
+
+        expect($result['unregistered'])->toBe(['payroll'])
+            ->and($result['product']->status)->toBe(ProductStatus::Pilot)
+            ->and($result['product']->applications()->pluck('code')->sort()->values()->all())->toBe(['finance', 'pharmacy']);
+
+        registerApplication('payroll', kind: ApplicationKind::SharedModule);
+        app(ProductCatalog::class)->sync(pharmacyProduct([
+            'applications' => [
+                ['code' => 'pharmacy', 'requirement' => 'required'],
+                ['code' => 'finance', 'requirement' => 'optional'],
+                ['code' => 'payroll', 'requirement' => 'optional'],
+            ],
+        ]));
+
+        expect(ErpProduct::query()->where('code', 'pharmacy')->sole()->applications()->pluck('code')->sort()->values()->all())->toBe(['finance', 'payroll', 'pharmacy']);
     });
 
     it('reports a product it cannot write and still writes the others', function () {

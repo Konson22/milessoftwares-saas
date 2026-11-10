@@ -52,6 +52,9 @@ export default function RootLayout() {
 
           <Stack.Protected guard={status === 'signedOut'}>
             <Stack.Screen name="login" />
+          </Stack.Protected>
+          {/* Registering, or signed in with no restaurant yet. */}
+          <Stack.Protected guard={status === 'signedOut' || status === 'noRestaurant'}>
             <Stack.Screen name="create-business" />
           </Stack.Protected>
           <Stack.Protected guard={status === 'chooseRestaurant'}>

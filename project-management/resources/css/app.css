@@ -1,0 +1,177 @@
+@import 'tailwindcss';
+
+@import 'tw-animate-css';
+@import '../js/ui/theme.css';
+
+/* Chart colours, all from the logo: status shows by how strong the colour is,
+   and every status also has its label. Status colours mean only status. The steps are an ordered ramp for workflow
+   stages, each with the ink that reads on it. */
+:root {
+    --viz-good: #01a8ff;
+    --viz-good-ink: #001652;
+    --viz-warning: #0053bb;
+    --viz-warning-ink: #ffffff;
+    --viz-critical: #001652;
+    --viz-critical-ink: #ffffff;
+    --viz-step-1: #7cc8ff;
+    --viz-step-1-ink: #001652;
+    --viz-step-2: #01a8ff;
+    --viz-step-2-ink: #001652;
+    --viz-step-3: #0053bb;
+    --viz-step-3-ink: #ffffff;
+    --viz-step-4: #001652;
+    --viz-step-4-ink: #ffffff;
+    --viz-grid: #e3edf9;
+    --viz-baseline: #b9cbe3;
+}
+
+.dark {
+    --viz-good: #01a8ff;
+    --viz-good-ink: #001652;
+    --viz-warning: #7cc8ff;
+    --viz-warning-ink: #001652;
+    --viz-critical: #ffffff;
+    --viz-critical-ink: #001652;
+    --viz-step-1: #003688;
+    --viz-step-1-ink: #ffffff;
+    --viz-step-2: #0053bb;
+    --viz-step-2-ink: #ffffff;
+    --viz-step-3: #01a8ff;
+    --viz-step-3-ink: #001652;
+    --viz-step-4: #7cc8ff;
+    --viz-step-4-ink: #001652;
+    --viz-grid: #002366;
+    --viz-baseline: #003688;
+}
+
+/* The public site, in the colours of the Tatook logo: deep navy (#001652)
+   and cyan (#01a8ff) on white, a bold geometric sans for headlines, and
+   flat surfaces with no shadows. Scoped to this tree so the product keeps
+   its own look. */
+.marketing {
+    --radius: 0.75rem;
+    --radius-xs: 0.25rem;
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.25rem;
+    --radius-3xl: 1.5rem;
+    --radius-4xl: 2rem;
+
+    --background: #ffffff;
+    --foreground: #001652;
+    --card: #f4f8fd;
+    --card-foreground: #001652;
+    --popover: #ffffff;
+    --popover-foreground: #001652;
+    --muted: #eef3fa;
+    --muted-foreground: #4a5d86;
+    --accent: #e6f2ff;
+    --accent-foreground: #001652;
+    --secondary: #e6f2ff;
+    --secondary-foreground: #001652;
+    --border: #dce6f3;
+    --input: #c3d2e6;
+    /* Buttons and links: the logo's royal blue, dark enough for white text. */
+    --primary: #0053bb;
+    --primary-foreground: #ffffff;
+    --ring: #0081fe;
+    /* The navy of the logo: bands and the closing call to action. */
+    --ink: #001652;
+    --ink-foreground: #ffffff;
+    /* The cyan of the logo, as it is: marks, rules and highlights. */
+    --signal: #01a8ff;
+    --brand-soft: #e6f2ff;
+}
+
+html.dark .marketing {
+    --background: #000e36;
+    --foreground: #eef7ff;
+    --card: #001652;
+    --card-foreground: #eef7ff;
+    --popover: #001652;
+    --popover-foreground: #eef7ff;
+    --muted: #002366;
+    --muted-foreground: #a9c4e6;
+    --accent: #003688;
+    --accent-foreground: #eef7ff;
+    --secondary: #003688;
+    --secondary-foreground: #eef7ff;
+    --border: #002366;
+    --input: #003688;
+    --primary: #01a8ff;
+    --primary-foreground: #001652;
+    --ring: #01a8ff;
+    --ink: #001652;
+    --ink-foreground: #ffffff;
+    --signal: #01a8ff;
+    --brand-soft: #002366;
+}
+
+@theme inline {
+    --font-display:
+        'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --color-ink: var(--ink);
+    --color-ink-foreground: var(--ink-foreground);
+    --color-signal: var(--signal);
+    --color-brand-soft: var(--brand-soft);
+}
+
+.marketing .font-display {
+    letter-spacing: -0.02em;
+}
+
+/* Figures line up, as in a ledger. */
+.marketing .figures {
+    font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* A soft azure wash behind the hero, echoing the logo's swoosh. */
+.marketing .brand-wash {
+    background:
+        radial-gradient(
+            60% 70% at 85% 10%,
+            color-mix(in oklab, var(--signal) 16%, transparent),
+            transparent 70%
+        ),
+        radial-gradient(
+            50% 60% at 0% 100%,
+            color-mix(in oklab, var(--primary) 9%, transparent),
+            transparent 70%
+        ),
+        var(--background);
+}
+
+/* The sign-in card is white in either scheme: the light colours, inside it. */
+.auth-card {
+    color-scheme: light;
+    --background: #ffffff;
+    --foreground: #001652;
+    --card: #ffffff;
+    --card-foreground: #001652;
+    --popover: #ffffff;
+    --popover-foreground: #001652;
+    --primary: #0053bb;
+    --primary-foreground: #ffffff;
+    --secondary: #eef7ff;
+    --secondary-foreground: #001652;
+    --muted: #eef3fa;
+    --muted-foreground: #4a5d86;
+    --accent: #e6f2ff;
+    --accent-foreground: #001652;
+    --destructive: #0053bb;
+    --destructive-foreground: #0053bb;
+    --border: #dce6f3;
+    --input: #c3d2e6;
+    --ring: #0081fe;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    html:has(.marketing) {
+        scroll-behavior: smooth;
+    }
+}
+
+@source '../views';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';

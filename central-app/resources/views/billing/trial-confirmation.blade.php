@@ -8,7 +8,7 @@
         @page { margin: 0; }
         * { box-sizing: border-box; }
         body { margin: 0; font-family: 'DejaVu Sans', sans-serif; font-size: 10pt; color: #1e293b; line-height: 1.45; }
-        .band { height: 8px; background: #0069d0; }
+        .band { height: 8px; background: #00b0e0; }
         .band span { display: block; height: 8px; width: 35%; background: #f95808; margin-left: 65%; }
         .page { padding: 34px 44px 30px; }
         table { width: 100%; border-collapse: collapse; }
@@ -16,9 +16,9 @@
         .logo { height: 54px; }
         .title { text-align: right; }
         .title h1 { margin: 0; font-size: 24pt; letter-spacing: 2px; color: #042356; }
-        .title .kind { margin-top: 2px; font-size: 10pt; font-weight: bold; color: #0069d0; text-transform: uppercase; letter-spacing: 1px; }
+        .title .kind { margin-top: 2px; font-size: 10pt; font-weight: bold; color: #007291; text-transform: uppercase; letter-spacing: 1px; }
         .muted { color: #64748b; }
-        .label { font-size: 7.5pt; font-weight: bold; color: #0069d0; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+        .label { font-size: 7.5pt; font-weight: bold; color: #007291; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
         .parties { margin-top: 26px; }
         .parties td { width: 50%; }
         .parties td:first-child { padding-right: 28px; }

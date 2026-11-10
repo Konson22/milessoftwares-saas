@@ -279,6 +279,7 @@ preserved (`ProxyPass "/pharmacy/" "http://127.0.0.1:8400/pharmacy/"`). Ports:
 | --------- | ----------------------- | -------- |
 | platform  | `central-app`           | 8100     |
 | pharmacy  | `pharmacy-app`          | 8400     |
+| petrol    | `petrol-app`            | 8900     |
 | blueprint | `templates/product-app` | 8499     |
 
 Register a product folder with the local platform (catalog, prefix, clients, webhook, provisioning,

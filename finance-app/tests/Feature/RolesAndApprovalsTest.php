@@ -16,8 +16,8 @@ use App\Models\JournalDraft;
 use App\Models\PaymentRequest;
 use App\Models\RecurringJournal;
 use App\Models\Supplier;
-use App\Models\SupplierPayment;
 use App\Models\TaxReturn;
+use App\Models\Workspace;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Miles\PlatformClient\Http\Middleware\RequirePlatformAccess;
@@ -69,10 +69,8 @@ function raRules(array $rules = []): void
 {
     asRole('system_administrator');
     test()->put(raUrl('payment-requests/settings'), $rules + [
-        'payment_approval' => '1',
         'threshold' => null,
         'payment_review' => '0',
-        'payment_separation' => '1',
     ])->assertSessionHasNoErrors();
 }
 
@@ -158,15 +156,8 @@ describe('authorization', function () {
         ['finance_manager', 'POST', 'payment-requests', false],
         ['accountant', 'POST', 'payment-requests', false],
         ['auditor', 'POST', 'payment-requests', false],
-        ['finance_officer', 'POST', 'supplier-payments', false],
-        ['finance_manager', 'POST', 'supplier-payments', false],
-        ['cashier', 'POST', 'supplier-payments', false],
-        ['accountant', 'POST', 'supplier-payments', false],
-        ['chief_accountant', 'POST', 'supplier-payments', false],
-        ['finance_officer', 'POST', 'banking/money-out', false],
-        ['cashier', 'POST', 'banking/money-out', false],
-        ['accountant', 'POST', 'banking/transfers', false],
         ['cashier', 'POST', 'banking/money-in', true],
+        ['finance_officer', 'POST', 'banking/money-in', false],
         ['accountant', 'POST', 'bills', true],
         ['finance_officer', 'POST', 'bills', false],
         ['accountant', 'POST', 'journals', true],
@@ -188,9 +179,49 @@ describe('authorization', function () {
         ['auditor', 'GET', 'payment-requests', true],
         ['auditor', 'GET', 'reports/trial-balance', true],
         ['cashier', 'GET', 'reports/trial-balance', false],
+        // Approval rules: read by approvals.view, changed by approvals.configure only.
+        ['auditor', 'GET', 'approval-rules', true],
+        ['finance_manager', 'GET', 'approval-rules', true],
+        ['auditor', 'PUT', 'payment-requests/settings', false],
+        ['auditor', 'PUT', 'journal-approvals/settings', false],
+        ['cashier', 'GET', 'approval-rules', false],
+        // The audit trail.
+        ['auditor', 'GET', 'audit', true],
+        ['system_administrator', 'GET', 'audit', true],
+        ['chief_accountant', 'GET', 'audit', true],
+        ['accountant', 'GET', 'audit', false],
+        ['cashier', 'GET', 'audit', false],
+        // The Finance Manager reads accounts, cost centres and journal schedules.
+        ['finance_manager', 'GET', 'accounts', true],
+        ['finance_manager', 'GET', 'dimensions', true],
+        ['finance_manager', 'GET', 'recurring-journals', true],
+        ['finance_manager', 'POST', 'accounts', false],
+        // The System Administrator sets Finance up, but not the chart, and touches no money.
+        ['system_administrator', 'POST', 'accounts', false],
+        ['system_administrator', 'GET', 'banking', false],
+        ['system_administrator', 'POST', 'payment-requests', false],
+        ['chief_accountant', 'POST', 'accounts', true],
+        // The auditor creates, approves and changes nothing.
+        ['auditor', 'POST', 'bills', false],
+        ['auditor', 'POST', 'invoices', false],
+        ['auditor', 'POST', 'banking/money-in', false],
+        ['auditor', 'POST', 'reconciliation', false],
+        ['auditor', 'POST', 'periods/years', false],
+    ]);
+
+    it('has no route left that pays or moves money directly, for any role or owner', function (string $method, string $path) {
+        $this->actingAsMember('acme', owner: true);
+
+        expect($this->call($method, raUrl($path))->getStatusCode())->toBeIn([404, 405]);
+    })->with([
+        ['POST', 'supplier-payments'],
+        ['GET', 'supplier-payments/create'],
+        ['POST', 'banking/money-out'],
+        ['POST', 'banking/transfers'],
     ]);
 
     it('lets only the chief accountant reverse a posted journal', function () {
+        $this->paymentLimit('acme', 1_000_00);
         asRole('accountant');
         $this->post(raUrl('journals'), ['entry_date' => '2026-10-05', 'memo' => 'Rent', 'lines' => [
             ['account_id' => raAccount('6000'), 'debit' => '10'],
@@ -325,30 +356,31 @@ describe('segregation of duties', function () {
         expect(raRequest()->status)->toBe(PaymentRequest::PENDING_APPROVAL);
     });
 
-    it('lets a very small team turn separation off', function () {
+    it('has no setting that lets one person approve and pay their own request, owners included', function () {
+        // A request to turn separation off is not a rule there is: it is ignored.
         raRules(['payment_separation' => '0']);
         $this->actingAsMember('acme', [], owner: true);
 
         raExpense()->assertSessionHasNoErrors();
         $request = raRequest();
-        $this->post(raUrl("payment-requests/{$request->id}/approve"))->assertSessionHasNoErrors();
-        $this->post(raUrl("payment-requests/{$request->id}/disburse"), ['paid_on' => '2026-10-20'])->assertSessionHasNoErrors();
+        $this->post(raUrl("payment-requests/{$request->id}/approve"))->assertSessionHasErrors('request');
+        $this->post(raUrl("payment-requests/{$request->id}/disburse"), ['paid_on' => '2026-10-20'])->assertSessionHasErrors('request');
 
-        expect(raRequest()->status)->toBe(PaymentRequest::DISBURSED);
+        expect(raRequest()->status)->toBe(PaymentRequest::PENDING_APPROVAL)
+            ->and(raRequest()->policy)->toBe(['payment_threshold_minor' => null, 'payment_review' => false, 'journal_approval' => false, 'journal_threshold_minor' => null])
+            ->and(raJournals())->toBe(0);
     });
 
-    it('needs no approval below the limit, but still a second person to pay', function () {
+    it('needs no approval below the limit, so whoever prepared it may pay it', function () {
         raRules(['threshold' => '1000']);
         $user = $this->platformUser();
         $this->actingAsMember('acme', ['finance.payments.view', 'finance.payments.prepare', 'finance.payments.disburse'], user: $user);
 
         raExpense('999.99')->assertSessionHasNoErrors();
         $small = raRequest();
-        expect($small->status)->toBe(PaymentRequest::APPROVED);
-        $this->post(raUrl("payment-requests/{$small->id}/disburse"), ['paid_on' => '2026-10-20'])->assertSessionHasErrors('request');
-
-        asRole('cashier');
+        expect($small->status)->toBe(PaymentRequest::APPROVED)->and($small->approved_by)->toBeNull();
         $this->post(raUrl("payment-requests/{$small->id}/disburse"), ['paid_on' => '2026-10-20'])->assertSessionHasNoErrors();
+        expect(raRequest()->status)->toBe(PaymentRequest::DISBURSED);
 
         asRole('finance_officer');
         raExpense('1000')->assertSessionHasNoErrors();
@@ -403,42 +435,38 @@ describe('segregation of duties', function () {
 describe('no way round approval', function () {
     beforeEach(function () {
         raRules();
-        // Someone holding the old direct permissions, and more.
+        // Someone who posts journals and reconciles: no payment permission at all.
         $this->actingAsMember('acme', [
-            'finance.payables.view', 'finance.payables.manage', 'finance.banking.view', 'finance.banking.manage',
-            'finance.banking.reconcile', 'finance.accounts.view', 'finance.journals.view', 'finance.journals.post',
+            'finance.payables.view', 'finance.banking.view', 'finance.banking.reconcile', 'finance.receipts.record',
+            'finance.accounts.view', 'finance.journals.view', 'finance.journals.post', 'finance.payments.view',
         ]);
     });
 
-    it('turns a direct supplier payment into a request', function () {
-        $supplier = $this->asTenant('acme', fn () => Supplier::query()->create(['name' => 'Acme Supplies']));
+    it('holds money leaving a bank by default, with no setting to stop it', function () {
+        // Out of the box (no limit), and whatever an old form still sends.
+        $this->actingAsMember('acme', [], owner: true);
+        $this->put(raUrl('payment-requests/settings'), ['payment_approval' => '0', 'payment_review' => '0', 'threshold' => null])->assertSessionHasNoErrors();
 
-        $this->post(raUrl('supplier-payments'), [
-            'supplier_id' => $supplier->id, 'account_id' => raAccount('1010'), 'amount' => '100', 'paid_on' => '2026-10-05',
-        ])->assertSessionHasNoErrors()->assertRedirect(raUrl('payment-requests'));
+        $this->post(raUrl('journals'), ['entry_date' => '2026-10-05', 'memo' => 'Rent', 'lines' => [
+            ['account_id' => raAccount('6000'), 'debit' => '100'],
+            ['account_id' => raAccount('1010'), 'credit' => '100'],
+        ]])->assertSessionHasNoErrors()->assertRedirect(raUrl('payment-requests'));
 
-        expect($this->asTenant('acme', fn () => SupplierPayment::query()->count()))->toBe(0)
-            ->and(raJournals())->toBe(0)
-            ->and(raRequest()->kind)->toBe(PaymentRequest::SUPPLIER)
-            ->and(raRequest()->status)->toBe(PaymentRequest::PENDING_APPROVAL);
-
-        $this->get(raUrl('payment-requests'))->assertOk();
+        expect(raJournals())->toBe(0)->and(raRequest()->kind)->toBe(PaymentRequest::JOURNAL);
     });
 
-    it('turns money out into a request', function () {
-        $this->post(raUrl('banking/money-out'), [
-            'account_id' => raAccount('1010'), 'other_account_id' => raAccount('6000'), 'amount' => '100', 'entry_date' => '2026-10-05', 'description' => 'Rent',
-        ])->assertSessionHasNoErrors()->assertRedirect(raUrl('payment-requests'));
+    it('lets the withdraw route reach whoever raised a held journal, and nobody else', function () {
+        $this->post(raUrl('journals'), ['entry_date' => '2026-10-05', 'memo' => 'Rent', 'lines' => [
+            ['account_id' => raAccount('6000'), 'debit' => '100'],
+            ['account_id' => raAccount('1010'), 'credit' => '100'],
+        ]])->assertSessionHasNoErrors();
+        $request = raRequest();
 
-        expect(raJournals())->toBe(0)->and(raRequest()->kind)->toBe(PaymentRequest::EXPENSE);
-    });
-
-    it('turns a transfer into a request', function () {
-        $this->post(raUrl('banking/transfers'), [
-            'account_id' => raAccount('1010'), 'to_account_id' => raAccount('1000'), 'amount' => '100', 'entry_date' => '2026-10-05', 'description' => 'To the till',
-        ])->assertSessionHasNoErrors()->assertRedirect(raUrl('payment-requests'));
-
-        expect(raJournals())->toBe(0)->and(raRequest()->kind)->toBe(PaymentRequest::TRANSFER);
+        asRole('finance_officer');
+        $this->post(raUrl("payment-requests/{$request->id}/withdraw"))->assertSessionHasErrors('request');
+        asRole('auditor');
+        $this->post(raUrl("payment-requests/{$request->id}/withdraw"))->assertForbidden();
+        expect(raRequest()->status)->toBe(PaymentRequest::PENDING_APPROVAL);
     });
 
     it('turns a manual journal that takes money out of a bank into a request, but not others', function () {
@@ -471,16 +499,18 @@ describe('no way round approval', function () {
         expect(raJournals())->toBe(1);
     });
 
-    it('leaves direct payments alone while approval is off', function () {
-        raRules(['payment_approval' => '0']);
-        $this->actingAsMember('acme', ['finance.banking.view', 'finance.banking.manage']);
+    it('lets money leave directly only below the limit', function () {
+        raRules(['threshold' => '1000']);
+        $this->actingAsMember('acme', ['finance.accounts.view', 'finance.journals.view', 'finance.journals.post']);
+        $journal = fn (string $amount) => $this->post(raUrl('journals'), ['entry_date' => '2026-10-05', 'memo' => 'Rent', 'lines' => [
+            ['account_id' => raAccount('6000'), 'debit' => $amount],
+            ['account_id' => raAccount('1010'), 'credit' => $amount],
+        ]])->assertSessionHasNoErrors();
 
-        $this->post(raUrl('banking/money-out'), [
-            'account_id' => raAccount('1010'), 'other_account_id' => raAccount('6000'), 'amount' => '100', 'entry_date' => '2026-10-05', 'description' => 'Rent',
-        ])->assertSessionHasNoErrors();
-
-        expect(raJournals())->toBe(1)
-            ->and($this->asTenant('acme', fn () => PaymentRequest::query()->count()))->toBe(0);
+        $journal('999.99');
+        expect(raJournals())->toBe(1);
+        $journal('1000');
+        expect(raJournals())->toBe(1)->and(raRequest()->kind)->toBe(PaymentRequest::JOURNAL);
     });
 });
 
@@ -600,8 +630,21 @@ describe('dashboards', function () {
             ->where('views', ['finance', 'accounting'])
             ->where('view', 'accounting'));
 
+        // Setup and controls, and no money.
+        raRules(['threshold' => '500']);
         asRole('system_administrator');
-        $this->get(raUrl())->assertInertia(fn (Assert $page) => $page->where('views', [])->where('view', null));
+        $this->get(raUrl())->assertInertia(fn (Assert $page) => $page
+            ->where('views', ['admin'])
+            ->where('view', 'admin')
+            ->where('admin.rules.paymentThresholdMinor', 50000)
+            ->where('admin.audit.0.action', 'approval_rules.payments_changed')
+            ->has('admin.chart')
+            ->where('finance', null)
+            ->where('accounting', null)
+            ->where('cash', null)
+            ->where('payable', null)
+            ->where('month', null)
+            ->where('recent', null));
     });
 
     it('only shows a role the figures its permissions allow', function () {
@@ -648,6 +691,7 @@ describe('dashboards', function () {
     });
 
     it('lists what stands between the books and closing the month', function () {
+        $this->paymentLimit('acme', 1_000_00);
         asRole('chief_accountant');
         $this->post(raUrl('periods/years'), ['starts_on' => '2026-01-01', 'months' => 12])->assertSessionHasNoErrors();
         foreach ($this->asTenant('acme', fn () => FiscalPeriod::query()->whereDate('starts_on', '<=', '2026-08-01')->orderBy('starts_on')->get()) as $month) {
@@ -682,8 +726,8 @@ describe('what the review found', function () {
     // Holds what is needed to prepare and pay in another currency.
     $dollars = function () {
         test()->actingAsMember('acme', [
-            'finance.accounts.view', 'finance.accounts.manage', 'finance.currencies.manage', 'finance.banking.view', 'finance.banking.manage',
-            'finance.payments.view', 'finance.payments.prepare',
+            'finance.accounts.view', 'finance.accounts.manage', 'finance.currencies.manage', 'finance.banking.view',
+            'finance.payments.view', 'finance.payments.prepare', 'finance.journals.view', 'finance.journals.post',
         ], features: [Currencies::FEATURE]);
         test()->post(raUrl('accounts'), ['code' => '1050', 'name' => 'Dollar account', 'type' => 'asset', 'bank_kind' => 'bank', 'currency' => 'USD'])->assertRedirect()->assertSessionHasNoErrors();
     };
@@ -710,10 +754,6 @@ describe('what the review found', function () {
         $expense(['rate' => '1.5'])->assertSessionHasNoErrors();
         expect(raRequest()->status)->toBe(PaymentRequest::PENDING_APPROVAL)->and(raRequest()->books_minor)->toBe(120000);
 
-        // Direct money out is judged the same way.
-        $this->post(raUrl('banking/money-out'), [
-            'account_id' => raAccount('1050'), 'other_account_id' => raAccount('6000'), 'amount' => '600', 'entry_date' => '2026-10-05', 'description' => 'Rent', 'rate' => '1.5',
-        ])->assertSessionHasNoErrors()->assertRedirect(raUrl('payment-requests'));
         expect(raJournals())->toBe(0);
     });
 
@@ -822,7 +862,8 @@ describe('what the review found', function () {
         expect(raRequest()->status)->toBe(PaymentRequest::APPROVED)->and(raBalance('1010'))->toBe(1800);
     });
 
-    it('does not unfile a return if that takes its refund back out of the bank while payments are held', function () use ($taxCollected) {
+    it('does not unfile a return if that takes its refund back out of the bank from the limit up', function () use ($taxCollected) {
+        $this->paymentLimit('acme', 1_000_00);
         $return = $taxCollected('2200', '1010');
         $this->post(raUrl("tax-returns/{$return->id}/settle"), ['account_id' => raAccount('1010'), 'date' => '2026-10-05'])->assertRedirect()->assertSessionHasNoErrors();
         raRules();
@@ -833,11 +874,11 @@ describe('what the review found', function () {
     });
 
     it('holds the reversal of money that came in, but not of money that went out', function () {
-        $this->actingAsMember('acme', ['finance.banking.view', 'finance.banking.manage', 'finance.journals.view']);
-        $move = fn (string $path) => $this->post(raUrl($path), ['account_id' => raAccount('1010'), 'other_account_id' => raAccount('6000'), 'amount' => '50', 'entry_date' => '2026-10-05', 'description' => 'Move'])->assertRedirect()->assertSessionHasNoErrors();
-        $move('banking/money-in');
+        $this->paymentLimit('acme', 1_000_00);
+        $this->actingAsMember('acme', ['finance.banking.view', 'finance.receipts.record', 'finance.journals.view', 'finance.payments.prepare', 'finance.payments.disburse']);
+        $this->post(raUrl('banking/money-in'), ['account_id' => raAccount('1010'), 'other_account_id' => raAccount('6000'), 'amount' => '50', 'entry_date' => '2026-10-05', 'description' => 'Move'])->assertRedirect()->assertSessionHasNoErrors();
         $in = $this->asTenant('acme', fn () => Journal::query()->where('source_type', 'money_in')->sole());
-        $move('banking/money-out');
+        $this->payThroughRequest(['kind' => 'expense', 'account_id' => raAccount('1010'), 'other_account_id' => raAccount('6000'), 'amount' => '50', 'pay_on' => '2026-10-05', 'description' => 'Move'])->assertSessionHasNoErrors();
         $out = $this->asTenant('acme', fn () => Journal::query()->where('source_type', 'money_out')->sole());
         raRules();
 
@@ -913,7 +954,8 @@ describe('what the review found', function () {
         expect($template('Reverses out')->posted_count)->toBe(1)->and($template('Pays out')->posted_count)->toBe(0);
     });
 
-    it('asks for a payment approver again if payments start being held after a journal approval', function () {
+    it('asks for a payment approver again if the limit comes down under a journal already approved', function () {
+        raRules(['threshold' => '1000']);
         asRole('system_administrator');
         $this->put(raUrl('journal-approvals/settings'), ['journal_approval' => '1', 'threshold' => null])->assertRedirect()->assertSessionHasNoErrors();
         asRole('accountant');
@@ -941,24 +983,32 @@ describe('what the review found', function () {
 
         $this->get(raUrl('approval-rules'))->assertOk()->assertInertia(fn (Assert $page) => $page
             ->component('approval-rules/index')
-            ->where('payments.approval', true)
+            ->where('canChange', true)
             ->where('payments.threshold', '250.00')
             ->where('payments.review', true)
-            ->where('journals.enabled', false));
+            ->where('journals.enabled', false)
+            ->where('history.0.rules', 'Payments')
+            ->where('history.0.before', 'no limit, no review step')
+            ->where('history.0.after', 'from 250.00, reviewed first'));
         $this->get(raUrl('payment-requests'))->assertForbidden();
         $this->get(raUrl('journal-approvals'))->assertForbidden();
 
-        asRole('finance_manager');
-        $this->get(raUrl('approval-rules'))->assertForbidden();
+        // Others read them, and cannot change them.
+        foreach (['auditor', 'finance_manager', 'chief_accountant'] as $role) {
+            asRole($role);
+            $this->get(raUrl('approval-rules'))->assertOk()->assertInertia(fn (Assert $page) => $page->where('canChange', false));
+            $this->put(raUrl('payment-requests/settings'), ['threshold' => null, 'payment_review' => '0'])->assertForbidden();
+        }
+        expect($this->asTenant('acme', fn () => Workspace::query()->sole()->payment_approval_threshold_minor))->toBe(25000);
     });
 
     it('pays a request whose description fills the memo, and holds one for a long supplier name', function () {
         raRules();
-        $direct = ['finance.banking.view', 'finance.banking.manage', 'finance.payables.view', 'finance.payables.manage'];
-        $this->actingAsMember('acme', $direct);
-        $this->post(raUrl('banking/money-out'), [
-            'account_id' => raAccount('1010'), 'other_account_id' => raAccount('6000'), 'amount' => '100', 'entry_date' => '2026-10-05', 'description' => str_repeat('x', 255),
-        ])->assertSessionHasNoErrors();
+        $this->actingAsMember('acme', ['finance.accounts.view', 'finance.journals.view', 'finance.journals.post']);
+        $this->post(raUrl('journals'), ['entry_date' => '2026-10-05', 'memo' => str_repeat('x', 255), 'lines' => [
+            ['account_id' => raAccount('6000'), 'debit' => '100'],
+            ['account_id' => raAccount('1010'), 'credit' => '100'],
+        ]])->assertSessionHasNoErrors();
         $request = raRequest();
 
         asRole('finance_manager');
@@ -969,10 +1019,10 @@ describe('what the review found', function () {
         $memo = $this->asTenant('acme', fn () => Journal::query()->sole()->memo);
         expect(mb_strlen($memo))->toBe(255)->and($memo)->toEndWith("({$request->number})");
 
-        $this->actingAsMember('acme', $direct);
+        asRole('finance_officer');
         $supplier = $this->asTenant('acme', fn () => Supplier::query()->create(['name' => str_repeat('n', 255)]));
-        $this->post(raUrl('supplier-payments'), [
-            'supplier_id' => $supplier->id, 'account_id' => raAccount('1010'), 'amount' => '100', 'paid_on' => '2026-10-05',
+        $this->post(raUrl('payment-requests'), [
+            'kind' => 'supplier', 'supplier_id' => $supplier->id, 'account_id' => raAccount('1010'), 'amount' => '100', 'pay_on' => '2026-10-05',
         ])->assertSessionHasNoErrors();
         expect(mb_strlen(raRequest()->description))->toBe(255);
     });

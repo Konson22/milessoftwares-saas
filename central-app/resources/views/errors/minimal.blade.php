@@ -47,25 +47,25 @@
         <link rel="icon" href="/favicon.ico" sizes="any">
         <style>
             :root {
-                --bg: #f2f9ff;
+                --bg: #ffffff;
                 --card: #ffffff;
-                --ink: #00255b;
-                --muted: #46597a;
-                --line: #dbe8f5;
-                --accent: #0069d0;
-                --accent-hover: #0055a8;
+                --ink: #304048;
+                --muted: #455863;
+                --line: #d5e1e7;
+                --accent: #007291;
+                --accent-hover: #00607c;
                 color-scheme: light;
             }
 
             @media (prefers-color-scheme: dark) {
                 :root {
-                    --bg: #001a42;
-                    --card: #00255b;
-                    --ink: #f4f7fb;
-                    --muted: #c5d0df;
-                    --line: #1a2f52;
-                    --accent: #0069d0;
-                    --accent-hover: #0055a8;
+                    --bg: #243038;
+                    --card: #304048;
+                    --ink: #f3f6f7;
+                    --muted: #aebfc8;
+                    --line: #3d5160;
+                    --accent: #1cb8e3;
+                    --accent-hover: #00b0e0;
                     color-scheme: dark;
                 }
             }

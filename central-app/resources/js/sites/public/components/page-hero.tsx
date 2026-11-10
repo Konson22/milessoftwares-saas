@@ -3,8 +3,8 @@ import type { ReactNode } from 'react';
 import { container, display, tints } from '@/sites/public/components/styles';
 
 /**
- * The short band every page but home opens with: a soft blue wash under
- * the header with a faint dot grid, a hairline below, and a left-aligned
+ * The short band every page but home opens with: white under the
+ * header with a faint dot grid, a hairline below, and a left-aligned
  * title with one line of intro. The top padding clears the fixed header
  * (h-16) with a modest gap, so the page content starts high. `above` is a
  * small line over the title (a back link or a step); `children`, at most
@@ -169,8 +169,8 @@ function Constellation() {
 }
 
 /**
- * The highlighted phrase of a heading, in the logo blue: its darker form
- * on light (5.3:1), a lighter blue on a dark band (5.1:1).
+ * The highlighted phrase of a heading, in the logo cyan: its darker form
+ * on light (5.5:1), a lighter cyan on a charcoal band (4.6:1).
  */
 export function Accent({ children }: { children: ReactNode }) {
     return (
@@ -203,8 +203,8 @@ export function IconBox({
 }
 
 /**
- * The logo's speed squares, as a small rule over a heading: a navy dash
- * and two blue ones. Decorative only.
+ * The logo's two shapes, as a small rule over a heading: a charcoal dash
+ * and two cyans. Decorative only.
  */
 export function SpeedMark({ className = '' }: { className?: string }) {
     return (

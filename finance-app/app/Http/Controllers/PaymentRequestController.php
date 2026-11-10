@@ -25,14 +25,13 @@ use Inertia\Response;
  */
 class PaymentRequestController extends Controller
 {
-    public function index(Request $request, PaymentPolicy $policy): Response
+    public function index(Request $request): Response
     {
         $user = $this->user($request);
         $with = ['account', 'otherAccount', 'costCentre', 'preparer', 'reviewer', 'approver', 'disburser', 'closer', 'journal'];
         $open = PaymentRequest::query()->with($with)->whereIn('status', PaymentRequest::OPEN)->orderBy('created_at')->get();
         $closed = PaymentRequest::query()->with($with)->whereNotIn('status', PaymentRequest::OPEN)->orderByDesc('updated_at')->limit(50)->get();
-        $separated = $policy->separated();
-        $row = fn (PaymentRequest $payment) => $this->row($payment, $user, $separated);
+        $row = fn (PaymentRequest $payment) => $this->row($payment, $user);
 
         return Inertia::render('payment-requests/index', [
             'open' => $open->map($row)->values(),
@@ -169,17 +168,13 @@ class PaymentRequestController extends Controller
     public function settings(Request $request, PaymentPolicy $policy): RedirectResponse
     {
         $data = $request->validate([
-            'payment_approval' => ['required', 'boolean'],
             'threshold' => ['nullable', 'string', Money::rule()],
             'payment_review' => ['required', 'boolean'],
-            'payment_separation' => ['required', 'boolean'],
         ]);
 
         $policy->configure(
-            (bool) $data['payment_approval'],
             ($data['threshold'] ?? '') === '' ? null : Money::toMinor($data['threshold']),
             (bool) $data['payment_review'],
-            (bool) $data['payment_separation'],
         );
 
         return back()->with('success', 'Payment approval rules saved.');
@@ -188,7 +183,7 @@ class PaymentRequestController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function row(PaymentRequest $payment, User $user, bool $separated): array
+    private function row(PaymentRequest $payment, User $user): array
     {
         $own = $payment->prepared_by === $user->id;
 
@@ -216,10 +211,10 @@ class PaymentRequestController extends Controller
             'journal' => $payment->journal === null ? null : ['id' => $payment->journal->id, 'number' => $payment->journal->number],
             'own' => $own,
             // For showing and hiding buttons: App\Finance\PaymentRequests decides.
-            'canReview' => $payment->status === PaymentRequest::PENDING_REVIEW && ! ($separated && $own) && $user->can('finance.payments.review'),
-            'canApprove' => $payment->status === PaymentRequest::PENDING_APPROVAL && ! ($separated && ($own || $payment->reviewed_by === $user->id)) && $user->can('finance.payments.approve'),
+            'canReview' => $payment->status === PaymentRequest::PENDING_REVIEW && PaymentRequests::refusal($payment, 'review', $user->id) === null && $user->can('finance.payments.review'),
+            'canApprove' => $payment->status === PaymentRequest::PENDING_APPROVAL && PaymentRequests::refusal($payment, 'approve', $user->id) === null && $user->can('finance.payments.approve'),
             'canDisburse' => $payment->status === PaymentRequest::APPROVED
-                && ! ($separated && ($own || $payment->approved_by === $user->id || $payment->reviewed_by === $user->id))
+                && PaymentRequests::refusal($payment, 'disburse', $user->id) === null
                 && $user->can('finance.payments.disburse'),
             'canReject' => in_array($payment->status, PaymentRequest::OPEN, true) && ! $own
                 && ($user->can('finance.payments.approve') || ($payment->status === PaymentRequest::PENDING_REVIEW && $user->can('finance.payments.review'))),

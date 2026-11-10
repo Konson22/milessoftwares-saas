@@ -1,0 +1,26 @@
+{
+  "cli": {
+    "version": ">= 24.11.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {
+      "autoIncrement": true
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "C:/Users/konak/Downloads/milesoftwares-4209776fb798.json",
+        "track": "internal"
+      }
+    }
+  }
+}

@@ -96,9 +96,9 @@ function Brand({ light = false }: { light?: boolean }) {
                         : '/images/logo-site.png'
                 }
                 alt="Miles Global Softwares"
-                width={874}
-                height={250}
-                className="h-9 w-auto sm:h-10"
+                width={959}
+                height={230}
+                className="h-10 w-auto sm:h-11"
             />
         </Link>
     );
@@ -188,7 +188,7 @@ function NavMenu({
                                 aria-current={
                                     path === item.href ? 'page' : undefined
                                 }
-                                className={`flex gap-3 rounded-xl whitespace-normal transition-colors hover:bg-site-soft aria-[current=page]:bg-site-accent/10 ${item.body ? 'items-start p-3' : 'items-center px-3 py-2'}`}
+                                className={`flex gap-3 rounded-xl whitespace-normal transition-colors hover:bg-slate-50 aria-[current=page]:bg-site-accent/10 ${item.body ? 'items-start p-3' : 'items-center px-3 py-2'}`}
                             >
                                 <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-site-accent/10 text-site-accent-ink">
                                     <Icon className="size-4" aria-hidden />
@@ -253,7 +253,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                 Skip to content
             </a>
             <header
-                className={`fixed inset-x-0 top-0 z-40 border-b bg-white transition-[border-color,box-shadow] duration-300 ${scrolled ? 'border-site-line shadow-[0_6px_20px_-14px_rgb(6_36_78/0.3)]' : 'border-transparent'}`}
+                className={`fixed inset-x-0 top-0 z-40 border-b bg-white transition-[border-color,box-shadow] duration-300 ${scrolled ? 'border-site-line shadow-[0_6px_20px_-14px_rgb(48_64_72/0.35)]' : 'border-transparent'}`}
             >
                 <nav
                     aria-label="Main"
@@ -302,7 +302,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                     </div>
                     <button
                         type="button"
-                        className={`ml-auto inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-site-line text-site-ink hover:bg-site-soft lg:hidden`}
+                        className={`ml-auto inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-site-line text-site-ink hover:bg-slate-50 lg:hidden`}
                         aria-expanded={menuOpen}
                         aria-controls="mobile-menu"
                         onClick={() => setMenuOpen((open) => !open)}
@@ -538,7 +538,7 @@ function MobileLink({
             href={href}
             aria-current={currentOf({ href, section }, path)}
             onClick={onClick}
-            className="block rounded-lg px-3 py-2.5 font-semibold text-slate-700 hover:bg-site-soft aria-[current=page]:bg-site-accent/10 aria-[current=page]:text-site-accent-ink aria-[current=true]:bg-site-accent/10 aria-[current=true]:text-site-accent-ink"
+            className="block rounded-lg px-3 py-2.5 font-semibold text-slate-700 hover:bg-slate-50 aria-[current=page]:bg-site-accent/10 aria-[current=page]:text-site-accent-ink aria-[current=true]:bg-site-accent/10 aria-[current=true]:text-site-accent-ink"
         >
             {children}
         </Link>

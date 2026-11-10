@@ -8,17 +8,21 @@ import { ArtBackground, BrandMark } from '@/components/art-background';
 import { KeyboardScroll } from '@/components/keyboard-scroll';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { GoogleButton } from '@/components/ui/google-button';
 import { Banner } from '@/components/ui/misc';
 import { useKeyboardHeight } from '@/hooks/use-keyboard';
 import { ApiError, errorMessage } from '@/lib/api/client';
 import { platform } from '@/lib/api/platform';
-import { NeedsBrowser, SignInCancelled, signInOnPlatform, signInWithCode, signInWithPassword, signUpWithPassword } from '@/lib/auth/tokens';
+import { googleAvailable, NeedsBrowser, SignInCancelled, signUpWithPassword } from '@/lib/auth/tokens';
 import { workspaceUrl } from '@/lib/config';
 import { colors } from '@/lib/theme';
-import { useAuth } from '@/store/auth';
+import { useAuth, type SignInWith } from '@/store/auth';
 
 /** ".milesoftwares.com", as the workspace address ends. */
 const ROOT = workspaceUrl('x').replace(/^https?:\/\/x/, '');
+
+/** Every new restaurant starts with this branch, so the floor opens straight in it. More can be added on the web. */
+const FIRST_BRANCH = 'Main branch';
 
 /** As the web's "New business": the name, lowercased, dashes for the rest. */
 function suggestSlug(name: string): string {
@@ -33,27 +37,41 @@ function suggestSlug(name: string): string {
 }
 
 /**
- * A new restaurant from the app, as the web's "New business" makes one:
- * first the person's Miles Softwares account (a new one, or one they have),
- * then the business with its first branch. They become its owner, with the
- * restaurant's free trial, and the restaurant opens in it.
+ * Register, in the app (no browser): first a Miles Softwares account, then
+ * the restaurant. They become its owner, with the restaurant's free trial,
+ * its Main branch is made for them, and the floor opens in it. Someone
+ * signed in with no restaurant yet goes straight to the restaurant.
  */
 export default function CreateBusinessScreen() {
   const insets = useSafeAreaInsets();
   const keyboard = useKeyboardHeight();
-  /** Signed in on the platform: the business form, with the ID token to open it after. */
-  const [idToken, setIdToken] = useState<string | null>(null);
+  const status = useAuth((s) => s.status);
+  const signOut = useAuth((s) => s.signOut);
+  /** Registered in this screen, and signed in with the new account. */
+  const [accountDone, setAccountDone] = useState(false);
+  const signedIn = status === 'noRestaurant' || accountDone;
+
+  async function changeAccount() {
+    await signOut();
+    setAccountDone(false);
+    router.replace('/login');
+  }
 
   return (
     <ArtBackground>
       <KeyboardScroll contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false} bounces={false}>
         {keyboard ? <View style={{ height: insets.top + 12 }} /> : <BrandMark compact />}
         <View className="w-full max-w-xl gap-4 self-center px-6" style={{ paddingBottom: (keyboard ? 0 : insets.bottom) + 16 }}>
-          <Steps step={idToken ? 2 : 1} />
-          {idToken ? <BusinessStep idToken={idToken} /> : <AccountStep onSignedIn={setIdToken} />}
+          {signedIn ? <BusinessStep /> : <AccountStep onRegistered={() => setAccountDone(true)} />}
           <View className="flex-row justify-center border-t border-white/15 pt-4">
-            <Text className="text-sm text-brand-100">Your restaurant is already on Miles? </Text>
-            <TextLink title="Sign in" onPress={() => router.replace('/login')} />
+            {signedIn ? (
+              <TextLink title="Use another account" onPress={changeAccount} />
+            ) : (
+              <>
+                <Text className="py-1 text-sm text-brand-100">Already have an account? </Text>
+                <TextLink title="Sign in" onPress={() => router.replace('/login')} />
+              </>
+            )}
           </View>
         </View>
       </KeyboardScroll>
@@ -61,32 +79,13 @@ export default function CreateBusinessScreen() {
   );
 }
 
-function Steps({ step }: { step: 1 | 2 }) {
-  return (
-    <View className="flex-row items-center gap-2" accessible accessibilityLabel={`Step ${step} of 2`}>
-      {(['Your account', 'Your restaurant'] as const).map((label, i) => {
-        const on = i + 1 <= step;
-        return (
-          <View key={label} className="flex-row items-center gap-2">
-            {i > 0 && <View className={`h-0.5 w-6 rounded-full ${on ? 'bg-accent' : 'bg-white/20'}`} />}
-            <View className={`h-6 w-6 items-center justify-center rounded-full ${on ? 'bg-accent' : 'bg-white/15'}`}>
-              {i + 1 < step ? (
-                <Ionicons name="checkmark" size={14} color={colors.brand[950]} />
-              ) : (
-                <Text className={`text-xs font-bold ${on ? 'text-brand-950' : 'text-brand-100'}`}>{i + 1}</Text>
-              )}
-            </View>
-            <Text className={`text-sm font-semibold ${on ? 'text-white' : 'text-brand-200'}`}>{label}</Text>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
-/** A new Miles Softwares account, or one the person has (with a two-step code, or in the browser). */
-function AccountStep({ onSignedIn }: { onSignedIn: (idToken: string) => void }) {
-  const [newAccount, setNewAccount] = useState(true);
+/**
+ * A new account. Google asks for nothing more: it has proven the address, so
+ * there is no link to confirm, and it is the sign-in too: someone who has a
+ * restaurant already is taken to it.
+ */
+function AccountStep({ onRegistered }: { onRegistered: () => void }) {
+  const signIn = useAuth((s) => s.signIn);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -98,14 +97,12 @@ function AccountStep({ onSignedIn }: { onSignedIn: (idToken: string) => void }) 
   const emailRef = useRef<ComponentRef<typeof TextInput>>(null);
   const passwordRef = useRef<ComponentRef<typeof TextInput>>(null);
 
-  async function run(key: string, task: () => Promise<{ idToken: string } | 'twoFactor'>) {
+  async function run(key: string, task: () => Promise<void>) {
     setBusy(key);
     setError(null);
     setNeedsBrowser(false);
     try {
-      const result = await task();
-      if (result === 'twoFactor') setCode({ value: '', recovery: false });
-      else onSignedIn(result.idToken);
+      await task();
     } catch (e) {
       if (e instanceof SignInCancelled) return;
       setError(errorMessage(e));
@@ -115,16 +112,23 @@ function AccountStep({ onSignedIn }: { onSignedIn: (idToken: string) => void }) 
     }
   }
 
+  /** With no restaurant yet the status moves on and this screen shows the restaurant; with one, it opens. */
+  const withPlatform = (key: string, how: SignInWith) =>
+    run(key, async () => {
+      if ((await signIn(how)) === 'twoFactor') setCode({ value: '', recovery: false });
+    });
+
   function submit() {
-    if (newAccount && !name.trim()) return setError('Enter your name.');
+    if (!name.trim()) return setError('Enter your name.');
     if (!email.trim() || !password) return setError('Enter your email and password.');
-    void run('password', () =>
-      newAccount ? signUpWithPassword(name.trim(), email.trim(), password) : signInWithPassword(email.trim(), password),
-    );
+    void run('password', async () => {
+      await signUpWithPassword(name.trim(), email.trim(), password);
+      onRegistered();
+    });
   }
 
   if (code) {
-    const withCode = () => run('code', () => signInWithCode(code.value.trim(), code.recovery));
+    const withCode = () => withPlatform('code', { with: 'code', code: code.value.trim(), recovery: code.recovery });
     return (
       <>
         <Heading title="Two-step sign-in" subtitle={code.recovery ? 'Enter one of your recovery codes.' : 'Enter the code from your authenticator app.'} />
@@ -158,24 +162,19 @@ function AccountStep({ onSignedIn }: { onSignedIn: (idToken: string) => void }) 
 
   return (
     <>
-      <Heading
-        title="Create your restaurant"
-        subtitle={newAccount ? 'First, your Miles Softwares account.' : 'First, sign in with your Miles Softwares account.'}
-      />
+      <Heading title="Create your restaurant" subtitle="First, your Miles Softwares account." />
       {error ? <Banner tone="error">{error}</Banner> : null}
-      {newAccount && (
-        <Field
-          dark
-          label="Your name"
-          icon="person-outline"
-          value={name}
-          onChangeText={setName}
-          autoComplete="name"
-          textContentType="name"
-          returnKeyType="next"
-          onSubmitEditing={() => emailRef.current?.focus()}
-        />
-      )}
+      <Field
+        dark
+        label="Your name"
+        icon="person-outline"
+        value={name}
+        onChangeText={setName}
+        autoComplete="name"
+        textContentType="name"
+        returnKeyType="next"
+        onSubmitEditing={() => emailRef.current?.focus()}
+      />
       <Field
         ref={emailRef}
         dark
@@ -202,11 +201,11 @@ function AccountStep({ onSignedIn }: { onSignedIn: (idToken: string) => void }) 
         secureTextEntry={!showPassword}
         autoCapitalize="none"
         autoCorrect={false}
-        textContentType={newAccount ? 'newPassword' : 'password'}
-        autoComplete={newAccount ? 'new-password' : 'current-password'}
+        textContentType="newPassword"
+        autoComplete="new-password"
         returnKeyType="go"
         onSubmitEditing={submit}
-        hint={newAccount ? 'At least 8 characters.' : undefined}
+        hint="At least 8 characters."
         trailing={
           <Pressable
             accessibilityRole="button"
@@ -218,32 +217,25 @@ function AccountStep({ onSignedIn }: { onSignedIn: (idToken: string) => void }) 
         }
       />
       <Button
-        title={newAccount ? 'Create account' : 'Continue'}
+        title="Create account"
         size="lg"
         variant="accent"
-        icon={newAccount ? 'person-add-outline' : 'arrow-forward'}
+        icon="person-add-outline"
         onPress={submit}
         loading={busy === 'password'}
         disabled={!!busy}
       />
-      <Button
-        title={needsBrowser ? 'Continue in the browser' : 'Google or the browser'}
-        variant="glass"
-        icon="globe-outline"
-        onPress={() => run('browser', signInOnPlatform)}
-        loading={busy === 'browser'}
-        disabled={!!busy}
-      />
-      <View className="flex-row justify-center">
-        <Text className="text-sm text-brand-100">{newAccount ? 'Already have an account? ' : 'No account yet? '}</Text>
-        <TextLink
-          title={newAccount ? 'Sign in instead' : 'Create one'}
-          onPress={() => {
-            setNewAccount(!newAccount);
-            setError(null);
-          }}
+      {googleAvailable() && <GoogleButton onPress={() => withPlatform('google', { with: 'google' })} loading={busy === 'google'} disabled={!!busy} />}
+      {(needsBrowser || !googleAvailable()) && (
+        <Button
+          title={needsBrowser ? 'Continue in the browser' : 'Google or the browser'}
+          variant="glass"
+          icon="globe-outline"
+          onPress={() => withPlatform('browser', { with: 'browser' })}
+          loading={busy === 'browser'}
+          disabled={!!busy}
         />
-      </View>
+      )}
     </>
   );
 }
@@ -275,15 +267,15 @@ function useSlugAvailability(slug: string): Availability {
   return slug === '' ? { state: 'idle' } : availability;
 }
 
-/** The business: its name and workspace address, where it is, and its first branch. */
-function BusinessStep({ idToken }: { idToken: string }) {
-  const openCreated = useAuth((s) => s.openCreated);
+/** The business: its name and workspace address. Its Main branch comes with it. */
+function BusinessStep() {
+  const chooseRestaurant = useAuth((s) => s.chooseRestaurant);
+  const signOut = useAuth((s) => s.signOut);
+  const noRestaurantYet = useAuth((s) => s.status === 'noRestaurant');
   const [displayName, setDisplayName] = useState('');
   const [legalName, setLegalName] = useState('');
   const [slug, setSlug] = useState('');
   const [slugEdited, setSlugEdited] = useState(false);
-  const [branch, setBranch] = useState('Main branch');
-  const [city, setCity] = useState('');
   const [country, setCountry] = useState('SS');
   const [currency, setCurrency] = useState('SSP');
   const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Juba');
@@ -307,12 +299,12 @@ function BusinessStep({ idToken }: { idToken: string }) {
         country_code: country.trim(),
         default_currency: currency.trim(),
         timezone: timezone.trim(),
-        branch_name: branch.trim(),
-        branch_city: city.trim() || null,
+        branch_name: FIRST_BRANCH,
+        branch_city: null,
       });
       made = result.organization.slug;
       // Signed in: the app moves on to the floor by itself.
-      await openCreated(made, idToken);
+      await chooseRestaurant(made);
     } catch (e) {
       if (made) setCreated(made);
       else setError(e);
@@ -328,7 +320,16 @@ function BusinessStep({ idToken }: { idToken: string }) {
           The restaurant is not open in this workspace yet: it is still being set up, or it is not offered as a free trial yet. Sign in again in
           a moment; if it still does not open, start the restaurant from the workspace on the web.
         </Banner>
-        <Button title="Back to sign in" size="lg" variant="accent" icon="log-in-outline" onPress={() => router.replace('/login')} />
+        <Button
+          title="Back to sign in"
+          size="lg"
+          variant="accent"
+          icon="log-in-outline"
+          onPress={async () => {
+            await signOut();
+            router.replace('/login');
+          }}
+        />
       </>
     );
   }
@@ -347,7 +348,10 @@ function BusinessStep({ idToken }: { idToken: string }) {
 
   return (
     <>
-      <Heading title="Your restaurant" subtitle="You become its owner, with the free trial, and the restaurant opens in it." />
+      <Heading title="Your restaurant" subtitle="You become its owner, with the free trial, and the floor opens in its Main branch." />
+      {noRestaurantYet && !general ? (
+        <Banner tone="info">No restaurant on this account yet. Create one, or ask the owner to invite you.</Banner>
+      ) : null}
       {general ? (
         <Banner tone={unverified ? 'warning' : 'error'}>
           {general}
@@ -386,10 +390,6 @@ function BusinessStep({ idToken }: { idToken: string }) {
         error={field('slug') ?? (availability.state === 'unavailable' ? availability.error : undefined)}
         hint={slugHint}
       />
-      <View className="flex-row gap-3">
-        <Field dark className="flex-1" label="First branch" value={branch} onChangeText={setBranch} error={field('branch_name')} />
-        <Field dark className="flex-1" label="City" value={city} onChangeText={setCity} error={field('branch_city')} placeholder="Juba" />
-      </View>
 
       <Pressable
         accessibilityRole="button"

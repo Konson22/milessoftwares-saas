@@ -3,7 +3,7 @@ import { create } from 'zustand';
 
 import { ApiError, currentWorkspace, request, setRequestContext } from '@/lib/api/client';
 import { platform, type RestaurantChoice } from '@/lib/api/platform';
-import { accessToken, loadTokens, saveTokens, signInOnPlatform, signInWithCode, signInWithPassword } from '@/lib/auth/tokens';
+import { accessToken, freshIdToken, loadTokens, saveTokens, signInOnPlatform, signInWithCode, signInWithGoogle, signInWithPassword } from '@/lib/auth/tokens';
 import { setCurrency } from '@/lib/format';
 import type { Branch, Me, User } from '@/lib/types';
 import { forgetPages } from '@/offline/cache';
@@ -15,15 +15,17 @@ const WORKSPACE_KEY = 'miles-restaurant.workspace';
 const OLD_MODE_KEY = 'miles-restaurant.mode';
 
 /**
- * signedOut → chooseRestaurant (in more than one) → needsBranch (more than
- * one branch) → ready.
+ * signedOut → noRestaurant (signed in, none yet: create one) or
+ * chooseRestaurant (in more than one) → needsBranch (more than one branch) →
+ * ready.
  */
-type Status = 'loading' | 'signedOut' | 'chooseRestaurant' | 'needsBranch' | 'ready';
+type Status = 'loading' | 'signedOut' | 'noRestaurant' | 'chooseRestaurant' | 'needsBranch' | 'ready';
 
-/** How the person signs in: email and password (then a two-step code if asked), or the browser. */
+/** How the person signs in: email and password (then a two-step code if asked), Google on the device, or the browser. */
 export type SignInWith =
   | { with: 'password'; email: string; password: string }
   | { with: 'code'; code: string; recovery?: boolean }
+  | { with: 'google' }
   | { with: 'browser' };
 
 /** Who is signed in where; no secrets (the tokens live in the secure store). */
@@ -46,11 +48,13 @@ interface AuthState {
 
   hydrate(): Promise<void>;
 
-  /** 'twoFactor' wants a code next; 'choose' lists the restaurants. */
-  signIn(how: SignInWith): Promise<'signedIn' | 'choose' | 'twoFactor'>;
+  /**
+   * 'twoFactor' wants a code next; 'choose' lists the restaurants;
+   * 'noRestaurant' stays signed in, to create one without signing in again.
+   */
+  signIn(how: SignInWith): Promise<'signedIn' | 'choose' | 'noRestaurant' | 'twoFactor'>;
+  /** Open a restaurant of whoever is signed in: one they chose, or one just created. */
   chooseRestaurant(workspace: string): Promise<void>;
-  /** A business just created here: its restaurant opens with the sign-in that made it. */
-  openCreated(workspace: string, idToken: string): Promise<void>;
   chooseBranch(branchId: string): Promise<void>;
   refreshMe(): Promise<void>;
 
@@ -170,7 +174,9 @@ export const useAuth = create<AuthState>((set, get) => {
           ? await signInWithPassword(how.email, how.password)
           : how.with === 'code'
             ? await signInWithCode(how.code, how.recovery)
-            : await signInOnPlatform();
+            : how.with === 'google'
+              ? await signInWithGoogle()
+              : await signInOnPlatform();
       if (tokens === 'twoFactor') return 'twoFactor';
 
       let restaurants: RestaurantChoice[];
@@ -180,9 +186,10 @@ export const useAuth = create<AuthState>((set, get) => {
         await saveTokens(null);
         throw error;
       }
+      // None yet: still signed in, to create one here.
       if (restaurants.length === 0) {
-        await saveTokens(null);
-        throw new ApiError('Your account is not in a restaurant yet. Create one, or ask the owner to invite you.', 403);
+        set({ status: 'noRestaurant' });
+        return 'noRestaurant';
       }
       if (restaurants.length === 1) {
         await openWorkspace(restaurants[0].slug, tokens.idToken);
@@ -196,11 +203,9 @@ export const useAuth = create<AuthState>((set, get) => {
       return 'choose';
     },
 
-    openCreated: (workspace, idToken) => openWorkspace(workspace, idToken),
-
     async chooseRestaurant(workspace) {
-      if (!pendingIdToken) throw new ApiError('Sign in again.', 401);
-      await openWorkspace(workspace, pendingIdToken);
+      // Just registered, or none until now: the refresh answers with a new ID token.
+      await openWorkspace(workspace, pendingIdToken ?? (await freshIdToken()));
       pendingIdToken = null;
       set({ choices: [] });
     },

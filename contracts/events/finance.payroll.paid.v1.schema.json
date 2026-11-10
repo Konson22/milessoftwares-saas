@@ -1,0 +1,15 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milesoftwares.com/contracts/events/finance.payroll.paid.v1.schema.json",
+    "title": "finance.payroll.paid, schema_version 1",
+    "description": "A payroll run's net pay went out: Dr Salaries payable, Cr the account the method names, dated occurred_at.",
+    "type": "object",
+    "required": ["run_reference", "currency", "amount_minor", "method"],
+    "additionalProperties": false,
+    "properties": {
+        "run_reference": { "type": "string", "maxLength": 64 },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "amount_minor": { "type": "integer", "minimum": 0 },
+        "method": { "enum": ["cash", "bank_transfer", "mobile_money"] }
+    }
+}

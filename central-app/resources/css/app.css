@@ -20,41 +20,37 @@
  * public site's palette and font.
  */
 @theme {
-    /* Brand colours, from the logo (public/images/logo-*.png): the navy
-       of "MILES" and of the mark's body, and the bright blue of the
-       mark's swoosh and "GLOBAL SOFTWARES".
-       cyan is the light blue, teal the blue darkened for text; green is
-       kept for success notes only. */
-    --color-brand-ink: #001a42;
-    --color-brand-navy: #00255b;
-    --color-brand-navy-light: #005aa4;
-    --color-brand-blue: #0389fc;
-    --color-brand-blue-dark: #0069d0;
-    --color-brand-cyan: #2b9bff;
-    --color-brand-teal: #0059ad;
-    --color-brand-green: #03d5cd;
+    /* Brand colours, sampled from the logo: charcoal of "Miles Global"
+       and of the mark's dark shape (#304048), and the cyan of the mark
+       and of "Softwares" (#00b0e0).
+       accent-ink and accent-deep are that cyan darkened so white text
+       and small type clear 4.5:1. highlight is the cyan lifted so it
+       clears 4.5:1 on the charcoal. green is for success notes only. */
+    --color-brand-ink: #243038;
+    --color-brand-navy: #304048;
+    --color-brand-navy-light: #3d5160;
+    --color-brand-blue: #00b0e0;
+    --color-brand-blue-dark: #007291;
+    --color-brand-cyan: #1cb8e3;
+    --color-brand-teal: #006480;
+    --color-brand-green: #0f9f8f;
 
-    /* Public site, in the logo's two colours: navy for type and bands,
-       the logo blue for actions, highlights, links and icons, on white
-       and soft blue.
-       - accent (the logo blue) for shapes and large text on navy;
-         accent-ink for buttons and blue text on light (5.3:1 with
-         white); accent-deep its hover.
-       - highlight, a lighter blue, for small shapes and for text on
-         navy (5.1:1).
+    /* Public site: charcoal for type and bands, the logo cyan for
+       shapes, the darkened cyan for buttons and text on white.
+       site-soft is the white page ground.
        site-black is the app sidebar in product art. */
-    --color-site-ink: #00255b;
-    --color-site-wash: #e3f3ff;
-    --color-site-soft: #f2f9ff;
-    --color-site-line: #dbe8f5;
+    --color-site-ink: #304048;
+    --color-site-wash: #e7f6fb;
+    --color-site-soft: #ffffff;
+    --color-site-line: #d5e1e7;
     --color-site-black: #070707;
-    --color-site-navy: #00255b;
-    --color-site-night: #001a42;
-    --color-site-accent: #0389fc;
-    --color-site-accent-ink: #0069d0;
-    --color-site-accent-deep: #0055a8;
-    --color-site-highlight: #2b9bff;
-    --color-site-slate: #515f6d;
+    --color-site-navy: #304048;
+    --color-site-night: #243038;
+    --color-site-accent: #00b0e0;
+    --color-site-accent-ink: #007291;
+    --color-site-accent-deep: #00607c;
+    --color-site-highlight: #1cb8e3;
+    --color-site-slate: #5a707b;
     --font-public:
         'Nunito Variable', 'Nunito', ui-sans-serif, system-ui, sans-serif;
     --font-public-display:
@@ -62,37 +58,38 @@
 }
 
 /*
- * The signed-in hosts in the logo's colours: the "MILES" navy for the
- * sidebar, the logo blue for actions, focus rings and the active sidebar
- * item, and a run of blues for charts. Overrides the shared theme for
- * this app only; the product apps keep their own.
+ * The signed-in hosts in the logo's colours: the charcoal of "Miles
+ * Global" for the sidebar, the logo cyan for focus rings and charts,
+ * and the darkened cyan for the active item so white type stays
+ * readable. Overrides the shared theme for this app only; the product
+ * apps keep their own.
  */
 :root {
-    --primary: #0069d0;
-    --ring: #0389fc;
-    --chart-1: #0069d0;
-    --chart-2: #00255b;
-    --chart-3: #2b9bff;
-    --chart-4: #7cc4ff;
-    --chart-5: #94a3b8;
-    --sidebar: #00255b;
-    --sidebar-primary: #0069d0;
+    --primary: #007291;
+    --ring: #00b0e0;
+    --chart-1: #007291;
+    --chart-2: #304048;
+    --chart-3: #00b0e0;
+    --chart-4: #1cb8e3;
+    --chart-5: #8aa0aa;
+    --sidebar: #304048;
+    --sidebar-primary: #007ea1;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-ring: #0389fc;
+    --sidebar-ring: #00b0e0;
 }
 
 .dark {
-    --primary: #0389fc;
-    --ring: #2b9bff;
-    --chart-1: #2b9bff;
-    --chart-2: #7cc4ff;
-    --chart-3: #0389fc;
-    --chart-4: #bfe1ff;
-    --chart-5: #94a3b8;
-    --sidebar: #001a42;
-    --sidebar-primary: #0069d0;
+    --primary: #1cb8e3;
+    --ring: #00b0e0;
+    --chart-1: #1cb8e3;
+    --chart-2: #7ad4ea;
+    --chart-3: #00b0e0;
+    --chart-4: #d6f4fb;
+    --chart-5: #8aa0aa;
+    --sidebar: #243038;
+    --sidebar-primary: #007ea1;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-ring: #2b9bff;
+    --sidebar-ring: #1cb8e3;
 }
 
 @layer utilities {
@@ -128,19 +125,18 @@
     --text-sm: 0.875rem;
     --text-sm--line-height: 1.25rem;
 
-    /* Greys drawn from the logo's navy, so body text sits in the brand
-       too. Same contrast steps as Tailwind's slate: 500 and darker keep
-       4.5:1 on white, 300 on navy. */
-    --color-slate-50: #f4f7fb;
-    --color-slate-100: #e8eef6;
-    --color-slate-200: #d3dce9;
-    --color-slate-300: #c5d0df;
-    --color-slate-400: #8b9bb4;
-    --color-slate-500: #5f7391;
-    --color-slate-600: #46597a;
-    --color-slate-700: #2f4366;
-    --color-slate-800: #1a2f52;
-    --color-slate-900: #0b2147;
+    /* Greys drawn from the logo's charcoal, so body text sits in the
+       brand too. 500 and darker keep 4.5:1 on white. */
+    --color-slate-50: #f3f6f7;
+    --color-slate-100: #e4ebef;
+    --color-slate-200: #c9d5dc;
+    --color-slate-300: #aebfc8;
+    --color-slate-400: #7a909b;
+    --color-slate-500: #5a707b;
+    --color-slate-600: #455863;
+    --color-slate-700: #304048;
+    --color-slate-800: #243038;
+    --color-slate-900: #172228;
 }
 
 /* Headings in the display face; everything else in the text face. */
@@ -262,7 +258,7 @@
 /* Card rails: a slim scrollbar while they scroll sideways. */
 .site-public .site-rail {
     scrollbar-width: thin;
-    scrollbar-color: rgb(1 133 253 / 0.35) transparent;
+    scrollbar-color: rgb(0 176 224 / 0.45) transparent;
 }
 
 /*

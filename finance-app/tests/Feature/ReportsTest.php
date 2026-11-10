@@ -14,6 +14,8 @@ beforeEach(function () {
     $this->platform()->organization('acme');
     $this->publishEventKeys();
     $this->setUpFinance('acme');
+    // Below the limit, money leaving a bank posts directly: these books are set up with it.
+    $this->paymentLimit('acme');
     $this->actingAsMember('acme', REPORTER);
 });
 

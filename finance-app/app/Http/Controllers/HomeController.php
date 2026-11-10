@@ -67,7 +67,7 @@ class HomeController extends Controller
             ])->values()->all()
             : null;
 
-        $views = array_values(array_filter(['finance', 'accounting'], fn (string $view) => $can("finance.dashboard.{$view}")));
+        $views = array_values(array_filter(['finance', 'accounting', 'admin'], fn (string $view) => $can("finance.dashboard.{$view}")));
         $view = in_array($request->query('view'), $views, true) ? $request->query('view') : ($views[0] ?? null);
 
         return Inertia::render('home', [
@@ -75,6 +75,7 @@ class HomeController extends Controller
             'view' => $view,
             'finance' => $view === 'finance' ? $dashboards->finance($can, $today) : null,
             'accounting' => $view === 'accounting' ? $dashboards->accounting($can, $today, FixedAssets::enabled()) : null,
+            'admin' => $view === 'admin' ? $dashboards->admin($can) : null,
             'cash' => $cash,
             'receivable' => $receivable,
             'payable' => $payable,

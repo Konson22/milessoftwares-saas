@@ -8,11 +8,8 @@ use App\Finance\Balances;
 use App\Finance\Banking;
 use App\Finance\Currencies;
 use App\Finance\Money;
-use App\Finance\PaymentPolicy;
-use App\Finance\PaymentRequests;
 use App\Models\Account;
 use App\Models\JournalLine;
-use App\Models\PaymentRequest;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,8 +17,8 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Bank and cash accounts: balances, recent movements, money in and out,
- * and transfers.
+ * Bank and cash accounts: balances, recent movements and money in. Money
+ * out and transfers go through payment requests (PaymentRequestController).
  */
 class BankingController extends Controller
 {
@@ -73,63 +70,12 @@ class BankingController extends Controller
         ]);
     }
 
-    public function moneyOut(Request $request, Banking $banking, PaymentPolicy $policy, PaymentRequests $requests): RedirectResponse
-    {
-        $data = $this->validated($request);
-
-        // Approval on: this becomes a payment request, whatever the caller meant.
-        if ($policy->holdsPayment($data['amount'], $data['bank']->currency, $data['date'], $data['rate'])) {
-            $held = $requests->submit(PaymentRequest::EXPENSE, $data['bank'], $data['amount'], $data['date'], $data['description'], $this->user($request), [
-                'other_account' => $data['other'],
-                'rate' => $data['rate'],
-            ]);
-
-            return redirect()->route('payment-requests.index')->with('success', "{$held->number} is waiting for approval; the money leaves once it is approved and disbursed.");
-        }
-
-        $journal = $banking->moneyOut($data['bank'], $data['other'], $data['amount'], $data['date'], $data['description'], $this->user($request), $data['rate']);
-
-        return back()->with('success', "Money out recorded ({$journal->number}).");
-    }
-
     public function moneyIn(Request $request, Banking $banking): RedirectResponse
     {
         $data = $this->validated($request);
         $journal = $banking->moneyIn($data['bank'], $data['other'], $data['amount'], $data['date'], $data['description'], $this->user($request), $data['rate']);
 
         return back()->with('success', "Money in recorded ({$journal->number}).");
-    }
-
-    public function transfer(Request $request, Banking $banking, PaymentPolicy $policy, PaymentRequests $requests): RedirectResponse
-    {
-        $data = $request->validate([
-            'account_id' => ['required', 'uuid', $this->openAccount(bank: true)],
-            'to_account_id' => ['required', 'uuid', 'different:account_id', $this->openAccount(bank: true)],
-            'amount' => ['required', 'string', Money::rule()],
-            'entry_date' => ['required', 'date_format:Y-m-d'],
-            'description' => ['required', 'string', 'max:255'],
-            'received' => ['nullable', 'string', Money::rule()],
-        ]);
-
-        $from = Account::query()->findOrFail((string) $data['account_id']);
-        $to = Account::query()->findOrFail((string) $data['to_account_id']);
-        $amount = $this->amountIn((string) $data['amount'], $from->currency);
-        $date = CarbonImmutable::parse($data['entry_date']);
-        $received = ($data['received'] ?? null) === null ? null : $this->amountIn((string) $data['received'], $to->currency, 'received');
-
-        // Approval on: this becomes a payment request, whatever the caller meant.
-        if ($policy->holdsPayment($amount, $from->currency, $date)) {
-            $held = $requests->submit(PaymentRequest::TRANSFER, $from, $amount, $date, $data['description'], $this->user($request), [
-                'other_account' => $to,
-                'received_minor' => $received,
-            ]);
-
-            return redirect()->route('payment-requests.index')->with('success', "{$held->number} is waiting for approval; the transfer happens once it is approved and disbursed.");
-        }
-
-        $journal = $banking->transfer($from, $to, $amount, $date, $data['description'], $this->user($request), $received);
-
-        return back()->with('success', "Transfer recorded ({$journal->number}).");
     }
 
     /**

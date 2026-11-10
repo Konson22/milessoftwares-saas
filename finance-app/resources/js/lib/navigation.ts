@@ -12,6 +12,7 @@ import {
     FileCheck2,
     FileInput,
     FileOutput,
+    History,
     Hourglass,
     Landmark,
     LayoutDashboard,
@@ -30,6 +31,7 @@ import {
     Gauge,
     TrendingUp,
     Truck,
+    Wallet,
     Waves,
 } from 'lucide-react';
 import type { ShellNavItem } from '@miles/ui/shell/navigation';
@@ -46,10 +48,12 @@ import { index as dimensions } from '@/routes/dimensions';
 import { index as fixedAssets } from '@/routes/fixed-assets';
 import { index as invoices } from '@/routes/invoices';
 import { index as approvalRules } from '@/routes/approval-rules';
+import { index as audit } from '@/routes/audit';
 import { index as journalApprovals } from '@/routes/journal-approvals';
 import { index as journals } from '@/routes/journals';
 import { index as paymentRequests } from '@/routes/payment-requests';
 import { index as periods } from '@/routes/periods';
+import { index as pettyCash } from '@/routes/petty-cash';
 import { index as reconciliation } from '@/routes/reconciliation';
 import { index as recurringJournals } from '@/routes/recurring-journals';
 import {
@@ -80,13 +84,11 @@ export type NavItem = ShellNavItem & {
 export type Feature = 'multicurrency' | 'fixedAssets';
 
 /**
- * Who a section is mainly for. A member with only the finance dashboard does
- * not get accounting's sections in the menu, and the other way round. It
- * only tidies the menu: what they may open is decided by their permissions.
+ * The menu shows what the member's permissions open, and nothing decides it
+ * by role or dashboard: a Finance Manager who may read journals finds them
+ * here. The routes check the same permissions again.
  */
-export type NavArea = 'finance' | 'accounting';
-
-export type NavGroup = { title: string; area?: NavArea; items: NavItem[] };
+export type NavGroup = { title: string; items: NavItem[] };
 
 /**
  * Finance's sections, in menu order.
@@ -113,15 +115,12 @@ export const navigation: NavGroup[] = [
                 permission: [
                     'finance.payments.view',
                     'finance.payments.prepare',
-                    'finance.payables.manage',
-                    'finance.banking.manage',
                 ],
             },
         ],
     },
     {
         title: 'Planning',
-        area: 'finance',
         items: [
             {
                 title: 'Budgets',
@@ -133,7 +132,6 @@ export const navigation: NavGroup[] = [
     },
     {
         title: 'Accounting',
-        area: 'accounting',
         items: [
             {
                 title: 'Chart of accounts',
@@ -157,7 +155,16 @@ export const navigation: NavGroup[] = [
                 title: 'Approval rules',
                 href: approvalRules(),
                 icon: SlidersHorizontal,
-                permission: 'finance.approvals.configure',
+                permission: [
+                    'finance.approvals.view',
+                    'finance.approvals.configure',
+                ],
+            },
+            {
+                title: 'Audit trail',
+                href: audit(),
+                icon: History,
+                permission: 'finance.audit.view',
             },
             {
                 title: 'Recurring journals',
@@ -236,6 +243,12 @@ export const navigation: NavGroup[] = [
                 permission: 'finance.banking.view',
             },
             {
+                title: 'Petty cash',
+                href: pettyCash(),
+                icon: Wallet,
+                permission: 'finance.banking.view',
+            },
+            {
                 title: 'Reconciliation',
                 href: reconciliation(),
                 icon: CheckCheck,
@@ -245,7 +258,6 @@ export const navigation: NavGroup[] = [
     },
     {
         title: 'Fixed assets',
-        area: 'accounting',
         items: [
             {
                 title: 'Asset register',
@@ -272,7 +284,6 @@ export const navigation: NavGroup[] = [
     },
     {
         title: 'Tax',
-        area: 'accounting',
         items: [
             {
                 title: 'Tax returns',
@@ -362,17 +373,7 @@ export function visibleNavigation(
     can: (permission: string) => boolean,
     features: Partial<Record<Feature, boolean>> = {},
 ): NavGroup[] {
-    const finance = can('finance.dashboard.finance');
-    const accounting = can('finance.dashboard.accounting');
-    const hidden: NavArea | null =
-        finance && !accounting
-            ? 'accounting'
-            : accounting && !finance
-              ? 'finance'
-              : null;
-
     return navigation
-        .filter((group) => group.area === undefined || group.area !== hidden)
         .map((group) => ({
             ...group,
             items: group.items.filter(

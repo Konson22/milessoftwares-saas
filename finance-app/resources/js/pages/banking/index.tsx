@@ -27,7 +27,8 @@ import {
 import { useCan } from '@/lib/access';
 import { sourceLabel, useMoney } from '@/lib/format';
 import { show as showAccount, store as storeAccount } from '@/routes/accounts';
-import { moneyIn, moneyOut, transfer } from '@/routes/banking';
+import { moneyIn } from '@/routes/banking';
+import { create as requestPayment } from '@/routes/payment-requests';
 import { show as showJournal } from '@/routes/journals';
 
 type Option = {
@@ -70,7 +71,7 @@ type Props = {
     today: string;
 };
 
-type Action = 'out' | 'in' | 'transfer' | 'account' | null;
+type Action = 'in' | 'account' | null;
 
 function Options({
     options,
@@ -171,16 +172,13 @@ export default function Banking({
     const can = useCan();
     const { currency: books, multicurrency } = usePage().props;
     const [fromId, setFromId] = useState('');
-    const [toId, setToId] = useState('');
     const currencyOf = (id: string) =>
         bankOptions.find((option) => option.id === id)?.currency ?? null;
     const fromCurrency = currencyOf(fromId);
-    const toCurrency = currencyOf(toId);
     const money = useMoney();
     const [action, setAction] = useState<Action>(null);
     const total = banks.reduce((sum, bank) => sum + bank.balanceMinor, 0);
     const income = accounts.filter((account) => account.type !== 'expense');
-    const spending = accounts.filter((account) => account.type !== 'revenue');
     const toggle = (next: Action) =>
         setAction((current) => (current === next ? null : next));
 
@@ -192,8 +190,7 @@ export default function Banking({
                 description={`Across all accounts: ${money(total)}.`}
                 actions={
                     <>
-                        {(can('finance.banking.manage') ||
-                            can('finance.receipts.record')) && (
+                        {can('finance.receipts.record') && (
                             <Button
                                 variant="outline"
                                 onClick={() => toggle('in')}
@@ -205,27 +202,34 @@ export default function Banking({
                                 Money in
                             </Button>
                         )}
-                        {can('finance.banking.manage') && (
+                        {/* Money leaves through a payment request: approved, then disbursed. */}
+                        {can('finance.payments.prepare') && (
                             <>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => toggle('out')}
-                                >
-                                    <ArrowUpFromLine
-                                        className="size-4"
-                                        aria-hidden
-                                    />
-                                    Money out
+                                <Button variant="outline" asChild>
+                                    <Link
+                                        href={requestPayment({
+                                            query: { kind: 'expense' },
+                                        })}
+                                    >
+                                        <ArrowUpFromLine
+                                            className="size-4"
+                                            aria-hidden
+                                        />
+                                        Money out
+                                    </Link>
                                 </Button>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => toggle('transfer')}
-                                >
-                                    <ArrowLeftRight
-                                        className="size-4"
-                                        aria-hidden
-                                    />
-                                    Transfer
+                                <Button variant="outline" asChild>
+                                    <Link
+                                        href={requestPayment({
+                                            query: { kind: 'transfer' },
+                                        })}
+                                    >
+                                        <ArrowLeftRight
+                                            className="size-4"
+                                            aria-hidden
+                                        />
+                                        Transfer
+                                    </Link>
                                 </Button>
                             </>
                         )}
@@ -239,21 +243,15 @@ export default function Banking({
                 }
             />
 
-            {(action === 'out' || action === 'in') && (
+            {action === 'in' && (
                 <Panel className="mb-3">
                     <PanelHeader
-                        title={action === 'out' ? 'Money out' : 'Money in'}
-                        description={
-                            action === 'out'
-                                ? 'Spending not on a supplier bill: bank charges, small expenses, owner drawings.'
-                                : 'Money received outside invoices: other income, loans, owner capital.'
-                        }
+                        title="Money in"
+                        description="Money received outside invoices: other income, loans, owner capital."
                     />
                     <PanelBody>
                         <Form
-                            {...(action === 'out'
-                                ? moneyOut.form()
-                                : moneyIn.form())}
+                            {...moneyIn.form()}
                             onSuccess={() => setAction(null)}
                             className="grid gap-3 sm:grid-cols-4"
                         >
@@ -261,11 +259,7 @@ export default function Banking({
                                 <>
                                     <Field
                                         id="account_id"
-                                        label={
-                                            action === 'out'
-                                                ? 'Paid from'
-                                                : 'Received into'
-                                        }
+                                        label="Received into"
                                         error={errors.account_id}
                                     >
                                         <Select
@@ -285,11 +279,7 @@ export default function Banking({
                                     </Field>
                                     <Field
                                         id="other_account_id"
-                                        label={
-                                            action === 'out'
-                                                ? 'Spent on'
-                                                : 'Income from'
-                                        }
+                                        label="Income from"
                                         error={errors.other_account_id}
                                     >
                                         <Select
@@ -299,11 +289,7 @@ export default function Banking({
                                             defaultValue=""
                                         >
                                             <Options
-                                                options={
-                                                    action === 'out'
-                                                        ? spending
-                                                        : income
-                                                }
+                                                options={income}
                                                 placeholder="Choose an account…"
                                             />
                                         </Select>
@@ -320,98 +306,6 @@ export default function Banking({
                                             disabled={processing}
                                         >
                                             Record
-                                        </Button>
-                                    </div>
-                                </>
-                            )}
-                        </Form>
-                    </PanelBody>
-                </Panel>
-            )}
-
-            {action === 'transfer' && (
-                <Panel className="mb-3">
-                    <PanelHeader
-                        title="Transfer between accounts"
-                        description="For example, banking the day's cash."
-                    />
-                    <PanelBody>
-                        <Form
-                            {...transfer.form()}
-                            onSuccess={() => setAction(null)}
-                            className="grid gap-3 sm:grid-cols-4"
-                        >
-                            {({ errors, processing }) => (
-                                <>
-                                    <Field
-                                        id="account_id"
-                                        label="From"
-                                        error={errors.account_id}
-                                    >
-                                        <Select
-                                            id="account_id"
-                                            name="account_id"
-                                            required
-                                            value={fromId}
-                                            onChange={(event) =>
-                                                setFromId(event.target.value)
-                                            }
-                                        >
-                                            <Options
-                                                options={bankOptions}
-                                                placeholder="Choose an account…"
-                                            />
-                                        </Select>
-                                    </Field>
-                                    <Field
-                                        id="to_account_id"
-                                        label="To"
-                                        error={errors.to_account_id}
-                                    >
-                                        <Select
-                                            id="to_account_id"
-                                            name="to_account_id"
-                                            required
-                                            value={toId}
-                                            onChange={(event) =>
-                                                setToId(event.target.value)
-                                            }
-                                        >
-                                            <Options
-                                                options={bankOptions}
-                                                placeholder="Choose an account…"
-                                            />
-                                        </Select>
-                                    </Field>
-                                    <AmountDateDescription
-                                        errors={errors}
-                                        today={today}
-                                        currency={fromCurrency}
-                                    />
-                                    {fromId !== '' &&
-                                        toId !== '' &&
-                                        fromCurrency !== toCurrency && (
-                                            <Field
-                                                id="received"
-                                                label={`Arrived (${toCurrency ?? books})`}
-                                                error={errors.received}
-                                                hint="The difference at the day's rate is an exchange gain or loss."
-                                            >
-                                                <Input
-                                                    id="received"
-                                                    name="received"
-                                                    inputMode="decimal"
-                                                    className="text-right tabular-nums"
-                                                    required
-                                                />
-                                            </Field>
-                                        )}
-                                    <div className="sm:col-span-4">
-                                        <Button
-                                            type="submit"
-                                            disabled={processing}
-                                        >
-                                            Transfer
                                         </Button>
                                     </div>
                                 </>

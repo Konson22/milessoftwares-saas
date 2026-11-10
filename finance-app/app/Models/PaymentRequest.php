@@ -28,7 +28,8 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property string|null $currency null: the books'
  * @property int $books_minor in the books' currency, which the approval limit is compared with
  * @property CarbonImmutable $pay_on
- * @property array{allocations?: array<string, int>, reference?: string|null, rate?: string|null, received_minor?: int|null, tax_return_id?: string, lines?: list<array{account_id: string, debit_minor: int, credit_minor: int, description: string|null, cost_centre_id: string|null, project_id: string|null}>, draft?: string|null, journal_id?: string, memo?: string}|null $details
+ * @property array{allocations?: array<string, int>, reference?: string|null, rate?: string|null, received_minor?: int|null, tax_return_id?: string, lines?: list<array{account_id: string, debit_minor: int, credit_minor: int, description: string|null, cost_centre_id: string|null, project_id: string|null}>, draft?: string|null, journal_id?: string, memo?: string, petty_cash_fund_id?: string, voucher_ids?: list<string>}|null $details
+ * @property array<string, mixed>|null $policy the approval rules in force when it was raised (PaymentPolicy::snapshot)
  * @property string $prepared_by
  * @property string|null $reviewed_by
  * @property CarbonImmutable|null $reviewed_at
@@ -107,6 +108,7 @@ class PaymentRequest extends Model
             'closed_at' => 'immutable_datetime',
             'created_at' => 'immutable_datetime',
             'details' => 'array',
+            'policy' => 'array',
             'amount_minor' => 'integer',
             'books_minor' => 'integer',
         ];

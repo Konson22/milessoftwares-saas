@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\AccountType;
 use App\Enums\BankKind;
 use App\Enums\CashFlowActivity;
+use App\Finance\Audit;
 use App\Finance\Balances;
 use App\Finance\Currencies;
 use App\Finance\Money;
@@ -13,6 +14,8 @@ use App\Models\JournalLine;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -115,15 +118,18 @@ class AccountController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, Audit $audit): RedirectResponse
     {
         $account = new Account($this->validated($request));
-        $account->save();
+        DB::transaction(function () use ($account, $audit) {
+            $account->save();
+            $audit->record('account.added', $account, null, Arr::except($account->attributesToArray(), ['id', 'organization_id', 'created_at', 'updated_at']));
+        });
 
         return back()->with('success', "Account {$account->label()} added.");
     }
 
-    public function update(Request $request, Account $account): RedirectResponse
+    public function update(Request $request, Account $account, Audit $audit): RedirectResponse
     {
         $data = $this->validated($request, $account);
 
@@ -138,7 +144,16 @@ class AccountController extends Controller
             throw ValidationException::withMessages(['active' => 'Finance posts to this account automatically: it stays open, with its type.']);
         }
 
-        $account->fill($data)->save();
+        // Bank details among them: what changed, before and after.
+        $account->fill($data);
+        $changed = array_keys(Arr::except($account->getDirty(), ['updated_at']));
+        DB::transaction(function () use ($account, $audit, $changed) {
+            $before = Arr::only($account->getRawOriginal(), $changed);
+            $account->save();
+            if ($changed !== []) {
+                $audit->record('account.changed', $account, $before, Arr::only($account->getAttributes(), $changed));
+            }
+        });
 
         return back()->with('success', "Account {$account->label()} saved.");
     }

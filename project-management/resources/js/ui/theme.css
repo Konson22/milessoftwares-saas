@@ -1,0 +1,189 @@
+/*
+ * The signed-in look of Tatook: Inter, the navy, royal blue, azure and cyan of
+ * the logo, a pale canvas and white panels; dense and square-cornered. Only the
+ * logo's colours and tints of them exist: Tailwind's other palettes are removed
+ * below, so a class like bg-red-500 produces nothing. Apps import it after tailwindcss and add
+ * @source for this package. The public site has its own look.
+ */
+
+@custom-variant dark (&:is(.dark *));
+
+/* Inside the desktop sidebar rail while it is collapsed to icons: not
+   hovered and not holding keyboard focus. The mobile drawer has no rail. */
+@custom-variant rail-collapsed (&:where(.shell-rail:not(:hover, :has(:focus-visible)) *));
+
+@theme {
+    /* Only the logo's colours. brand-400 to brand-900 are sampled from it;
+       the lighter steps are tints of its cyan, and 950 a shade of its navy. */
+    --color-*: initial;
+    --color-white: #ffffff;
+    --color-black: #000e36;
+    --color-brand-50: #eef7ff;
+    --color-brand-100: #d9eeff;
+    --color-brand-200: #b0dcff;
+    --color-brand-300: #7cc8ff;
+    --color-brand-400: #01a8ff;
+    --color-brand-500: #0081fe;
+    --color-brand-600: #0053bb;
+    --color-brand-700: #003688;
+    --color-brand-800: #002366;
+    --color-brand-900: #001652;
+    --color-brand-950: #000e36;
+
+    --font-sans:
+        'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+        'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* Small text a step up from Tailwind's 12px and 14px, for legibility;
+       spacing stays dense. */
+    --text-xs: 0.8125rem;
+    --text-xs--line-height: 1.125rem;
+    --text-sm: 0.9375rem;
+    --text-sm--line-height: 1.375rem;
+
+    /* Square corners: every rounded-* utility resolves to 0 (rounded-full,
+       for avatars and status dots, is the one exception). */
+    --radius: 0px;
+    --radius-xs: 0px;
+    --radius-sm: 0px;
+    --radius-md: 0px;
+    --radius-lg: 0px;
+    --radius-xl: 0px;
+    --radius-2xl: 0px;
+    --radius-3xl: 0px;
+    --radius-4xl: 0px;
+
+    /* Flat everywhere: no shadow-*, inset-shadow-*, drop-shadow-* or
+       text-shadow-* utilities (focus rings are outlines, and stay). */
+    --shadow-*: initial;
+    --inset-shadow-*: initial;
+    --drop-shadow-*: initial;
+    --text-shadow-*: initial;
+}
+
+/* Colours are inline so a scope that redefines --background and friends
+   (the public site's .marketing) is picked up by the utilities. */
+@theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+    --background: #f4f8fd;
+    --foreground: #001652;
+    --card: #ffffff;
+    --card-foreground: #001652;
+    --popover: #ffffff;
+    --popover-foreground: #001652;
+    --primary: #0053bb;
+    --primary-foreground: #ffffff;
+    --secondary: #eef7ff;
+    --secondary-foreground: #001652;
+    --muted: #eef3fa;
+    --muted-foreground: #4a5d86;
+    --accent: #e6f2ff;
+    --accent-foreground: #001652;
+    --destructive: #0053bb;
+    --destructive-foreground: #0053bb;
+    --border: #dce6f3;
+    --input: #c3d2e6;
+    --ring: #0081fe;
+    --chart-1: #0081fe;
+    --chart-2: #01a8ff;
+    --chart-3: #001652;
+    --chart-4: #0053bb;
+    --chart-5: #7cc8ff;
+    --sidebar: #001652;
+    --sidebar-foreground: #d9eeff;
+    --sidebar-primary: #01a8ff;
+    --sidebar-primary-foreground: #001652;
+    --sidebar-accent: rgb(255 255 255 / 9%);
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: rgb(255 255 255 / 10%);
+    --sidebar-ring: #01a8ff;
+}
+
+.dark {
+    --background: #000e36;
+    --foreground: #eef7ff;
+    --card: #001652;
+    --card-foreground: #eef7ff;
+    --popover: #001652;
+    --popover-foreground: #eef7ff;
+    --primary: #01a8ff;
+    --primary-foreground: #001652;
+    --secondary: #002366;
+    --secondary-foreground: #eef7ff;
+    --muted: #002366;
+    --muted-foreground: #a9c4e6;
+    --accent: #003688;
+    --accent-foreground: #eef7ff;
+    --destructive: #7cc8ff;
+    --destructive-foreground: #7cc8ff;
+    --border: #002366;
+    --input: #003688;
+    --ring: #01a8ff;
+    --chart-1: #01a8ff;
+    --chart-2: #7cc8ff;
+    --chart-3: #0081fe;
+    --chart-4: #b0dcff;
+    --chart-5: #d9eeff;
+    --sidebar: #000e36;
+    --sidebar-foreground: #eef7ff;
+    --sidebar-primary: #01a8ff;
+    --sidebar-primary-foreground: #001652;
+    --sidebar-accent: #002366;
+    --sidebar-accent-foreground: #eef7ff;
+    --sidebar-border: #002366;
+    --sidebar-ring: #01a8ff;
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+    }
+}

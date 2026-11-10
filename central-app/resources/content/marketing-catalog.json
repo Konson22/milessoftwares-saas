@@ -567,6 +567,91 @@
             ]
         },
         {
+            "slug": "petrol",
+            "category": "application",
+            "name": "Petrol Station",
+            "icon": "fuel",
+            "registry": { "type": "application", "code": "petrol" },
+            "highlights": [
+                "Tanks, pumps and nozzles",
+                "Shifts and meter readings",
+                "Fuel sales",
+                "Credit customers",
+                "Deliveries and cash"
+            ],
+            "offering": {
+                "platforms": ["web"],
+                "connectivity": ["online", "offline_sync"],
+                "licensing": ["subscription"],
+                "desktop": [],
+                "mobile": [
+                    "Record a fuel sale or a credit collection without a connection; it is applied once when the phone reaches the station again"
+                ]
+            },
+            "summary": "Tanks, pumps, shifts and fuel sales for a petrol station, with Finance & Accounting for the books.",
+            "headline": "Every litre, from the tank to the receipt.",
+            "subhead": "Pumps and nozzles, attendant shifts, meter readings and fuel sales, with credit, deliveries and a cash count at closing. Add Finance & Accounting and sales, deliveries and shortages post to your books.",
+            "audience": "Petrol stations, from one station to several.",
+            "seoTitle": "Petrol station software: tanks, shifts and fuel sales",
+            "seoDescription": "Petrol station software for tanks, pumps, shifts, meter readings, fuel sales, credit and deliveries, with optional Finance & Accounting.",
+            "features": [
+                {
+                    "icon": "fuel",
+                    "title": "Tanks, pumps and nozzles",
+                    "body": "Each nozzle sells one grade and draws from one tank. A sale cannot take the tank below zero."
+                },
+                {
+                    "icon": "gauge",
+                    "title": "Shifts and meters",
+                    "body": "One open shift per station. Dispensed litres are the closing meter minus the opening meter, checked against the sales."
+                },
+                {
+                    "icon": "receipt",
+                    "title": "Fuel sales",
+                    "body": "Sell by litres or by amount, in cash, mobile money, bank transfer or credit. The same sale is never posted twice."
+                },
+                {
+                    "icon": "users",
+                    "title": "Attendants and credit",
+                    "body": "Roster attendants to a station and a nozzle. Credit customers have a limit the sale cannot pass."
+                },
+                {
+                    "icon": "truck",
+                    "title": "Deliveries",
+                    "body": "Receive fuel by the quantity measured in the tank. The supplier bill is sent to Finance."
+                },
+                {
+                    "icon": "wallet",
+                    "title": "Cash at closing",
+                    "body": "Count the drawer. A difference is posted once, when someone other than the person who closed the shift approves it."
+                }
+            ],
+            "workflow": [
+                {
+                    "title": "Open",
+                    "body": "Open the shift, record the opening meters and assign each nozzle."
+                },
+                {
+                    "title": "Sell",
+                    "body": "Each sale takes litres from the tank and writes the receipt."
+                },
+                {
+                    "title": "Close",
+                    "body": "Submit the closing meters and the cash count. A second person approves the shift."
+                }
+            ],
+            "faqs": [
+                {
+                    "question": "Does it work for several stations?",
+                    "answer": "Yes. Each station is a branch, with its own tanks, pumps, shifts and cash. Fuel grades are shared."
+                },
+                {
+                    "question": "Is accounting included?",
+                    "answer": "Finance & Accounting is a separate application. Add it and fuel sales, deliveries and cash differences post to it. Paying a supplier in Finance is still done there."
+                }
+            ]
+        },
+        {
             "slug": "projects",
             "category": "application",
             "name": "Project Management",
@@ -642,12 +727,12 @@
                 "desktop": [],
                 "mobile": []
             },
-            "summary": "Staff records, contracts and documents, with leave and payroll on the way.",
+            "summary": "Staff records, contracts and documents, kept in step with Payroll.",
             "headline": "Your people, on record and in order.",
-            "subhead": "Staff profiles, employment history, contracts and documents with expiry reminders. Leave, attendance and payroll are being built.",
+            "subhead": "Staff profiles, employment history, contracts and documents with expiry reminders. Add Payroll and the people you hire and let go are kept in step there. Leave and attendance are being built.",
             "audience": "Any organization with staff to keep records for.",
             "seoTitle": "HR software: staff records, contracts and documents",
-            "seoDescription": "HR software for staff profiles, employment history, contracts and documents with expiry reminders. Leave and payroll on the way.",
+            "seoDescription": "HR software for staff profiles, employment history, contracts and documents with expiry reminders, kept in step with Payroll.",
             "features": [
                 {
                     "icon": "users",
@@ -687,7 +772,108 @@
             "faqs": [
                 {
                     "question": "Is payroll included?",
-                    "answer": "Not yet. Leave, attendance and payroll are being built on top of today's staff records."
+                    "answer": "Payroll is a separate application. Add it and everyone you hire, move or let go in HR is kept in step on the payroll. Pay itself is entered only in Payroll."
+                }
+            ]
+        },
+        {
+            "slug": "payroll",
+            "category": "application",
+            "name": "Payroll",
+            "icon": "banknote",
+            "registry": { "type": "application", "code": "payroll" },
+            "highlights": [
+                "Monthly and hourly pay",
+                "Allowances and deductions",
+                "Income tax and social security",
+                "Approved by a second person",
+                "Payslips and one journal to Finance"
+            ],
+            "offering": {
+                "platforms": ["web"],
+                "connectivity": ["online"],
+                "licensing": ["subscription"],
+                "desktop": [],
+                "mobile": []
+            },
+            "summary": "Monthly payroll and payslips, with any Miles ERP or on its own.",
+            "headline": "Payday, worked out and signed off.",
+            "subhead": "Basic pay, allowances and deductions, income tax and social security, a monthly payroll approved by a second person, and payslips. Takes staff from HR and posts one journal to Finance & Accounting.",
+            "audience": "Any organization that pays staff, with or without Miles HR: restaurants, pharmacies, shops, schools and offices.",
+            "seoTitle": "Payroll software: payslips, income tax and social security",
+            "seoDescription": "Payroll software for monthly and hourly pay, allowances, deductions, income tax and social security, approved payroll runs and payslips, with optional HR and Finance & Accounting.",
+            "features": [
+                {
+                    "icon": "users",
+                    "title": "People on the payroll",
+                    "body": "Add them in Payroll, or add Miles HR and hires, transfers and leavers arrive on their own."
+                },
+                {
+                    "icon": "wallet",
+                    "title": "Pay",
+                    "body": "A monthly salary or an hourly rate, with each change dated. Joiners and leavers are paid for the days they worked."
+                },
+                {
+                    "icon": "hand-coins",
+                    "title": "Allowances and deductions",
+                    "body": "Fixed amounts or a percentage of basic pay, taxable or not, from a start date to an end date."
+                },
+                {
+                    "icon": "calculator",
+                    "title": "Income tax and social security",
+                    "body": "Tax bands and employee and employer rates you set, dated so a new law starts in the right month."
+                },
+                {
+                    "icon": "user-check",
+                    "title": "Two people for every payroll",
+                    "body": "One person prepares the month, another approves it. Once approved, it never changes."
+                },
+                {
+                    "icon": "receipt",
+                    "title": "Payslips",
+                    "body": "A payslip for each person, with every earning and deduction on it."
+                },
+                {
+                    "icon": "lock",
+                    "title": "Pay kept private",
+                    "body": "Seeing who is on the payroll and seeing what they earn are separate permissions."
+                },
+                {
+                    "icon": "landmark",
+                    "title": "Into the books",
+                    "body": "Add Finance & Accounting and each approved payroll posts one journal of totals, then the payment when it goes out."
+                }
+            ],
+            "workflow": [
+                {
+                    "title": "Prepare",
+                    "body": "Choose the month and the pay date. Every payslip is worked out."
+                },
+                {
+                    "title": "Approve",
+                    "body": "A second person checks and approves. The payroll and its payslips are locked."
+                },
+                {
+                    "title": "Pay",
+                    "body": "Pay by bank, cash or mobile money and record it as paid."
+                }
+            ],
+            "faqs": [
+                {
+                    "question": "Do I need Miles HR?",
+                    "answer": "No. Add people in Payroll yourself. With HR, they arrive from HR and only their pay is entered in Payroll."
+                },
+                {
+                    "question": "Can I add it to my restaurant, pharmacy or shop?",
+                    "answer": "Yes. Payroll works next to any Miles ERP, or on its own."
+                },
+                {
+                    "question": "Are tax rates set for my country?",
+                    "answer": "You enter your tax bands and social security rates, or start from a South Sudan preset and check it against the current law before your first payroll."
+                },
+                {
+                    "question": "Is accounting included?",
+                    "answer": "Finance & Accounting is a separate application. Add it and each payroll posts to your books, without anyone's individual pay."
                 }
             ]
         },

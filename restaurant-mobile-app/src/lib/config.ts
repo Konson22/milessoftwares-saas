@@ -10,6 +10,15 @@ export const AUTH_URL = (process.env.EXPO_PUBLIC_AUTH_URL ?? 'https://auth.miles
 export const CLIENT_ID = process.env.EXPO_PUBLIC_CLIENT_ID ?? '';
 
 /**
+ * Native Google sign-in (Google Cloud OAuth clients). The web client's ID is
+ * the platform's GOOGLE_CLIENT_ID: Google issues the ID token for it, and the
+ * platform takes it. Android finds its own client by package name and
+ * signing key; iOS names its client here (and its URL scheme in app.config.js).
+ */
+export const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
+export const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '';
+
+/**
  * A workspace's address; {workspace} is its slug. Local development points
  * it at the dev PC (http://{workspace}.milesoftwares.localhost does not
  * resolve on a phone).

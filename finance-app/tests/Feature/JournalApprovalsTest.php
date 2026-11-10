@@ -14,6 +14,8 @@ const APPROVER = ['finance.accounts.view', 'finance.journals.view', 'finance.jou
 beforeEach(function () {
     $this->platform()->organization('acme');
     $this->setUpFinance('acme');
+    // Below the limit, money leaving a bank posts directly: these books are set up with it.
+    $this->paymentLimit('acme');
     $this->approver = $this->actingAsMember('acme', APPROVER);
     $this->preparer = $this->actingAsMember('acme', PREPARER);
 });

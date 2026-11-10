@@ -16,10 +16,9 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property string $timezone
  * @property bool $journal_approval manual journals need a second person's approval
  * @property int|null $journal_approval_threshold_minor only from this total up (null: all)
- * @property bool $payment_approval direct payments are held as payment requests
  * @property int|null $payment_approval_threshold_minor below this, payments need no approval (null: all do)
  * @property bool $payment_review requests are reviewed before approval
- * @property bool $payment_separation one person cannot act twice on the same payment
+ * @property int|null $petty_cash_max_minor the most one petty cash voucher may be (null: none may be recorded)
  */
 class Workspace extends Model
 {
@@ -33,10 +32,9 @@ class Workspace extends Model
         return [
             'journal_approval' => 'boolean',
             'journal_approval_threshold_minor' => 'integer',
-            'payment_approval' => 'boolean',
             'payment_approval_threshold_minor' => 'integer',
             'payment_review' => 'boolean',
-            'payment_separation' => 'boolean',
+            'petty_cash_max_minor' => 'integer',
         ];
     }
 
