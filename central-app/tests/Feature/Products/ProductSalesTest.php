@@ -182,6 +182,22 @@ describe('public site', function () {
             }));
     });
 
+    it('offers trials of Project Management and Petrol Station on early access', function () {
+        foreach (['projects' => 'Projects', 'petrol' => 'Petrol Station'] as $code => $name) {
+            Application::query()->forceCreate(['code' => $code, 'name' => $name, 'category' => 'products', 'kind' => 'standalone', 'status' => 'beta', 'trial_enabled' => false, 'sort_order' => 9]);
+        }
+
+        (require database_path('migrations/2026_11_11_120000_open_projects_and_petrol_for_trials.php'))->up();
+
+        $this->get(apex('products'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('catalog', function ($catalog) {
+                $bySlug = collect($catalog)->keyBy('slug');
+
+                return $bySlug['projects']['status'] === 'early_access' && $bySlug['projects']['trial'] === 'projects'
+                    && $bySlug['petrol']['status'] === 'early_access' && $bySlug['petrol']['trial'] === 'petrol';
+            }));
+    });
+
     it('shows an ERP solution with its applications and plans', function () {
         $this->get(apex('erp/pharmacy'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
             ->component('public/landing')
