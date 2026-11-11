@@ -1,5 +1,12 @@
 import { Link } from '@inertiajs/react';
-import { ArrowRight, Check } from 'lucide-react';
+import {
+    ArrowRight,
+    Check,
+    FileText,
+    Layers,
+    LifeBuoy,
+    MonitorSmartphone,
+} from 'lucide-react';
 import {
     CtaBand,
     StepBand,
@@ -16,6 +23,30 @@ type Props = {
     trialDays: number;
     canonical: string;
 };
+
+/** What every custom project comes with, beside the hero. */
+const heroFacts = [
+    {
+        icon: FileText,
+        title: 'Quoted up front',
+        body: 'A written scope, timeline and price first.',
+    },
+    {
+        icon: MonitorSmartphone,
+        title: 'Any screen',
+        body: 'Web, Windows, Android and iOS.',
+    },
+    {
+        icon: Layers,
+        title: 'Proven modules',
+        body: 'Built on the platform our own ERPs run on.',
+    },
+    {
+        icon: LifeBuoy,
+        title: 'Supported after launch',
+        body: 'Training, and maintenance as agreed.',
+    },
+];
 
 const steps = [
     {
@@ -98,28 +129,23 @@ export default function Services({ canonical }: Props) {
                 intro="We adapt a Tatook product or build a new system around how you work."
                 asideClassName=""
                 aside={
-                    <nav aria-label="Our services">
-                        <ul className="grid grid-cols-2 gap-3">
-                            {services.map(({ id, icon: Icon, title }) => (
-                                <li key={id}>
-                                    <a
-                                        href={`#${id}`}
-                                        className="group flex h-full flex-col gap-3 rounded-2xl bg-white/[0.07] p-4 ring-1 ring-white/10 backdrop-blur-sm transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-white/[0.12] focus-visible:outline-2 focus-visible:outline-site-highlight sm:flex-row sm:items-center"
-                                    >
-                                        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-site-highlight text-site-night">
-                                            <Icon
-                                                className="size-5"
-                                                aria-hidden
-                                            />
-                                        </span>
-                                        <span className="text-sm leading-snug font-semibold text-white group-hover:text-site-highlight">
-                                            {title}
-                                        </span>
-                                    </a>
-                                </li>
-                            ))}
-                        </ul>
-                    </nav>
+                    <ul className="grid gap-4 rounded-xl bg-white/[0.06] p-5 ring-1 ring-white/10 backdrop-blur-sm sm:grid-cols-2 sm:p-6">
+                        {heroFacts.map(({ icon: Icon, title, body }) => (
+                            <li key={title} className="flex items-start gap-3">
+                                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-site-highlight text-site-night">
+                                    <Icon className="size-5" aria-hidden />
+                                </span>
+                                <span>
+                                    <span className="block text-sm font-semibold text-white">
+                                        {title}
+                                    </span>
+                                    <span className="mt-0.5 block text-sm leading-snug text-slate-300">
+                                        {body}
+                                    </span>
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
                 }
             >
                 <Link
@@ -137,77 +163,88 @@ export default function Services({ canonical }: Props) {
                 </Link>
             </DarkHero>
 
-            {services.map((service, i) => {
-                const Icon = service.icon;
-                const flip = i % 2 === 1;
+            <section
+                id="what-we-build"
+                aria-labelledby="build-heading"
+                className="scroll-mt-24 bg-site-wash"
+            >
+                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+                    <SectionHeading
+                        id="build-heading"
+                        title={
+                            <>
+                                What we <Accent>build for you</Accent>
+                            </>
+                        }
+                        lead="Six kinds of work, each scoped and quoted on its own or together as one project."
+                        align="left"
+                    />
+                    <ul className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                        {services.map((service, i) => {
+                            const Icon = service.icon;
 
-                return (
-                    <section
-                        key={service.id}
-                        id={service.id}
-                        aria-labelledby={`${service.id}-heading`}
-                        className={`scroll-mt-24 ${flip ? 'bg-site-wash' : 'bg-white'}`}
-                    >
-                        <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.15fr_1fr] lg:gap-16 lg:px-8">
-                            <div className={flip ? 'lg:order-2' : ''}>
-                                <span className="inline-flex size-14 items-center justify-center rounded-2xl bg-linear-160 from-[#0a5a26] to-[#032a16] text-site-highlight shadow-lg shadow-site-night/20">
-                                    <Icon className="size-7" aria-hidden />
-                                </span>
-                                <h2
-                                    id={`${service.id}-heading`}
-                                    className={`mt-6 text-3xl sm:text-4xl ${display}`}
+                            return (
+                                <li
+                                    key={service.id}
+                                    id={service.id}
+                                    className="group flex scroll-mt-28 flex-col rounded-xl bg-white p-6 ring-1 ring-site-line transition-[box-shadow,transform] duration-300 target:ring-2 target:ring-site-accent hover:-translate-y-1 hover:shadow-xl hover:shadow-site-night/5 sm:p-7"
                                 >
-                                    {service.title}
-                                </h2>
-                                <p className="mt-4 max-w-xl text-lg leading-relaxed text-slate-600">
-                                    {service.body}
-                                </p>
-                                <Link
-                                    href={service.href}
-                                    className={`mt-8 ${button.primary}`}
-                                >
-                                    {service.cta}
-                                    <span className="sr-only">
-                                        : {service.title}
-                                    </span>
-                                    <ArrowRight
-                                        className="size-4"
-                                        aria-hidden
-                                    />
-                                </Link>
-                            </div>
-                            <div className="site-dark relative overflow-hidden rounded-3xl bg-linear-160 from-[#0a5a26] via-[#063519] to-[#032a16] p-7 shadow-xl shadow-site-night/20 sm:p-9">
-                                <span
-                                    aria-hidden
-                                    className="absolute inset-0 bg-[radial-gradient(rgb(255_255_255/0.12)_1px,transparent_1.5px)] [background-size:16px_16px] [mask-image:linear-gradient(to_bottom_left,black,transparent_60%)]"
-                                />
-                                <Icon
-                                    aria-hidden
-                                    strokeWidth={1.25}
-                                    className="absolute -right-6 -bottom-8 size-44 text-white/[0.06]"
-                                />
-                                <ul className="relative space-y-4">
-                                    {service.points.map((point) => (
-                                        <li
-                                            key={point}
-                                            className="flex items-start gap-3 font-semibold text-white"
+                                    <div className="flex items-center justify-between">
+                                        <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-linear-160 from-[#0a5a26] to-[#032a16] text-site-highlight">
+                                            <Icon
+                                                className="size-6"
+                                                aria-hidden
+                                            />
+                                        </span>
+                                        <span
+                                            aria-hidden
+                                            className="font-public-display text-3xl font-semibold text-site-accent/20 tabular-nums"
                                         >
-                                            <span className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-site-highlight text-site-night">
-                                                <Check
-                                                    className="size-3.5"
-                                                    strokeWidth={3}
-                                                    aria-hidden
-                                                />
-                                            </span>
-                                            {point}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        </div>
-                    </section>
-                );
-            })}
+                                            {String(i + 1).padStart(2, '0')}
+                                        </span>
+                                    </div>
+                                    <h2 className={`mt-6 text-xl ${display}`}>
+                                        {service.title}
+                                    </h2>
+                                    <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                                        {service.body}
+                                    </p>
+                                    <ul className="mt-5 flex-1 space-y-2.5 border-t border-site-line pt-5">
+                                        {service.points.map((point) => (
+                                            <li
+                                                key={point}
+                                                className="flex items-start gap-2.5 text-sm font-medium text-slate-700"
+                                            >
+                                                <span className="mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-site-accent-ink text-white">
+                                                    <Check
+                                                        className="size-3"
+                                                        strokeWidth={3}
+                                                        aria-hidden
+                                                    />
+                                                </span>
+                                                {point}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    <Link
+                                        href={service.href}
+                                        className="mt-6 inline-flex items-center gap-2 self-start text-sm font-bold text-site-accent-ink hover:underline"
+                                    >
+                                        {service.cta}
+                                        <span className="sr-only">
+                                            : {service.title}
+                                        </span>
+                                        <ArrowRight
+                                            className="size-4 transition-transform group-hover:translate-x-1"
+                                            aria-hidden
+                                        />
+                                    </Link>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </div>
+            </section>
 
             <section
                 id="customize-or-build"

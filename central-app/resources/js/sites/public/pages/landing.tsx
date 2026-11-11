@@ -169,7 +169,7 @@ export default function LandingPage({
                 aria-labelledby="audience-heading"
                 className="px-4 pt-12 sm:px-6 lg:px-8 sm:pt-16"
             >
-                <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 rounded-3xl bg-white px-6 py-6 text-center shadow-xl ring-1 shadow-site-night/5 ring-site-line sm:flex-row sm:px-10 sm:text-left">
+                <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 rounded-xl bg-white px-6 py-6 text-center shadow-xl ring-1 shadow-site-night/5 ring-site-line sm:flex-row sm:px-10 sm:text-left">
                     <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-site-accent/10 text-site-accent-ink">
                         <Users className="size-6" aria-hidden />
                     </span>

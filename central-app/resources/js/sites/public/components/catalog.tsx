@@ -294,7 +294,7 @@ export function StatusBadge({
 
     if (status === 'early_access') {
         return (
-            <span className="absolute top-0 right-0 z-10 size-28 overflow-hidden rounded-tr-3xl">
+            <span className="absolute top-0 right-0 z-10 size-28 overflow-hidden rounded-tr-xl">
                 <span className="absolute top-[1.6rem] -right-[2.6rem] w-44 rotate-45 bg-site-highlight py-1.5 text-center text-[0.6875rem] font-extrabold tracking-[0.14em] text-site-night uppercase shadow-[0_4px_10px_rgb(1_27_14/0.3)] ring-1 ring-site-night/10">
                     Early access
                 </span>
@@ -360,9 +360,9 @@ export function ProductCard({
         'inline-flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold whitespace-nowrap transition-[background-color,color,border-color,transform] hover:-translate-y-0.5';
 
     return (
-        <article className="group relative flex h-full flex-col rounded-3xl bg-white shadow-[0_1px_2px_rgb(5_69_27/0.06),0_10px_30px_-12px_rgb(5_69_27/0.18)] ring-1 ring-site-line transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgb(5_69_27/0.08),0_24px_48px_-16px_rgb(5_69_27/0.32)] hover:ring-site-accent/40">
+        <article className="group relative flex h-full flex-col rounded-xl bg-white shadow-[0_1px_2px_rgb(5_69_27/0.06),0_10px_30px_-12px_rgb(5_69_27/0.18)] ring-1 ring-site-line transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgb(5_69_27/0.08),0_24px_48px_-16px_rgb(5_69_27/0.32)] hover:ring-site-accent/40">
             {/* The header: the product's name on a green panel. */}
-            <div className="site-dark relative flex min-h-32 items-end overflow-hidden rounded-t-3xl bg-linear-160 from-[#0a5a26] via-[#063519] to-[#032a16] px-6 pt-12 pr-28 pb-5 sm:px-7 sm:pr-28">
+            <div className="site-dark relative flex min-h-32 items-end overflow-hidden rounded-t-xl bg-linear-160 from-[#0a5a26] via-[#063519] to-[#032a16] px-6 pt-12 pr-28 pb-5 sm:px-7 sm:pr-28">
                 <span
                     aria-hidden
                     className="absolute inset-0 bg-[radial-gradient(rgb(255_255_255/0.14)_1px,transparent_1.5px)] [background-size:14px_14px] [mask-image:linear-gradient(to_bottom,black,transparent)]"

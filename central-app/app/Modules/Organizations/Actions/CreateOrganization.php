@@ -30,7 +30,7 @@ final class CreateOrganization
     ) {}
 
     /**
-     * @param  array{display_name: string, legal_name: string, slug: string, business_type?: string|null, contact_email?: string|null, country_code: string, default_currency: string, timezone: string}  $data
+     * @param  array{display_name: string, legal_name?: string|null, slug: string, business_type?: string|null, contact_email?: string|null, country_code: string, default_currency: string, timezone: string}  $data
      *
      * @throws ValidationException
      */
@@ -46,7 +46,8 @@ final class CreateOrganization
             $organization = DB::transaction(function () use ($creator, $data, $slug): Organization {
                 $organization = new Organization;
                 $organization->forceFill([
-                    'legal_name' => $data['legal_name'],
+                    // The registered name can be given later in settings; until then the business name.
+                    'legal_name' => ($data['legal_name'] ?? null) ?: $data['display_name'],
                     'display_name' => $data['display_name'],
                     'business_type' => $data['business_type'] ?? null,
                     'contact_email' => $data['contact_email'] ?? null,

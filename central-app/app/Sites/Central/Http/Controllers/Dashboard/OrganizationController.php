@@ -5,6 +5,7 @@ namespace App\Sites\Central\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Modules\Applications\Models\Application;
 use App\Modules\Entitlements\Actions\ManageEntitlements;
+use App\Modules\Entitlements\Support\TrialRefused;
 use App\Modules\Marketing\Support\MarketingCatalog;
 use App\Modules\Organizations\Actions\AddFirstBranch;
 use App\Modules\Organizations\Actions\CheckSlugAvailability;
@@ -54,9 +55,13 @@ class OrganizationController extends Controller
             return $organization;
         });
 
-        $trial = $request->trialApplication();
-        if ($trial !== null) {
-            $entitlements->startTrial($organization, Application::query()->where('code', $trial)->sole(), $request->user());
+        foreach ($request->trialApplications() as $code) {
+            try {
+                $entitlements->startTrial($organization, Application::query()->where('code', $code)->sole(), $request->user());
+            } catch (TrialRefused) {
+                // Already on trial alongside an earlier choice (Finance
+                // with Pharmacy): nothing more to start.
+            }
         }
 
         // The business has its own host and session: open it there (signing in

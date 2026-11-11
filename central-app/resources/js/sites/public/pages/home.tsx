@@ -2,8 +2,11 @@ import { Link } from '@inertiajs/react';
 import {
     ArrowRight,
     Code2,
+    FileText,
     LayoutGrid,
+    MessagesSquare,
     Monitor,
+    PackageCheck,
     Rocket,
     Smartphone,
 } from 'lucide-react';
@@ -17,7 +20,7 @@ import HeroEcosystem from '@/sites/public/components/hero-ecosystem';
 import WhyMiles from '@/sites/public/components/why-miles';
 import {
     DeploymentOptions,
-    ServiceList,
+    ServiceCards,
     quoteUrl,
 } from '@/sites/public/components/offerings';
 import { Accent, IconBox } from '@/sites/public/components/page-hero';
@@ -40,6 +43,25 @@ type Props = {
 };
 
 /** The three ways in, in a row just under the hero: subscriptions, custom work, the trial. */
+/** How a custom project runs, in three plain steps (no links). */
+const customSteps: { icon: LucideIcon; title: string; body: string }[] = [
+    {
+        icon: MessagesSquare,
+        title: 'Scoped with you',
+        body: 'We map your workflows, approvals and reports first.',
+    },
+    {
+        icon: FileText,
+        title: 'Quoted up front',
+        body: 'A fixed scope and price before any work starts.',
+    },
+    {
+        icon: PackageCheck,
+        title: 'Delivered and supported',
+        body: 'Set up, your team trained, and support after launch.',
+    },
+];
+
 function highlights(trialDays: number): {
     icon: LucideIcon;
     title: string;
@@ -79,7 +101,7 @@ function highlights(trialDays: number): {
  */
 function ApplicationTiles() {
     return (
-        <div className="site-dark relative isolate overflow-hidden rounded-3xl bg-[radial-gradient(circle_at_30%_20%,#11512b,#063519_60%,#032a16)] p-4 shadow-2xl shadow-site-night/20 sm:p-8">
+        <div className="site-dark relative isolate overflow-hidden rounded-xl bg-[radial-gradient(circle_at_30%_20%,#11512b,#063519_60%,#032a16)] p-4 shadow-2xl shadow-site-night/20 sm:p-8">
             <div
                 aria-hidden
                 className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(#a3e63526_1px,transparent_1px)] bg-size-[22px_22px]"
@@ -106,7 +128,7 @@ function ApplicationTiles() {
                         </>
                     );
                     const box =
-                        'group block h-full rounded-2xl bg-white/5 px-1 py-3 ring-1 ring-white/10 transition-colors sm:px-2 sm:py-5';
+                        'group block h-full rounded-lg bg-white/5 px-1 py-3 ring-1 ring-white/10 transition-colors sm:px-2 sm:py-5';
 
                     return (
                         <li key={app.id}>
@@ -217,7 +239,7 @@ export default function MarketingHome({
                         <li key={item.href}>
                             <Link
                                 href={item.href}
-                                className="group flex h-full items-start gap-4 rounded-2xl bg-white p-6 shadow-xl ring-1 shadow-site-night/10 ring-site-line transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-2xl hover:ring-site-accent/40"
+                                className="group flex h-full items-start gap-4 rounded-lg bg-white p-6 shadow-xl ring-1 shadow-site-night/10 ring-site-line transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-2xl hover:ring-site-accent/40"
                             >
                                 <IconBox icon={item.icon} index={i} />
                                 <span className="flex-1">
@@ -320,40 +342,76 @@ export default function MarketingHome({
             <section
                 id="custom"
                 aria-labelledby="custom-heading"
-                className="scroll-mt-24 bg-white"
+                className="relative scroll-mt-24 overflow-hidden bg-gradient-to-b from-white via-site-wash/60 to-white"
             >
-                <div
-                    className={`${container} grid gap-12 py-20 sm:py-28 lg:grid-cols-[1fr_1.4fr] lg:gap-16`}
-                >
-                    <div className="lg:sticky lg:top-28 lg:self-start">
-                        <SectionHeading
-                            id="custom-heading"
-                            title={
-                                <>
-                                    Your business is unique.{' '}
-                                    <Accent>Your software can be too.</Accent>
-                                </>
-                            }
-                            lead="Apart from our subscription products, we build and adapt software around your workflows: scoped with you, quoted, and delivered as a project."
-                            align="left"
-                        />
-                        <div className="mt-8 flex flex-wrap gap-3">
-                            <Link
-                                href={quoteUrl('Project: Custom software')}
-                                className={button.primary}
-                            >
-                                Discuss Your Project
-                                <ArrowRight className="size-4" aria-hidden />
-                            </Link>
-                            <Link
-                                href={quoteUrl('Quote: Custom software')}
-                                className={button.outline}
-                            >
-                                Request a Quotation
-                            </Link>
+                <div className={`${container} py-20 sm:py-28`}>
+                    <div className="grid items-center gap-12 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
+                        <div>
+                            <SectionHeading
+                                id="custom-heading"
+                                title={
+                                    <>
+                                        Your business is unique.{' '}
+                                        <Accent>
+                                            Your software can be too.
+                                        </Accent>
+                                    </>
+                                }
+                                lead="Apart from our subscription products, we build and adapt software around your workflows: scoped with you, quoted, and delivered as a project."
+                                align="left"
+                            />
+                            <ul className="mt-8 grid gap-3 sm:grid-cols-3">
+                                {customSteps.map((step) => (
+                                    <li
+                                        key={step.title}
+                                        className="rounded-lg bg-white/70 p-4 ring-1 ring-site-line"
+                                    >
+                                        <step.icon
+                                            className="size-5 text-site-accent-ink"
+                                            aria-hidden
+                                        />
+                                        <p className="mt-3 font-semibold text-site-ink">
+                                            {step.title}
+                                        </p>
+                                        <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                                            {step.body}
+                                        </p>
+                                    </li>
+                                ))}
+                            </ul>
+                            <div className="mt-8 flex flex-wrap gap-3">
+                                <Link
+                                    href={quoteUrl('Project: Custom software')}
+                                    className={button.primary}
+                                >
+                                    Discuss Your Project
+                                    <ArrowRight
+                                        className="size-4"
+                                        aria-hidden
+                                    />
+                                </Link>
+                                <Link
+                                    href={quoteUrl('Quote: Custom software')}
+                                    className={button.outline}
+                                >
+                                    Request a Quotation
+                                </Link>
+                            </div>
                         </div>
+                        <figure className="lg:order-first">
+                            <img
+                                src="/images/home/custom-software.webp"
+                                srcSet="/images/home/custom-software-800.webp 800w, /images/home/custom-software.webp 1536w"
+                                sizes="(min-width: 1024px) 50vw, 100vw"
+                                alt="A business owner at her laptop, with Finance, HR, Inventory, Sales and POS, Projects, Scheduling, Operations and Analytics around one dashboard"
+                                width={1536}
+                                height={1024}
+                                loading="lazy"
+                                decoding="async"
+                                className="w-full mix-blend-multiply [mask-image:radial-gradient(closest-side,black_72%,transparent)]"
+                            />
+                        </figure>
                     </div>
-                    <ServiceList />
                 </div>
             </section>
 
@@ -381,9 +439,21 @@ export default function MarketingHome({
                             trialDays={trialDays}
                         />
                     </div>
+                    <div className="mt-14 sm:mt-16">
+                        <h3 className="font-public-display text-2xl font-semibold tracking-tight text-site-ink">
+                            Or have it built for you
+                        </h3>
+                        <p className="mt-2 max-w-2xl text-slate-600">
+                            When a ready product is not the right fit, we build
+                            or adapt the software as a project, quoted up front.
+                        </p>
+                        <div className="mt-8">
+                            <ServiceCards />
+                        </div>
+                    </div>
                     <Link
                         href="/downloads"
-                        className="group mt-10 flex flex-wrap items-center gap-x-6 gap-y-4 rounded-2xl border border-site-line bg-white p-6 shadow-sm transition-[border-color,box-shadow] hover:border-site-accent/40 hover:shadow-lg hover:shadow-site-night/5 sm:p-8"
+                        className="group mt-10 flex flex-wrap items-center gap-x-6 gap-y-4 rounded-lg border border-site-line bg-white p-6 shadow-sm transition-[border-color,box-shadow] hover:border-site-accent/40 hover:shadow-lg hover:shadow-site-night/5 sm:p-8"
                     >
                         <span className="flex -space-x-2" aria-hidden>
                             <span className="inline-flex size-11 items-center justify-center rounded-xl bg-white text-site-accent-ink ring-1 ring-site-line">
@@ -437,7 +507,7 @@ export default function MarketingHome({
                         {howItWorks.map((step, i) => (
                             <li
                                 key={step.title}
-                                className="rounded-2xl bg-white/5 p-6 ring-1 ring-white/10"
+                                className="rounded-lg bg-white/5 p-6 ring-1 ring-white/10"
                             >
                                 <span className="inline-flex size-10 items-center justify-center rounded-full bg-site-highlight font-public-display text-sm font-semibold text-site-night">
                                     {ordinal(i)}

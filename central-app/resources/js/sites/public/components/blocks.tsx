@@ -91,7 +91,7 @@ export function FeatureCards({
 
 /** The white card surface of the redesigned pages, with a hover lift. */
 export const cardSurface =
-    'rounded-3xl bg-white ring-1 ring-site-line shadow-[0_1px_2px_rgb(5_69_27/0.06),0_10px_30px_-12px_rgb(5_69_27/0.18)] transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgb(5_69_27/0.08),0_24px_48px_-16px_rgb(5_69_27/0.3)]';
+    'rounded-xl bg-white ring-1 ring-site-line shadow-[0_1px_2px_rgb(5_69_27/0.06),0_10px_30px_-12px_rgb(5_69_27/0.18)] transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgb(5_69_27/0.08),0_24px_48px_-16px_rgb(5_69_27/0.3)]';
 
 /** Two digits, as numbered steps read: 01, 02, … */
 const ordinal = (i: number) => String(i + 1).padStart(2, '0');
@@ -135,7 +135,7 @@ export function StepBand({
                     {steps.map((step, i) => (
                         <li
                             key={step.title}
-                            className="relative rounded-3xl bg-white/[0.06] p-6 ring-1 ring-white/10 backdrop-blur-sm transition-colors hover:bg-white/[0.09] sm:p-7"
+                            className="relative rounded-xl bg-white/[0.06] p-6 ring-1 ring-white/10 backdrop-blur-sm transition-colors hover:bg-white/[0.09] sm:p-7"
                         >
                             <span className="inline-flex size-10 items-center justify-center rounded-full bg-site-highlight font-public-display text-sm font-semibold text-site-night shadow-[0_0_0_6px_rgb(139_209_3/0.15)]">
                                 {ordinal(i)}
@@ -178,7 +178,7 @@ export function CtaBand({
             className="px-4 pb-16 sm:px-6 sm:pb-24 lg:px-8"
         >
             <div
-                className={`${darkBand} mx-auto grid max-w-7xl items-center gap-8 rounded-2xl px-6 py-12 sm:px-12 sm:py-16 lg:grid-cols-[1fr_auto]`}
+                className={`${darkBand} mx-auto grid max-w-7xl items-center gap-8 rounded-lg px-6 py-12 sm:px-12 sm:py-16 lg:grid-cols-[1fr_auto]`}
             >
                 <HeroBackdrop />
                 <div className="text-center lg:text-left">

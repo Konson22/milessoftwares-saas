@@ -38,6 +38,9 @@ export function UserMenu({
     signOut?: { label: string; action: string; method: 'post' };
 }) {
     const [open, setOpen] = useState(false);
+    // A picture that will not load (expired link, blocked host) falls back
+    // to initials rather than a broken image.
+    const [brokenAvatar, setBrokenAvatar] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
     const close = useCallback(() => setOpen(false), []);
     useDismiss(ref, open, close);
@@ -51,11 +54,12 @@ export function UserMenu({
                 onClick={() => setOpen((value) => !value)}
                 className="flex items-center gap-2 px-1.5 py-0.5 text-left transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
-                {user.avatar ? (
+                {user.avatar && !brokenAvatar ? (
                     <img
                         src={user.avatar}
                         alt=""
                         referrerPolicy="no-referrer"
+                        onError={() => setBrokenAvatar(true)}
                         className="size-7 shrink-0 rounded-full object-cover"
                     />
                 ) : (

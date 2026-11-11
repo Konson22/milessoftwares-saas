@@ -65,7 +65,8 @@ final class SecurityHeaders
             "default-src 'self'",
             "script-src 'self' 'nonce-{$nonce}'{$dev}",
             "style-src 'self' 'unsafe-inline'{$dev}",
-            "img-src 'self' data: blob:{$dev}",
+            // Google profile pictures from the platform user (avatar).
+            "img-src 'self' data: blob: https://*.googleusercontent.com{$dev}",
             "font-src 'self' data:{$dev}",
             "connect-src 'self'{$dev}{$devSocket}",
             "object-src 'none'",

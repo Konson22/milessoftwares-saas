@@ -90,7 +90,7 @@ export default function FaqList({ items }: { items: Question[] }) {
                 <details
                     key={question}
                     name="faq"
-                    className="group rounded-2xl border border-site-line bg-white px-5 transition-colors duration-200 open:border-site-accent/40 sm:px-6"
+                    className="group rounded-lg border border-site-line bg-white px-5 transition-colors duration-200 open:border-site-accent/40 sm:px-6"
                 >
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 font-semibold sm:gap-6 sm:py-5 [&::-webkit-details-marker]:hidden">
                         {question}

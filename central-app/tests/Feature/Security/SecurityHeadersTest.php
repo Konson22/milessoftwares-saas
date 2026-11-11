@@ -52,7 +52,8 @@ test('the public site allows Meta Pixel hosts in CSP', function () {
         ->get('Content-Security-Policy'));
 
     expect($auth['script-src'])->not->toContain('https://connect.facebook.net')
-        ->and($auth['img-src'] ?? [])->not->toContain('https://www.facebook.com');
+        ->and($auth['img-src'] ?? [])->not->toContain('https://www.facebook.com')
+        ->and($auth['img-src'])->toContain('https://*.googleusercontent.com');
 });
 
 test('the nonce changes on every request', function () {

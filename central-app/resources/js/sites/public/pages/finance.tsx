@@ -176,7 +176,9 @@ export default function FinancePage({
                                 budgets, and generate financial reports—all in
                                 one place.
                             </p>
-                            <div className="mt-5">{primary(button.primary)}</div>
+                            <div className="mt-5">
+                                {primary(button.primary)}
+                            </div>
                         </div>
                         <div
                             aria-hidden
@@ -207,7 +209,7 @@ export default function FinancePage({
                 aria-labelledby="audience-heading"
                 className={`${container} py-9 sm:py-12`}
             >
-                <div className="flex items-start gap-4 rounded-2xl border border-site-line bg-white p-5 sm:p-6">
+                <div className="flex items-start gap-4 rounded-lg border border-site-line bg-white p-5 sm:p-6">
                     <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-site-accent/10 text-site-accent-ink">
                         <Users className="size-5" aria-hidden />
                     </span>
@@ -248,20 +250,23 @@ export default function FinancePage({
                                 const Icon = feature.icon;
 
                                 return (
-                                <li
-                                    key={feature.title}
-                                    className="rounded-2xl border border-site-line bg-white p-4"
-                                >
-                                    <span className="inline-flex size-9 items-center justify-center rounded-lg bg-site-accent/10 text-site-accent-ink">
-                                        <Icon className="size-4" aria-hidden />
-                                    </span>
-                                    <h3 className="mt-3 text-base font-semibold text-site-ink">
-                                        {feature.title}
-                                    </h3>
-                                    <p className="mt-1 text-sm leading-relaxed text-slate-600">
-                                        {feature.body}
-                                    </p>
-                                </li>
+                                    <li
+                                        key={feature.title}
+                                        className="rounded-lg border border-site-line bg-white p-4"
+                                    >
+                                        <span className="inline-flex size-9 items-center justify-center rounded-lg bg-site-accent/10 text-site-accent-ink">
+                                            <Icon
+                                                className="size-4"
+                                                aria-hidden
+                                            />
+                                        </span>
+                                        <h3 className="mt-3 text-base font-semibold text-site-ink">
+                                            {feature.title}
+                                        </h3>
+                                        <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                                            {feature.body}
+                                        </p>
+                                    </li>
                                 );
                             })}
                         </ul>
@@ -285,7 +290,7 @@ export default function FinancePage({
                             {product.workflow.map((step, i) => (
                                 <li
                                     key={step.title}
-                                    className="rounded-2xl border border-site-line bg-white p-5"
+                                    className="rounded-lg border border-site-line bg-white p-5"
                                 >
                                     <span className="font-public-display text-sm font-bold text-site-accent-ink">
                                         {String(i + 1).padStart(2, '0')}
@@ -324,7 +329,7 @@ export default function FinancePage({
                         {facts.map(({ term, values }) => (
                             <div
                                 key={term}
-                                className="rounded-2xl border border-site-line bg-white p-5"
+                                className="rounded-lg border border-site-line bg-white p-5"
                             >
                                 <dt className="text-sm font-semibold text-slate-500">
                                     {term}
@@ -393,11 +398,10 @@ export default function FinancePage({
             )}
 
             <section className="px-4 pb-12 sm:px-6 sm:pb-16 lg:px-8">
-                <div className="site-dark mx-auto grid max-w-7xl items-center gap-6 rounded-2xl bg-[#0a3d1c] px-6 py-8 sm:px-10 lg:grid-cols-[1fr_auto]">
+                <div className="site-dark mx-auto grid max-w-7xl items-center gap-6 rounded-lg bg-[#0a3d1c] px-6 py-8 sm:px-10 lg:grid-cols-[1fr_auto]">
                     <div>
                         <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-                            Run your business.{' '}
-                            <Accent>All connected.</Accent>
+                            Run your business. <Accent>All connected.</Accent>
                         </h2>
                         <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#bcd3bf] sm:text-base">
                             Bring your financial operations and business

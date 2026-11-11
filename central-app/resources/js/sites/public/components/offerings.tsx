@@ -210,7 +210,7 @@ export function DeploymentOptions({
                     <li
                         key={option.id}
                         id={option.id}
-                        className="site-dark group relative isolate flex scroll-mt-28 flex-col overflow-hidden rounded-3xl bg-linear-160 from-[#0a5a26] via-[#063519] to-[#032a16] shadow-lg ring-1 shadow-site-night/15 ring-white/10 transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-site-accent/25"
+                        className="site-dark group relative isolate flex scroll-mt-28 flex-col overflow-hidden rounded-xl bg-linear-160 from-[#0a5a26] via-[#063519] to-[#032a16] shadow-lg ring-1 shadow-site-night/15 ring-white/10 transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-site-accent/25"
                     >
                         {/* Faint dots and a large faded icon behind the top of the card. */}
                         <div
@@ -358,49 +358,47 @@ const serviceGroups: Omit<Service, 'href' | 'cta'>[] = [
 ];
 
 /**
- * The custom-work services as a numbered, divided list (no cards, no
- * surface): each row links to its section on the Services page.
+ * The custom-work services as three numbered cards, each linking to its
+ * section on the Services page.
  */
-export function ServiceList() {
+export function ServiceCards() {
     return (
-        <ol className="divide-y divide-site-line border-y border-site-line">
+        <ol className="grid gap-5 lg:grid-cols-3">
             {serviceGroups.map((service, i) => (
                 <li key={service.id}>
                     <Link
                         href={`/services#${service.id}`}
-                        className="group grid gap-x-6 gap-y-4 py-8 sm:grid-cols-[auto_1fr_auto] sm:items-start"
+                        className="group flex h-full flex-col rounded-xl bg-white p-6 shadow-sm ring-1 ring-site-line transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-site-night/10 sm:p-7"
                     >
-                        <span className="flex items-center gap-4">
-                            <span className="font-public-display text-sm font-semibold text-site-accent-ink tabular-nums">
+                        <span className="flex items-center justify-between">
+                            <IconBox icon={service.icon} index={i} />
+                            <span className="font-public-display text-3xl font-semibold text-site-line tabular-nums transition-colors group-hover:text-site-accent/40">
                                 {String(i + 1).padStart(2, '0')}
                             </span>
-                            <IconBox icon={service.icon} index={i} />
                         </span>
-                        <span className="block">
-                            <span
-                                className={`block text-xl transition-colors group-hover:text-site-accent-ink ${display}`}
-                            >
-                                {service.title}
-                            </span>
-                            <span className="mt-2 block max-w-xl leading-relaxed text-slate-600">
-                                {service.body}
-                            </span>
-                            <span className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
-                                {service.points.map((point) => (
-                                    <span
-                                        key={point}
-                                        className="inline-flex items-center gap-2 text-sm text-slate-700"
-                                    >
-                                        <Check
-                                            className="size-4 shrink-0 text-site-accent-ink"
-                                            aria-hidden
-                                        />
-                                        {point}
-                                    </span>
-                                ))}
-                            </span>
+                        <span
+                            className={`mt-5 block text-xl transition-colors group-hover:text-site-accent-ink ${display}`}
+                        >
+                            {service.title}
                         </span>
-                        <span className="inline-flex items-center gap-2 text-sm font-bold text-site-accent-ink sm:mt-1">
+                        <span className="mt-2 block text-sm leading-relaxed text-slate-600">
+                            {service.body}
+                        </span>
+                        <span className="mt-5 flex flex-1 flex-col gap-2 border-t border-site-line pt-5">
+                            {service.points.map((point) => (
+                                <span
+                                    key={point}
+                                    className="inline-flex items-start gap-2 text-sm text-slate-700"
+                                >
+                                    <Check
+                                        className="mt-0.5 size-4 shrink-0 text-site-accent-ink"
+                                        aria-hidden
+                                    />
+                                    {point}
+                                </span>
+                            ))}
+                        </span>
+                        <span className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-site-accent-ink">
                             Learn more
                             <span className="sr-only">
                                 {' '}

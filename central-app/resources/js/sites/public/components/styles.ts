@@ -37,10 +37,10 @@ export const display =
  * hairline box whose border and shadow come up on hover.
  */
 export const card =
-    'rounded-2xl border border-site-line bg-white transition-[border-color,box-shadow] duration-200 hover:border-site-accent/40 hover:shadow-lg hover:shadow-site-night/5';
+    'rounded-lg border border-site-line bg-white transition-[border-color,box-shadow] duration-200 hover:border-site-accent/40 hover:shadow-lg hover:shadow-site-night/5';
 
 /** Static surface (feature tiles, steps): same chrome, no hover. */
-export const panel = 'rounded-2xl border border-site-line bg-white';
+export const panel = 'rounded-lg border border-site-line bg-white';
 
 /** The page width and gutter every section uses. */
 export const container = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';

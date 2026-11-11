@@ -239,7 +239,7 @@ function AppCard({ app }: { app: App }) {
                 <p className="flex-1 text-sm leading-relaxed text-slate-600">
                     {app.summary}
                 </p>
-                <p className="mt-5 flex gap-3 rounded-2xl bg-site-wash p-4 text-sm text-slate-700 ring-1 ring-site-line">
+                <p className="mt-5 flex gap-3 rounded-lg bg-site-wash p-4 text-sm text-slate-700 ring-1 ring-site-line">
                     <Cpu
                         className="mt-0.5 size-4 shrink-0 text-site-accent-ink"
                         aria-hidden
@@ -499,12 +499,12 @@ function SetupHelp() {
                         align="left"
                     />
                     <nav aria-label="Setup topics" className="mt-8">
-                        <ul className="space-y-1.5 rounded-3xl bg-site-wash p-2 text-sm ring-1 ring-site-line">
+                        <ul className="space-y-1.5 rounded-xl bg-site-wash p-2 text-sm ring-1 ring-site-line">
                             {topics.map(({ icon: Icon, ...topic }) => (
                                 <li key={topic.id}>
                                     <a
                                         href={`#${topic.id}`}
-                                        className="flex items-center gap-3 rounded-2xl px-3 py-2.5 font-semibold text-slate-700 transition-colors hover:bg-white hover:text-site-accent-ink hover:shadow-sm"
+                                        className="flex items-center gap-3 rounded-lg px-3 py-2.5 font-semibold text-slate-700 transition-colors hover:bg-white hover:text-site-accent-ink hover:shadow-sm"
                                     >
                                         <Icon
                                             className="size-4 shrink-0 text-site-accent-ink"
@@ -523,7 +523,7 @@ function SetupHelp() {
                             key={topic.id}
                             id={topic.id}
                             aria-labelledby={`${topic.id}-heading`}
-                            className="scroll-mt-24 rounded-3xl bg-white p-6 shadow-[0_1px_2px_rgb(5_69_27/0.06),0_10px_30px_-12px_rgb(5_69_27/0.18)] ring-1 ring-site-line sm:p-8"
+                            className="scroll-mt-24 rounded-xl bg-white p-6 shadow-[0_1px_2px_rgb(5_69_27/0.06),0_10px_30px_-12px_rgb(5_69_27/0.18)] ring-1 ring-site-line sm:p-8"
                         >
                             <div className="flex items-center gap-3">
                                 <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-linear-160 from-[#0a5a26] to-[#032a16] text-site-highlight">
@@ -577,7 +577,7 @@ function ReleaseNotes({ apps }: { apps: App[] }) {
                                 key={app.code}
                                 id={`notes-${app.code}`}
                                 aria-labelledby={`notes-${app.code}-heading`}
-                                className="grid scroll-mt-24 gap-6 rounded-3xl bg-white p-6 ring-1 ring-site-line sm:p-8 lg:grid-cols-[1fr_2fr] lg:gap-16"
+                                className="grid scroll-mt-24 gap-6 rounded-xl bg-white p-6 ring-1 ring-site-line sm:p-8 lg:grid-cols-[1fr_2fr] lg:gap-16"
                             >
                                 <div className="flex items-start gap-3">
                                     <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-site-accent/10 text-site-accent-ink">
@@ -691,7 +691,7 @@ function DevicesPicture() {
             <div className="absolute top-1/2 left-1/2 size-80 -translate-1/2 rounded-full bg-site-accent/20 blur-3xl" />
 
             {/* The PC: a window with the counter. */}
-            <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] ring-1 ring-white/20">
+            <div className="relative overflow-hidden rounded-lg bg-white shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] ring-1 ring-white/20">
                 <div className="flex items-center gap-2 bg-[#04381a] px-4 py-2.5">
                     <span className="aspect-square w-3 bg-site-highlight [clip-path:polygon(0_0,100%_0,58%_50%,58%_100%,26%_100%,26%_50%,0_50%)]" />
                     <span className="text-xs font-semibold text-white">

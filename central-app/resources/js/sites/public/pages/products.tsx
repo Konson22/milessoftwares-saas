@@ -198,7 +198,7 @@ export default function Products({ catalog, trialDays, canonical }: Props) {
             >
                 <div className="mx-auto max-w-7xl px-4 pt-14 sm:px-6 lg:px-8 sm:pt-16">
                     {/* A coupon: notched edges and a dashed tear line. */}
-                    <div className="relative flex flex-col gap-6 overflow-hidden rounded-3xl bg-site-wash p-6 ring-1 ring-site-line sm:p-8 md:flex-row md:items-center md:gap-8">
+                    <div className="relative flex flex-col gap-6 overflow-hidden rounded-xl bg-site-wash p-6 ring-1 ring-site-line sm:p-8 md:flex-row md:items-center md:gap-8">
                         <div className="flex flex-1 flex-col items-start gap-5 sm:flex-row sm:items-center">
                             <span className="inline-flex size-16 shrink-0 items-center justify-center rounded-2xl bg-linear-160 from-[#0a5a26] to-[#032a16] text-site-highlight shadow-lg shadow-site-night/20">
                                 <MonitorSmartphone
@@ -341,8 +341,8 @@ function FanCard({
     trialDays: number;
 }) {
     return (
-        <div className="relative w-60 rounded-3xl bg-white shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] ring-1 ring-white/20 xl:w-64">
-            <div className="relative flex h-24 items-end overflow-hidden rounded-t-3xl bg-linear-160 from-[#0d6a2e] to-[#04381a] px-5 pr-24 pb-4">
+        <div className="relative w-60 rounded-xl bg-white shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] ring-1 ring-white/20 xl:w-64">
+            <div className="relative flex h-24 items-end overflow-hidden rounded-t-xl bg-linear-160 from-[#0d6a2e] to-[#04381a] px-5 pr-24 pb-4">
                 <span className="absolute inset-0 bg-[radial-gradient(rgb(255_255_255/0.16)_1px,transparent_1.5px)] [background-size:12px_12px] [mask-image:linear-gradient(to_bottom,black,transparent)]" />
                 <span className="relative text-lg leading-tight font-semibold text-white">
                     {product.name}

@@ -71,7 +71,7 @@ export default function About({ canonical }: Props) {
                         {facts.map(({ icon: Icon, title, body }, i) => (
                             <li
                                 key={title}
-                                className={`rounded-3xl bg-white/[0.07] p-5 ring-1 ring-white/10 backdrop-blur-sm transition-colors hover:bg-white/[0.1] ${i % 2 === 1 ? 'sm:translate-y-6' : ''}`}
+                                className={`rounded-xl bg-white/[0.07] p-5 ring-1 ring-white/10 backdrop-blur-sm transition-colors hover:bg-white/[0.1] ${i % 2 === 1 ? 'sm:translate-y-6' : ''}`}
                             >
                                 <span className="inline-flex size-10 items-center justify-center rounded-xl bg-site-highlight text-site-night">
                                     <Icon className="size-5" aria-hidden />
@@ -98,7 +98,7 @@ export default function About({ canonical }: Props) {
 
             <section aria-labelledby="story-heading" className="bg-white">
                 <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:px-8">
-                    <div className="site-dark relative overflow-hidden rounded-3xl bg-linear-160 from-[#0a5a26] via-[#063519] to-[#032a16] p-8 shadow-xl shadow-site-night/20 sm:p-10">
+                    <div className="site-dark relative overflow-hidden rounded-xl bg-linear-160 from-[#0a5a26] via-[#063519] to-[#032a16] p-8 shadow-xl shadow-site-night/20 sm:p-10">
                         <span
                             aria-hidden
                             className="absolute inset-0 bg-[radial-gradient(rgb(255_255_255/0.12)_1px,transparent_1.5px)] [background-size:16px_16px] [mask-image:linear-gradient(to_top_left,black,transparent_60%)]"

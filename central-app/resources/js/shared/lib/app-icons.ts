@@ -1,6 +1,8 @@
 import {
     Boxes,
     Calculator,
+    FolderKanban,
+    Fuel,
     GraduationCap,
     Handshake,
     Landmark,
@@ -31,6 +33,8 @@ const icons: Record<string, LucideIcon> = {
     crm: Handshake,
     clinic: Stethoscope,
     restaurant: UtensilsCrossed,
+    petrol: Fuel,
+    projects: FolderKanban,
 };
 
 export function appIcon(code: string): LucideIcon {

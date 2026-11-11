@@ -182,6 +182,19 @@ it('starts a free trial of the application chosen on the public site', function 
         ->and($audit->organization_id)->toBe($organization->id);
 });
 
+it('takes the business name as the legal name until one is given', function () {
+    $input = organizationInput(['country_code' => 'KE', 'default_currency' => 'KES', 'timezone' => 'Africa/Nairobi']);
+    unset($input['legal_name']);
+
+    $this->actingAs(User::factory()->create())->post(appUrl('workspaces'), $input)->assertSessionHasNoErrors();
+
+    $organization = Organization::query()->sole();
+    expect($organization->legal_name)->toBe($input['display_name'])
+        ->and($organization->country_code)->toBe('KE')
+        ->and($organization->default_currency)->toBe('KES')
+        ->and($organization->timezone)->toBe('Africa/Nairobi');
+});
+
 it('creates a workspace without a trial when none is chosen', function () {
     Application::query()->forceCreate(['code' => 'retail', 'name' => 'Retail', 'category' => 'operations', 'kind' => 'standalone', 'status' => 'available']);
 
@@ -247,6 +260,26 @@ describe('trials of an ERP product', function () {
         $this->actingAs($this->user)->post(appUrl('workspaces'), organizationInput(['trial_application' => 'finance']));
 
         expect(trialsOf(Organization::query()->sole()))->toBe(['finance']);
+    });
+
+    it('starts a trial of each application picked on the form', function (array $picked) {
+        $this->actingAs($this->user)->post(appUrl('workspaces'), organizationInput(['trial_applications' => $picked]))
+            ->assertSessionHasNoErrors();
+
+        // Finance, picked or not, runs once: alongside Pharmacy or on its own.
+        expect(trialsOf(Organization::query()->sole()))->toBe(['finance', 'pharmacy'])
+            ->and(AuditLog::query()->where('action', 'entitlement.trial_started')->count())->toBe(2);
+    })->with([
+        'the product first' => [['pharmacy', 'finance']],
+        'the shared module first' => [['finance', 'pharmacy']],
+        'the product only' => [['pharmacy']],
+    ]);
+
+    it('refuses a pick that cannot be tried, and creates nothing', function () {
+        $this->actingAs($this->user)->post(appUrl('workspaces'), organizationInput(['trial_applications' => ['pharmacy', 'school']]))
+            ->assertSessionHasErrors('trial_applications.1');
+
+        expect(Organization::query()->count())->toBe(0);
     });
 
     it('does not try a shared module again that the organization has already tried', function () {

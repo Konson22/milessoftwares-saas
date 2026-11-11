@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { ArrowRight, Check, Globe, Monitor, Smartphone } from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
 import { whyMiles } from '@/sites/public/components/content';
 import { Accent } from '@/sites/public/components/page-hero';
 import { button, container, display } from '@/sites/public/components/styles';
@@ -8,9 +8,9 @@ type Reason = (typeof whyMiles)[number];
 
 /**
  * Why Tatook, on the home page: the four reasons around a
- * hub, the Tatook mark in concentric circles, with dashed connectors from
- * each card to it (one workspace, everything joined to it). On small
- * screens the hub is hidden and the cards stack. Pale blue band, white
+ * picture of the Tatook workspace on every screen, with dashed connectors
+ * from each card to it. On small screens the picture sits between the
+ * cards. Pale blue band, white
  * cards, the logo blue for icons and accents; no navy backgrounds.
  * Wording comes from whyMiles in content.ts (same order).
  */
@@ -20,6 +20,7 @@ export default function WhyMiles() {
 
     return (
         <section
+            id="why-tatook"
             aria-labelledby="why-heading"
             className="relative isolate overflow-hidden bg-site-soft"
         >
@@ -43,7 +44,7 @@ export default function WhyMiles() {
                     </p>
                 </div>
 
-                <div className="mt-14 grid gap-5 lg:mt-20 lg:grid-cols-[1fr_auto_1fr] lg:items-center lg:gap-14">
+                <div className="mt-14 grid gap-5 lg:mt-20 lg:grid-cols-[1fr_auto_1fr] lg:items-center lg:gap-6">
                     <ul className="grid gap-5">
                         {left.map((item, i) => (
                             <ReasonCard
@@ -93,15 +94,15 @@ function ReasonCard({
     // A dashed line from the card's inner edge towards the hub (wide screens only).
     const connector =
         side === 'left'
-            ? 'lg:after:-right-14 lg:after:left-auto'
-            : 'lg:after:-left-14 lg:after:right-auto';
+            ? 'lg:after:-right-6 lg:after:left-auto'
+            : 'lg:after:-left-6 lg:after:right-auto';
 
     return (
         <li
-            className={`group relative rounded-3xl bg-white p-6 shadow-sm ring-1 ring-site-line transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-site-accent/10 sm:p-7 lg:after:absolute lg:after:top-1/2 lg:after:w-14 lg:after:border-t-2 lg:after:border-dashed lg:after:border-site-accent/40 lg:after:content-[''] ${connector}`}
+            className={`group relative rounded-xl bg-white p-6 transition-transform duration-300 hover:-translate-y-1 sm:p-7 lg:after:absolute lg:after:top-1/2 lg:after:w-6 lg:after:border-t-2 lg:after:border-dashed lg:after:border-site-accent/40 lg:after:content-[''] ${connector}`}
         >
             <div className="flex items-center gap-4">
-                <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-site-accent text-white shadow-md shadow-site-accent/30 transition-transform duration-300 group-hover:scale-105">
+                <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-site-accent text-white transition-transform duration-300 group-hover:scale-105">
                     <Icon className="size-5" aria-hidden />
                 </span>
                 <h3 className="flex-1 text-lg font-semibold text-site-ink">
@@ -136,35 +137,25 @@ function ReasonCard({
     );
 }
 
-/** The Tatook mark in three circles, with the screens it runs on beneath. */
+/**
+ * The Tatook workspace on a laptop, tablet and phone with the trades around
+ * it. Its white background multiplies into the band and the edges fade, so
+ * it sits on the section with no frame.
+ */
 function Hub() {
     return (
-        <div aria-hidden className="hidden flex-col items-center lg:flex">
-            <div className="relative flex size-72 items-center justify-center rounded-full bg-site-accent/5 ring-1 ring-site-accent/15">
-                <div className="absolute inset-0 animate-[spin_40s_linear_infinite] rounded-full border-2 border-dashed border-site-accent/20 motion-reduce:animate-none" />
-                <div className="flex size-52 items-center justify-center rounded-full bg-site-accent/10 ring-1 ring-site-accent/20">
-                    <div className="flex size-32 items-center justify-center rounded-full bg-white shadow-xl shadow-site-accent/20 ring-1 ring-site-line">
-                        <img
-                            src="/images/logo-icon.png"
-                            alt=""
-                            className="size-20 object-contain"
-                        />
-                    </div>
-                </div>
-            </div>
-            <div className="mt-6 flex items-center gap-2">
-                {[Globe, Monitor, Smartphone].map((Icon, i) => (
-                    <span
-                        key={i}
-                        className="inline-flex size-9 items-center justify-center rounded-full bg-white text-site-accent shadow-sm ring-1 ring-site-line"
-                    >
-                        <Icon className="size-4" />
-                    </span>
-                ))}
-            </div>
-            <p className="mt-3 text-sm font-medium text-slate-600">
-                Web, Windows and Android
-            </p>
-        </div>
+        <figure className="mx-auto w-full max-w-md lg:w-[24rem] lg:max-w-none xl:w-[32rem]">
+            <img
+                src="/images/home/tatook-ecosystem.webp"
+                srcSet="/images/home/tatook-ecosystem-700.webp 700w, /images/home/tatook-ecosystem.webp 1190w"
+                sizes="(min-width: 1280px) 32rem, (min-width: 1024px) 24rem, 28rem"
+                alt="Tatook on a laptop, tablet and phone, joined to shop, team, device and cloud icons"
+                width={1190}
+                height={800}
+                loading="lazy"
+                decoding="async"
+                className="w-full mix-blend-multiply [mask-composite:intersect] [mask-image:linear-gradient(to_right,transparent,black_5%,black_95%,transparent),linear-gradient(transparent,black_5%,black_95%,transparent)]"
+            />
+        </figure>
     );
 }

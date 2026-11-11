@@ -73,7 +73,8 @@ class SecurityHeaders
             "default-src 'self'",
             "script-src 'self' 'nonce-{$nonce}'{$dev}{$fbScript}",
             "style-src 'self' 'unsafe-inline'{$dev}",
-            "img-src 'self' data: blob:{$dev}{$fbImg}",
+            // Google profile pictures (users.avatar_url) come from googleusercontent.com.
+            "img-src 'self' data: blob: https://*.googleusercontent.com{$dev}{$fbImg}",
             "font-src 'self' data:{$dev}",
             "connect-src 'self'{$dev}{$devSocket}{$fbConnect}",
             "object-src 'none'",

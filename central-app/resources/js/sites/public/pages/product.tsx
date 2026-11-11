@@ -146,7 +146,7 @@ export default function ProductPage({
                     className="px-4 py-16 sm:px-6 lg:px-8 sm:py-24"
                 >
                     <div
-                        className={`${darkBand} mx-auto flex max-w-7xl flex-col items-center gap-6 rounded-[2rem] px-6 py-14 text-center sm:px-12`}
+                        className={`${darkBand} mx-auto flex max-w-7xl flex-col items-center gap-6 rounded-xl px-6 py-14 text-center sm:px-12`}
                     >
                         <h2
                             id="try-heading"

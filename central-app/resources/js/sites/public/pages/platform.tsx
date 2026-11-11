@@ -192,8 +192,8 @@ function WorkspacePicture() {
         <div aria-hidden className="relative mx-auto max-w-md py-8">
             <div className="absolute top-1/2 left-1/2 size-80 -translate-1/2 rounded-full bg-site-accent/20 blur-3xl" />
 
-            <div className="relative rotate-[-2deg] rounded-3xl bg-white shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] ring-1 ring-white/20">
-                <div className="flex items-center gap-3 rounded-t-3xl bg-linear-160 from-[#0d6a2e] to-[#04381a] px-6 py-4">
+            <div className="relative rotate-[-2deg] rounded-xl bg-white shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] ring-1 ring-white/20">
+                <div className="flex items-center gap-3 rounded-t-xl bg-linear-160 from-[#0d6a2e] to-[#04381a] px-6 py-4">
                     <span className="aspect-square w-4 bg-site-highlight [clip-path:polygon(0_0,100%_0,58%_50%,58%_100%,26%_100%,26%_50%,0_50%)]" />
                     <span className="font-semibold text-white">
                         Your workspace

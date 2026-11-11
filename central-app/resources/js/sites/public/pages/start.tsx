@@ -96,7 +96,7 @@ export default function Start({
 
                         <aside
                             aria-label="Your trial"
-                            className="flex flex-col rounded-2xl border border-site-line bg-site-soft p-6 text-slate-600"
+                            className="flex flex-col rounded-lg border border-site-line bg-site-soft p-6 text-slate-600"
                         >
                             <div className="flex items-center gap-3">
                                 {product && (

@@ -40,7 +40,7 @@ export default function HeroShowcase({ products }: { products: Product[] }) {
 
     return (
         <div
-            className="relative overflow-hidden rounded-2xl border border-site-line bg-site-night"
+            className="relative overflow-hidden rounded-lg border border-site-line bg-site-night"
             onMouseEnter={() => setPaused(true)}
             onMouseLeave={() => setPaused(false)}
         >
@@ -63,7 +63,7 @@ export default function HeroShowcase({ products }: { products: Product[] }) {
                 <div
                     key={current.code}
                     aria-live="polite"
-                    className="hero-caption flex min-w-0 items-center gap-3 rounded-2xl bg-white/95 py-2.5 pr-5 pl-2.5 text-site-ink"
+                    className="hero-caption flex min-w-0 items-center gap-3 rounded-lg bg-white/95 py-2.5 pr-5 pl-2.5 text-site-ink"
                 >
                     <span className={`${iconChip} size-10 shrink-0 rounded-xl`}>
                         <Icon className="size-5" aria-hidden />

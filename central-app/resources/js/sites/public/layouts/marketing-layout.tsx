@@ -1,11 +1,11 @@
 import { Link, usePage } from '@inertiajs/react';
-import { ArrowRight, Boxes, ChevronDown, Menu, X } from 'lucide-react';
+import { ArrowRight, ChevronDown, Menu, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import { milesProducts } from '@/sites/public/components/content';
 import MetaPixel from '@/sites/public/components/meta-pixel';
-import { demoUrl, services } from '@/sites/public/components/offerings';
+import { demoUrl } from '@/sites/public/components/offerings';
 import {
     SocialIcon,
     socialLinks,
@@ -29,22 +29,6 @@ type NavEntry =
     | { title: string; href: string; section?: string[] }
     | { title: string; id: string; items: MenuItem[] };
 
-// Relative paths on the apex host; sign-in and registration live on the
-// auth host, so those are plain links.
-const customSolutions: MenuItem[] = [
-    {
-        title: 'All custom solutions',
-        body: 'Software built or adapted for you',
-        href: '/services',
-        icon: Boxes,
-    },
-    ...services.map((service) => ({
-        title: service.title,
-        href: `/services#${service.id}`,
-        icon: service.icon,
-    })),
-];
-
 const nav: NavEntry[] = [
     { title: 'Home', href: '/' },
     { title: 'Tatook Workspace', href: '/platform' },
@@ -53,7 +37,7 @@ const nav: NavEntry[] = [
         href: '/products',
         section: ['/products', '/erp', '/apps'],
     },
-    { title: 'Custom Solutions', id: 'custom', items: customSolutions },
+    { title: 'Custom Solutions', href: '/services' },
     { title: 'Downloads', href: '/downloads' },
     { title: 'About Us', href: '/about' },
     { title: 'Contact', href: '/contact' },
