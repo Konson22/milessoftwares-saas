@@ -21,12 +21,11 @@ const sections: LegalSection[] = [
         body: (
             <>
                 <p>
-                    Miles Global Softwares is the software business of Miles
-                    Global Link Co. Ltd ("Miles", "we", "us"). This policy
-                    explains what personal information we collect through
-                    milesoftwares.com, our applications and our desktop and
-                    mobile apps, why we collect it and what you can ask us to do
-                    with it.
+                    Tatook is a product of Miles Global Link Co. Ltd ("Miles
+                    Global Link", "we", "us"). This policy explains what
+                    personal information we collect through milesoftwares.com,
+                    our applications and our desktop and mobile apps, why we
+                    collect it and what you can ask us to do with it.
                 </p>
                 <p>
                     For anything in this policy, write to {email} or message us
@@ -72,7 +71,7 @@ const sections: LegalSection[] = [
                     <li>
                         <strong>Business data you enter:</strong> sales, stock,
                         customers, staff, accounts and anything else you record
-                        in a Miles application. This belongs to your
+                        in a Tatook application. This belongs to your
                         organization; we process it on your behalf.
                     </li>
                 </ul>
@@ -141,7 +140,7 @@ const sections: LegalSection[] = [
             <>
                 <p>
                     We do not sell personal information. We share it only with
-                    the service providers that help us run Miles, and only what
+                    the service providers that help us run Tatook, and only what
                     each one needs:
                 </p>
                 <ul>
@@ -228,8 +227,8 @@ const sections: LegalSection[] = [
         title: 'Children',
         body: (
             <p>
-                Miles is business software. It is not meant for children, and we
-                do not knowingly collect information from anyone under 16.
+                Tatook is business software. It is not meant for children, and
+                we do not knowingly collect information from anyone under 16.
             </p>
         ),
     },
@@ -240,7 +239,7 @@ const sections: LegalSection[] = [
             <p>
                 When we change this policy we update the date at the top of this
                 page, and for important changes we email account owners before
-                they take effect. Using Miles is also covered by our{' '}
+                they take effect. Using Tatook is also covered by our{' '}
                 <Link href="/terms">terms of service</Link>.
             </p>
         ),
@@ -253,7 +252,7 @@ export default function Privacy({ canonical }: Props) {
         <>
             <Seo
                 title="Privacy policy"
-                description="How Miles Global Softwares collects, uses and protects personal information on milesoftwares.com and in Miles applications."
+                description="How Tatook collects, uses and protects personal information on milesoftwares.com and in Tatook applications."
                 canonical={canonical}
             />
 

@@ -36,13 +36,13 @@ class LeadAcknowledged extends Notification implements ShouldQueue
         $support = $this->supportEmail ?: (string) config('mail.from.address');
 
         return (new MailMessage)
-            ->subject('We received your message · Miles Global Softwares')
-            ->replyTo($support, 'Miles Global Softwares')
+            ->subject('We received your message · Tatook')
+            ->replyTo($support, 'Tatook')
             ->markdown('mail.lead-acknowledged', [
                 'greeting' => $this->greeting(),
                 'supportEmail' => $support,
                 'phone' => (string) config('platform.billing.phone'),
-                'from' => 'The Miles Global Softwares team',
+                'from' => 'The Tatook team',
                 'address' => (string) config('platform.billing.address'),
                 'website' => PlatformHosts::root(),
                 'productsUrl' => PlatformHosts::url(PlatformHosts::root(), 'products'),

@@ -1,12 +1,12 @@
 {
     "application": {
         "code": "platform",
-        "name": "Miles Softwares platform",
+        "name": "Tatook platform",
         "category": "platform",
         "kind": "platform",
         "status": "available"
     },
-    "version": "1.0.0",
+    "version": "1.0.1",
     "permissions": [
         {
             "key": "platform.access.manage",

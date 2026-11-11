@@ -103,7 +103,7 @@ img {
 }
 
 .header a {
-    color: #042356;
+    color: #05451b;
     font-size: 19px;
     font-weight: bold;
     text-decoration: none;
@@ -111,7 +111,7 @@ img {
 
 /* Logo */
 
-/* The wide Miles Global Softwares logo (960 × 200). */
+/* The wide Tatook logo (960 × 200). */
 .logo {
     height: auto;
     margin-top: 15px;
@@ -240,11 +240,11 @@ img {
 
 .button-blue,
 .button-primary {
-    background-color: #007291;
-    border-bottom: 8px solid #007291;
-    border-left: 18px solid #007291;
-    border-right: 18px solid #007291;
-    border-top: 8px solid #007291;
+    background-color: #037f1f;
+    border-bottom: 8px solid #037f1f;
+    border-left: 18px solid #037f1f;
+    border-right: 18px solid #037f1f;
+    border-top: 8px solid #037f1f;
 }
 
 .button-green,

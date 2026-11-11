@@ -21,7 +21,7 @@ export default function AdminAuthLayout({
                         <ShieldCheck className="size-5" aria-hidden />
                     </span>
                     <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                        Miles Global Softwares administration
+                        Tatook administration
                     </p>
                     <h1 className="text-xl font-semibold">{title}</h1>
                     {description && (

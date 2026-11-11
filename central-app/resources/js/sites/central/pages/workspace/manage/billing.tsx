@@ -80,7 +80,7 @@ export default function OrganizationBilling({
 
             <PageHeader
                 title="Billing"
-                description="Invoices from Miles Global Softwares and the payments you have made."
+                description="Invoices from Tatook and the payments you have made."
             />
 
             <div className="space-y-3">

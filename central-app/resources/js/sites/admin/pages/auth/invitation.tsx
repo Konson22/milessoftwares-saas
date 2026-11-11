@@ -52,7 +52,7 @@ export default function StaffInvitation(props: Props) {
                 <div className="grid gap-6">
                     <p className="text-sm text-muted-foreground">
                         Step 2 of 2: your account already uses an authenticator
-                        app. Enter the six-digit code it shows for Miles.
+                        app. Enter the six-digit code it shows for Tatook.
                     </p>
                     <CodeForm token={props.token} />
                 </div>
@@ -97,7 +97,7 @@ function Account({
                     <p className="text-sm text-muted-foreground">
                         Step 1 of 2:{' '}
                         {hasAccount
-                            ? 'you already have a Miles account with this email. Choose a new password for it; you will use it to sign in everywhere.'
+                            ? 'you already have a Tatook account with this email. Choose a new password for it; you will use it to sign in everywhere.'
                             : 'choose your name and a password.'}
                     </p>
                     <div className="grid gap-2">
@@ -266,5 +266,5 @@ function CodeForm({ token }: { token: string }) {
 
 StaffInvitation.layout = {
     title: 'Set up your admin access',
-    description: 'Miles Global Softwares staff',
+    description: 'Tatook staff',
 };

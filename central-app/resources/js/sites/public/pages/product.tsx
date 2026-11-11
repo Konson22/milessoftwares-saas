@@ -31,9 +31,7 @@ export default function ProductPage({
     canonical,
 }: Props) {
     const summary =
-        product.tagline ??
-        product.description ??
-        `${product.name} by Miles Global Softwares.`;
+        product.tagline ?? product.description ?? `${product.name} by Tatook.`;
     const trialable = product.status !== 'planned';
 
     return (

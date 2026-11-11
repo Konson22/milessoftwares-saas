@@ -177,7 +177,7 @@ it('confirms without repeating what the visitor typed', function (string $name, 
         ->and($html)->toContain('We received your message')
         ->and($html)->toContain('images/logo-with-text.png')
         ->and($html)->toContain('mailto:support@milesoftwares.test')
-        ->and($mail->replyTo)->toBe([['support@milesoftwares.test', 'Miles Global Softwares']])
+        ->and($mail->replyTo)->toBe([['support@milesoftwares.test', 'Tatook']])
         ->and($html)->not->toContain('spam.example');
 })->with([
     'a plain name' => ['Amina Deng', 'Hello Amina,'],

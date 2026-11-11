@@ -1,5 +1,5 @@
 {
-    "$comment": "Public-site wording for every Miles product. What is sold, its release status and whether it can be trialed come from the application registry and database/erp-products.json (registry.type + registry.code); an entry without a registry record is shown as coming soon. Features of a product that is not released describe what it is being built to do. offering says how each product runs today: platforms (web, desktop, android, ios), connectivity (online, offline_sync, offline), licensing (subscription, one_time, quotation), and what its desktop and mobile apps do; list only what is built. highlights are the short points on the home page.",
+    "$comment": "Public-site wording for every Tatook product. What is sold, its release status and whether it can be trialed come from the application registry and database/erp-products.json (registry.type + registry.code); an entry without a registry record is shown as coming soon. Features of a product that is not released describe what it is being built to do. offering says how each product runs today: platforms (web, desktop, android, ios), connectivity (online, offline_sync, offline), licensing (subscription, one_time, quotation), and what its desktop and mobile apps do; list only what is built. highlights are the short points on the home page.",
     "products": [
         {
             "slug": "pharmacy",
@@ -280,7 +280,7 @@
                 },
                 {
                     "question": "Will it include accounting?",
-                    "answer": "Finance & Accounting is an optional add-on, as with every Miles ERP. Add it and paid bills post to your books."
+                    "answer": "Finance & Accounting is an optional add-on, as with every Tatook ERP. Add it and paid bills post to your books."
                 }
             ]
         },
@@ -656,7 +656,7 @@
             "category": "application",
             "name": "Project Management",
             "icon": "folder-kanban",
-            "registry": null,
+            "registry": { "type": "application", "code": "projects" },
             "offering": {
                 "platforms": ["web"],
                 "connectivity": ["online"],
@@ -666,10 +666,10 @@
             },
             "summary": "Projects, tasks and budgets, with actual costs from Finance.",
             "headline": "Deliver projects on time and on budget.",
-            "subhead": "Project Management is planned for teams that run projects, with actual costs coming straight from Finance & Accounting.",
+            "subhead": "Now in early access for teams that run projects: plans, tasks and team assignments, with actual costs coming straight from Finance & Accounting.",
             "audience": "Consultancies, contractors, NGOs and any team that runs projects.",
-            "seoTitle": "Project Management software (coming soon)",
-            "seoDescription": "Project management on the way: projects, tasks and milestones, team assignments, and budgets against actual costs from Finance & Accounting.",
+            "seoTitle": "Project Management software (early access)",
+            "seoDescription": "Project management in early access: projects, tasks and milestones, team assignments, and budgets against actual costs from Finance & Accounting.",
             "features": [
                 {
                     "icon": "folder-kanban",
@@ -703,8 +703,8 @@
             ],
             "faqs": [
                 {
-                    "question": "When will Project Management be available?",
-                    "answer": "It is planned. Join the waitlist and we will tell you first."
+                    "question": "Can I use Project Management today?",
+                    "answer": "It is in early access. Request a demo and we will set it up with you."
                 }
             ]
         },
@@ -796,17 +796,17 @@
                 "desktop": [],
                 "mobile": []
             },
-            "summary": "Monthly payroll and payslips, with any Miles ERP or on its own.",
+            "summary": "Monthly payroll and payslips, with any Tatook ERP or on its own.",
             "headline": "Payday, worked out and signed off.",
             "subhead": "Basic pay, allowances and deductions, income tax and social security, a monthly payroll approved by a second person, and payslips. Takes staff from HR and posts one journal to Finance & Accounting.",
-            "audience": "Any organization that pays staff, with or without Miles HR: restaurants, pharmacies, shops, schools and offices.",
+            "audience": "Any organization that pays staff, with or without Tatook HR: restaurants, pharmacies, shops, schools and offices.",
             "seoTitle": "Payroll software: payslips, income tax and social security",
             "seoDescription": "Payroll software for monthly and hourly pay, allowances, deductions, income tax and social security, approved payroll runs and payslips, with optional HR and Finance & Accounting.",
             "features": [
                 {
                     "icon": "users",
                     "title": "People on the payroll",
-                    "body": "Add them in Payroll, or add Miles HR and hires, transfers and leavers arrive on their own."
+                    "body": "Add them in Payroll, or add Tatook HR and hires, transfers and leavers arrive on their own."
                 },
                 {
                     "icon": "wallet",
@@ -860,12 +860,12 @@
             ],
             "faqs": [
                 {
-                    "question": "Do I need Miles HR?",
+                    "question": "Do I need Tatook HR?",
                     "answer": "No. Add people in Payroll yourself. With HR, they arrive from HR and only their pay is entered in Payroll."
                 },
                 {
                     "question": "Can I add it to my restaurant, pharmacy or shop?",
-                    "answer": "Yes. Payroll works next to any Miles ERP, or on its own."
+                    "answer": "Yes. Payroll works next to any Tatook ERP, or on its own."
                 },
                 {
                     "question": "Are tax rates set for my country?",

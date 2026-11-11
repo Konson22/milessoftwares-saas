@@ -9,7 +9,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Tells an organization owner that Miles Global Softwares staff were given
+ * Tells an organization owner that Tatook staff were given
  * temporary access to their organization's data.
  */
 class SupportAccessApproved extends Notification implements ShouldQueue
@@ -35,7 +35,7 @@ class SupportAccessApproved extends Notification implements ShouldQueue
     {
         return (new MailMessage)
             ->subject("Support access to {$this->organizationName} was approved")
-            ->line("A Miles Global Softwares support team member now has temporary access to {$this->organizationName}.")
+            ->line("A Tatook support team member now has temporary access to {$this->organizationName}.")
             ->line('Reason: '.$this->reason)
             ->line('Access: '.($this->scope === 'read_only' ? 'view only' : 'view and change configuration'))
             ->line('Ends: '.$this->expiresAt->utc()->toDayDateTimeString().' UTC')

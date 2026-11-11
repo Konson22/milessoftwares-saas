@@ -23,7 +23,7 @@ export default function Contact({ formToken, subject, canonical }: Props) {
         <>
             <Seo
                 title="Contact us"
-                description="Questions about Miles Global Softwares, pricing or partnerships? Send us a message."
+                description="Questions about Tatook, pricing or partnerships? Send us a message."
                 canonical={canonical}
             />
 

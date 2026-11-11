@@ -10,7 +10,7 @@ return new class extends Migration
     /**
      * Run the migrations.
      *
-     * Commercial SaaS billing for Miles Global Softwares itself. This is not the
+     * Commercial SaaS billing for Tatook itself. This is not the
      * customers' own accounting, which belongs to the Finance application.
      */
     public function up(): void

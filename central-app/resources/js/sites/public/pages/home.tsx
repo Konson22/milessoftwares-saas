@@ -12,6 +12,8 @@ import { CtaBand, FeatureGrid } from '@/sites/public/components/blocks';
 import type { CatalogEntry } from '@/sites/public/components/catalog';
 import { cloudPillars, howItWorks } from '@/sites/public/components/content';
 import FaqList, { faq } from '@/sites/public/components/faq';
+import { heroApplications } from '@/sites/public/components/hero-applications';
+import HeroEcosystem from '@/sites/public/components/hero-ecosystem';
 import WhyMiles from '@/sites/public/components/why-miles';
 import {
     DeploymentOptions,
@@ -70,6 +72,62 @@ function highlights(trialDays: number): {
     ];
 }
 
+/**
+ * The eight application areas as tiles on a dark panel, beside the
+ * Products heading: the hero's icons again, with a link where the site has
+ * a page.
+ */
+function ApplicationTiles() {
+    return (
+        <div className="site-dark relative isolate overflow-hidden rounded-3xl bg-[radial-gradient(circle_at_30%_20%,#11512b,#063519_60%,#032a16)] p-4 shadow-2xl shadow-site-night/20 sm:p-8">
+            <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(#a3e63526_1px,transparent_1px)] bg-size-[22px_22px]"
+            />
+            <ul
+                aria-label="Areas of a business Tatook connects"
+                className="grid grid-cols-4 gap-2 sm:gap-4"
+            >
+                {heroApplications.map((app) => {
+                    const tile = (
+                        <>
+                            <img
+                                src={app.icon}
+                                alt=""
+                                width={192}
+                                height={192}
+                                loading="lazy"
+                                decoding="async"
+                                className="mx-auto w-12 drop-shadow-[0_6px_10px_rgb(0_0_0/0.25)] transition-transform duration-300 group-hover:scale-110 sm:w-16 lg:w-20"
+                            />
+                            <span className="mt-2 block text-center text-[0.6875rem] leading-tight font-semibold text-slate-200 sm:text-sm">
+                                {app.name}
+                            </span>
+                        </>
+                    );
+                    const box =
+                        'group block h-full rounded-2xl bg-white/5 px-1 py-3 ring-1 ring-white/10 transition-colors sm:px-2 sm:py-5';
+
+                    return (
+                        <li key={app.id}>
+                            {app.href ? (
+                                <Link
+                                    href={app.href}
+                                    className={`${box} hover:bg-white/10 hover:ring-site-highlight/60 focus-visible:outline-2 focus-visible:outline-site-highlight`}
+                                >
+                                    {tile}
+                                </Link>
+                            ) : (
+                                <div className={box}>{tile}</div>
+                            )}
+                        </li>
+                    );
+                })}
+            </ul>
+        </div>
+    );
+}
+
 /** Two digits, as numbered steps read: 01, 02, … */
 function ordinal(i: number): string {
     return String(i + 1).padStart(2, '0');
@@ -86,7 +144,7 @@ export default function MarketingHome({
         <>
             <Seo
                 title="Run your whole business in one place"
-                description="Pharmacy, retail, finance and HR, connected under one Miles Global Softwares account."
+                description="Pharmacy, retail, finance and HR, connected under one Tatook account."
                 canonical={canonical}
                 jsonLd={{
                     '@context': 'https://schema.org',
@@ -104,28 +162,32 @@ export default function MarketingHome({
             />
 
             {/*
-              Full-bleed dark hero. The ground matches the illustration's
-              edges so the picture sits in the page, not in a card. Copy is
-              the left 48%; the picture is the right 52% from the tablet up.
+              Full-bleed dark hero. Copy is the left 48%; the application
+              orbit (animated dashboard and eight areas) is the right 52% from
+              the tablet up, and above the copy on phones. The page then
+              alternates light and dark bands down to the closing call.
             */}
-            <section className="site-dark relative overflow-hidden bg-[#102d3d]">
+            <section className="site-dark relative overflow-hidden bg-[radial-gradient(circle_at_75%_45%,#11512b,#063519_56%,#032a16_100%)]">
+                {/* Faint dot grid, strongest behind the illustration. */}
                 <div
                     aria-hidden
-                    className="pointer-events-none absolute top-1/2 right-0 size-[36rem] -translate-y-1/2 rounded-full bg-site-accent/15 blur-3xl"
+                    className="pointer-events-none absolute inset-0 bg-[radial-gradient(#a3e63533_1px,transparent_1px)] mask-[radial-gradient(ellipse_at_75%_45%,black,transparent_65%)] bg-size-[24px_24px]"
                 />
                 <div
-                    className={`${container} relative grid items-center gap-8 pt-24 pb-12 sm:pt-28 sm:pb-14 md:grid-cols-[46fr_54fr] md:gap-6 lg:grid-cols-[48fr_52fr] lg:gap-10 lg:pt-32 lg:pb-16`}
+                    className={`${container} relative grid items-center gap-8 pt-24 pb-20 sm:pt-28 sm:pb-24 md:grid-cols-[46fr_54fr] md:gap-6 lg:grid-cols-[48fr_52fr] lg:gap-10 lg:pt-32 lg:pb-28`}
                 >
                     <div>
                         <h1
                             className={`site-rise max-w-xl text-[2.125rem] leading-[1.08] sm:text-[2.625rem] md:text-[2rem] lg:text-[2.75rem] xl:text-[3.5rem] ${display}`}
                         >
-                            <span className="block">Run your whole business</span>
+                            <span className="block">
+                                Run your whole business
+                            </span>
                             <Accent>in one place</Accent>
                         </h1>
                         <p className="site-rise mt-5 max-w-[35rem] text-base leading-relaxed text-pretty text-slate-300 [animation-delay:120ms] sm:text-[1.0625rem] lg:text-lg">
                             Pharmacy, retail, finance and HR, connected under
-                            one Miles Global Softwares account.
+                            one Tatook account.
                         </p>
                         <div className="site-rise mt-8 flex flex-wrap items-center gap-3 [animation-delay:220ms]">
                             <a href="#products" className={button.primary}>
@@ -140,29 +202,22 @@ export default function MarketingHome({
                             </Link>
                         </div>
                     </div>
-                    <img
-                        src="/images/home/software-ecosystem.webp"
-                        alt="Connected business software: analytics, cloud, operations, workflows, security, and desktop and mobile apps around one hub."
-                        width={1024}
-                        height={768}
-                        decoding="async"
-                        fetchPriority="high"
-                        sizes="(min-width: 768px) 52vw, 100vw"
-                        className="site-rise order-first mx-auto w-full max-w-lg [animation-delay:160ms] [mask-image:radial-gradient(ellipse_at_center,black_86%,transparent_100%)] md:order-none md:max-w-none"
-                    />
+                    <div className="order-first md:order-none">
+                        <HeroEcosystem />
+                    </div>
                 </div>
             </section>
 
-            {/* Three ways in, a divided row under the hero. */}
+            {/* Three ways in: cards that overlap the foot of the hero. */}
             <div className="bg-white">
                 <ul
-                    className={`${container} grid divide-y divide-site-line md:grid-cols-3 md:divide-x md:divide-y-0`}
+                    className={`${container} relative z-10 -mt-12 grid gap-4 sm:-mt-14 md:grid-cols-3 lg:gap-6`}
                 >
                     {highlights(trialDays).map((item, i) => (
                         <li key={item.href}>
                             <Link
                                 href={item.href}
-                                className="group flex h-full items-start gap-4 py-7 md:px-7 md:first:pl-0 md:last:pr-0"
+                                className="group flex h-full items-start gap-4 rounded-2xl bg-white p-6 shadow-xl ring-1 shadow-site-night/10 ring-site-line transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-2xl hover:ring-site-accent/40"
                             >
                                 <IconBox icon={item.icon} index={i} />
                                 <span className="flex-1">
@@ -186,7 +241,7 @@ export default function MarketingHome({
                 </ul>
             </div>
 
-            {/* 2. Miles Products: the whole family in one picture; each product is on the Products page. */}
+            {/* 2. Tatook Products: the whole family in one picture; each product is on the Products page. */}
             <section
                 id="products"
                 aria-labelledby="products-heading"
@@ -195,15 +250,7 @@ export default function MarketingHome({
                 <div
                     className={`${container} grid items-center gap-10 py-20 sm:py-28 md:gap-12 lg:grid-cols-[1.15fr_1fr] lg:gap-16`}
                 >
-                    <img
-                        src="/images/home/miles-products.webp"
-                        alt="Miles business applications on a desktop, laptop, tablet and phone, surrounded by the industries they serve: restaurants, pharmacies, retail, schools, accounting, finance, HR, warehousing, hotels, water utilities, fuel stations and offices."
-                        width={1280}
-                        height={960}
-                        loading="lazy"
-                        decoding="async"
-                        className="mx-auto w-full max-w-2xl lg:max-w-none"
-                    />
+                    <ApplicationTiles />
                     <div>
                         <SectionHeading
                             id="products-heading"
@@ -221,9 +268,9 @@ export default function MarketingHome({
                         <p className="mt-4 max-w-xl text-base leading-relaxed text-pretty text-slate-600">
                             From managing sales and inventory to handling
                             financial operations, customer relationships, and
-                            other essential business activities, Miles Global
-                            Softwares provides reliable, scalable, and
-                            easy-to-use solutions for modern organizations.
+                            other essential business activities, Tatook provides
+                            reliable, scalable, and easy-to-use solutions for
+                            modern organizations.
                         </p>
                         <Link
                             href="/products"
@@ -236,11 +283,11 @@ export default function MarketingHome({
                 </div>
             </section>
 
-            {/* 3. Miles Workspace */}
+            {/* 3. Tatook Workspace */}
             <section
                 id="cloud"
                 aria-labelledby="cloud-heading"
-                className="scroll-mt-24 bg-white"
+                className="site-dark relative isolate scroll-mt-24 overflow-hidden bg-[radial-gradient(circle_at_85%_0%,#11512b,#063519_55%,#032a16)] text-slate-300"
             >
                 <div className={`${container} py-20 sm:py-28`}>
                     <div className="flex flex-wrap items-end justify-between gap-6">
@@ -255,12 +302,12 @@ export default function MarketingHome({
                                         </Accent>
                                     </>
                                 }
-                                lead="Your organization gets one workspace for every Miles application: one account, one team and one set of permissions, whichever applications you use."
+                                lead="Your organization gets one workspace for every Tatook application: one account, one team and one set of permissions, whichever applications you use."
                                 align="left"
                             />
                         </div>
-                        <Link href="/platform" className={button.outline}>
-                            Explore Miles Workspace
+                        <Link href="/platform" className={button.outlineDark}>
+                            Explore Tatook Workspace
                         </Link>
                     </div>
                     <div className="mt-14">
@@ -273,7 +320,7 @@ export default function MarketingHome({
             <section
                 id="custom"
                 aria-labelledby="custom-heading"
-                className="scroll-mt-24"
+                className="scroll-mt-24 bg-white"
             >
                 <div
                     className={`${container} grid gap-12 py-20 sm:py-28 lg:grid-cols-[1fr_1.4fr] lg:gap-16`}
@@ -314,7 +361,7 @@ export default function MarketingHome({
             <section
                 id="ways-to-run"
                 aria-labelledby="ways-heading"
-                className="scroll-mt-24 bg-white"
+                className="scroll-mt-24 bg-site-wash"
             >
                 <div className={`${container} py-20 sm:py-28`}>
                     <SectionHeading
@@ -336,7 +383,7 @@ export default function MarketingHome({
                     </div>
                     <Link
                         href="/downloads"
-                        className="group mt-10 flex flex-wrap items-center gap-x-6 gap-y-4 rounded-2xl border border-site-line bg-site-soft p-6 transition-colors hover:border-site-accent/40 sm:p-8"
+                        className="group mt-10 flex flex-wrap items-center gap-x-6 gap-y-4 rounded-2xl border border-site-line bg-white p-6 shadow-sm transition-[border-color,box-shadow] hover:border-site-accent/40 hover:shadow-lg hover:shadow-site-night/5 sm:p-8"
                     >
                         <span className="flex -space-x-2" aria-hidden>
                             <span className="inline-flex size-11 items-center justify-center rounded-xl bg-white text-site-accent-ink ring-1 ring-site-line">
@@ -367,14 +414,14 @@ export default function MarketingHome({
                 </div>
             </section>
 
-            {/* 6. Why Miles Global Softwares */}
+            {/* 6. Why Tatook */}
             <WhyMiles />
 
             {/* 7. How we work */}
             <section
                 id="how-it-works"
                 aria-labelledby="how-heading"
-                className="scroll-mt-24 bg-site-wash"
+                className="site-dark relative isolate scroll-mt-24 overflow-hidden bg-[radial-gradient(circle_at_15%_100%,#11512b,#063519_55%,#032a16)] text-slate-300"
             >
                 <div className={`${container} py-20 sm:py-28`}>
                     <SectionHeading
@@ -386,19 +433,19 @@ export default function MarketingHome({
                         }
                         align="left"
                     />
-                    <ol className="mt-14 grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+                    <ol className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                         {howItWorks.map((step, i) => (
                             <li
                                 key={step.title}
-                                className="border-t-2 border-site-ink pt-6"
+                                className="rounded-2xl bg-white/5 p-6 ring-1 ring-white/10"
                             >
-                                <span className="font-public-display text-sm font-semibold text-site-accent-ink">
+                                <span className="inline-flex size-10 items-center justify-center rounded-full bg-site-highlight font-public-display text-sm font-semibold text-site-night">
                                     {ordinal(i)}
                                 </span>
-                                <h3 className="mt-3 text-lg font-semibold">
+                                <h3 className="mt-5 text-lg font-semibold text-white">
                                     {step.title}
                                 </h3>
-                                <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                                <p className="mt-2 text-sm leading-relaxed text-slate-300">
                                     {step.body}
                                 </p>
                             </li>

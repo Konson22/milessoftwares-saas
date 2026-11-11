@@ -7,8 +7,8 @@ import { button, container, display } from '@/sites/public/components/styles';
 type Reason = (typeof whyMiles)[number];
 
 /**
- * Why Miles Global Softwares, on the home page: the four reasons around a
- * hub, the Miles mark in concentric circles, with dashed connectors from
+ * Why Tatook, on the home page: the four reasons around a
+ * hub, the Tatook mark in concentric circles, with dashed connectors from
  * each card to it (one workspace, everything joined to it). On small
  * screens the hub is hidden and the cards stack. Pale blue band, white
  * cards, the logo blue for icons and accents; no navy backgrounds.
@@ -34,7 +34,7 @@ export default function WhyMiles() {
                         id="why-heading"
                         className={`${display} text-3xl sm:text-4xl lg:text-5xl`}
                     >
-                        Why <Accent>Miles Global Softwares</Accent>
+                        Why <Accent>Tatook</Accent>
                     </h2>
                     <p className="mt-5 text-base leading-relaxed text-slate-600 sm:text-lg">
                         Software made for the trade you run, on the screens you
@@ -136,7 +136,7 @@ function ReasonCard({
     );
 }
 
-/** The Miles mark in three circles, with the screens it runs on beneath. */
+/** The Tatook mark in three circles, with the screens it runs on beneath. */
 function Hub() {
     return (
         <div aria-hidden className="hidden flex-col items-center lg:flex">

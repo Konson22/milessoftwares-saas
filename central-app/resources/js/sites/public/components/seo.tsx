@@ -1,7 +1,7 @@
 import { Head } from '@inertiajs/react';
 import { socialLinks, whatsappNumber } from '@/sites/public/components/social';
 
-export const siteName = 'Miles Global Softwares';
+export const siteName = 'Tatook';
 
 type Props = {
     title: string;
@@ -13,15 +13,26 @@ type Props = {
     image?: string;
 };
 
-/** The organization behind the site, for structured data on any page. */
+/** The company that makes Tatook. */
+export const companyName = 'Miles Global Link Co. Ltd';
+
+/**
+ * Tatook for structured data on any page: the brand, with Miles Global
+ * Link as the company behind it.
+ */
 export function organization(origin: string): Record<string, unknown> {
     return {
         '@type': 'Organization',
         '@id': `${origin}/#organization`,
         name: siteName,
-        legalName: 'Miles Global Link Co. Ltd',
         url: `${origin}/`,
         logo: `${origin}/images/logo-icon.png`,
+        slogan: 'Business software that works together',
+        parentOrganization: {
+            '@type': 'Organization',
+            name: companyName,
+            alternateName: 'Miles Global Link',
+        },
         sameAs: socialLinks
             .filter((link) => link.name !== 'WhatsApp')
             .map((link) => link.href),

@@ -15,7 +15,7 @@ const apps: Record<
     { name: string; device: string; place: string; where: string; file: string }
 > = {
     pharmacy: {
-        name: 'Miles Pharmacy',
+        name: 'Tatook Pharmacy',
         device: 'PC',
         place: 'Pharmacy',
         where: 'On the PC, open Settings, Activation. Scanning its QR code with your phone fills them in here.',
@@ -47,7 +47,7 @@ type Props = {
 };
 
 /**
- * Activating Miles Pharmacy on a PC, or Mataem Plus on a phone, with no
+ * Activating Tatook Pharmacy on a PC, or Mataem Plus on a phone, with no
  * internet, from another device: the licence key, and the device's codes
  * (filled in by the app's QR code or link), give the activation code to
  * carry back.

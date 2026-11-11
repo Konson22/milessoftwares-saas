@@ -10,7 +10,7 @@ return new class extends Migration
     /**
      * Run the migrations.
      *
-     * Internal Miles Global Softwares staff. Platform roles are kept entirely
+     * Internal Tatook staff. Platform roles are kept entirely
      * separate from organization and application roles.
      */
     public function up(): void

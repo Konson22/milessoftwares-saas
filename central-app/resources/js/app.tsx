@@ -4,7 +4,7 @@ import { TooltipProvider } from '@/shared/components/ui/tooltip';
 import { initializeTheme } from '@/shared/hooks/use-appearance';
 import { resolveLayout, resolvePage } from '@/sites';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Miles Global Softwares';
+const appName = import.meta.env.VITE_APP_NAME || 'Tatook';
 
 void createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),

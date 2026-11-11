@@ -34,7 +34,7 @@ export default function Explore({ trialDays, applications }: Props) {
             <Head title="Explore the ERP" />
 
             <PageHeader
-                title="Explore the Miles Global Softwares ERP"
+                title="Explore the Tatook ERP"
                 description={`Try any of our applications free for ${trialDays} days. No payment details needed.`}
             />
 
@@ -64,7 +64,7 @@ export default function Explore({ trialDays, applications }: Props) {
                     <Panel aria-labelledby="coming-soon">
                         <PanelHeader
                             title={<span id="coming-soon">Coming soon</span>}
-                            description="On the way to the Miles Global Softwares ERP."
+                            description="On the way to the Tatook ERP."
                         />
                         <ApplicationGrid applications={comingSoon} />
                     </Panel>

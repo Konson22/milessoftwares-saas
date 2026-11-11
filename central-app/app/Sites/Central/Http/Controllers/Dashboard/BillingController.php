@@ -18,7 +18,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Invoices from Miles Global Softwares and the payments made against them.
+ * Invoices from Tatook and the payments made against them.
  * Payment happens outside the platform; the owner reports it here with its
  * reference and staff confirm it.
  */
@@ -86,7 +86,7 @@ class BillingController extends Controller
             ],
             'issuer' => [
                 'name' => config('platform.billing.issuer'),
-                'brand' => 'Miles Global Softwares',
+                'brand' => 'Tatook',
                 'email' => config('platform.billing.contact_email'),
             ],
             'instructions' => config('platform.billing.payment_instructions'),

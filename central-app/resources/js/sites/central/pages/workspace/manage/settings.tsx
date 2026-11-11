@@ -191,7 +191,7 @@ export default function OrganizationSettings({
                                 <Section
                                     id="contact"
                                     title="Contact"
-                                    description="How customers and Miles Global Softwares reach your business."
+                                    description="How customers and Tatook reach your business."
                                 >
                                     <div className="grid gap-4 sm:grid-cols-2">
                                         <Field
@@ -319,7 +319,7 @@ export default function OrganizationSettings({
                             <Section
                                 id="billing"
                                 title="Billing details"
-                                description="Who invoices from Miles Global Softwares are addressed to. Leave a field empty to use your contact details."
+                                description="Who invoices from Tatook are addressed to. Leave a field empty to use your contact details."
                                 footer={
                                     <Button
                                         type="submit"

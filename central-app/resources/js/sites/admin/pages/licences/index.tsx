@@ -81,7 +81,7 @@ export default function Licences({
 
             <h1 className="text-2xl font-semibold">Offline licences</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-                Licence keys for offline Miles Pharmacy on one PC and Miles
+                Licence keys for offline Tatook Pharmacy on one PC and Tatook
                 Restaurant on one phone. A key is tied to its device when it is
                 first activated; free it here to move it to another.
             </p>

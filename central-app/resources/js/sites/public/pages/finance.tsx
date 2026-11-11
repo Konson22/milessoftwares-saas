@@ -160,7 +160,7 @@ export default function FinancePage({
                 }}
             />
 
-            <section className="site-dark relative overflow-hidden bg-[#17313f] bg-[linear-gradient(115deg,#17313f_0%,#203b49_100%)]">
+            <section className="site-dark relative overflow-hidden bg-[#0a3d1c] bg-[linear-gradient(115deg,#0a3d1c_0%,#0f4a24_100%)]">
                 <div
                     className={`${container} flex items-center pt-[4.5rem] pb-5 sm:pb-6 lg:min-h-[35vh]`}
                 >
@@ -171,7 +171,7 @@ export default function FinancePage({
                             >
                                 {product.name}, <Accent>simplified.</Accent>
                             </h1>
-                            <p className="mt-3 max-w-[34rem] text-base leading-relaxed text-pretty text-[#b8c8d0] sm:text-lg">
+                            <p className="mt-3 max-w-[34rem] text-base leading-relaxed text-pretty text-[#bcd3bf] sm:text-lg">
                                 Manage your books, reconcile banks, track
                                 budgets, and generate financial reports—all in
                                 one place.
@@ -393,15 +393,15 @@ export default function FinancePage({
             )}
 
             <section className="px-4 pb-12 sm:px-6 sm:pb-16 lg:px-8">
-                <div className="site-dark mx-auto grid max-w-7xl items-center gap-6 rounded-2xl bg-[#17313f] px-6 py-8 sm:px-10 lg:grid-cols-[1fr_auto]">
+                <div className="site-dark mx-auto grid max-w-7xl items-center gap-6 rounded-2xl bg-[#0a3d1c] px-6 py-8 sm:px-10 lg:grid-cols-[1fr_auto]">
                     <div>
                         <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
                             Run your business.{' '}
                             <Accent>All connected.</Accent>
                         </h2>
-                        <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#b8c8d0] sm:text-base">
+                        <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#bcd3bf] sm:text-base">
                             Bring your financial operations and business
-                            applications together with Miles Global Softwares.
+                            applications together with Tatook.
                         </p>
                     </div>
                     <div className="flex flex-wrap gap-3">

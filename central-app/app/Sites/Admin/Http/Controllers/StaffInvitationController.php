@@ -164,7 +164,7 @@ class StaffInvitationController extends Controller
         Auth::guard('web')->login($user);
         $request->session()->regenerate();
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Welcome to the Miles admin.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Welcome to the Tatook admin.')]);
 
         return redirect()->to(PlatformHosts::url(PlatformHosts::admin(), '/'));
     }

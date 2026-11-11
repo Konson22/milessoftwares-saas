@@ -29,7 +29,7 @@ import type { LucideIcon } from 'lucide-react';
 
 export type Feature = { icon: LucideIcon; title: string; body: string };
 
-/** Why Miles Global Softwares, on the home page. */
+/** Why Tatook, on the home page. */
 export const whyMiles: (Feature & { points: string[] })[] = [
     {
         icon: Store,
@@ -52,7 +52,7 @@ export const whyMiles: (Feature & { points: string[] })[] = [
     {
         icon: KeyRound,
         title: 'One connected workspace',
-        body: 'One sign-in, one organization and one set of books across every Miles application you use.',
+        body: 'One sign-in, one organization and one set of books across every Tatook application you use.',
         points: [
             'Shared team and permissions',
             'Add the next application as you grow',
@@ -90,7 +90,7 @@ export const howItWorks: { title: string; body: string }[] = [
 ];
 
 /**
- * Miles Products: the portfolio under its brand names, each pointing to its
+ * Tatook Products: the portfolio under its brand names, each pointing to its
  * catalog entry (wording, status and trial come from there). The icon is
  * the entry's, for the menus, which do not receive the catalog.
  */
@@ -101,44 +101,44 @@ export const milesProducts: {
     icon: string;
 }[] = [
     {
-        title: 'Miles Pharmacy',
+        title: 'Tatook Pharmacy',
         category: 'erp',
         slug: 'pharmacy',
         icon: 'pill',
     },
     {
-        title: 'Miles Retail',
+        title: 'Tatook Retail',
         category: 'erp',
         slug: 'retail',
         icon: 'shopping-cart',
     },
     {
-        title: 'Miles Finance',
+        title: 'Tatook Finance',
         category: 'application',
         slug: 'finance',
         icon: 'landmark',
     },
-    { title: 'Miles HR', category: 'application', slug: 'hr', icon: 'users' },
+    { title: 'Tatook HR', category: 'application', slug: 'hr', icon: 'users' },
     {
-        title: 'Miles Logistics',
+        title: 'Tatook Logistics',
         category: 'erp',
         slug: 'logistics',
         icon: 'truck',
     },
     {
-        title: 'Miles Restaurant',
+        title: 'Tatook Restaurant',
         category: 'erp',
         slug: 'restaurant',
         icon: 'utensils',
     },
 ];
 
-/** Miles Workspace: what it does for an organization. */
+/** Tatook Workspace: what it does for an organization. */
 export const cloudPillars: Feature[] = [
     {
         icon: KeyRound,
         title: 'One account',
-        body: 'One sign-in for every Miles application you use, with Google, passkeys and two-step verification.',
+        body: 'One sign-in for every Tatook application you use, with Google, passkeys and two-step verification.',
     },
     {
         icon: Building2,
@@ -162,7 +162,7 @@ export const cloudPillars: Feature[] = [
     },
 ];
 
-/** Miles Workspace: from a new workspace to a growing set of applications. */
+/** Tatook Workspace: from a new workspace to a growing set of applications. */
 export const cloudSteps: { title: string; body: string }[] = [
     {
         title: 'Create your workspace',
@@ -182,7 +182,7 @@ export const cloudSteps: { title: string; body: string }[] = [
     },
 ];
 
-/** The platform page: what every Miles product stands on. */
+/** The platform page: what every Tatook product stands on. */
 export const platformGroups: {
     id: string;
     title: string;
@@ -219,7 +219,7 @@ export const platformGroups: {
             {
                 icon: KeyRound,
                 title: 'Single sign-on',
-                body: 'One account across every Miles application.',
+                body: 'One account across every Tatook application.',
             },
             {
                 icon: Fingerprint,

@@ -169,6 +169,19 @@ describe('public site', function () {
             }));
     });
 
+    it('opens Project Management for early access, by demo rather than trial', function () {
+        Application::query()->forceCreate(['code' => 'projects', 'name' => 'Projects', 'category' => 'products', 'kind' => 'standalone', 'status' => 'retired', 'sort_order' => 9]);
+
+        (require database_path('migrations/2026_11_11_110000_open_projects_for_early_access.php'))->up();
+
+        $this->get(apex('products'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('catalog', function ($catalog) {
+                $projects = collect($catalog)->firstWhere('slug', 'projects');
+
+                return $projects['status'] === 'early_access' && $projects['trial'] === null;
+            }));
+    });
+
     it('shows an ERP solution with its applications and plans', function () {
         $this->get(apex('erp/pharmacy'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
             ->component('public/landing')

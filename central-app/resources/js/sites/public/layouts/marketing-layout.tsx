@@ -47,7 +47,7 @@ const customSolutions: MenuItem[] = [
 
 const nav: NavEntry[] = [
     { title: 'Home', href: '/' },
-    { title: 'Miles Workspace', href: '/platform' },
+    { title: 'Tatook Workspace', href: '/platform' },
     {
         title: 'Products',
         href: '/products',
@@ -81,12 +81,12 @@ function currentOf(
         : undefined;
 }
 
-/** The logo; `light` is the white-"MILES" variant for dark bands. */
+/** The logo; `light` has white lettering, for dark bands. */
 function Brand({ light = false }: { light?: boolean }) {
     return (
         <Link
             href="/"
-            aria-label="Miles Global Softwares home"
+            aria-label="Tatook home"
             className="flex shrink-0 items-center"
         >
             <img
@@ -95,8 +95,8 @@ function Brand({ light = false }: { light?: boolean }) {
                         ? '/images/logo-site-light.png'
                         : '/images/logo-site.png'
                 }
-                alt="Miles Global Softwares"
-                width={959}
+                alt="Tatook"
+                width={913}
                 height={230}
                 className="h-10 w-auto sm:h-11"
             />
@@ -384,7 +384,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                     <div className="col-span-2 md:col-span-3 lg:col-span-1">
                         <Brand light />
                         <p className="mt-5 max-w-xs leading-relaxed">
-                            Business software that works together: Miles
+                            Business software that works together: Tatook
                             products in one workspace, and custom software for
                             web, desktop and mobile.
                         </p>
@@ -427,7 +427,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                         title="Company"
                         links={[
                             { title: 'About Us', href: '/about' },
-                            { title: 'Miles Workspace', href: '/platform' },
+                            { title: 'Tatook Workspace', href: '/platform' },
                             { title: 'Custom Solutions', href: '/services' },
                             { title: 'Pricing', href: '/pricing' },
                             { title: 'Contact', href: '/contact' },
@@ -460,8 +460,8 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                         className={`${container} flex flex-wrap items-center justify-between gap-x-6 gap-y-3 py-6`}
                     >
                         <p className="text-slate-400">
-                            © {new Date().getFullYear()} Miles Global Link Co.
-                            Ltd
+                            Tatook is a product of Miles Global Link Co. Ltd · ©{' '}
+                            {new Date().getFullYear()}
                         </p>
                         <div className="flex flex-wrap gap-x-6 gap-y-2">
                             <Link

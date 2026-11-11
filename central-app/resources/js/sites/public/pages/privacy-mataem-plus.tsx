@@ -22,8 +22,8 @@ const sections: LegalSection[] = [
             <>
                 <p>
                     Mataem Plus is a restaurant app for phones and tablets, made
-                    by Miles Global Softwares, the software business of Miles
-                    Global Link Co. Ltd ("Miles", "we", "us"). It runs a
+                    by Miles Global Link Co. Ltd ("Miles Global Link", "we", "us")
+                    as part of Tatook. It runs a
                     restaurant's floor, orders, kitchen tickets, bills, shifts,
                     menu and drinks stock.
                 </p>
@@ -31,7 +31,7 @@ const sections: LegalSection[] = [
                     This policy explains what the app collects, where it keeps
                     it and who can see it. It adds to our main{" "}
                     <Link href="/privacy">privacy policy</Link>, which covers
-                    Miles accounts and workspaces. For anything in it, write to{" "}
+                    Tatook accounts and workspaces. For anything in it, write to{" "}
                     {email} or message us on WhatsApp at {whatsappNumber}.
                 </p>
             </>
@@ -79,13 +79,13 @@ const sections: LegalSection[] = [
     },
     {
         id: "workspace",
-        title: "Where it is kept: your Miles workspace",
+        title: "Where it is kept: your Tatook workspace",
         body: (
             <>
                 <p>
-                    You sign in with your Miles account (email and password,
+                    You sign in with your Tatook account (email and password,
                     two-step sign-in, or Google). What you record is sent over
-                    encrypted connections to your restaurant's Miles workspace,
+                    encrypted connections to your restaurant's Tatook workspace,
                     and shared there with the restaurant's other phones, tablets
                     and computers and the staff whose roles allow it.
                 </p>
@@ -137,7 +137,7 @@ const sections: LegalSection[] = [
         body: (
             <ul>
                 <li>
-                    <strong>Internet:</strong> to reach your Miles workspace.
+                    <strong>Internet:</strong> to reach your Tatook workspace.
                 </li>
                 <li>
                     <strong>Vibration:</strong> a short buzz to confirm an
@@ -178,7 +178,7 @@ const sections: LegalSection[] = [
         title: "Security",
         body: (
             <p>
-                Connections to Miles are encrypted, sign-in tokens are kept in
+                Connections to Tatook are encrypted, sign-in tokens are kept in
                 the device's secure storage, and each person sees only what
                 their role allows. No system is perfectly secure, so tell us at{" "}
                 {email} straight away if you think an account or device has been
@@ -233,7 +233,7 @@ const sections: LegalSection[] = [
             <p>
                 When we change this policy we update the date at the top of this
                 page, and for important changes we tell users in the app or by
-                email before they take effect. Using Miles is also covered by
+                email before they take effect. Using Tatook is also covered by
                 our <Link href="/terms">terms of service</Link>.
             </p>
         ),
@@ -246,7 +246,7 @@ export default function PrivacyMataemPlus({ canonical }: Props) {
         <>
             <Seo
                 title="Mataem Plus privacy policy"
-                description="What the Mataem Plus restaurant app collects, where it keeps it and who can see it, on the device and in a Miles workspace."
+                description="What the Mataem Plus restaurant app collects, where it keeps it and who can see it, on the device and in a Tatook workspace."
                 canonical={canonical}
             />
 

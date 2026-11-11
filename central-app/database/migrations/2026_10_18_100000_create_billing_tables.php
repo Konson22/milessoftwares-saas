@@ -10,7 +10,7 @@ return new class extends Migration
     /**
      * Run the migrations.
      *
-     * Manual billing for Miles Global Softwares itself: staff issue invoices,
+     * Manual billing for Tatook itself: staff issue invoices,
      * customers report payments made offline (bank transfer, mobile money,
      * cash) and staff confirm them. Customers ask for plan changes; staff
      * decide. Not the customers' own accounting (Finance application).

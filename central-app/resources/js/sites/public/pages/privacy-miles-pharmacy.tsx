@@ -22,8 +22,8 @@ const sections: LegalSection[] = [
             <>
                 <p>
                     Miles Pharma POS is a pharmacy counter app for phones and
-                    tablets, made by Miles Global Softwares, the software
-                    business of Miles Global Link Co. Ltd ("Miles", "we", "us").
+                    tablets, part of Tatook, a product of
+                    Miles Global Link Co. Ltd ("Miles Global Link", "we", "us").
                     It handles a pharmacy's sales, prescriptions, stock checks,
                     shifts and receipts.
                 </p>
@@ -31,7 +31,7 @@ const sections: LegalSection[] = [
                     This policy explains what the app collects, where it keeps
                     it and who can see it. It adds to our main{' '}
                     <Link href="/privacy">privacy policy</Link>, which covers
-                    Miles accounts and workspaces. For anything in it, write to{' '}
+                    Tatook accounts and workspaces. For anything in it, write to{' '}
                     {email} or message us on WhatsApp at {whatsappNumber}.
                 </p>
             </>
@@ -80,13 +80,13 @@ const sections: LegalSection[] = [
     },
     {
         id: 'workspace',
-        title: 'Where it is kept: your Miles workspace',
+        title: 'Where it is kept: your Tatook workspace',
         body: (
             <>
                 <p>
-                    You sign in with your Miles account (email and password,
+                    You sign in with your Tatook account (email and password,
                     two-step sign-in, or Google). What you record is sent over
-                    encrypted connections to your pharmacy's Miles workspace,
+                    encrypted connections to your pharmacy's Tatook workspace,
                     and shared there with the pharmacy's other devices and the
                     staff whose roles allow it.
                 </p>
@@ -149,7 +149,7 @@ const sections: LegalSection[] = [
                     pharmacy uses one.
                 </li>
                 <li>
-                    <strong>Internet:</strong> to reach your Miles workspace.
+                    <strong>Internet:</strong> to reach your Tatook workspace.
                 </li>
             </ul>
         ),
@@ -186,7 +186,7 @@ const sections: LegalSection[] = [
         title: 'Security',
         body: (
             <p>
-                Connections to Miles are encrypted, sign-in tokens are kept in
+                Connections to Tatook are encrypted, sign-in tokens are kept in
                 the device's secure storage, and each person sees only what
                 their role allows. No system is perfectly secure, so tell us at{' '}
                 {email} straight away if you think an account or device has been
@@ -243,7 +243,7 @@ const sections: LegalSection[] = [
             <p>
                 When we change this policy we update the date at the top of this
                 page, and for important changes we tell users in the app or by
-                email before they take effect. Using Miles is also covered by
+                email before they take effect. Using Tatook is also covered by
                 our <Link href="/terms">terms of service</Link>.
             </p>
         ),
@@ -256,7 +256,7 @@ export default function PrivacyMilesPharmacy({ canonical }: Props) {
         <>
             <Seo
                 title="Miles Pharma POS privacy policy"
-                description="What the Miles Pharma POS app collects, where it keeps it and who can see it, on the device and in a Miles workspace."
+                description="What the Miles Pharma POS app collects, where it keeps it and who can see it, on the device and in a Tatook workspace."
                 canonical={canonical}
             />
 

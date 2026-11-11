@@ -98,7 +98,7 @@ export const services: Service[] = [
         id: 'system-integration',
         icon: Cable,
         title: 'System Integration',
-        body: 'Connect the systems you already use with each other or with Miles, so information is entered once and flows where it is needed.',
+        body: 'Connect the systems you already use with each other or with Tatook, so information is entered once and flows where it is needed.',
         href: quoteUrl('Project: System integration'),
         cta: 'Discuss your project',
         points: [
@@ -111,7 +111,7 @@ export const services: Service[] = [
         id: 'erp-customization',
         icon: Settings2,
         title: 'ERP Customization',
-        body: 'Adapt a Miles ERP you already use or are about to buy: extra fields, documents, reports, print layouts and approval steps.',
+        body: 'Adapt a Tatook ERP you already use or are about to buy: extra fields, documents, reports, print layouts and approval steps.',
         href: quoteUrl('Quote: ERP customization'),
         cta: 'Request a quotation',
         points: [
@@ -138,7 +138,7 @@ const hasMobile = (entry: CatalogEntry) =>
         (platform) => platform === 'android' || platform === 'ios',
     );
 
-/** The ways a Miles product can run. Not every product offers each one. */
+/** The ways a Tatook product can run. Not every product offers each one. */
 export function deployments(trialDays: number): Deployment[] {
     return [
         {
@@ -188,7 +188,7 @@ export function deployments(trialDays: number): Deployment[] {
 }
 
 /**
- * The ways to run Miles software, each naming the released products that
+ * The ways to run Tatook software, each naming the released products that
  * offer it, so no option reads as available for everything.
  */
 export function DeploymentOptions({
@@ -210,33 +210,37 @@ export function DeploymentOptions({
                     <li
                         key={option.id}
                         id={option.id}
-                        className="group relative isolate flex scroll-mt-28 flex-col overflow-hidden rounded-3xl bg-site-soft p-2 ring-1 ring-site-line transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-site-accent/15"
+                        className="site-dark group relative isolate flex scroll-mt-28 flex-col overflow-hidden rounded-3xl bg-linear-160 from-[#0a5a26] via-[#063519] to-[#032a16] shadow-lg ring-1 shadow-site-night/15 ring-white/10 transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-site-accent/25"
                     >
-                        {/* Large faded icon behind the top of the card. */}
+                        {/* Faint dots and a large faded icon behind the top of the card. */}
+                        <div
+                            aria-hidden
+                            className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(#a3e63522_1px,transparent_1px)] mask-[linear-gradient(black,transparent_70%)] bg-size-[18px_18px]"
+                        />
                         <Icon
                             aria-hidden
                             strokeWidth={1.25}
-                            className="pointer-events-none absolute -top-6 -right-6 -z-10 size-40 text-site-accent/10 transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-6"
+                            className="pointer-events-none absolute -top-6 -right-6 -z-10 size-40 text-site-highlight/10 transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-6"
                         />
-                        <div className="flex flex-1 flex-col p-5 sm:p-6">
+                        <div className="flex flex-1 flex-col p-6 sm:p-7">
                             <div className="flex items-start justify-between gap-4">
-                                <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-white text-site-accent shadow-sm ring-1 ring-site-line">
+                                <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-site-highlight/15 text-site-highlight ring-1 ring-site-highlight/30">
                                     <Icon className="size-5" aria-hidden />
                                 </span>
-                                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-site-accent-ink shadow-sm ring-1 ring-site-line">
+                                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white ring-1 ring-white/20">
                                     {option.tag}
                                 </span>
                             </div>
-                            <h3 className={`mt-6 text-xl ${display}`}>
+                            <h3 className="mt-6 text-xl font-semibold tracking-tight text-balance text-white">
                                 {option.title}
                             </h3>
-                            <ul className="mt-4 space-y-3 text-sm text-slate-700">
+                            <ul className="mt-4 space-y-3 text-sm text-slate-200">
                                 {option.points.map((point) => (
                                     <li
                                         key={point}
                                         className="flex items-start gap-3"
                                     >
-                                        <span className="mt-px inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-white text-site-accent ring-1 ring-site-line">
+                                        <span className="mt-px inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-site-highlight text-site-night">
                                             <Check
                                                 className="size-3"
                                                 strokeWidth={3}
@@ -248,43 +252,62 @@ export function DeploymentOptions({
                                 ))}
                             </ul>
                         </div>
-                        <div className="space-y-4 rounded-2xl bg-site-accent p-5 text-sm text-white sm:p-6">
-                            <div className="flex items-start gap-2.5">
-                                <BadgeCheck
-                                    className="mt-0.5 size-4 shrink-0"
-                                    aria-hidden
+
+                        {/* The foot: a lime and a white wave into a white panel. */}
+                        <div className="relative mt-4">
+                            <svg
+                                aria-hidden
+                                viewBox="0 0 400 48"
+                                preserveAspectRatio="none"
+                                className="pointer-events-none absolute inset-x-0 bottom-[calc(100%-1px)] block h-10 w-full overflow-visible"
+                            >
+                                <path
+                                    d="M0 22 C 80 0, 160 40, 250 16 S 360 4, 400 14 V40 H0 Z"
+                                    className="fill-site-highlight/70 transition-transform duration-700 group-hover:translate-x-[-6px]"
                                 />
-                                <p className="font-semibold">
-                                    {option.licence}
-                                </p>
-                            </div>
-                            {products.length > 0 ? (
-                                <div className="border-t border-white/25 pt-4">
-                                    <p className="text-white/90">
-                                        Available for
+                                <path
+                                    d="M0 34 C 90 14, 180 50, 270 28 S 370 18, 400 26 V56 H0 Z"
+                                    fill="#ffffff"
+                                />
+                            </svg>
+                            <div className="space-y-4 bg-white px-6 pt-3 pb-6 text-sm sm:px-7 sm:pb-7 lg:min-h-[9.5rem]">
+                                <div className="flex items-start gap-2.5 text-site-ink">
+                                    <BadgeCheck
+                                        className="mt-0.5 size-4 shrink-0 text-site-accent-ink"
+                                        aria-hidden
+                                    />
+                                    <p className="font-semibold">
+                                        {option.licence}
                                     </p>
-                                    <ul className="mt-2 flex flex-wrap gap-2">
-                                        {products.map((entry) => (
-                                            <li key={entry.slug}>
-                                                <Link
-                                                    href={`/${entry.url}`}
-                                                    className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-semibold text-site-accent-ink transition-shadow hover:shadow-md hover:shadow-black/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-                                                >
-                                                    {entry.name}
-                                                    <ArrowRight
-                                                        className="size-3"
-                                                        aria-hidden
-                                                    />
-                                                </Link>
-                                            </li>
-                                        ))}
-                                    </ul>
                                 </div>
-                            ) : (
-                                <p className="border-t border-white/25 pt-4 text-white/90">
-                                    Not offered by a released product yet.
-                                </p>
-                            )}
+                                {products.length > 0 ? (
+                                    <div className="border-t border-site-line pt-4">
+                                        <p className="text-slate-600">
+                                            Available for
+                                        </p>
+                                        <ul className="mt-2 flex flex-wrap gap-2">
+                                            {products.map((entry) => (
+                                                <li key={entry.slug}>
+                                                    <Link
+                                                        href={`/${entry.url}`}
+                                                        className="inline-flex items-center gap-1 rounded-full bg-site-accent-ink px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-site-accent-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-accent-ink"
+                                                    >
+                                                        {entry.name}
+                                                        <ArrowRight
+                                                            className="size-3"
+                                                            aria-hidden
+                                                        />
+                                                    </Link>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                ) : (
+                                    <p className="border-t border-site-line pt-4 text-slate-600">
+                                        Not offered by a released product yet.
+                                    </p>
+                                )}
+                            </div>
                         </div>
                     </li>
                 );
@@ -324,7 +347,7 @@ const serviceGroups: Omit<Service, 'href' | 'cta'>[] = [
     {
         id: 'erp-customization',
         icon: Settings2,
-        title: 'Customize a Miles product',
+        title: 'Customize a Tatook product',
         body: 'Start from one of our ERPs and have it adapted: extra fields, documents, print layouts, reports and approval steps.',
         points: [
             'Your product licence plus a setup charge',

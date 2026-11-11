@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
- * What an organization owes Miles Global Softwares. Issued by staff; paid
+ * What an organization owes Tatook. Issued by staff; paid
  * once confirmed payments cover the total.
  *
  * @property string $id

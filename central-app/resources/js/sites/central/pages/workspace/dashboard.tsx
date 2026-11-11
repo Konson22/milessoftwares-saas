@@ -175,7 +175,7 @@ export default function Dashboard({ organizations, current }: Props) {
                 description={
                     current
                         ? `Here is how ${current.displayName} is doing.`
-                        : 'Your Miles Global Softwares account.'
+                        : 'Your Tatook account.'
                 }
                 actions={
                     current && (
@@ -282,7 +282,7 @@ function BillingAlerts({ billing }: { billing: Billing }) {
         alerts.push({
             tone: 'info',
             icon: ReceiptText,
-            text: `${billing.paymentsAwaitingConfirmation} reported payment${billing.paymentsAwaitingConfirmation === 1 ? ' is' : 's are'} waiting for confirmation by Miles Global Softwares.`,
+            text: `${billing.paymentsAwaitingConfirmation} reported payment${billing.paymentsAwaitingConfirmation === 1 ? ' is' : 's are'} waiting for confirmation by Tatook.`,
             href: workspaceRoutes.billing,
             cta: 'Details',
         });
@@ -441,7 +441,7 @@ function Applications({
                     }
                 >
                     {current.isOwner
-                        ? 'Choose a plan to start using Miles Global Softwares applications.'
+                        ? 'Choose a plan to start using Tatook applications.'
                         : 'No applications have been given to you yet. Ask an administrator for access.'}
                 </EmptyState>
             ) : (
@@ -491,7 +491,7 @@ function BillingPanel({ billing }: { billing: Billing }) {
             />
             {billing.recentInvoices.length === 0 ? (
                 <EmptyState icon={ReceiptText} title="No invoices yet">
-                    Invoices from Miles Global Softwares will appear here.
+                    Invoices from Tatook will appear here.
                 </EmptyState>
             ) : (
                 <ul className="divide-y">
@@ -563,8 +563,7 @@ function SubscriptionsPanel({ billing }: { billing: Billing }) {
                         </Button>
                     }
                 >
-                    Choose a plan to start using Miles Global Softwares
-                    applications.
+                    Choose a plan to start using Tatook applications.
                 </EmptyState>
             ) : (
                 <ul className="divide-y">
@@ -806,7 +805,7 @@ function RecommendationsPanel({
         <Panel aria-labelledby="recommendations">
             <PanelHeader
                 title={<span id="recommendations">Recommended for you</span>}
-                description={`More of the Miles Global Softwares ERP to add to ${workspace}.`}
+                description={`More of the Tatook ERP to add to ${workspace}.`}
                 actions={
                     <Button asChild size="sm" variant="ghost">
                         <Link href={workspaceRoutes.plans}>See plans</Link>

@@ -43,29 +43,29 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noindex">
-        <title>@yield('title') · Miles Global Softwares</title>
+        <title>@yield('title') · Tatook</title>
         <link rel="icon" href="/favicon.ico" sizes="any">
         <style>
             :root {
                 --bg: #ffffff;
                 --card: #ffffff;
-                --ink: #304048;
-                --muted: #455863;
-                --line: #d5e1e7;
-                --accent: #007291;
-                --accent-hover: #00607c;
+                --ink: #05451b;
+                --muted: #46594a;
+                --line: #d5e6d0;
+                --accent: #037f1f;
+                --accent-hover: #026124;
                 color-scheme: light;
             }
 
             @media (prefers-color-scheme: dark) {
                 :root {
-                    --bg: #243038;
-                    --card: #304048;
-                    --ink: #f3f6f7;
-                    --muted: #aebfc8;
-                    --line: #3d5160;
-                    --accent: #1cb8e3;
-                    --accent-hover: #00b0e0;
+                    --bg: #033214;
+                    --card: #05451b;
+                    --ink: #f4f7f4;
+                    --muted: #afc0b0;
+                    --line: #0a5a26;
+                    --accent: #8bd103;
+                    --accent-hover: #4aaf03;
                     color-scheme: dark;
                 }
             }
@@ -184,7 +184,7 @@
             <a class="brand" href="{{ PlatformHosts::url(PlatformHosts::root()) }}">
                 <picture>
                     <source srcset="/images/logo-with-text-light.png" media="(prefers-color-scheme: dark)">
-                    <img src="/images/logo-with-text.png" alt="Miles Global Softwares">
+                    <img src="/images/logo-with-text.png" alt="Tatook">
                 </picture>
             </a>
 

@@ -41,7 +41,7 @@ const purchasePaths = [
         cta: 'See the plans',
     },
     {
-        title: 'Customizing a Miles product',
+        title: 'Customizing a Tatook product',
         points: [
             'The product licence',
             'A setup or customization charge where applicable',
@@ -84,7 +84,7 @@ export default function Pricing({
         <>
             <Seo
                 title="Pricing"
-                description={`Subscriptions for ready-made Miles software, one-time licences where offered, and quotations for customization and custom software. ${trial} free trial.`}
+                description={`Subscriptions for ready-made Tatook software, one-time licences where offered, and quotations for customization and custom software. ${trial} free trial.`}
                 canonical={canonical}
             />
 

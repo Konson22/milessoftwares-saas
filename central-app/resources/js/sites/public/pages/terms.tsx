@@ -25,9 +25,9 @@ function sections(trialDays: number): LegalSection[] {
                 <>
                     <p>
                         These terms are an agreement between you and Miles
-                        Global Link Co. Ltd, trading as Miles Global Softwares
-                        ("Miles", "we", "us"). They cover milesoftwares.com, the
-                        Miles applications and our desktop and mobile apps
+                        Global Link Co. Ltd ("Miles Global Link", "we", "us"),
+                        the company behind Tatook. They cover milesoftwares.com,
+                        the Tatook applications and our desktop and mobile apps
                         (together, "the service").
                     </p>
                     <p>
@@ -175,11 +175,11 @@ function sections(trialDays: number): LegalSection[] {
             title: 'Our software',
             body: (
                 <p>
-                    Miles owns the service, its software and its brand. Your
-                    subscription or licence lets your organization use it; it
-                    does not transfer ownership. Software we build for you as a
-                    custom project is owned as set out in that project's
-                    contract.
+                    Miles Global Link owns the service, its software and the
+                    Tatook brand. Your subscription or licence lets your
+                    organization use it; it does not transfer ownership.
+                    Software we build for you as a custom project is owned as
+                    set out in that project's contract.
                 </p>
             ),
         },
@@ -189,12 +189,12 @@ function sections(trialDays: number): LegalSection[] {
             body: (
                 <p>
                     The service is provided as it is offered at the time. As far
-                    as the law allows, Miles is not liable for indirect or
-                    consequential losses, such as lost profits or lost business,
-                    and our total liability for any claim is limited to what you
-                    paid us for the service in the 12 months before it. Nothing
-                    in these terms limits liability that cannot be limited by
-                    law.
+                    as the law allows, Miles Global Link is not liable for
+                    indirect or consequential losses, such as lost profits or
+                    lost business, and our total liability for any claim is
+                    limited to what you paid us for the service in the 12 months
+                    before it. Nothing in these terms limits liability that
+                    cannot be limited by law.
                 </p>
             ),
         },
@@ -227,13 +227,13 @@ function sections(trialDays: number): LegalSection[] {
     ];
 }
 
-/** /terms: the agreement for using Miles. */
+/** /terms: the agreement for using Tatook. */
 export default function Terms({ trialDays, canonical }: Props) {
     return (
         <>
             <Seo
                 title="Terms of service"
-                description="The terms for using Miles Global Softwares: accounts, free trials, plans and payment, your data and acceptable use."
+                description="The terms for using Tatook: accounts, free trials, plans and payment, your data and acceptable use."
                 canonical={canonical}
             />
 
@@ -243,7 +243,7 @@ export default function Terms({ trialDays, canonical }: Props) {
                         Terms of <Accent>service</Accent>
                     </>
                 }
-                intro="The agreement for using Miles applications, written to be read."
+                intro="The agreement for using Tatook applications, written to be read."
                 updated={updated}
                 sections={sections(trialDays)}
             />

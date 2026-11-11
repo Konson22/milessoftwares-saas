@@ -8,28 +8,28 @@
         @page { margin: 0; }
         * { box-sizing: border-box; }
         body { margin: 0; font-family: 'DejaVu Sans', sans-serif; font-size: 10pt; color: #1e293b; line-height: 1.45; }
-        .band { height: 8px; background: #00b0e0; }
+        .band { height: 8px; background: #4aaf03; }
         .band span { display: block; height: 8px; width: 35%; background: #f95808; margin-left: 65%; }
         .page { padding: 34px 44px 30px; }
         table { width: 100%; border-collapse: collapse; }
         td, th { vertical-align: top; }
         .logo { height: 54px; }
         .title { text-align: right; }
-        .title h1 { margin: 0; font-size: 24pt; letter-spacing: 2px; color: #042356; }
-        .title .kind { margin-top: 2px; font-size: 10pt; font-weight: bold; color: #007291; text-transform: uppercase; letter-spacing: 1px; }
+        .title h1 { margin: 0; font-size: 24pt; letter-spacing: 2px; color: #05451b; }
+        .title .kind { margin-top: 2px; font-size: 10pt; font-weight: bold; color: #037f1f; text-transform: uppercase; letter-spacing: 1px; }
         .muted { color: #64748b; }
-        .label { font-size: 7.5pt; font-weight: bold; color: #007291; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+        .label { font-size: 7.5pt; font-weight: bold; color: #037f1f; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
         .parties { margin-top: 26px; }
         .parties td { width: 50%; }
         .parties td:first-child { padding-right: 28px; }
-        .strong { font-weight: bold; color: #042356; }
+        .strong { font-weight: bold; color: #05451b; }
         .meta { margin-top: 22px; background: #f3f8ff; border: 1px solid #dfe7f3; }
         .meta td { padding: 10px 14px; width: 25%; border-right: 1px solid #dfe7f3; }
         .meta td:last-child { border-right: 0; }
-        .meta .value { font-weight: bold; color: #042356; }
+        .meta .value { font-weight: bold; color: #05451b; }
         .paid { color: #0059ad; }
         .lines { margin-top: 24px; }
-        .lines th { background: #042356; color: #ffffff; text-align: left; font-size: 8pt; text-transform: uppercase; letter-spacing: 1px; padding: 9px 12px; }
+        .lines th { background: #05451b; color: #ffffff; text-align: left; font-size: 8pt; text-transform: uppercase; letter-spacing: 1px; padding: 9px 12px; }
         .lines th.amount, .lines td.amount { text-align: right; white-space: nowrap; }
         .lines .col-desc { width: 46%; }
         .lines .col-period { width: 30%; }
@@ -40,7 +40,7 @@
         .totals td { padding: 5px 12px; }
         .totals .key { text-align: right; width: 80%; color: #475569; }
         .totals .val { text-align: right; width: 20%; white-space: nowrap; }
-        .totals .grand td { border-top: 2px solid #042356; padding-top: 9px; font-size: 12pt; font-weight: bold; color: #042356; }
+        .totals .grand td { border-top: 2px solid #05451b; padding-top: 9px; font-size: 12pt; font-weight: bold; color: #05451b; }
         .note { margin-top: 26px; padding: 14px 16px; border-left: 4px solid #4fb0ff; background: #effaff; }
         .note p { margin: 0 0 4px; }
         .plans { margin-top: 22px; }
@@ -48,7 +48,7 @@
         .plans td { padding: 8px 12px; border-bottom: 1px solid #eef2f7; }
         .plans td.amount, .plans th.amount { text-align: right; }
         .footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 14px 44px 18px; border-top: 1px solid #dfe7f3; font-size: 8pt; color: #64748b; text-align: center; }
-        .footer .brand { color: #042356; font-weight: bold; }
+        .footer .brand { color: #05451b; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -59,7 +59,7 @@
             <tr>
                 <td>
                     @if ($logo)
-                        <img class="logo" src="{{ $logo }}" alt="Miles Global Softwares">
+                        <img class="logo" src="{{ $logo }}" alt="Tatook">
                     @else
                         <span class="strong">{{ $from['name'] }}</span>
                     @endif

@@ -114,7 +114,7 @@ const entry = {
     subhead: 'Expiry-first selling and books that keep themselves.',
     audience: 'Pharmacies and wholesalers',
     seoTitle: 'Pharmacy ERP',
-    seoDescription: 'Pharmacy ERP by Miles Global Softwares.',
+    seoDescription: 'Pharmacy ERP by Tatook.',
     features: [{ icon: 'pill', title: 'Expiry first', body: 'Sells oldest.' }],
     workflow: [{ title: 'Receive', body: 'Batches in.' }],
     faqs: [{ question: 'Is there a trial?', answer: 'Yes.' }],
@@ -329,7 +329,7 @@ const pages: [string, ReactNode][] = [
         />,
     ],
     [
-        'Miles Pharmacy privacy',
+        'Tatook Pharmacy privacy',
         <PrivacyMilesPharmacy
             key="privacy-miles-pharmacy"
             canonical="https://example.test/privacy/miles-pharmacy"
@@ -352,7 +352,7 @@ const pages: [string, ReactNode][] = [
                 {
                     code: 'pharmacy',
                     platform: 'windows',
-                    name: 'Miles Pharmacy',
+                    name: 'Tatook Pharmacy',
                     summary: 'The pharmacy on a PC.',
                     needs: 'Nothing to start',
                     version: '1.1.0',
@@ -378,9 +378,9 @@ const pages: [string, ReactNode][] = [
                 {
                     code: 'retail-android',
                     platform: 'android',
-                    name: 'Miles Retail',
+                    name: 'Tatook Retail',
                     summary: 'The shop counter on a phone.',
-                    needs: 'A Miles workspace',
+                    needs: 'A Tatook workspace',
                     version: '1.0.0',
                     product: 'erp/retail',
                     url: null,

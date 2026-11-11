@@ -21,7 +21,7 @@ import type { BreadcrumbItem } from '@/shared/types';
 
 /**
  * The account area on the auth host (your businesses, new business,
- * profile and security) in the shell every Miles app shares. Pages pass
+ * profile and security) in the shell every Tatook app shares. Pages pass
  * their breadcrumbs as layout props. Each business opens on its own host,
  * with its own shell (WorkspaceLayout).
  */
@@ -67,11 +67,7 @@ export default function AppLayout({
 
     return (
         <AppShell
-            crumbs={
-                crumbs.length > 0
-                    ? crumbs
-                    : [{ label: 'Miles Global Softwares' }]
-            }
+            crumbs={crumbs.length > 0 ? crumbs : [{ label: 'Tatook' }]}
             actions={
                 auth.user && (
                     <UserMenu
@@ -100,7 +96,7 @@ export default function AppLayout({
                 <ShellSidebar
                     label="Account"
                     brand={{
-                        title: 'Miles Global Softwares',
+                        title: 'Tatook',
                         subtitle: auth.user?.name,
                         icon: Building2,
                         href: workspaces(),

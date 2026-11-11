@@ -44,7 +44,7 @@ class SendWebhook implements ShouldQueue
             $response = Http::timeout(10)
                 ->withHeaders([
                     'Content-Type' => 'application/json',
-                    'User-Agent' => 'MilesSoftwares-Webhooks/1',
+                    'User-Agent' => 'Tatook-Webhooks/1',
                     'Miles-Event-Id' => $delivery->id,
                     'Miles-Event-Type' => $delivery->event_type,
                     WebhookSignature::HEADER => WebhookSignature::sign($delivery->endpoint->secret, $body, $timestamp),

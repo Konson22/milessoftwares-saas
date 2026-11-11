@@ -20,37 +20,39 @@
  * public site's palette and font.
  */
 @theme {
-    /* Brand colours, sampled from the logo: charcoal of "Miles Global"
-       and of the mark's dark shape (#304048), and the cyan of the mark
-       and of "Softwares" (#00b0e0).
-       accent-ink and accent-deep are that cyan darkened so white text
-       and small type clear 4.5:1. highlight is the cyan lifted so it
-       clears 4.5:1 on the charcoal. green is for success notes only. */
-    --color-brand-ink: #243038;
-    --color-brand-navy: #304048;
-    --color-brand-navy-light: #3d5160;
-    --color-brand-blue: #00b0e0;
-    --color-brand-blue-dark: #007291;
-    --color-brand-cyan: #1cb8e3;
-    --color-brand-teal: #006480;
+    /* Brand colours, sampled from the Tatook logo: the dark green of the
+       lettering (#05451b) and the bright green of the middle bar
+       (#4aaf03). accent-ink is the first bar's green (#037f1f), dark
+       enough for white text and small type at 4.5:1; accent-deep is the
+       mark's green. highlight is the lime of the tallest bar, which
+       clears 4.5:1 on the dark green. The token names (navy, blue, cyan)
+       are kept from the previous palette. brand-green is for success
+       notes only. */
+    --color-brand-ink: #033214;
+    --color-brand-navy: #05451b;
+    --color-brand-navy-light: #0a5a26;
+    --color-brand-blue: #4aaf03;
+    --color-brand-blue-dark: #037f1f;
+    --color-brand-cyan: #8bd103;
+    --color-brand-teal: #026124;
     --color-brand-green: #0f9f8f;
 
-    /* Public site: charcoal for type and bands, the logo cyan for
-       shapes, the darkened cyan for buttons and text on white.
+    /* Public site: dark green for type and bands, the bright green for
+       shapes, the darker green for buttons and text on white.
        site-soft is the white page ground.
        site-black is the app sidebar in product art. */
-    --color-site-ink: #304048;
-    --color-site-wash: #e7f6fb;
+    --color-site-ink: #05451b;
+    --color-site-wash: #eef8e6;
     --color-site-soft: #ffffff;
-    --color-site-line: #d5e1e7;
+    --color-site-line: #d5e6d0;
     --color-site-black: #070707;
-    --color-site-navy: #304048;
-    --color-site-night: #243038;
-    --color-site-accent: #00b0e0;
-    --color-site-accent-ink: #007291;
-    --color-site-accent-deep: #00607c;
-    --color-site-highlight: #1cb8e3;
-    --color-site-slate: #5a707b;
+    --color-site-navy: #05451b;
+    --color-site-night: #033214;
+    --color-site-accent: #4aaf03;
+    --color-site-accent-ink: #037f1f;
+    --color-site-accent-deep: #026124;
+    --color-site-highlight: #8bd103;
+    --color-site-slate: #5b705d;
     --font-public:
         'Nunito Variable', 'Nunito', ui-sans-serif, system-ui, sans-serif;
     --font-public-display:
@@ -58,38 +60,38 @@
 }
 
 /*
- * The signed-in hosts in the logo's colours: the charcoal of "Miles
- * Global" for the sidebar, the logo cyan for focus rings and charts,
- * and the darkened cyan for the active item so white type stays
+ * The signed-in hosts in the logo's colours: the dark green of the
+ * lettering for the sidebar, the bright green for focus rings and
+ * charts, and the darker green for the active item so white type stays
  * readable. Overrides the shared theme for this app only; the product
  * apps keep their own.
  */
 :root {
-    --primary: #007291;
-    --ring: #00b0e0;
-    --chart-1: #007291;
-    --chart-2: #304048;
-    --chart-3: #00b0e0;
-    --chart-4: #1cb8e3;
-    --chart-5: #8aa0aa;
-    --sidebar: #304048;
-    --sidebar-primary: #007ea1;
+    --primary: #037f1f;
+    --ring: #4aaf03;
+    --chart-1: #037f1f;
+    --chart-2: #05451b;
+    --chart-3: #4aaf03;
+    --chart-4: #8bd103;
+    --chart-5: #8fa392;
+    --sidebar: #05451b;
+    --sidebar-primary: #037f1f;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-ring: #00b0e0;
+    --sidebar-ring: #4aaf03;
 }
 
 .dark {
-    --primary: #1cb8e3;
-    --ring: #00b0e0;
-    --chart-1: #1cb8e3;
-    --chart-2: #7ad4ea;
-    --chart-3: #00b0e0;
-    --chart-4: #d6f4fb;
-    --chart-5: #8aa0aa;
-    --sidebar: #243038;
-    --sidebar-primary: #007ea1;
+    --primary: #8bd103;
+    --ring: #4aaf03;
+    --chart-1: #8bd103;
+    --chart-2: #b5e36b;
+    --chart-3: #4aaf03;
+    --chart-4: #e6f6cc;
+    --chart-5: #8fa392;
+    --sidebar: #033214;
+    --sidebar-primary: #037f1f;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-ring: #1cb8e3;
+    --sidebar-ring: #8bd103;
 }
 
 @layer utilities {
@@ -125,18 +127,18 @@
     --text-sm: 0.875rem;
     --text-sm--line-height: 1.25rem;
 
-    /* Greys drawn from the logo's charcoal, so body text sits in the
+    /* Greys with a touch of the logo's green, so body text sits in the
        brand too. 500 and darker keep 4.5:1 on white. */
-    --color-slate-50: #f3f6f7;
-    --color-slate-100: #e4ebef;
-    --color-slate-200: #c9d5dc;
-    --color-slate-300: #aebfc8;
-    --color-slate-400: #7a909b;
-    --color-slate-500: #5a707b;
-    --color-slate-600: #455863;
-    --color-slate-700: #304048;
-    --color-slate-800: #243038;
-    --color-slate-900: #172228;
+    --color-slate-50: #f4f7f4;
+    --color-slate-100: #e5ece5;
+    --color-slate-200: #cad7cb;
+    --color-slate-300: #afc0b0;
+    --color-slate-400: #7b917d;
+    --color-slate-500: #5b705d;
+    --color-slate-600: #46594a;
+    --color-slate-700: #2f4433;
+    --color-slate-800: #22332a;
+    --color-slate-900: #16231b;
 }
 
 /* Headings in the display face; everything else in the text face. */
@@ -252,6 +254,222 @@
 
     to {
         transform: scaleX(1);
+    }
+}
+
+/*
+ * The home hero's application orbit (hero-ecosystem.tsx): the dashboard
+ * rises in, the icons slide out from behind it along their spokes, the
+ * lines draw out, then the ring turns slowly (--turn) while each icon
+ * turns back the other way to stay upright. Hovering or focusing the
+ * illustration pauses the turn. Transform and opacity only. With reduced
+ * motion the icons rest at their starting angles and the travelling dots
+ * are hidden.
+ */
+
+/* At rest: each icon at the rim (half the ring's width), upright. */
+.site-public .eco-out {
+    transform: translateX(50cqw);
+}
+
+.site-public .eco-upright {
+    transform: scaleY(var(--unsquash, 1));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .site-public .eco-dash {
+        animation: eco-rise 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    .site-public .eco-out {
+        animation: eco-out 1s cubic-bezier(0.19, 0.9, 0.26, 1) both;
+        animation-delay: var(--d, 0ms);
+    }
+
+    .site-public .eco-spin {
+        animation: eco-spin var(--turn, 60s) linear infinite;
+    }
+
+    .site-public .eco-upright {
+        animation: eco-counter var(--turn, 60s) linear infinite;
+    }
+
+    .site-public .eco-orbit:hover :is(.eco-spin, .eco-upright),
+    .site-public .eco-orbit:focus-within :is(.eco-spin, .eco-upright) {
+        animation-play-state: paused;
+    }
+
+    .site-public .eco-line {
+        stroke-dasharray: 1;
+        animation: eco-draw 0.7s ease-out both;
+        animation-delay: var(--d, 0ms);
+        transition:
+            stroke 0.2s,
+            stroke-opacity 0.2s,
+            stroke-width 0.2s;
+    }
+
+    .site-public .eco-float {
+        animation: eco-float var(--fd, 5s) ease-in-out infinite;
+        animation-delay: var(--f, 0s);
+    }
+
+    /* The centre dashboard (hero-dashboard.tsx). */
+    .site-public .eco-bar {
+        animation: eco-bar-rise 0.95s cubic-bezier(0.16, 1, 0.3, 1) both;
+        animation-delay: calc(1.15s + var(--n, 0) * 0.12s);
+    }
+
+    .site-public .eco-trend {
+        stroke-dasharray: 1;
+        animation: eco-draw 2s ease 1.8s both;
+    }
+
+    .site-public .eco-activity {
+        animation: eco-slide-in 0.7s ease both;
+        animation-delay: calc(1.8s + var(--j, 0) * 0.28s);
+    }
+
+    .site-public .eco-live {
+        animation: eco-ping 2.2s ease-out infinite;
+    }
+
+    .site-public .eco-sheen {
+        animation: eco-sheen 8s ease-in-out 3s infinite;
+    }
+
+    .site-public .eco-halo {
+        animation: eco-halo 5s ease-in-out infinite;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .site-public :is(.eco-particle, .eco-sheen) {
+        display: none;
+    }
+}
+
+@keyframes eco-bar-rise {
+    from {
+        transform: scaleY(0.08);
+    }
+
+    to {
+        transform: scaleY(1);
+    }
+}
+
+@keyframes eco-slide-in {
+    from {
+        opacity: 0;
+        transform: translateX(9px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes eco-ping {
+    0% {
+        box-shadow: 0 0 0 0 #79df4b80;
+    }
+
+    75%,
+    100% {
+        box-shadow: 0 0 0 7px #79df4b00;
+    }
+}
+
+/* Across the screen and off the other side; the sheen is a fifth as wide. */
+@keyframes eco-sheen {
+    0%,
+    70% {
+        transform: skewX(-18deg) translateX(0);
+    }
+
+    90%,
+    100% {
+        transform: skewX(-18deg) translateX(900%);
+    }
+}
+
+@keyframes eco-halo {
+    50% {
+        scale: 1.07;
+        opacity: 0.6;
+    }
+}
+
+@keyframes eco-rise {
+    from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* From the dashboard's centre out along the spoke to the rim. */
+@keyframes eco-out {
+    from {
+        opacity: 0;
+        transform: translateX(0) scale(0.2);
+    }
+
+    25% {
+        opacity: 0.85;
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(50cqw);
+    }
+}
+
+@keyframes eco-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* The ring's turn undone, then the squash undone, so icons stay upright. */
+@keyframes eco-counter {
+    from {
+        transform: rotate(0deg) scaleY(var(--unsquash, 1));
+    }
+
+    to {
+        transform: rotate(-360deg) scaleY(var(--unsquash, 1));
+    }
+}
+
+@keyframes eco-draw {
+    from {
+        stroke-dashoffset: 1;
+    }
+
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes eco-float {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-5px);
     }
 }
 

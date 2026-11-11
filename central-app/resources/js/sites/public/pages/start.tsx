@@ -45,7 +45,7 @@ export default function Start({
         <>
             <Seo
                 title="Start your free trial"
-                description={`Choose a Miles Global Softwares application and try it free for ${trialDuration(trialDays)}. No payment details needed.`}
+                description={`Choose a Tatook application and try it free for ${trialDuration(trialDays)}. No payment details needed.`}
                 canonical={canonical}
             />
 

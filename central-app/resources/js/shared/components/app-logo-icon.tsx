@@ -1,9 +1,9 @@
 import type { ImgHTMLAttributes } from 'react';
 
-/** The Miles mark alone; the charcoal shape turns white in dark mode. */
+/** The Tatook mark alone; the dark-green T turns white in dark mode. */
 export default function AppLogoIcon({
     className,
-    alt = 'Miles Global Softwares',
+    alt = 'Tatook',
     ...props
 }: ImgHTMLAttributes<HTMLImageElement>) {
     return (

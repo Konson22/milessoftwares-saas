@@ -26,8 +26,8 @@ class SyncFirstPartyClients extends Command
     protected $description = 'Create or repair the OpenID Connect clients for the admin and workspace hosts';
 
     private const NAMES = [
-        'admin' => 'Miles Global Softwares Admin',
-        'workspace' => 'Miles Global Softwares Workspace',
+        'admin' => 'Tatook Admin',
+        'workspace' => 'Tatook Workspace',
     ];
 
     public function handle(ClientRepository $clients): int

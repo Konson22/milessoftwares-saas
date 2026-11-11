@@ -52,6 +52,55 @@ export default function PageHero({
 }
 
 /**
+ * The dark green opening band of the main pages: the title, the intro and
+ * up to a few actions, with `aside` beside them from `lg` (a picture, or
+ * links). `asideClassName` decides where the aside shows; by default only
+ * from `lg`, as pictures are decorative.
+ */
+export function DarkHero({
+    title,
+    intro,
+    children,
+    aside,
+    asideClassName = 'hidden lg:block',
+}: {
+    title: ReactNode;
+    intro?: ReactNode;
+    children?: ReactNode;
+    aside?: ReactNode;
+    asideClassName?: string;
+}) {
+    return (
+        <section className="site-dark relative isolate overflow-hidden bg-[radial-gradient(circle_at_78%_40%,#11512b,#063519_55%,#032a16_100%)]">
+            <HeroBackdrop />
+            <div
+                className={`${container} grid items-center gap-10 pt-24 pb-12 sm:pt-28 sm:pb-14 ${aside ? 'lg:grid-cols-[1.05fr_1fr]' : ''}`}
+            >
+                <div className="site-rise min-w-0">
+                    <SpeedMark className="mb-5" />
+                    <h1
+                        className={`max-w-2xl text-[2.25rem] leading-[1.08] sm:text-5xl lg:text-[3.25rem] ${display}`}
+                    >
+                        {title}
+                    </h1>
+                    {intro && (
+                        <p className="mt-5 max-w-xl text-base leading-relaxed text-pretty text-slate-200 sm:text-lg">
+                            {intro}
+                        </p>
+                    )}
+                    {children && (
+                        <div className="mt-8 flex flex-wrap items-center gap-3">
+                            {children}
+                        </div>
+                    )}
+                </div>
+                {aside && <div className={asideClassName}>{aside}</div>}
+            </div>
+        </section>
+    );
+}
+
+/**
  * A faint dot grid that fades out towards the copy, behind a light hero.
  * Decorative only.
  */

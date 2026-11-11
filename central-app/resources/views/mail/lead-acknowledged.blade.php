@@ -3,7 +3,7 @@
 
 {{ $greeting }}
 
-Thank you for contacting Miles Global Softwares. Your message has reached our team, and we will reply within **one working day**.
+Thank you for contacting Tatook. Your message has reached our team, and we will reply within **one working day**.
 
 <x-mail::panel>
 **What happens next**<br>

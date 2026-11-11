@@ -26,7 +26,7 @@ import { appIcon } from '@/shared/lib/app-icons';
 import { workspaceRoutes } from '@/sites/central/lib/workspace-routes';
 
 /**
- * The workspace ({business}.<root>) in the shell every Miles app shares:
+ * The workspace ({business}.<root>) in the shell every Tatook app shares:
  * its own pages, administration for those allowed, and the applications
  * the member can open (Pharmacy, Finance, ...), which link back here. The
  * owner also gets the business's plans, subscription, billing and settings.

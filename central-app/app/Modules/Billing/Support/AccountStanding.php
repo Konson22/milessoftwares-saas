@@ -11,7 +11,7 @@ use App\Modules\Subscriptions\Models\Subscription;
 use Illuminate\Support\Carbon;
 
 /**
- * Where the current organization stands with Miles Global Softwares: what
+ * Where the current organization stands with Tatook: what
  * it owes, what is overdue, and what is waiting on staff. Runs inside the
  * tenant context, so every query is scoped to that organization.
  */

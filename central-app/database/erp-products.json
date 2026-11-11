@@ -70,8 +70,8 @@
         {
             "code": "finance_accounting",
             "name": "Finance & Accounting",
-            "tagline": "Advanced accounting, on its own or with any Miles ERP.",
-            "description": "Chart of accounts, journals, receivables, payables, banking and financial statements: the Finance application any Miles ERP can post to when it is added.",
+            "tagline": "Advanced accounting, on its own or with any Tatook ERP.",
+            "description": "Chart of accounts, journals, receivables, payables, banking and financial statements: the Finance application any Tatook ERP can post to when it is added.",
             "status": "pilot",
             "sort_order": 50,
             "applications": [{ "code": "finance", "requirement": "required" }]
@@ -79,8 +79,8 @@
         {
             "code": "payroll",
             "name": "Payroll",
-            "tagline": "Monthly payroll and payslips, with any Miles ERP or on its own.",
-            "description": "Basic pay, allowances and deductions, income tax and social security, monthly payroll runs approved by a second person, and payslips. Takes staff from HR and hours from any Miles ERP, and posts one journal per payroll to Finance & Accounting.",
+            "tagline": "Monthly payroll and payslips, with any Tatook ERP or on its own.",
+            "description": "Basic pay, allowances and deductions, income tax and social security, monthly payroll runs approved by a second person, and payslips. Takes staff from HR and hours from any Tatook ERP, and posts one journal per payroll to Finance & Accounting.",
             "status": "pilot",
             "sort_order": 60,
             "applications": [
