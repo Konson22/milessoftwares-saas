@@ -111,7 +111,7 @@ return [
     */
 
     'marketing' => [
-        'support_email' => env('PLATFORM_SUPPORT_EMAIL', 'support@milesoftwares.com'),
+        'support_email' => env('PLATFORM_SUPPORT_EMAIL', 'info@tatook.com'),
         'trial_days' => (int) env('PLATFORM_TRIAL_DAYS', 60),
     ],
 

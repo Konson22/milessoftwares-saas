@@ -2,7 +2,7 @@
 export const whatsappNumber = '+211 920 079 070';
 
 /** Support's mailbox: contact form messages are emailed here too. */
-export const supportEmail = 'support@milesoftwares.com';
+export const supportEmail = 'info@tatook.com';
 
 export const socialLinks = [
     {
