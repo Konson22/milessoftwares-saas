@@ -55,7 +55,6 @@ return [
     'modules' => [
         'finance' => env('PLATFORM_FINANCE_EVENTS_URL'),
         'hr' => env('PLATFORM_HR_EVENTS_URL'),
-        'payroll' => env('PLATFORM_PAYROLL_EVENTS_URL'),
     ],
 
     // Signs webhooks and provisioning calls (whsec_...).

@@ -20,6 +20,18 @@ path `PLATFORM_PATH`, default `projects`). Every route carries the path itself.
   is emailed with a link to the donor's workspace (`/projects/invitations/{token}`); the person
   says which workspace their organization uses and accepts there (`partnerships/{token}`,
   `organization.manage`). An organization without a workspace starts one on the platform.
+- At sign-up on the platform an organization says what it is: **donor or funder**, or
+  **organization** (it runs the work). The form asks when Projects is among the trials, and the
+  platform passes it on (`organization_type`). A donor has funding others switched on from its
+  first visit. It stays a capability, not a fixed type: Administration → Settings turns it off or on.
+- A donor can also **create** the workspace of an organization it funds (Beneficiaries → Create
+  their workspace, `organization.manage`). The platform makes it and holds it, pending and with no
+  owner, for the person named (`POST /api/v1/sponsored-organizations`, scope
+  `organizations.sponsor`). It emails them a link, and claiming makes them its owner with the
+  Projects trial on. The donor gets no place in that workspace. The partnership connects the first
+  time its owner opens Projects (`Beneficiaries::connectCreated`) and shares nothing until they
+  turn it on, grant by grant. Sending the link again works as for an invitation, and withdrawing
+  an unclaimed workspace removes it.
 - Each grant chooses what its donor sees: budget, spending, project progress and project tasks, all off
   until the beneficiary turns them on (`App\Support\DonorProjection`).
 - `App\Tenancy\Hosts` builds absolute URLs to a workspace (scheme and port from `APP_URL`).

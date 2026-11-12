@@ -32,7 +32,7 @@ final class EventTokenVerifier
     /**
      * @param  string  $issuer  the platform auth host URL
      * @param  string  $publicKeyPem  the platform signing key (from its JWKS)
-     * @param  string  $module  this module's application code: finance, hr or payroll
+     * @param  string  $module  this module's application code: finance or hr
      */
     public function __construct(
         string $issuer,

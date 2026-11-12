@@ -161,9 +161,9 @@ it('splits profit and loss by cost centre into columns that add up to the whole'
     $this->get(dimUrl("reports/trial-balance?as_of=2026-10-31&cost_centre={$clinic->id}"))
         ->assertInertia(fn (Assert $page) => $page->where('debitMinor', 35000)->where('creditMinor', 0));
 
-    $csv = $this->get(dimUrl('reports/profit-and-loss-by-dimension?from=2026-10-01&to=2026-10-31&by=cost_centre&export=statement'))->assertOk()->streamedContent();
+    $csv = xlsxText($this->get(dimUrl('reports/profit-and-loss-by-dimension?from=2026-10-01&to=2026-10-31&by=cost_centre&export=statement'))->assertOk()->streamedContent());
     expect($csv)->toContain('Section,Code,Account,"ADM · Administration","CLN · Clinic","No cost centre",Total')
-        ->toContain('Expenses,6000,Rent,200.00,300.00,0.00,500.00');
+        ->toContain('Expenses,6000,Rent,200,300,0,500');
 });
 
 it('keeps managing cost centres and projects to those who manage accounts', function () {

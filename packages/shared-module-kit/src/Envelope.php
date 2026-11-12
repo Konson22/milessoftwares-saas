@@ -100,6 +100,7 @@ final readonly class Envelope
 
     /**
      * The module the event is addressed to: "finance", "hr" or "payroll".
+     * Payroll is part of Finance (ADR-0009): Finance takes payroll.* events.
      */
     public function module(): string
     {

@@ -14,16 +14,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * read starts from the donor or the beneficiary in hand. Written by
  * App\Actions\Beneficiaries.
  *
- * Two ways in, one record: an invitation by email (a token; the organization
- * is set up or connected on accepting), or a direct one to an organization
+ * Three ways in, one record: an invitation by email (a token; the organization
+ * is set up or connected on accepting), a direct one to an organization
  * already on the platform (invited_organization_id; its administrators accept
- * in the app). Either can be declined by the invited side or withdrawn by the
+ * in the app), or a workspace the donor creates for them (platform_claim_id:
+ * the platform holds it until the person named claims it, and it connects the
+ * first time it opens Projects). Either can be declined by the invited side or withdrawn by the
  * donor; accepting connects, and gives the donor nothing it is not shared.
  *
  * @property string $id
  * @property string $donor_organization_id
  * @property string|null $beneficiary_organization_id
  * @property string|null $invited_organization_id
+ * @property string|null $platform_claim_id the platform's claim on a workspace the donor created
+ * @property string|null $created_organization_id the platform organization created for them
+ * @property string|null $created_slug its workspace address
  * @property CarbonImmutable|null $declined_at
  * @property string|null $declined_by
  * @property string|null $funder_id
@@ -50,7 +55,7 @@ class Partnership extends Model
     /** What the donor calls them; both get the same workspace. */
     public const LABELS = ['beneficiary' => 'Beneficiary', 'implementer' => 'Project implementer'];
 
-    protected $guarded = ['donor_organization_id', 'beneficiary_organization_id', 'invited_organization_id', 'funder_id', 'token_hash', 'accepted_at', 'accepted_by', 'declined_at', 'declined_by'];
+    protected $guarded = ['donor_organization_id', 'beneficiary_organization_id', 'invited_organization_id', 'platform_claim_id', 'created_organization_id', 'created_slug', 'funder_id', 'token_hash', 'accepted_at', 'accepted_by', 'declined_at', 'declined_by'];
 
     protected function casts(): array
     {
@@ -83,6 +88,12 @@ class Partnership extends Model
     public function isPending(): bool
     {
         return $this->accepted_at === null && $this->declined_at === null && $this->expires_at->isFuture();
+    }
+
+    /** A workspace the donor created for them, rather than an invitation. */
+    public function isCreated(): bool
+    {
+        return $this->platform_claim_id !== null;
     }
 
     public function isDeclined(): bool

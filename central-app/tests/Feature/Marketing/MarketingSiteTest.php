@@ -358,7 +358,7 @@ it('lists every product of the brief on the products page', function () {
             $slugs = fn (string $category) => collect($catalog)->where('category', $category)->pluck('slug')->values()->all();
 
             return $slugs('erp') === ['pharmacy', 'retail', 'restaurant', 'school', 'logistics', 'ngo']
-                && $slugs('application') === ['finance', 'petrol', 'projects', 'hr', 'payroll', 'procurement', 'inventory', 'crm', 'assets', 'documents'];
+                && $slugs('application') === ['finance', 'petrol', 'projects', 'hr', 'procurement', 'inventory', 'crm', 'assets', 'documents'];
         }));
 });
 

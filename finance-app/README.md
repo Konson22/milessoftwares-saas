@@ -40,3 +40,19 @@ composer ci:check     # format, lint, types, Pint, PHPStan, Pest
 
 Catalog (roles and permissions): `platform/catalog.json`. Register with the local platform:
 `cd ../../central-app && php artisan platform:local-product templates/product-app --url=http://127.0.0.1:8500`.
+
+## Payroll
+
+Payroll is part of Finance ([ADR-0009](../docs/adr/0009-payroll-in-finance.md)), at
+`{workspace}/finance/payroll`: people, pay history, allowances and deductions, statutory rules,
+monthly runs and payslips (`app/Payroll`, `app/Http/Controllers/Payroll`, `routes/payroll.php`,
+`resources/js/pages/payroll`).
+
+- Permissions `finance.payroll.*`; roles Payroll clerk, officer, approver and manager. Seeing who
+  is paid and seeing what they earn are separate; whoever prepared a run cannot approve it.
+- Approving a run posts one summarised journal to the ledger, and marking it paid posts the
+  payment, each in the same transaction as the run.
+- HR (and any product that keeps staff or hours) sends `payroll.employee.joined`, `.left` and
+  `payroll.timesheet.submitted` to Finance's `/finance/events`; `App\Payroll\ApplyEvent` applies
+  them.
+- On PostgreSQL a trigger keeps an approved run's payslips unchangeable.

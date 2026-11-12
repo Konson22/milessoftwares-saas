@@ -197,7 +197,7 @@ export const platformGroups: {
             {
                 icon: Globe,
                 title: 'Your own address',
-                body: 'yourbusiness.milesoftwares.com, with each application at its own path.',
+                body: 'yourbusiness.tatook.com, with each application at its own path.',
             },
             {
                 icon: Building2,

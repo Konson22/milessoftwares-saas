@@ -7,6 +7,7 @@ use App\Sites\Central\Http\Controllers\Api\IntegrationController;
 use App\Sites\Central\Http\Controllers\Api\LicenceActivationController;
 use App\Sites\Central\Http\Controllers\Api\ProvisioningCallbackController;
 use App\Sites\Central\Http\Controllers\Api\SharedModulesController;
+use App\Sites\Central\Http\Controllers\Api\SponsoredOrganizationController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -47,6 +48,14 @@ Route::prefix('api/v1')->middleware('throttle:600,1')->name('api.')->group(funct
     Route::post('health', [SharedModulesController::class, 'health'])
         ->middleware('api.client:health.write')
         ->name('health.store');
+
+    // A workspace one organization creates for another (a donor for its
+    // grantee), waiting for its owner to claim it.
+    Route::middleware('api.client:organizations.sponsor')->prefix('sponsored-organizations')->name('sponsored-organizations.')->group(function () {
+        Route::post('/', [SponsoredOrganizationController::class, 'store'])->middleware('throttle:sponsored-create')->name('store');
+        Route::post('{claim}/resend', [SponsoredOrganizationController::class, 'resend'])->whereUuid('claim')->middleware('throttle:sponsored-resend')->name('resend');
+        Route::post('{claim}/cancel', [SponsoredOrganizationController::class, 'destroy'])->whereUuid('claim')->name('cancel');
+    });
 
     // A person in an application's own app (desktop counter): a new business.
     Route::middleware('api.user')->prefix('account')->name('account.')->group(function () {

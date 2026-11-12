@@ -63,7 +63,7 @@ export function AppShell({
 
             {/* Desktop sidebar: an icon rail that widens over the page on
                 hover or keyboard focus, so the page never reflows. */}
-            <aside className="sticky top-0 z-30 hidden h-screen w-14 shrink-0 lg:block">
+            <aside className="sticky top-0 z-30 hidden h-screen w-14 shrink-0 lg:block print:hidden">
                 <div className="shell-rail absolute inset-y-0 left-0 w-14 overflow-hidden transition-[width,box-shadow] duration-200 hover:w-64 hover:shadow-xl has-[:focus-visible]:w-64 has-[:focus-visible]:shadow-xl">
                     <div className="h-full w-64">{sidebar(closeSidebar)}</div>
                 </div>
@@ -72,7 +72,7 @@ export function AppShell({
             {/* Mobile sidebar drawer */}
             <div
                 className={cn(
-                    'fixed inset-0 z-40 lg:hidden',
+                    'fixed inset-0 z-40 lg:hidden print:hidden',
                     sidebarOpen ? 'pointer-events-auto' : 'pointer-events-none',
                 )}
                 aria-hidden={!sidebarOpen}
@@ -98,7 +98,7 @@ export function AppShell({
             </div>
 
             <div className="flex min-w-0 flex-1 flex-col">
-                <header className="sticky top-0 z-20 flex h-13 shrink-0 items-center gap-3 border-b bg-white px-3 dark:bg-card">
+                <header className="sticky top-0 z-20 flex h-13 shrink-0 items-center gap-3 border-b bg-white px-3 dark:bg-card print:hidden">
                     <button
                         type="button"
                         onClick={() => setSidebarOpen(true)}
@@ -116,11 +116,11 @@ export function AppShell({
                         </div>
                     )}
                 </header>
-                <main id="main" className="flex-1 p-3">
+                <main id="main" className="flex-1 p-3 print:p-0">
                     {flash && (
                         <p
                             role="status"
-                            className="mb-3 border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm text-emerald-800"
+                            className="mb-3 border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm text-emerald-800 print:hidden"
                         >
                             {flash}
                         </p>

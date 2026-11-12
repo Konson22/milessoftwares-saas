@@ -56,14 +56,13 @@ JSON Schemas in `contracts/events/`:
 - Amounts are integers in the currency's minor unit.
 - **Sensitive HR and payroll data never travels in events**: pay, rates, bank details, identity
   numbers, dates of birth, health. The envelope validator rejects these keys at any depth
-  (`Envelope::SENSITIVE_KEYS`); such data is entered inside the HR or Payroll module itself.
-- Each module is its own audience: `finance.*` to `finance`, `hr.*` to `hr`, `payroll.*` to
-  `payroll` (`payroll-app`, [ADR-0008](adr/0008-payroll-separate-application.md), which replaced
-  ADR-0005's single HR & Payroll module). Payroll is a sender too: approved runs reach Finance as
-  `finance.payroll.posted`. HR sends `payroll.employee.joined` / `.left` on every hire, change
-  and leaving when `PLATFORM_PAYROLL_EVENTS_URL` is set; any product that keeps staff may send the
-  same events and `payroll.timesheet.submitted` (with `employee_reference` its own id for the
-  person, or their Payroll number).
+  (`Envelope::SENSITIVE_KEYS`); such data is entered inside HR or Finance's payroll itself.
+- Each module is its own audience: `finance.*` to `finance`, `hr.*` to `hr`. Payroll is part of
+  Finance ([ADR-0009](adr/0009-payroll-in-finance.md)), so `payroll.*` goes to `finance` too and
+  approved runs post to the ledger in process. HR sends `payroll.employee.joined` / `.left` on
+  every hire, change and leaving when `PLATFORM_FINANCE_EVENTS_URL` is set; any product that keeps
+  staff may send the same events and `payroll.timesheet.submitted` (with `employee_reference` its
+  own id for the person, or their payroll number).
 - A breaking payload change is a new `schema_version`; receivers support old versions for a
   published deprecation period.
 

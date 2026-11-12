@@ -6,6 +6,9 @@ use App\Finance\NotYetPostable;
 use App\Finance\PostEvent;
 use App\Finance\UnsupportedEvent;
 use App\Models\Workspace;
+use App\Payroll\ApplyEvent;
+use App\Payroll\NotYetApplicable;
+use App\Payroll\UnsupportedEvent as UnsupportedPayrollEvent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -26,7 +29,9 @@ use Miles\SharedModuleKit\Jwks;
 use RuntimeException;
 
 /**
- * Receives a product's business event and posts it exactly once.
+ * Receives a product's business event and posts it exactly once. Payroll is
+ * part of Finance (ADR-0009): payroll.* events (people from HR or a product,
+ * hours) are applied to the payroll instead of posted.
  *
  *   201 accepted   200 duplicate   409 conflict (same transaction id, other content)
  *   401 bad token  403 token does not vouch for the event   422 not postable
@@ -41,6 +46,7 @@ class EventController extends Controller
         PlatformApi $platform,
         CurrentTenant $tenant,
         PostEvent $post,
+        ApplyEvent $payroll,
     ): JsonResponse {
         $authorization = (string) $request->header('Authorization', '');
 
@@ -66,7 +72,7 @@ class EventController extends Controller
             return response()->json(['error' => 'source_mismatch'], 403);
         }
 
-        if ($envelope->module() !== $config->application()) {
+        if (! in_array($envelope->module(), [$config->application(), 'payroll'], true)) {
             return response()->json(['error' => 'wrong_module', 'detail' => "{$envelope->eventType} is not a {$config->application()} event."], 422);
         }
 
@@ -76,7 +82,7 @@ class EventController extends Controller
             return $this->later('The organization could not be looked up.');
         }
 
-        return $tenant->run($organization, function () use ($envelope, $token, $post) {
+        return $tenant->run($organization, function () use ($envelope, $token, $post, $payroll) {
             $workspace = Workspace::current();
 
             if ($workspace === null) {
@@ -91,15 +97,16 @@ class EventController extends Controller
 
             try {
                 $result = DB::transaction(fn (): InboxResult => (new Inbox(DB::connection()->getPdo()))
-                    ->accept($envelope, $token, fn (Envelope $event) => $post->handle($event)));
+                    ->accept($envelope, $token, fn (Envelope $event) => $event->module() === 'payroll' ? $payroll->handle($event) : $post->handle($event)));
             } catch (EventRejected $e) {
                 return response()->json(['error' => $e->reason, 'detail' => $e->getMessage()], 403);
-            } catch (NotYetPostable $e) {
+            } catch (NotYetPostable|NotYetApplicable $e) {
                 return $this->later($e->getMessage());
-            } catch (UnsupportedEvent $e) {
+            } catch (UnsupportedEvent|UnsupportedPayrollEvent $e) {
                 return response()->json(['error' => 'unsupported_event', 'detail' => $e->getMessage()], 422);
             } catch (ValidationException $e) {
-                return response()->json(['error' => 'not_postable', 'detail' => $e->errors()], 422);
+                // Payroll's events are applied, not posted.
+                return response()->json(['error' => $envelope->module() === 'payroll' ? 'not_applicable' : 'not_postable', 'detail' => $e->errors()], 422);
             }
 
             return response()->json($result->toArray(), $result->httpStatus());

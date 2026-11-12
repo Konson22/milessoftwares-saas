@@ -8,7 +8,7 @@ use App\Finance\Reports;
 use App\Finance\Statements;
 use App\Models\Account;
 use App\Models\DimensionValue;
-use App\Support\CsvExport;
+use App\Support\XlsxExport;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -20,7 +20,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Financial statements and the accountant's reports. Each report also
- * downloads its tables as CSV (?export=<table>).
+ * downloads its tables as Excel (.xlsx) (?export=<table>).
  */
 class ReportController extends Controller
 {
@@ -31,7 +31,7 @@ class ReportController extends Controller
         $report = $statements->trialBalance($asOf, $dimensions);
 
         if ($this->export($request, ['accounts'])) {
-            return CsvExport::download("trial-balance-{$asOf->toDateString()}", [
+            return XlsxExport::download("trial-balance-{$asOf->toDateString()}", [
                 'Code' => 'code', 'Account' => 'name', 'Type' => 'type', 'Debit' => 'debitMinor', 'Credit' => 'creditMinor',
             ], $report['rows']);
         }
@@ -58,7 +58,7 @@ class ReportController extends Controller
         }
 
         if ($this->export($request, ['statement'])) {
-            return CsvExport::download("profit-and-loss-{$from->toDateString()}-{$to->toDateString()}", $this->statementColumns($compare !== null), [
+            return XlsxExport::download("profit-and-loss-{$from->toDateString()}-{$to->toDateString()}", $this->statementColumns($compare !== null), [
                 ...$this->sectionRows('Revenue', $report['revenue']),
                 ...$this->sectionRows('Expenses', $report['expenses']),
             ]);
@@ -92,7 +92,7 @@ class ReportController extends Controller
                 array_map(fn (array $column) => $row['amounts'][$column['id']] ?? 0, $report['columns']),
             ), $rows);
 
-            return CsvExport::download("profit-and-loss-by-{$kind}-{$from->toDateString()}-{$to->toDateString()}", $columns, [
+            return XlsxExport::download("profit-and-loss-by-{$kind}-{$from->toDateString()}-{$to->toDateString()}", $columns, [
                 ...$flatten('Revenue', $report['revenue']),
                 ...$flatten('Expenses', $report['expenses']),
             ]);
@@ -118,7 +118,7 @@ class ReportController extends Controller
         }
 
         if ($this->export($request, ['statement'])) {
-            return CsvExport::download("balance-sheet-{$asOf->toDateString()}", $this->statementColumns($compare !== null), [
+            return XlsxExport::download("balance-sheet-{$asOf->toDateString()}", $this->statementColumns($compare !== null), [
                 ...$this->sectionRows('Assets', $report['assets']),
                 ...$this->sectionRows('Liabilities', $report['liabilities']),
                 ...$this->sectionRows('Equity', $report['equity']),
@@ -139,7 +139,7 @@ class ReportController extends Controller
         $report = $reports->cashFlow($from, $to);
 
         if ($this->export($request, ['statement'])) {
-            return CsvExport::download("cash-flow-{$from->toDateString()}-{$to->toDateString()}", $this->statementColumns(false), [
+            return XlsxExport::download("cash-flow-{$from->toDateString()}-{$to->toDateString()}", $this->statementColumns(false), [
                 ['section' => 'Operating activities', 'code' => '', 'name' => 'Net profit', 'amountMinor' => $report['profitMinor']],
                 ...$this->sectionRows('Operating activities', $report['operating']),
                 ...$this->sectionRows('Investing activities', $report['investing']),
@@ -172,7 +172,7 @@ class ReportController extends Controller
                 $rows[] = ['ratio' => Ratios::LABELS[$key] ?? $key, 'value' => $value, 'previous' => $compare['ratios'][$key]];
             }
 
-            return CsvExport::download("ratios-{$from->toDateString()}-{$to->toDateString()}", ['Ratio' => 'ratio', $report['to'] => 'value', $compare['to'] => 'previous'], $rows);
+            return XlsxExport::download("ratios-{$from->toDateString()}-{$to->toDateString()}", ['Ratio' => 'ratio', $report['to'] => 'value', $compare['to'] => 'previous'], $rows);
         }
 
         return Inertia::render('reports/ratios', [
@@ -199,7 +199,7 @@ class ReportController extends Controller
                 $rows[] = ['code' => $account['code'], 'account' => $account['name'], 'date' => $to->toDateString(), 'memo' => 'Closing balance', 'debitMinor' => $account['debitMinor'], 'creditMinor' => $account['creditMinor'], 'balanceMinor' => $account['closingMinor']];
             }
 
-            return CsvExport::download("general-ledger-{$from->toDateString()}-{$to->toDateString()}", [
+            return XlsxExport::download("general-ledger-{$from->toDateString()}-{$to->toDateString()}", [
                 'Code' => 'code', 'Account' => 'account', 'Date' => 'date', 'Journal' => 'number', 'Memo' => 'memo',
                 'Line' => 'description', 'From' => 'source', 'Debit' => 'debitMinor', 'Credit' => 'creditMinor', 'Balance' => 'balanceMinor',
             ], $rows);
@@ -234,10 +234,10 @@ class ReportController extends Controller
 
         $export = $this->export($request, ['parties', 'documents']);
         if ($export === 'parties') {
-            return CsvExport::download("aged-{$kind}-{$report['asOf']}", [$party => 'party'] + $buckets, $report['parties']);
+            return XlsxExport::download("aged-{$kind}-{$report['asOf']}", [$party => 'party'] + $buckets, $report['parties']);
         }
         if ($export === 'documents') {
-            return CsvExport::download("aged-{$kind}-documents-{$report['asOf']}", [
+            return XlsxExport::download("aged-{$kind}-documents-{$report['asOf']}", [
                 $party => 'party', 'Number' => 'number', 'Date' => 'date', 'Due' => 'dueOn', 'Days overdue' => 'daysOverdue',
                 'Total' => 'totalMinor', 'Outstanding' => 'outstandingMinor',
             ], $report['documents']);

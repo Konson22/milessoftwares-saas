@@ -41,6 +41,7 @@ class IntegrationController extends Controller
             'country_code' => $record->country_code,
             'default_currency' => $record->default_currency,
             'timezone' => $record->timezone,
+            'organization_type' => $record->organization_type?->value,
         ]);
     }
 

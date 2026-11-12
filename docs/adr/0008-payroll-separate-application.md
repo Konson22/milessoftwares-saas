@@ -1,6 +1,6 @@
 # ADR-0008: Payroll as its own shared module
 
-- Status: Accepted (2026-11-09)
+- Status: Superseded by [ADR-0009](0009-payroll-in-finance.md) (2026-11-12)
 - Supersedes: the "HR and Payroll are one application" part of
   [ADR-0005](0005-hr-and-payroll-application.md) (option 3 there, revisited here as that ADR asks)
 - Code: `payroll-app` (registry application `payroll`, `{workspace}/payroll`)

@@ -76,6 +76,14 @@ return [
     |--------------------------------------------------------------------------
     */
 
+    /*
+    | Applications that may create a workspace for another organization on
+    | behalf of one of their own (Projects: a donor for its grantee). The
+    | workspace waits, pending, for the person it was made for to claim it.
+    */
+
+    'sponsoring_applications' => ['projects'],
+
     'slug' => [
         'min_length' => 4,
         'max_length' => 32,

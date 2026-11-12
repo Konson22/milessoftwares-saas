@@ -4,6 +4,7 @@ namespace App\Modules\Organizations\Models;
 
 use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Organizations\Enums\OrganizationStatus;
+use App\Modules\Organizations\Enums\OrganizationType;
 use App\Support\Hosts\PlatformHosts;
 use Database\Factories\OrganizationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -23,6 +24,7 @@ use Illuminate\Support\Carbon;
  * @property string $legal_name
  * @property string $display_name
  * @property string|null $business_type
+ * @property OrganizationType|null $organization_type
  * @property string|null $contact_email
  * @property string|null $contact_phone
  * @property string|null $address
@@ -60,6 +62,7 @@ class Organization extends Model
     {
         return [
             'status' => OrganizationStatus::class,
+            'organization_type' => OrganizationType::class,
             'activated_at' => 'datetime',
             'suspended_at' => 'datetime',
             'archived_at' => 'datetime',

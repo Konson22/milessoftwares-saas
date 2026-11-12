@@ -11,7 +11,6 @@ site's CSP allows images from 'self' only.
 | restaurant.webp | https://unsplash.com/photos/rHjzjwxDP2g (chefs in a busy kitchen)            |
 | inventory.webp  | https://unsplash.com/photos/-aCrA9FmT8Y (warehouse full of boxes)            |
 | finance.webp    | https://unsplash.com/photos/KNQUEQwTCY4 (laptop with charts)                 |
-| payroll.webp    | https://unsplash.com/photos/0oZpRxG5Hkk (documents, calculator, laptop)      |
 | hr.webp         | https://unsplash.com/photos/U2BI3GMnSSE (colleagues in an open office)       |
 | school.webp     | https://unsplash.com/photos/zFSo6bnZJTw (teacher presenting to a class)      |
 | clinic.webp     | https://unsplash.com/photos/tl447mekwuQ (doctor talking to a patient)        |

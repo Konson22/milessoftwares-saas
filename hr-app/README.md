@@ -1,9 +1,10 @@
-# HR & Payroll (`hr-app`)
+# HR (`hr-app`)
 
-Staff records and, from HR Phase H5, payroll for every Miles ERP product, served at
-`{workspace}/hr`. One registry application, `hr`; Payroll is the `payroll` plan feature
-([ADR-0005](../docs/adr/0005-hr-and-payroll-application.md), phases in
-[`docs/erp/hr-roadmap.md`](../docs/erp/hr-roadmap.md)). Built from `templates/product-app` and
+Staff records for every Miles ERP product, served at `{workspace}/hr`. One registry application,
+`hr` ([ADR-0005](../docs/adr/0005-hr-and-payroll-application.md); phases in
+[`docs/erp/hr-roadmap.md`](../docs/erp/hr-roadmap.md)). Payroll is part of Finance
+([ADR-0009](../docs/adr/0009-payroll-in-finance.md)): HR keeps Finance's payroll in step with
+hires, changes and leavers when `PLATFORM_FINANCE_EVENTS_URL` is set. Built from `templates/product-app` and
 connected through [`miles/platform-client`](../packages/platform-client/README.md).
 
 ## What is here (H1–H3)

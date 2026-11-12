@@ -187,16 +187,15 @@ class DashboardController extends Controller
      * @var array<string, list<string>>
      */
     private const PAIRS_WELL_WITH = [
-        'pharmacy' => ['finance', 'inventory', 'hr', 'payroll', 'crm'],
-        'retail' => ['inventory', 'finance', 'crm', 'hr', 'payroll'],
-        'finance' => ['advanced_accounting', 'payroll', 'hr', 'inventory'],
+        'pharmacy' => ['finance', 'inventory', 'hr', 'crm'],
+        'retail' => ['inventory', 'finance', 'crm', 'hr'],
+        'finance' => ['advanced_accounting', 'hr', 'inventory'],
         'inventory' => ['retail', 'finance'],
-        'hr' => ['payroll', 'finance'],
-        'payroll' => ['hr', 'finance'],
-        'advanced_accounting' => ['finance', 'payroll'],
+        'hr' => ['finance'],
+        'advanced_accounting' => ['finance'],
         'crm' => ['finance', 'retail'],
-        'school' => ['finance', 'hr', 'payroll'],
-        'clinic' => ['pharmacy', 'finance', 'hr', 'payroll'],
+        'school' => ['finance', 'hr'],
+        'clinic' => ['pharmacy', 'finance', 'hr'],
         'restaurant' => ['inventory', 'finance', 'retail', 'hr'],
     ];
 

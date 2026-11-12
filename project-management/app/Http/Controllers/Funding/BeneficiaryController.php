@@ -15,6 +15,7 @@ use App\Models\Organization;
 use App\Models\Partnership;
 use App\Support\DonorProjection;
 use App\Tenancy\CurrentOrganization;
+use App\Tenancy\Hosts;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -53,6 +54,8 @@ class BeneficiaryController extends Controller
                     default => 'invited',
                 },
                 'direct' => $partnership->invited_organization_id !== null,
+                // A workspace the donor created, waiting to be claimed: its address.
+                'created' => $partnership->isCreated() && ! $partnership->isAccepted() ? $partnership->created_slug.'.'.Hosts::rootDomain() : null,
                 'expiresOn' => $partnership->isAccepted() ? null : $partnership->expires_at->toDateString(),
                 'grants' => $partnership->isAccepted() && $partnership->beneficiary?->isActive()
                     ? count($this->inBeneficiary($partnership, fn () => DonorProjection::grants((string) $partnership->funder_id)))
@@ -60,7 +63,8 @@ class BeneficiaryController extends Controller
             ])->values(),
             'labels' => collect(Partnership::LABELS)->map(fn (string $label, string $value) => ['value' => $value, 'label' => $label])->values(),
             'timezones' => timezone_identifiers_list(),
-            'defaults' => ['currency' => $this->donor()->currency, 'timezone' => $this->donor()->timezone],
+            'defaults' => ['currency' => $this->donor()->currency, 'timezone' => $this->donor()->timezone, 'country' => $this->donor()->country_code],
+            'rootDomain' => Hosts::rootDomain(),
         ]);
     }
 
@@ -81,6 +85,35 @@ class BeneficiaryController extends Controller
         ]);
 
         return back()->with('success', "Invitation sent to {$validated['email']}.");
+    }
+
+    /**
+     * The donor creates the organization's workspace for the person who will
+     * run it, instead of inviting them to make one.
+     */
+    public function createWorkspace(Request $request): RedirectResponse
+    {
+        $validated = $this->organizationDetails($request, [
+            'label' => ['required', Rule::in(array_keys(Partnership::LABELS))],
+            'owner_name' => ['required', 'string', 'max:120'],
+            'email' => ['required', 'string', 'email', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:32', 'regex:/^[a-z][a-z0-9-]*[a-z0-9]$/'],
+            // The platform needs it for the new workspace's defaults.
+            'country_code' => ['required', 'string', 'regex:/^[A-Z]{2}$/'],
+        ], ['slug.regex' => 'Lowercase letters, digits and dashes, starting with a letter.']);
+
+        $partnership = Beneficiaries::createWorkspace($this->donor(), $this->member($request), [
+            'label' => $validated['label'],
+            'name' => trim($validated['name']),
+            'slug' => $validated['slug'] ?? null,
+            'owner_name' => trim($validated['owner_name']),
+            'email' => $validated['email'],
+            'currency' => $validated['currency'],
+            'timezone' => $validated['timezone'],
+            'country_code' => $validated['country_code'],
+        ]);
+
+        return back()->with('success', "Workspace created for {$partnership->name}. {$validated['email']} has the link to claim it.");
     }
 
     public function resend(Request $request, string $partnership): RedirectResponse

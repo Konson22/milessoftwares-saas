@@ -2,6 +2,7 @@
 
 use App\Models\Account;
 use App\Models\FiscalYear;
+use App\Support\XlsxExport;
 use Carbon\CarbonImmutable;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -74,13 +75,13 @@ it('lists the general ledger with opening, running and closing balances', functi
     $this->get(reportUrl('reports/general-ledger?from=2026-10-01&to=2026-10-31&account='.accountIdFor('6000')))
         ->assertInertia(fn (Assert $page) => $page->has('accounts', 1)->where('accounts.0.closingMinor', 30000));
 
-    $csv = $this->get(reportUrl('reports/general-ledger?from=2026-10-01&to=2026-10-31&export=lines'))
+    $csv = xlsxText($this->get(reportUrl('reports/general-ledger?from=2026-10-01&to=2026-10-31&export=lines'))
         ->assertOk()
-        ->assertHeader('Content-Type', 'text/csv; charset=UTF-8')
-        ->streamedContent();
+        ->assertHeader('Content-Type', XlsxExport::CONTENT_TYPE)
+        ->streamedContent());
 
-    expect($csv)->toContain('1010,"Bank account",2026-10-01,,"Opening balance",,,,,1000.00')
-        ->and($csv)->toContain('"Closing balance",,,0.00,350.00,650.00');
+    expect($csv)->toContain('1010,"Bank account",2026-10-01,,"Opening balance",,,,,1000')
+        ->and($csv)->toContain('"Closing balance",,,0,350,650');
 });
 
 it('ages receivables by days past due and agrees with the receivable account', function () {
@@ -110,8 +111,8 @@ it('ages receivables by days past due and agrees with the receivable account', f
     $this->get(reportUrl('reports/aged-receivables'))
         ->assertInertia(fn (Assert $page) => $page->where('accountMinor', 60500)->where('differenceMinor', 500));
 
-    expect($this->get(reportUrl('reports/aged-receivables?export=documents'))->streamedContent())
-        ->toContain('"Mary Deng",S-3,2026-06-01,,141,300.00,300.00');
+    expect(xlsxText($this->get(reportUrl('reports/aged-receivables?export=documents'))->streamedContent()))
+        ->toContain('"Mary Deng",S-3,2026-06-01,,141,300,300');
 });
 
 it('ages payables from bills, less what was paid', function () {
@@ -206,9 +207,9 @@ it('compares profit and loss with the previous period and the same period last y
 
     $this->get(reportUrl('reports/profit-and-loss?compare=yesterday'))->assertSessionHasErrors('compare');
 
-    expect($this->get(reportUrl('reports/profit-and-loss?from=2026-10-01&to=2026-10-31&compare=previous_period&export=statement'))->streamedContent())
+    expect(xlsxText($this->get(reportUrl('reports/profit-and-loss?from=2026-10-01&to=2026-10-31&compare=previous_period&export=statement'))->streamedContent()))
         ->toContain('Section,Code,Account,Amount,"Compared with"')
-        ->toContain('Revenue,4000,"Sales revenue",500.00,300.00');
+        ->toContain('Revenue,4000,"Sales revenue",500,300');
 });
 
 it('compares the balance sheet with the end of the previous month', function () {
@@ -227,9 +228,9 @@ it('compares the balance sheet with the end of the previous month', function () 
 it('downloads the trial balance, and keeps reports from members without the permission', function () {
     entry('2026-10-01', '1010', '3000', '1000', 'Capital');
 
-    expect($this->get(reportUrl('reports/trial-balance?as_of=2026-10-31&export=accounts'))->streamedContent())
+    expect(xlsxText($this->get(reportUrl('reports/trial-balance?as_of=2026-10-31&export=accounts'))->streamedContent()))
         ->toContain('Code,Account,Type,Debit,Credit')
-        ->toContain('1010,"Bank account",asset,1000.00,');
+        ->toContain('1010,"Bank account",asset,1000,0');
 
     $this->actingAsMember('acme', ['finance.journals.view']);
     foreach (['cash-flow', 'general-ledger', 'aged-receivables', 'aged-payables'] as $report) {
@@ -275,7 +276,7 @@ it('works out financial ratios from the statements, next to the period before', 
         ->where('compare.ratios.current', null)
         ->where('compare.ratios.grossMargin', null));
 
-    $csv = $this->get(reportUrl('reports/ratios?from=2026-10-01&to=2026-10-31&export=ratios'))->assertOk()->streamedContent();
+    $csv = xlsxText($this->get(reportUrl('reports/ratios?from=2026-10-01&to=2026-10-31&export=ratios'))->assertOk()->streamedContent());
     expect($csv)->toContain('"Current ratio (×)",5.67,')
         ->and($csv)->toContain('"Days payables outstanding",46.5,');
 });

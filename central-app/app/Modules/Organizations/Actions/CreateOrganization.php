@@ -30,7 +30,7 @@ final class CreateOrganization
     ) {}
 
     /**
-     * @param  array{display_name: string, legal_name?: string|null, slug: string, business_type?: string|null, contact_email?: string|null, country_code: string, default_currency: string, timezone: string}  $data
+     * @param  array{display_name: string, legal_name?: string|null, slug: string, business_type?: string|null, organization_type?: string|null, contact_email?: string|null, country_code: string, default_currency: string, timezone: string}  $data
      *
      * @throws ValidationException
      */
@@ -50,6 +50,7 @@ final class CreateOrganization
                     'legal_name' => ($data['legal_name'] ?? null) ?: $data['display_name'],
                     'display_name' => $data['display_name'],
                     'business_type' => $data['business_type'] ?? null,
+                    'organization_type' => $data['organization_type'] ?? null,
                     'contact_email' => $data['contact_email'] ?? null,
                     'country_code' => strtoupper($data['country_code']),
                     'default_currency' => strtoupper($data['default_currency']),

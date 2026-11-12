@@ -15,7 +15,6 @@ const photos: Record<string, string> = {
     inventory: 'inventory',
     finance: 'finance',
     advanced_accounting: 'finance',
-    payroll: 'payroll',
     hr: 'hr',
     school: 'school',
     clinic: 'clinic',

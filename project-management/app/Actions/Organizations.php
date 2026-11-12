@@ -47,6 +47,11 @@ final class Organizations
         if ($organization === null) {
             $organization = new Organization;
             $organization->forceFill(['id' => $platform->id, 'currency' => $platform->defaultCurrency ?? 'USD']);
+            // Signed up as a donor: the funding sections are on from the start
+            // (Administration → Settings turns them off or on later).
+            if ($platform->isDonor()) {
+                $organization->forceFill(['capabilities' => [Organization::DONOR]]);
+            }
             $organization->fill($details)->forceFill(['status' => Organization::ACTIVE])->save();
             Audit::record('organization.created', $organization, ['slug' => $organization->slug], $organization->id);
 

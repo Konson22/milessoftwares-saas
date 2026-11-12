@@ -10,7 +10,7 @@ use App\Models\BudgetLine;
 use App\Models\DimensionValue;
 use App\Models\FiscalPeriod;
 use App\Models\FiscalYear;
-use App\Support\CsvExport;
+use App\Support\XlsxExport;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
@@ -192,7 +192,7 @@ class BudgetController extends Controller
         if (($data['export'] ?? null) === 'report') {
             $rows = fn (string $section, array $rows) => array_map(fn (array $row) => ['section' => $section] + $row, $rows);
 
-            return CsvExport::download("budget-vs-actual-{$budget->year->name}-{$budget->name}", [
+            return XlsxExport::download("budget-vs-actual-{$budget->year->name}-{$budget->name}", [
                 'Section' => 'section', 'Code' => 'code', 'Account' => 'name',
                 'Budget' => 'budgetMinor', 'Actual' => 'actualMinor', 'Variance' => 'varianceMinor',
             ], [...$rows('Revenue', $report['revenue']), ...$rows('Expenses', $report['expenses'])]);

@@ -31,6 +31,8 @@ import {
     Gauge,
     TrendingUp,
     Truck,
+    Users,
+    Settings,
     Wallet,
     Waves,
 } from 'lucide-react';
@@ -54,6 +56,9 @@ import { index as journals } from '@/routes/journals';
 import { index as paymentRequests } from '@/routes/payment-requests';
 import { index as periods } from '@/routes/periods';
 import { index as pettyCash } from '@/routes/petty-cash';
+import { home as payroll, settings as payrollSettings } from '@/routes/payroll';
+import { index as payrollPeople } from '@/routes/payroll/employees';
+import { index as payrollRuns } from '@/routes/payroll/runs';
 import { index as reconciliation } from '@/routes/reconciliation';
 import { index as recurringJournals } from '@/routes/recurring-journals';
 import {
@@ -253,6 +258,39 @@ export const navigation: NavGroup[] = [
                 href: reconciliation(),
                 icon: CheckCheck,
                 permission: 'finance.banking.view',
+            },
+        ],
+    },
+    {
+        title: 'Payroll',
+        items: [
+            {
+                title: 'Payroll overview',
+                href: payroll(),
+                icon: Banknote,
+                permission: [
+                    'finance.payroll.employees.view',
+                    'finance.payroll.pay.view',
+                    'finance.payroll.settings',
+                ],
+            },
+            {
+                title: 'People',
+                href: payrollPeople(),
+                icon: Users,
+                permission: 'finance.payroll.employees.view',
+            },
+            {
+                title: 'Payroll runs',
+                href: payrollRuns(),
+                icon: Coins,
+                permission: 'finance.payroll.pay.view',
+            },
+            {
+                title: 'Payroll settings',
+                href: payrollSettings(),
+                icon: Settings,
+                permission: 'finance.payroll.settings',
             },
         ],
     },

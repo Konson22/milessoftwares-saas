@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Access\Access;
 use App\Access\Catalog;
 use App\Access\CurrentAccess;
+use App\Actions\Beneficiaries;
 use App\Actions\Organizations;
 use App\Models\User;
 use App\Tenancy\CurrentOrganization;
@@ -58,6 +59,12 @@ final class EnterWorkspace
         $membership = Organizations::enter($organization, $user, new Access($organization->id, '', $platform->isOwner, $permissions, $roles));
 
         $this->organizations->set($organization);
+
+        // A workspace a donor created for this organization: connected the
+        // first time it opens Projects, by whoever claimed it.
+        if ($platform->isOwner) {
+            Beneficiaries::connectCreated($organization, $user);
+        }
         $this->access->set(new Access($organization->id, $membership->id, $platform->isOwner, $permissions, $roles));
 
         return $next($request);

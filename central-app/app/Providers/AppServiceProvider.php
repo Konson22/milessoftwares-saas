@@ -5,8 +5,11 @@ namespace App\Providers;
 use App\Support\Inertia\SitePageFinder;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -27,6 +30,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        // Workspaces one organization creates for others: 30 an hour per
+        // sponsor (creates and claim emails each), not per calling server,
+        // which every donor of an application shares.
+        foreach (['sponsored-create', 'sponsored-resend'] as $name) {
+            RateLimiter::for($name, fn (Request $request) => Limit::perHour(30)->by($name.':'.$request->string('sponsor_organization_id')));
+        }
 
         // Pages live per site (resources/js/sites/{site}/pages). Bound in boot()
         // so it replaces the binding the Inertia provider registers.

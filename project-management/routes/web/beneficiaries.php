@@ -23,6 +23,7 @@ Route::prefix('beneficiaries')->name('beneficiaries.')->group(function () {
 
     Route::middleware('can:organization.manage')->group(function () {
         Route::post('/', [BeneficiaryController::class, 'store'])->middleware('throttle:30,1')->name('store');
+        Route::post('workspaces', [BeneficiaryController::class, 'createWorkspace'])->middleware('throttle:20,60')->name('workspaces.store');
         Route::post('{partnership}/resend', [BeneficiaryController::class, 'resend'])->whereUuid('partnership')->middleware('throttle:30,1')->name('resend');
         Route::delete('{partnership}', [BeneficiaryController::class, 'destroy'])->whereUuid('partnership')->name('destroy');
     });

@@ -332,4 +332,7 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::get('reports/aged-receivables', [ReportController::class, 'agedReceivables'])->name('reports.aged-receivables');
             Route::get('reports/aged-payables', [ReportController::class, 'agedPayables'])->name('reports.aged-payables');
         });
+
+        // Payroll (ADR-0009).
+        require __DIR__.'/payroll.php';
     });

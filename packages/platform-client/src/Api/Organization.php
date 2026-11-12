@@ -16,6 +16,8 @@ final readonly class Organization
         public ?string $countryCode,
         public ?string $defaultCurrency,
         public ?string $timezone,
+        /** donor | organization, as chosen at sign-up; null when never asked */
+        public ?string $organizationType = null,
     ) {}
 
     /**
@@ -31,6 +33,7 @@ final readonly class Organization
             countryCode: isset($data['country_code']) ? (string) $data['country_code'] : null,
             defaultCurrency: isset($data['default_currency']) ? (string) $data['default_currency'] : null,
             timezone: isset($data['timezone']) ? (string) $data['timezone'] : null,
+            organizationType: isset($data['organization_type']) ? (string) $data['organization_type'] : null,
         );
     }
 
@@ -47,7 +50,13 @@ final readonly class Organization
             'country_code' => $this->countryCode,
             'default_currency' => $this->defaultCurrency,
             'timezone' => $this->timezone,
+            'organization_type' => $this->organizationType,
         ];
+    }
+
+    public function isDonor(): bool
+    {
+        return $this->organizationType === 'donor';
     }
 
     public function isActive(): bool

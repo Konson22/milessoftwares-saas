@@ -50,6 +50,12 @@ final class PlatformFake
     /** @var array<string, list<int>> statuses the next deliveries get, by module (default 201) */
     public array $moduleAnswers = [];
 
+    /** @var array<string, array<string, mixed>> workspaces created for others, by claim id (sponsorOrganization) */
+    public array $sponsored = [];
+
+    /** @var array<string, list<string>>|null the errors the next sponsorOrganization call is refused with */
+    public ?array $refuseSponsoring = null;
+
     /** @var list<string> modules the organization is not entitled to: event tokens answer 404 */
     public array $notEntitledTo = [];
 
@@ -119,6 +125,45 @@ final class PlatformFake
 
             if ($path === '/oauth/jwks') {
                 return Http::response($this->jwks());
+            }
+
+            if ($path === '/api/v1/sponsored-organizations') {
+                if ($this->refuseSponsoring !== null) {
+                    [$errors, $this->refuseSponsoring] = [$this->refuseSponsoring, null];
+
+                    return Http::response(['message' => 'Refused.', 'errors' => $errors], 422);
+                }
+                // As the platform: the same request again answers the workspace it made.
+                foreach ($this->sponsored as $id => $earlier) {
+                    if ($earlier['status'] === 'pending'
+                        && $earlier['sponsor_organization_id'] === $request['sponsor_organization_id']
+                        && mb_strtolower((string) $earlier['owner_email']) === mb_strtolower((string) $request['owner_email'])
+                        && $earlier['display_name'] === $request['display_name']) {
+                        return Http::response($this->sponsoredAnswer((string) $id), 201);
+                    }
+                }
+                $claim = (string) Str::uuid();
+                $slug =(string) ($request['slug'] ?? '') !== '' ? (string) $request['slug'] : Str::slug((string) $request['display_name']);
+                $this->sponsored[$claim] = [...$request->data(), 'claim_id' => $claim, 'organization_id' => (string) Str::uuid(), 'slug' => $slug, 'status' => 'pending', 'resent' => 0];
+
+                return Http::response($this->sponsoredAnswer($claim), 201);
+            }
+
+            if (preg_match('#^/api/v1/sponsored-organizations/([^/]+)/(resend|cancel)$#', $path, $m) === 1) {
+                if (! isset($this->sponsored[$m[1]])) {
+                    return Http::response(['error' => 'not_found'], 404);
+                }
+                if ($this->sponsored[$m[1]]['status'] !== 'pending') {
+                    return Http::response(['message' => 'This workspace has been claimed.'], 409);
+                }
+                if ($m[2] === 'cancel') {
+                    $this->sponsored[$m[1]]['status'] = 'cancelled';
+
+                    return Http::response(null, 204);
+                }
+                $this->sponsored[$m[1]]['resent']++;
+
+                return Http::response($this->sponsoredAnswer($m[1]));
             }
 
             if ($path === '/api/v1/health') {
@@ -336,6 +381,43 @@ final class PlatformFake
 
         /** @var array{private: non-empty-string, public: non-empty-string} */
         return self::$keys;
+    }
+
+    /**
+     * The person a sponsored workspace was made for claims it: it becomes an
+     * organization like any other, organization_type "organization". Returns its slug.
+     */
+    public function claimSponsored(string $claimId): string
+    {
+        $sponsored = $this->sponsored[$claimId];
+        $this->sponsored[$claimId]['status'] = 'claimed';
+        $this->organization($sponsored['slug'], [
+            'id' => $sponsored['organization_id'],
+            'slug' => $sponsored['slug'],
+            'display_name' => $sponsored['display_name'],
+            'status' => 'active',
+            'country_code' => $sponsored['country_code'],
+            'default_currency' => $sponsored['default_currency'],
+            'timezone' => $sponsored['timezone'],
+            'organization_type' => 'organization',
+        ]);
+
+        return $sponsored['slug'];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function sponsoredAnswer(string $claimId): array
+    {
+        $sponsored = $this->sponsored[$claimId];
+
+        return [
+            'claim_id' => $claimId,
+            'organization' => ['id' => $sponsored['organization_id'], 'slug' => $sponsored['slug'], 'display_name' => $sponsored['display_name']],
+            'status' => $sponsored['status'],
+            'expires_at' => now()->addDays(14)->toIso8601String(),
+        ];
     }
 
     /**

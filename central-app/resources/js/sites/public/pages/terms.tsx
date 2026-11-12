@@ -26,7 +26,7 @@ function sections(trialDays: number): LegalSection[] {
                     <p>
                         These terms are an agreement between you and Miles
                         Global Link Co. Ltd ("Miles Global Link", "we", "us"),
-                        the company behind Tatook. They cover milesoftwares.com,
+                        the company behind Tatook. They cover tatook.com,
                         the Tatook applications and our desktop and mobile apps
                         (together, "the service").
                     </p>

@@ -183,6 +183,56 @@ final class PlatformApi
     }
 
     /**
+     * Creates a workspace for another organization on behalf of one entitled to
+     * this application (a donor for its grantee). It waits, pending, for the
+     * person named to claim it with the link the platform emails them.
+     *
+     * @param  array{display_name: string, slug?: string|null, owner_name: string, owner_email: string, country_code: string, default_currency: string, timezone: string}  $details
+     *
+     * @throws PlatformRefused with the errors by field (the address is taken...)
+     * @throws NotVisible
+     * @throws PlatformUnavailable
+     */
+    public function sponsorOrganization(string $sponsorOrganizationId, string $sponsorUserId, array $details): SponsoredOrganization
+    {
+        return SponsoredOrganization::fromArray($this->send('post', '/api/v1/sponsored-organizations', 'organizations.sponsor', [
+            ...$details,
+            'sponsor_organization_id' => $sponsorOrganizationId,
+            'sponsor_user_id' => $sponsorUserId,
+        ]));
+    }
+
+    /**
+     * A fresh link for a workspace nobody has claimed yet (the old one stops working).
+     *
+     * @throws PlatformRefused when it has been claimed
+     * @throws NotVisible
+     * @throws PlatformUnavailable
+     */
+    public function resendSponsoredOrganization(string $claimId, string $sponsorOrganizationId, string $sponsorUserId): SponsoredOrganization
+    {
+        return SponsoredOrganization::fromArray($this->send('post', '/api/v1/sponsored-organizations/'.rawurlencode($claimId).'/resend', 'organizations.sponsor', [
+            'sponsor_organization_id' => $sponsorOrganizationId,
+            'sponsor_user_id' => $sponsorUserId,
+        ]));
+    }
+
+    /**
+     * Withdraws a workspace nobody has claimed: the platform removes it.
+     *
+     * @throws PlatformRefused when it has been claimed
+     * @throws NotVisible
+     * @throws PlatformUnavailable
+     */
+    public function cancelSponsoredOrganization(string $claimId, string $sponsorOrganizationId, string $sponsorUserId): void
+    {
+        $this->send('post', '/api/v1/sponsored-organizations/'.rawurlencode($claimId).'/cancel', 'organizations.sponsor', [
+            'sponsor_organization_id' => $sponsorOrganizationId,
+            'sponsor_user_id' => $sponsorUserId,
+        ]);
+    }
+
+    /**
      * Drops every cached organization lookup and access answer for the
      * organization (called for each webhook about it).
      */
@@ -249,6 +299,19 @@ final class PlatformApi
         }
 
         $data = $response->json();
+
+        // Only these calls answer with a reason to show; the others keep failing as unavailable.
+        if (str_starts_with($path, '/api/v1/sponsored-organizations') && in_array($response->status(), [409, 422], true)) {
+            $errors = is_array($data) && is_array($data['errors'] ?? null) ? $data['errors'] : [];
+            $message = is_array($data) && is_string($data['message'] ?? null) ? $data['message'] : 'Refused.';
+
+            /** @var array<string, list<string>> $errors */
+            throw new PlatformRefused($message, $errors);
+        }
+
+        if ($response->status() === 204) {
+            return [];
+        }
 
         if (! $response->successful() || ! is_array($data)) {
             $error = is_array($data) && is_string($data['error'] ?? null) ? $data['error'] : '';

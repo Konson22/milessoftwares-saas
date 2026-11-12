@@ -8,6 +8,7 @@ use App\Modules\Entitlements\Actions\ManageEntitlements;
 use App\Modules\Entitlements\Models\Entitlement;
 use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Organizations\Enums\OrganizationStatus;
+use App\Modules\Organizations\Enums\OrganizationType;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationSlug;
 use App\Modules\Products\Support\ProductCatalog;
@@ -291,4 +292,16 @@ describe('trials of an ERP product', function () {
         expect(app(TenantContext::class)->run($organization, fn () => Entitlement::query()->where('application_id', $this->finance->id)->count()))->toBe(1)
             ->and(trialsOf($organization))->toBe(['finance', 'pharmacy']);
     });
+});
+
+it('keeps what the organization signs up as: a donor, or an organization that runs the work', function () {
+    $this->actingAs(User::factory()->create())
+        ->post(appUrl('workspaces'), organizationInput(['organization_type' => 'donor']))
+        ->assertSessionHasNoErrors();
+
+    expect(Organization::query()->sole()->organization_type)->toBe(OrganizationType::Donor);
+
+    $this->actingAs(User::factory()->create())
+        ->post(appUrl('workspaces'), organizationInput(['slug' => 'other-one', 'organization_type' => 'bank']))
+        ->assertSessionHasErrors('organization_type');
 });

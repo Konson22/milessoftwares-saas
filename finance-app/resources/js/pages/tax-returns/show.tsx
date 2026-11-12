@@ -61,7 +61,7 @@ export default function TaxReturnShow({
                             download
                         >
                             <Download className="size-4" aria-hidden />
-                            CSV
+                            Excel
                         </a>
                     </Button>
                 }

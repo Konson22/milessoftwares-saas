@@ -5,6 +5,7 @@ use App\Modules\Identity\Http\Controllers\FirstPartySignInController;
 use App\Modules\Identity\Http\Controllers\GoogleSignInController;
 use App\Modules\Identity\Http\Controllers\NativeGoogleSignInController;
 use App\Modules\Identity\Http\Controllers\SignOutController;
+use App\Sites\Central\Http\Controllers\Account\ClaimController;
 use App\Sites\Central\Http\Controllers\Account\JoinController;
 use App\Sites\Central\Http\Controllers\Account\PasswordSetupController;
 use App\Sites\Central\Http\Controllers\Account\TrialController as AccountTrialController;
@@ -95,6 +96,12 @@ Route::domain(PlatformHosts::auth())->group(function () {
         // "Start free trial" from the public site: choose the business (or a
         // new one); the trial is confirmed on that business's host.
         Route::get('trial', [AccountTrialController::class, 'show'])->middleware(RememberTrialChoice::class)->name('trial');
+
+        // A workspace a donor created for this person: the token is the credential.
+        Route::get('workspaces/claim/{token}', [ClaimController::class, 'show'])
+            ->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:30,1')->name('workspaces.claim');
+        Route::post('workspaces/claim/{token}', [ClaimController::class, 'store'])
+            ->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:10,1')->name('workspaces.claim.store');
 
         // Invitation links: the token is the credential, so it is rate limited.
         Route::get('invitations/{token}', [InvitationAcceptanceController::class, 'show'])

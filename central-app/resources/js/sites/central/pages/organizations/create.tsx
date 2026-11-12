@@ -4,9 +4,11 @@ import {
     Check,
     CircleAlert,
     Globe,
+    HandCoins,
     LayoutGrid,
     MapPin,
     Sparkles,
+    Users,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -159,6 +161,33 @@ function currenciesFor(country: Country): string[] {
 const selectClass =
     'h-8 w-full min-w-0 rounded-md border border-input bg-transparent px-2 text-base outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm';
 
+/** Projects works differently for a donor and for an organization that runs the work. */
+const PROJECTS = 'projects';
+
+type OrganizationType = 'donor' | 'organization';
+
+const organizationTypes: {
+    value: OrganizationType;
+    title: string;
+    description: string;
+    icon: typeof Building2;
+}[] = [
+    {
+        value: 'organization',
+        title: 'Organization',
+        description:
+            'You run projects and programmes: an NGO, a company or an implementing partner.',
+        icon: Users,
+    },
+    {
+        value: 'donor',
+        title: 'Donor or funder',
+        description:
+            'You fund the work of other organizations. Invite them, or create their workspace, and follow their grants.',
+        icon: HandCoins,
+    },
+];
+
 function suggestSlug(name: string): string {
     return name
         .toLowerCase()
@@ -228,7 +257,10 @@ export default function CreateOrganization({
     const [picked, setPicked] = useState<string[]>(
         trial.selected ? [trial.selected] : [],
     );
+    const [organizationType, setOrganizationType] =
+        useState<OrganizationType>('organization');
     const availability = useSlugAvailability(slug);
+    const triesProjects = picked.includes(PROJECTS);
     const [country, setCountry] = useState(() =>
         countryFor(defaults.country_code),
     );
@@ -407,6 +439,17 @@ export default function CreateOrganization({
                                                     ),
                                                 )}
                                             </div>
+                                            {triesProjects && (
+                                                <OrganizationTypeChoice
+                                                    value={organizationType}
+                                                    onChange={
+                                                        setOrganizationType
+                                                    }
+                                                    error={
+                                                        errors.organization_type
+                                                    }
+                                                />
+                                            )}
                                             <InputError
                                                 className="mt-2"
                                                 message={
@@ -543,6 +586,57 @@ export default function CreateOrganization({
                 </Form>
             </div>
         </>
+    );
+}
+
+/**
+ * For Projects: what the organization is. A donor's Projects is about the
+ * organizations it funds; it can still run projects of its own.
+ */
+function OrganizationTypeChoice({
+    value,
+    onChange,
+    error,
+}: {
+    value: OrganizationType;
+    onChange: (value: OrganizationType) => void;
+    error?: string;
+}) {
+    return (
+        <fieldset className="mt-5 border-t pt-5">
+            <legend className="text-sm font-medium">
+                In Projects, you are
+            </legend>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                {organizationTypes.map((type) => (
+                    <label
+                        key={type.value}
+                        className="group relative flex cursor-pointer gap-3 rounded-lg border bg-background p-4 transition-[border-color,background-color] hover:border-primary/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
+                    >
+                        <input
+                            type="radio"
+                            name="organization_type"
+                            value={type.value}
+                            checked={value === type.value}
+                            onChange={() => onChange(type.value)}
+                            className="sr-only"
+                        />
+                        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors group-has-[:checked]:bg-primary group-has-[:checked]:text-primary-foreground">
+                            <type.icon className="size-5" aria-hidden />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                            <span className="block font-medium">
+                                {type.title}
+                            </span>
+                            <span className="mt-0.5 block text-sm leading-snug text-muted-foreground">
+                                {type.description}
+                            </span>
+                        </span>
+                    </label>
+                ))}
+            </div>
+            <InputError className="mt-2" message={error} />
+        </fieldset>
     );
 }
 

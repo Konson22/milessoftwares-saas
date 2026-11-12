@@ -18,6 +18,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Miles\PlatformClient\Api\NotVisible;
+use Miles\PlatformClient\Api\PlatformApi;
+use Miles\PlatformClient\Api\PlatformRefused;
+use Miles\PlatformClient\Api\PlatformUnavailable;
 
 /**
  * A donor brings in the beneficiaries and implementers it works with. The donor
@@ -26,6 +30,11 @@ use Illuminate\Validation\ValidationException;
  * say and an email address gives nothing away. On accepting, the beneficiary
  * gets a funder record standing for the donor; it records grants against it and
  * chooses what each shares, exactly as for any funder.
+ *
+ * Or the donor creates their workspace (createWorkspace): the platform makes it
+ * and holds it for the person named, who claims it and owns it. It connects to
+ * the donor the first time it opens Projects (connectCreated), and shares
+ * nothing until they turn it on, grant by grant.
  */
 final class Beneficiaries
 {
@@ -84,11 +93,131 @@ final class Beneficiaries
     }
 
     /**
+     * The donor creates the organization's workspace instead of inviting it to
+     * make one. The platform holds it, pending, for the person named, and
+     * emails them the link that makes them its owner. The donor gets no place
+     * in it.
+     *
+     * @param  array{label: string, name: string, slug?: string|null, owner_name: string, email: string, currency: string, timezone: string, country_code: string}  $details
+     *
+     * @throws ValidationException when the platform refuses (the address is taken...)
+     */
+    public static function createWorkspace(Organization $donor, User $by, array $details): Partnership
+    {
+        $email = mb_strtolower(trim($details['email']));
+        try {
+            $created = app(PlatformApi::class)->sponsorOrganization($donor->id, $by->id, [
+                'display_name' => $details['name'],
+                'slug' => ($details['slug'] ?? null) ?: null,
+                'owner_name' => $details['owner_name'],
+                'owner_email' => $email,
+                'country_code' => $details['country_code'],
+                'default_currency' => $details['currency'],
+                'timezone' => $details['timezone'],
+            ]);
+        } catch (PlatformRefused $refused) {
+            $errors = array_filter([
+                'slug' => $refused->errors['slug'] ?? null,
+                'email' => $refused->errors['owner_email'] ?? null,
+                'name' => $refused->errors['display_name'] ?? null,
+            ]);
+
+            throw ValidationException::withMessages($errors === [] ? ['name' => $refused->getMessage()] : $errors);
+        } catch (PlatformUnavailable) {
+            // Safe to try again: the platform answers a repeat with the workspace it made.
+            throw ValidationException::withMessages(['name' => 'The workspace could not be created just now. Try again in a minute.']);
+        }
+
+        // A retry the platform answered with the workspace made the first time.
+        $existing = Partnership::query()->where('platform_claim_id', $created->claimId)->first();
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $partnership = new Partnership([
+            'label' => $details['label'],
+            'name' => $created->displayName !== '' ? $created->displayName : $details['name'],
+            'email' => $email,
+            'currency' => $details['currency'],
+            'timezone' => $details['timezone'],
+            'country_code' => $details['country_code'],
+            'invited_by' => $by->id,
+            'expires_at' => $created->expiresAt !== '' ? $created->expiresAt : now()->addDays(14),
+        ]);
+        $partnership->forceFill([
+            'donor_organization_id' => $donor->id,
+            'platform_claim_id' => $created->claimId,
+            'created_organization_id' => $created->organizationId,
+            'created_slug' => $created->slug,
+        ])->save();
+
+        Audit::record('beneficiary.workspace_created', $partnership, ['name' => $partnership->name, 'email' => $email, 'slug' => $created->slug], $donor->id, $by);
+
+        return $partnership;
+    }
+
+    /**
+     * The first time a workspace a donor created opens Projects, it is
+     * connected to that donor, by whoever claimed it (its owner). Its grants
+     * stay its own: the donor sees only what it chooses to share.
+     */
+    public static function connectCreated(Organization $organization, User $by): void
+    {
+        $waiting = Partnership::query()->where('created_organization_id', $organization->id)
+            ->whereNull('accepted_at')->whereNull('declined_at')->pluck('id')->map(fn ($id) => (string) $id);
+
+        foreach ($waiting as $id) {
+            DB::transaction(function () use ($id, $organization, $by) {
+                $partnership = Partnership::query()->whereNull('accepted_at')->lockForUpdate()->find($id);
+                if ($partnership === null || ! $organization->isActive()) {
+                    return;
+                }
+                if (! self::connectable($partnership, $organization)) {
+                    // Connected to this donor already (or the donor itself):
+                    // nothing to wait for any more.
+                    Audit::record('beneficiary.invitation_revoked', $partnership, ['email' => $partnership->email, 'reason' => 'already_connected'], $partnership->donor_organization_id, $by);
+                    $partnership->delete();
+
+                    return;
+                }
+
+                $funder = self::funderFor($partnership->donor, $organization);
+                $partnership->forceFill([
+                    'beneficiary_organization_id' => $organization->id,
+                    'funder_id' => $funder->id,
+                    'name' => $organization->name,
+                    'accepted_at' => now(),
+                    'accepted_by' => $by->id,
+                ])->save();
+
+                Audit::record('beneficiary.connected', $partnership, ['beneficiary' => $organization->name, 'created' => true], $partnership->donor_organization_id, $by);
+                Audit::record('donor.connected', $partnership, ['donor' => $partnership->donor->name, 'created' => true], $organization->id, $by);
+                self::tellDonorOrganization($partnership, "{$organization->name} claimed the workspace you created", $by);
+            });
+        }
+    }
+
+    /**
      * A fresh link (the old one stops working) and more time.
      */
     public static function resend(Partnership $partnership, User $by): void
     {
         abort_if($partnership->isDeclined(), 409, 'They declined this invitation.');
+        if ($partnership->isCreated()) {
+            try {
+                $created = app(PlatformApi::class)->resendSponsoredOrganization((string) $partnership->platform_claim_id, $partnership->donor_organization_id, $by->id);
+            } catch (PlatformRefused) {
+                abort(409, 'They have claimed the workspace already. It connects the first time they open Projects.');
+            } catch (NotVisible) {
+                abort(409, 'This workspace is no longer waiting on the platform. Remove it here and create it again if needed.');
+            } catch (PlatformUnavailable) {
+                abort(503, 'The link could not be sent just now. Try again in a minute.');
+            }
+            $partnership->forceFill(['expires_at' => $created->expiresAt !== '' ? $created->expiresAt : now()->addDays(14)])->save();
+            Audit::record('beneficiary.invitation_resent', $partnership, ['email' => $partnership->email, 'created' => true], $partnership->donor_organization_id, $by);
+
+            return;
+        }
         if ($partnership->invited_organization_id !== null) {
             // A direct invitation has no link: more time, and they hear again.
             $partnership->forceFill(['expires_at' => now()->addDays((int) config('access.invitation_days', 7))])->save();
@@ -119,6 +248,15 @@ final class Beneficiaries
 
     public static function revoke(Partnership $partnership, User $by): void
     {
+        // A workspace nobody has claimed is removed on the platform; one that
+        // has been claimed is theirs, and only this connection goes.
+        if ($partnership->isCreated()) {
+            try {
+                app(PlatformApi::class)->cancelSponsoredOrganization((string) $partnership->platform_claim_id, $partnership->donor_organization_id, $by->id);
+            } catch (PlatformRefused|NotVisible) {
+                // Claimed, or gone already.
+            }
+        }
         Audit::record('beneficiary.invitation_revoked', $partnership, ['email' => $partnership->email, 'organization' => $partnership->invited_organization_id], $partnership->donor_organization_id, $by);
         $partnership->delete();
     }

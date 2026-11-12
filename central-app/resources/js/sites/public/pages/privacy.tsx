@@ -23,7 +23,7 @@ const sections: LegalSection[] = [
                 <p>
                     Tatook is a product of Miles Global Link Co. Ltd ("Miles
                     Global Link", "we", "us"). This policy explains what
-                    personal information we collect through milesoftwares.com,
+                    personal information we collect through tatook.com,
                     our applications and our desktop and mobile apps, why we
                     collect it and what you can ask us to do with it.
                 </p>
@@ -252,7 +252,7 @@ export default function Privacy({ canonical }: Props) {
         <>
             <Seo
                 title="Privacy policy"
-                description="How Tatook collects, uses and protects personal information on milesoftwares.com and in Tatook applications."
+                description="How Tatook collects, uses and protects personal information on tatook.com and in Tatook applications."
                 canonical={canonical}
             />
 

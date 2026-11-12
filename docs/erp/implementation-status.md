@@ -25,7 +25,7 @@
 | HR H1 Staff records | Done 2026-10-19 |
 | HR H2 Documents | Done 2026-10-19 |
 | HR H3 Leave | Done 2026-10-23 |
-| Payroll P1 `payroll-app` (people, pay, rules, runs, payslips, events to Finance, from HR) | Built 2026-11-09, tests green; not yet run in a browser or registered on the platform |
+| Payroll P1 `payroll-app` (people, pay, rules, runs, payslips, events to Finance, from HR) | Built 2026-11-09; moved into `finance-app` 2026-11-12 (ADR-0009), `payroll-app` deleted |
 | Finance F1 Periods and close | Done 2026-10-20 |
 | Finance F2 Reports | Done 2026-10-20 |
 | Finance F3 Bank reconciliation | Done 2026-10-20 |
@@ -43,6 +43,15 @@ Decisions accepted 2026-10-16: D1 → `docs/adr/0003-erp-workspace-application.m
 D2 → `docs/adr/0004-companies-as-organizations.md`. Accepted 2026-10-19: D3 →
 `docs/adr/0005-hr-and-payroll-application.md` (HR phases: `hr-roadmap.md`). Accepted
 2026-11-09: Payroll as its own module, `docs/adr/0008-payroll-separate-application.md`.
+
+## Payroll moved into Finance — 2026-11-12 (local, Windows)
+
+Per [ADR-0009](../adr/0009-payroll-in-finance.md) Payroll is part of `finance-app` at
+`{workspace}/finance/payroll`: tables in `2026_11_12_200000_create_payroll_tables`, permissions
+`finance.payroll.*` (catalog 1.12.0), approve and paid post to the ledger in the same
+transaction, HR's `payroll.*` events go to Finance. `payroll-app`, its CI job, nginx/php-fpm
+confs and local proxy are removed; the central `payroll` ERP product is retired. The P1 notes
+below describe the original standalone build.
 
 ## Payroll P1 — 2026-11-09 (local, Windows)
 

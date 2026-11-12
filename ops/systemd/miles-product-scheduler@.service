@@ -1,6 +1,6 @@
 # Runs a product's `schedule:run` every minute via miles-product-scheduler@<code>.timer:
 # for every product, the events outbox (platform:outbox) that delivers
-# business events to Finance, HR and Payroll with retries.
+# business events to Finance and HR with retries.
 [Unit]
 Description=Miles product %i scheduler
 

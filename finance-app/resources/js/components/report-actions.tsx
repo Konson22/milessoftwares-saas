@@ -5,7 +5,7 @@ import type { RouteDefinition, RouteQueryOptions } from '@/wayfinder';
 type ReportRoute = (options?: RouteQueryOptions) => RouteDefinition<'get'>;
 
 /**
- * Print and CSV downloads for a report (?export=<table>), keeping its
+ * Print and Excel (.xlsx) downloads for a report (?export=<table>), keeping its
  * filters. Hidden when printing.
  */
 export function ReportActions({
@@ -26,7 +26,7 @@ export function ReportActions({
 
     return (
         <span className="ml-auto flex flex-wrap items-center gap-1 text-sm print:hidden">
-            <span className="text-muted-foreground">CSV:</span>
+            <span className="text-muted-foreground">Excel:</span>
             {exports.map((table) => (
                 <Button key={table.key} variant="link" size="sm" asChild>
                     <a

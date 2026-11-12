@@ -1,7 +1,6 @@
 import { Form, Head, Link } from '@inertiajs/react';
 import {
     AppWindow,
-    Banknote,
     Blocks,
     Building2,
     Calculator,
@@ -85,7 +84,6 @@ const icons: Record<string, LucideIcon> = {
     inventory: Warehouse,
     school: GraduationCap,
     hr: Users,
-    payroll: Banknote,
     finance: Calculator,
     advanced_accounting: Calculator,
     crm: Handshake,

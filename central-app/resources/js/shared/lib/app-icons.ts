@@ -12,7 +12,6 @@ import {
     Stethoscope,
     Users,
     UtensilsCrossed,
-    Wallet,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -28,7 +27,6 @@ const icons: Record<string, LucideIcon> = {
     retail: ShoppingCart,
     school: GraduationCap,
     hr: Users,
-    payroll: Wallet,
     inventory: Boxes,
     crm: Handshake,
     clinic: Stethoscope,

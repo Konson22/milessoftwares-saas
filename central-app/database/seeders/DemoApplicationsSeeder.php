@@ -48,13 +48,6 @@ class DemoApplicationsSeeder extends Seeder
             'features' => ['Employee records and documents', 'Leave requests and approvals', 'Contracts and probation tracking', 'Org chart by branch and department'],
         ],
         [
-            'code' => 'payroll',
-            'name' => 'Payroll',
-            'tagline' => 'Pay everyone right, on time.',
-            'description' => 'Salaries, allowances, deductions and payslips calculated from HR records, with payments posted straight into Finance.',
-            'features' => ['Allowances and deductions', 'Payslips for every employee', 'Tax and statutory reports', 'Posts to Finance automatically'],
-        ],
-        [
             'code' => 'advanced_accounting',
             'name' => 'Advanced accounting',
             'tagline' => 'Budgets, cost centres and consolidation.',

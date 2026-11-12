@@ -6,7 +6,7 @@
         "kind": "shared_module",
         "status": "beta"
     },
-    "version": "1.11.0",
+    "version": "1.12.0",
     "permissions": [
         {
             "key": "finance.accounts.view",
@@ -205,6 +205,57 @@
             "name": "Set up, suspend and close petty cash funds, and hand them to another custodian",
             "sensitivity": 3,
             "scopes": ["organization"]
+        },
+        {
+            "key": "finance.payroll.employees.view",
+            "name": "View who is on the payroll",
+            "description": "Names, numbers, jobs, branches and departments. No pay.",
+            "sensitivity": 1,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "finance.payroll.employees.manage",
+            "name": "Add people to the payroll and change their work details",
+            "sensitivity": 2,
+            "scopes": ["organization", "branch"]
+        },
+        {
+            "key": "finance.payroll.pay.view",
+            "name": "View pay and payslips",
+            "description": "Basic pay, allowances, deductions, payslips and the account each person is paid into.",
+            "sensitivity": 4,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.payroll.pay.manage",
+            "name": "Change pay, allowances, deductions and payment details",
+            "sensitivity": 4,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.payroll.settings",
+            "name": "Set up allowances, deductions, income tax and social security",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.payroll.runs.prepare",
+            "name": "Prepare payroll runs",
+            "sensitivity": 4,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.payroll.runs.approve",
+            "name": "Approve payroll runs",
+            "description": "Never a run one prepared. Approval locks the run and posts its journal to the books.",
+            "sensitivity": 4,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "finance.payroll.runs.pay",
+            "name": "Record that a payroll was paid",
+            "sensitivity": 4,
+            "scopes": ["organization"]
         }
     ],
     "features": [
@@ -366,6 +417,64 @@
                 "finance.approvals.view",
                 "finance.audit.view"
             ]
+        },
+        {
+            "key": "payroll_clerk",
+            "name": "Payroll clerk",
+            "description": "Keeps the list of people on the payroll. No pay.",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization", "branch"],
+            "permissions": [
+                "finance.payroll.employees.view",
+                "finance.payroll.employees.manage"
+            ]
+        },
+        {
+            "key": "payroll_officer",
+            "name": "Payroll officer",
+            "description": "Keeps pay up to date and prepares each month's payroll. Cannot approve it.",
+            "sensitivity": 4,
+            "delegable": false,
+            "scopes": ["organization"],
+            "permissions": [
+                "finance.payroll.employees.view",
+                "finance.payroll.employees.manage",
+                "finance.payroll.pay.view",
+                "finance.payroll.pay.manage",
+                "finance.payroll.runs.prepare"
+            ]
+        },
+        {
+            "key": "payroll_approver",
+            "name": "Payroll approver",
+            "description": "Checks and approves prepared payrolls, and records them paid.",
+            "sensitivity": 4,
+            "delegable": false,
+            "scopes": ["organization"],
+            "permissions": [
+                "finance.payroll.employees.view",
+                "finance.payroll.pay.view",
+                "finance.payroll.runs.approve",
+                "finance.payroll.runs.pay"
+            ]
+        },
+        {
+            "key": "payroll_manager",
+            "name": "Payroll manager",
+            "description": "People, pay, income tax and social security rules, and approving and paying runs. Runs are prepared by a payroll officer, so the one who prepares is never the one who approves.",
+            "sensitivity": 4,
+            "delegable": false,
+            "scopes": ["organization"],
+            "permissions": [
+                "finance.payroll.employees.view",
+                "finance.payroll.employees.manage",
+                "finance.payroll.pay.view",
+                "finance.payroll.pay.manage",
+                "finance.payroll.settings",
+                "finance.payroll.runs.approve",
+                "finance.payroll.runs.pay"
+            ]
         }
     ],
     "separation_of_duties": [
@@ -461,6 +570,14 @@
             ],
             "mode": "warn",
             "description": "Whoever keeps petty cash should not also check its vouchers."
+        },
+        {
+            "permissions": [
+                "finance.payroll.runs.prepare",
+                "finance.payroll.runs.approve"
+            ],
+            "mode": "warn",
+            "description": "Payroll refuses approval by whoever prepared the run; one person holding both still removes a check when nobody else does."
         }
     ]
 }

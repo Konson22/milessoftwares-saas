@@ -7,7 +7,7 @@ use App\Finance\PaymentRequests;
 use App\Finance\Tax;
 use App\Models\Account;
 use App\Models\TaxReturn;
-use App\Support\CsvExport;
+use App\Support\XlsxExport;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -67,7 +67,7 @@ class TaxReturnController extends Controller
         $report = $tax->report($return->starts_on, $return->ends_on);
 
         if ($request->query('export') === 'rows') {
-            return CsvExport::download('tax-return-'.$return->starts_on->toDateString().'-to-'.$return->ends_on->toDateString(), [
+            return XlsxExport::download('tax-return-'.$return->starts_on->toDateString().'-to-'.$return->ends_on->toDateString(), [
                 'Kind' => 'kind',
                 'Code' => 'code',
                 'Net amount' => 'baseMinor',

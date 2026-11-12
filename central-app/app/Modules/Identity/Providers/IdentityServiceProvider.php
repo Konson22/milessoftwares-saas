@@ -72,6 +72,7 @@ class IdentityServiceProvider extends ServiceProvider
             'provisioning.write' => 'Report provisioning progress',
             'events.issue' => 'Obtain organization-bound tokens for sending events to shared modules',
             'health.write' => 'Report service health',
+            'organizations.sponsor' => 'Create a workspace for another organization, for its owner to claim',
         ]);
 
         // Access tokens are short-lived and held server-side by each product (BFF).

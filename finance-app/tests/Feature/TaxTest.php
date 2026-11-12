@@ -224,8 +224,8 @@ it('exports a return and keeps filing to those who manage tax', function () {
     $this->post(taxUrl('tax-returns'), ['starts_on' => '2026-09-01', 'ends_on' => '2026-09-30'])->assertSessionHasNoErrors();
     $return = $this->asTenant('acme', fn () => TaxReturn::query()->sole());
 
-    $csv = $this->get(taxUrl("tax-returns/{$return->id}?export=rows"))->assertOk()->streamedContent();
-    expect($csv)->toContain('Kind,Code,"Net amount",Tax')->toContain('adjustment,,,18.00');
+    $csv = xlsxText($this->get(taxUrl("tax-returns/{$return->id}?export=rows"))->assertOk()->streamedContent());
+    expect($csv)->toContain('Kind,Code,"Net amount",Tax')->toContain('adjustment,,,18');
 
     $this->actingAsMember('acme', ['finance.reports.view']);
     $this->get(taxUrl('tax-returns'))->assertOk();

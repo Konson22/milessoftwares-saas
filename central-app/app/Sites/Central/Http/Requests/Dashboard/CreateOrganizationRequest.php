@@ -3,6 +3,7 @@
 namespace App\Sites\Central\Http\Requests\Dashboard;
 
 use App\Modules\Marketing\Support\MarketingCatalog;
+use App\Modules\Organizations\Enums\OrganizationType;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Arr;
@@ -21,6 +22,8 @@ class CreateOrganizationRequest extends FormRequest
             // Format, reservation and uniqueness are checked by CreateOrganization.
             'slug' => ['required', 'string', 'max:63'],
             'business_type' => ['nullable', 'string', 'max:48'],
+            // Asked when Projects is among the trials: a donor, or an organization that runs the work.
+            'organization_type' => ['nullable', Rule::enum(OrganizationType::class)],
             'contact_email' => ['nullable', 'email', 'max:255'],
             'country_code' => ['required', 'string', 'size:2', 'alpha'],
             'default_currency' => ['required', 'string', 'size:3', 'alpha'],
@@ -44,11 +47,11 @@ class CreateOrganizationRequest extends FormRequest
     /**
      * The organization's own fields, without the trial choice.
      *
-     * @return array{display_name: string, legal_name?: string|null, slug: string, business_type?: string|null, contact_email?: string|null, country_code: string, default_currency: string, timezone: string}
+     * @return array{display_name: string, legal_name?: string|null, slug: string, business_type?: string|null, organization_type?: string|null, contact_email?: string|null, country_code: string, default_currency: string, timezone: string}
      */
     public function validated($key = null, $default = null): array
     {
-        /** @var array{display_name: string, legal_name?: string|null, slug: string, business_type?: string|null, contact_email?: string|null, country_code: string, default_currency: string, timezone: string} */
+        /** @var array{display_name: string, legal_name?: string|null, slug: string, business_type?: string|null, organization_type?: string|null, contact_email?: string|null, country_code: string, default_currency: string, timezone: string} */
         return Arr::except(parent::validated($key, $default), ['trial_application', 'trial_applications']);
     }
 

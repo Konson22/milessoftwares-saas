@@ -12,7 +12,7 @@ type Workspace = {
     id: string;
     displayName: string;
     status: string;
-    /** The business's own address, e.g. acme.milesoftwares.com. */
+    /** The business's own address, e.g. acme.tatook.com. */
     address: string | null;
     /** Where Open goes; null while the business cannot be opened. */
     url: string | null;

@@ -4,53 +4,49 @@
             "code": "pharmacy",
             "name": "Pharmacy ERP",
             "tagline": "Medicines, batches, expiry and the counter.",
-            "description": "For retail pharmacies, medical stores and pharmaceutical wholesalers: medicine catalogue, batch and expiry tracking, purchasing and receiving, dispensing and sales at the counter, and prescriptions. Finance & Accounting and Payroll can be added for the books and staff pay.",
+            "description": "For retail pharmacies, medical stores and pharmaceutical wholesalers: medicine catalogue, batch and expiry tracking, purchasing and receiving, dispensing and sales at the counter, and prescriptions. Finance & Accounting can be added for the books and staff pay.",
             "status": "pilot",
             "sort_order": 10,
             "applications": [
                 { "code": "pharmacy", "requirement": "required" },
-                { "code": "finance", "requirement": "optional" },
-                { "code": "payroll", "requirement": "optional" }
+                { "code": "finance", "requirement": "optional" }
             ]
         },
         {
             "code": "retail_trading",
             "name": "Retail & Trading ERP",
             "tagline": "Retail and wholesale trading, from the counter to the invoice.",
-            "description": "For retail stores, supermarkets, wholesalers and trading companies: point of sale, quotations, orders, invoices, delivery notes, purchasing and stock. Finance & Accounting and Payroll can be added for the books and staff pay.",
+            "description": "For retail stores, supermarkets, wholesalers and trading companies: point of sale, quotations, orders, invoices, delivery notes, purchasing and stock. Finance & Accounting can be added for the books and staff pay.",
             "status": "pilot",
             "sort_order": 20,
             "applications": [
                 { "code": "retail", "requirement": "required" },
-                { "code": "finance", "requirement": "optional" },
-                { "code": "payroll", "requirement": "optional" }
+                { "code": "finance", "requirement": "optional" }
             ]
         },
         {
             "code": "restaurant",
             "name": "Restaurant ERP",
             "tagline": "Tables, orders and the kitchen, with bills and tills.",
-            "description": "For restaurants, cafés, bars and hotel kitchens: the menu, table orders, kitchen tickets, bills and tills, and drinks stock. Finance & Accounting and Payroll can be added for the books and staff pay.",
+            "description": "For restaurants, cafés, bars and hotel kitchens: the menu, table orders, kitchen tickets, bills and tills, and drinks stock. Finance & Accounting can be added for the books and staff pay.",
             "status": "pilot",
             "sort_order": 25,
             "applications": [
                 { "code": "restaurant", "requirement": "required" },
-                { "code": "finance", "requirement": "optional" },
-                { "code": "payroll", "requirement": "optional" }
+                { "code": "finance", "requirement": "optional" }
             ]
         },
         {
             "code": "education",
             "name": "Education ERP",
             "tagline": "Admissions to results, with student fees.",
-            "description": "For schools, colleges and universities: admissions, classes, attendance, examinations, student fees and staff. Finance & Accounting and Payroll can be added for the books and staff pay.",
+            "description": "For schools, colleges and universities: admissions, classes, attendance, examinations, student fees and staff. Finance & Accounting can be added for the books and staff pay.",
             "status": "pilot",
             "sort_order": 30,
             "applications": [
                 { "code": "school", "requirement": "required" },
                 { "code": "finance", "requirement": "optional" },
-                { "code": "hr", "requirement": "optional" },
-                { "code": "payroll", "requirement": "optional" }
+                { "code": "hr", "requirement": "optional" }
             ]
         },
         {
@@ -63,31 +59,17 @@
             "applications": [
                 { "code": "projects", "requirement": "required" },
                 { "code": "finance", "requirement": "optional" },
-                { "code": "hr", "requirement": "optional" },
-                { "code": "payroll", "requirement": "optional" }
+                { "code": "hr", "requirement": "optional" }
             ]
         },
         {
             "code": "finance_accounting",
             "name": "Finance & Accounting",
             "tagline": "Advanced accounting, on its own or with any Tatook ERP.",
-            "description": "Chart of accounts, journals, receivables, payables, banking and financial statements: the Finance application any Tatook ERP can post to when it is added.",
+            "description": "Chart of accounts, journals, receivables, payables, banking, payroll and financial statements: the Finance application any Tatook ERP can post to when it is added.",
             "status": "pilot",
             "sort_order": 50,
             "applications": [{ "code": "finance", "requirement": "required" }]
-        },
-        {
-            "code": "payroll",
-            "name": "Payroll",
-            "tagline": "Monthly payroll and payslips, with any Tatook ERP or on its own.",
-            "description": "Basic pay, allowances and deductions, income tax and social security, monthly payroll runs approved by a second person, and payslips. Takes staff from HR and hours from any Tatook ERP, and posts one journal per payroll to Finance & Accounting.",
-            "status": "pilot",
-            "sort_order": 60,
-            "applications": [
-                { "code": "payroll", "requirement": "required" },
-                { "code": "hr", "requirement": "optional" },
-                { "code": "finance", "requirement": "optional" }
-            ]
         }
     ]
 }

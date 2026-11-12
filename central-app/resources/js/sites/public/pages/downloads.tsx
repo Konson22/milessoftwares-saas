@@ -358,7 +358,7 @@ const topics: {
                     </li>
                 </ol>
                 <p className="mt-3">
-                    Only install Tatook apps downloaded from milesoftwares.com.
+                    Only install Tatook apps downloaded from tatook.com.
                 </p>
             </>
         ),
@@ -410,7 +410,7 @@ const topics: {
                         <strong>Without internet on that PC:</strong> scan the
                         QR code with your phone, or open{' '}
                         <Link href="/activate" className={textLink}>
-                            milesoftwares.com/activate
+                            tatook.com/activate
                         </Link>{' '}
                         and enter the device code the app shows. Type the
                         activation code you get back into the app, or open the
