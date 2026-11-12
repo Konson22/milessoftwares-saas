@@ -18,12 +18,12 @@ function hireAkol(): Employee
  */
 function payrollEvents(): array
 {
-    return DB::table('platform_outbox')->where('audience', 'finance')->orderBy('created_at')->orderBy('id')->get()
+    return DB::table('platform_outbox')->where('audience', 'payroll')->orderBy('created_at')->orderBy('id')->get()
         ->map(fn ($row) => ['type' => $row->event_type, 'payload' => json_decode($row->payload, true)])->all();
 }
 
 it('tells Payroll who was hired, what changed and when they left', function () {
-    config(['platform-client.modules.finance' => 'http://finance.internal/finance/events']);
+    config(['platform-client.modules.payroll' => 'http://payroll.internal/payroll/events']);
     $this->actingAsMember('acme', ['hr.employees.view', 'hr.employees.manage', 'hr.employment.manage']);
 
     $akol = hireAkol();
@@ -48,7 +48,7 @@ it('tells Payroll who was hired, what changed and when they left', function () {
 });
 
 it('sends nothing while this deployment has no Payroll', function () {
-    config(['platform-client.modules.finance' => null]);
+    config(['platform-client.modules.payroll' => null]);
     $this->actingAsMember('acme', ['hr.employees.view', 'hr.employees.manage']);
 
     hireAkol();

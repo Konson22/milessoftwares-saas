@@ -24,7 +24,7 @@ final class XlsxExport
     /**
      * @param  array<string, string>  $columns  heading => row key; keys ending in "Minor" are amounts
      * @param  iterable<array<string, mixed>>  $rows
-     * @param  int|null  $decimals  of the amounts; the books' currency's when null (payroll always keeps two)
+     * @param  int|null  $decimals  of the amounts; the books' currency's when null
      */
     public static function download(string $name, array $columns, iterable $rows, ?int $decimals = null): StreamedResponse
     {

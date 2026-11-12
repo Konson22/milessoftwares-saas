@@ -1,6 +1,6 @@
 # ADR-0009: Payroll is part of Finance & Accounting
 
-- Status: Accepted (2026-11-12)
+- Status: Superseded by [ADR-0010](0010-standalone-payroll.md) (2026-11-12)
 - Supersedes: [ADR-0008](0008-payroll-separate-application.md) (Payroll as its own shared module)
 - Code: `finance-app` (`app/Payroll`, `app/Http/Controllers/Payroll`, `routes/payroll.php`,
   pages under `resources/js/pages/payroll`), at `{workspace}/finance/payroll`

@@ -7,15 +7,14 @@ use Miles\PlatformClient\Events\Outbox;
 use Throwable;
 
 /**
- * Keeps the payroll's list of people in step with HR: who works here, where,
- * and when they started or left. Payroll is part of Finance (ADR-0009), so the
- * payroll.* events go to Finance's events endpoint. Never pay, bank or
- * personal details: those are entered in Finance's payroll itself.
+ * Keeps Payroll's list of people in step with HR (ADR-0010): who works
+ * here, where, and when they started or left. Never pay, bank or personal
+ * details: those are entered in Payroll itself.
  *
  * Called inside HR's own transaction, so the event exists exactly when the
- * change does. Nothing is recorded while this deployment has no Finance
- * events URL (PLATFORM_FINANCE_EVENTS_URL); the outbox skips organizations
- * without Finance.
+ * change does. Nothing is recorded while this deployment has no Payroll
+ * events URL (PLATFORM_PAYROLL_EVENTS_URL); the outbox skips organizations
+ * without Payroll.
  */
 class PayrollSync
 {
@@ -25,7 +24,7 @@ class PayrollSync
     ) {}
 
     /**
-     * Hired, or their work details changed: the payroll adds or refreshes them.
+     * Hired, or their work details changed: Payroll adds or refreshes them.
      */
     public function joined(Employee $employee): void
     {
@@ -45,8 +44,8 @@ class PayrollSync
             'started_on' => $employee->hired_on->toDateString(),
         ];
 
-        // The same details again are the same event (Finance answers duplicate).
-        $this->outbox->record('finance', 'payroll.employee.joined', 1, "employee:{$employee->id}:joined:".substr(hash('sha256', (string) json_encode($payload)), 0, 16), $payload);
+        // The same details again are the same event (Payroll answers duplicate).
+        $this->outbox->record('payroll', 'payroll.employee.joined', 1, "employee:{$employee->id}:joined:".substr(hash('sha256', (string) json_encode($payload)), 0, 16), $payload);
     }
 
     public function left(Employee $employee): void
@@ -55,7 +54,7 @@ class PayrollSync
             return;
         }
 
-        $this->outbox->record('finance', 'payroll.employee.left', 1, "employee:{$employee->id}:left:{$employee->left_on->toDateString()}", [
+        $this->outbox->record('payroll', 'payroll.employee.left', 1, "employee:{$employee->id}:left:{$employee->left_on->toDateString()}", [
             'employee_reference' => $employee->id,
             'left_on' => $employee->left_on->toDateString(),
         ]);
@@ -63,7 +62,7 @@ class PayrollSync
 
     private function enabled(): bool
     {
-        $url = config('platform-client.modules.finance');
+        $url = config('platform-client.modules.payroll');
 
         return is_string($url) && $url !== '';
     }
