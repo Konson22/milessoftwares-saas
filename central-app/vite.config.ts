@@ -4,7 +4,6 @@ import babel from '@rolldown/plugin-babel';
 import tailwindcss from '@tailwindcss/vite';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import laravel from 'laravel-vite-plugin';
-import { bunny } from 'laravel-vite-plugin/fonts';
 import { loadEnv } from 'vite';
 import { defineConfig, lazyPlugins } from 'vite-plus';
 
@@ -34,16 +33,34 @@ export default defineConfig({
     ssr: {
         noExternal: ['@miles/ui'],
     },
+    build: {
+        rolldownOptions: {
+            output: {
+                // Left alone, every Lucide icon used by two or more pages
+                // became its own file (under 1 KB each), and the home page
+                // waited on 40 requests. Those icons now share one file:
+                // 16 requests, the same bytes. (Grouping the public site's
+                // shared components too cost more bytes than it saved.)
+                codeSplitting: {
+                    // A group takes only the modules its test names, not
+                    // what they import (React stays in its own chunk).
+                    includeDependenciesRecursively: false,
+                    groups: [
+                        {
+                            name: 'icons',
+                            test: /node_modules[\\/]lucide-react[\\/]/,
+                            minShareCount: 2,
+                            priority: 20,
+                        },
+                    ],
+                },
+            },
+        },
+    },
     plugins: lazyPlugins(() => [
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],
             refresh: true,
-            fonts: [
-                // Public site. Signed-in apps use Segoe UI from the system.
-                bunny('IBM Plex Sans', {
-                    weights: [400, 500, 600, 700],
-                }),
-            ],
         }),
         inertia(),
         react(),

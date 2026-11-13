@@ -48,6 +48,12 @@ class SecurityHeaders
             $value = 'max-age='.(int) config('platform.security_headers.hsts_max_age');
             if (config('platform.security_headers.hsts_include_subdomains')) {
                 $value .= '; includeSubDomains';
+                // Asks browsers to ship the domain as HTTPS-only (after
+                // submission at hstspreload.org). Hard to undo: only with
+                // max-age of a year or more and every subdomain on HTTPS.
+                if (config('platform.security_headers.hsts_preload')) {
+                    $value .= '; preload';
+                }
             }
             $headers->set('Strict-Transport-Security', $value);
         }
@@ -95,7 +101,15 @@ class SecurityHeaders
 
         $directives = [
             "default-src 'self'",
-            "script-src 'self' 'nonce-{$nonce}'{$dev}{$trackingScript}",
+            // A strict, nonce-based policy: only scripts carrying this
+            // request's nonce run, and 'strict-dynamic' extends that trust
+            // to the scripts they load (Vite's chunks, gtm.js, the Pixel),
+            // so no host list is needed. Browsers that understand nonces
+            // ignore 'self', the hosts, https: and 'unsafe-inline'; those
+            // are the fallback for older ones. A script injected without
+            // the nonce never runs, including Cloudflare's own (keep its
+            // Email Obfuscation and Rocket Loader off).
+            "script-src 'nonce-{$nonce}' 'strict-dynamic' 'self'{$dev}{$trackingScript} https: 'unsafe-inline'",
             "style-src 'self' 'unsafe-inline'{$dev}",
             // Google profile pictures (users.avatar_url) come from googleusercontent.com.
             "img-src 'self' data: blob: https://*.googleusercontent.com{$dev}{$trackingImg}",

@@ -219,17 +219,33 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [menuOpen]);
 
+    // Scrolled past the first 24px: the marker at the top of the page has
+    // left the viewport. An observer, not window.scrollY, so nothing reads
+    // layout on the main thread (Lighthouse: forced reflow).
+    const topMarker = useRef<HTMLDivElement>(null);
+
     useEffect(() => {
-        const onScroll = () => setScrolled(window.scrollY > 24);
+        const marker = topMarker.current;
 
-        onScroll();
-        window.addEventListener('scroll', onScroll, { passive: true });
+        if (!marker || !('IntersectionObserver' in window)) {
+            return;
+        }
 
-        return () => window.removeEventListener('scroll', onScroll);
+        const observer = new IntersectionObserver(([entry]) =>
+            setScrolled(!entry.isIntersecting),
+        );
+        observer.observe(marker);
+
+        return () => observer.disconnect();
     }, []);
 
     return (
-        <div className="site-public flex min-h-screen flex-col overflow-x-clip bg-white font-public text-site-ink">
+        <div className="site-public relative flex min-h-screen flex-col overflow-x-clip bg-white font-public text-site-ink">
+            <div
+                ref={topMarker}
+                aria-hidden
+                className="pointer-events-none absolute top-0 left-0 h-6 w-px"
+            />
             <Analytics />
             <MetaPixel />
             <a

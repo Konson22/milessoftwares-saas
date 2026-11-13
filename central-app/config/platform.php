@@ -327,6 +327,9 @@ return [
         'hsts' => env('PLATFORM_HSTS', false),
         'hsts_max_age' => (int) env('PLATFORM_HSTS_MAX_AGE', 63072000),
         'hsts_include_subdomains' => env('PLATFORM_HSTS_INCLUDE_SUBDOMAINS', true),
+        // Adds "preload" (with includeSubDomains). Turn on only together
+        // with a submission at hstspreload.org; leaving the list takes months.
+        'hsts_preload' => env('PLATFORM_HSTS_PRELOAD', false),
     ],
 
     /*

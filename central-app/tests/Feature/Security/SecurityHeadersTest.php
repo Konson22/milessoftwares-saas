@@ -25,7 +25,12 @@ test('every page gets the hardening headers and a nonce-based script policy', fu
     expect($policy['frame-ancestors'])->toBe(["'none'"])
         ->and($policy['object-src'])->toBe(["'none'"])
         ->and($policy['base-uri'])->toBe(["'self'"])
-        ->and($policy['script-src'])->not->toContain("'unsafe-inline'")
+        // Strict CSP: the nonce and 'strict-dynamic' decide. 'unsafe-inline'
+        // and https: are only the fallback for browsers without nonce
+        // support; any browser with it ignores them.
+        ->and($policy['script-src'][0])->toStartWith("'nonce-")
+        ->and($policy['script-src'])->toContain("'strict-dynamic'")
+        ->and($policy['script-src'])->toContain("'unsafe-inline'")
         ->and($policy['script-src'])->not->toContain("'unsafe-eval'");
 
     // The inline theme script carries the same nonce the header allows.
@@ -79,6 +84,16 @@ test('HSTS is sent only over HTTPS and only when enabled', function () {
 
     config(['platform.security_headers.hsts' => false]);
     $this->get(str_replace('http://', 'https://', $url))->assertHeaderMissing('Strict-Transport-Security');
+});
+
+test('HSTS asks for preloading only when enabled, and only with subdomains', function () {
+    $url = str_replace('http://', 'https://', PlatformHosts::url(PlatformHosts::root(), '/'));
+    config(['platform.security_headers.hsts' => true, 'platform.security_headers.hsts_preload' => true]);
+
+    $this->get($url)->assertHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+
+    config(['platform.security_headers.hsts_include_subdomains' => false]);
+    $this->get($url)->assertHeader('Strict-Transport-Security', 'max-age=63072000');
 });
 
 test('the policy can run in report-only mode with a report endpoint', function () {

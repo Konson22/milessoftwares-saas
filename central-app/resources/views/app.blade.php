@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" @class(['dark' => ($appearance ?? 'system') == 'dark']) @if ($forcedAppearance ?? null) data-forced-appearance="{{ $forcedAppearance }}" style="color-scheme: {{ $forcedAppearance }}" @endif>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="ltr" @class(['dark' => ($appearance ?? 'system') == 'dark']) @if ($forcedAppearance ?? null) data-forced-appearance="{{ $forcedAppearance }}" style="color-scheme: {{ $forcedAppearance }}" @endif>
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -34,8 +34,6 @@
         <link rel="icon" href="/favicon-96x96.png" type="image/png" sizes="96x96">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
         <meta name="theme-color" content="#05451b">
-
-        @fonts
 
         @php
             // Public site pages only: never the signed-in hosts.
@@ -115,6 +113,13 @@
         @endphp
         @if ($inlineCss)
             <style>{!! Vite::content('resources/css/app.css') !!}</style>
+            {{--
+                The public site's first text: headings in Poppins 600, body in
+                Nunito (Latin). Fetched with the page rather than once the
+                stylesheet has been parsed. Signed-in hosts use system fonts.
+            --}}
+            <link rel="preload" as="font" type="font/woff2" crossorigin href="{{ Vite::asset('node_modules/@fontsource/poppins/files/poppins-latin-600-normal.woff2') }}">
+            <link rel="preload" as="font" type="font/woff2" crossorigin href="{{ Vite::asset('node_modules/@fontsource-variable/nunito/files/nunito-latin-wght-normal.woff2') }}">
         @endif
         @vite([...($inlineCss ? [] : ['resources/css/app.css']), 'resources/js/app.tsx', \App\Support\Inertia\SitePages::sitePath($page['component']), \App\Support\Inertia\SitePages::path($page['component'])])
         <x-inertia::head>
