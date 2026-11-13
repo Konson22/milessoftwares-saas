@@ -4,6 +4,7 @@ use App\Models\EmployeeComponent;
 use App\Models\PayComponent;
 use App\Models\PayrollRun;
 use App\Models\Payslip;
+use App\Models\TimesheetEntry;
 use App\Payroll\Runs;
 use App\Support\XlsxExport;
 use Carbon\CarbonImmutable;
@@ -271,4 +272,28 @@ it('allows one payroll per month even when two are prepared at once', function (
         ...$run->only(['period_start', 'period_end', 'pay_date', 'status', 'prepared_by', 'prepared_at']),
         'number' => 'PR-00099',
     ]))->toThrow(QueryException::class));
+});
+
+it('pays hours and overtime in whole numbers, rounding once', function () {
+    $ayen = addEmployee('Ayen', details: ['pay_basis' => 'hourly'], salary: '333.33');
+    $this->asTenant('acme', function () use ($ayen) {
+        foreach ([['2026-03-02', '7.25', 'regular'], ['2026-03-03', '8.00', 'regular'], ['2026-03-04', '2.50', 'overtime']] as [$date, $hours, $kind]) {
+            TimesheetEntry::query()->create([
+                'employee_id' => $ayen->id,
+                'work_date' => $date,
+                'hours' => $hours,
+                'kind' => $kind,
+                'source_app' => 'restaurant',
+                'source_reference' => "timesheet:{$date}",
+            ]);
+        }
+    });
+
+    prepareRun()->assertSessionHasNoErrors();
+
+    $payslip = $this->asTenant('acme', fn () => Payslip::query()->sole());
+    // 15.25 h x 333.33 = 5 083.2825; 2.5 h x 333.33 x 3/2 = 1 249.9875.
+    expect($payslip->basic_minor)->toBe(508_328)
+        ->and(collect($payslip->lines)->firstWhere('name', 'Overtime')['amount_minor'])->toBe(124_999)
+        ->and((float) $payslip->hours_paid)->toBe(17.75);
 });

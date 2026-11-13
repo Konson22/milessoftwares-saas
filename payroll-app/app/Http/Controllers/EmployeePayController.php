@@ -60,7 +60,7 @@ class EmployeePayController extends Controller
             'employee_id' => $employee->id,
             'pay_component_id' => $component->id,
             'amount_minor' => $percent ? null : Money::toMinor($value),
-            'rate_bp' => $percent ? (int) round(((float) $value) * 100) : null,
+            'rate_bp' => $percent ? Money::hundredths($value) : null,
             'starts_on' => $validated['starts_on'],
             'ends_on' => $validated['ends_on'] ?? null,
         ]))->save();

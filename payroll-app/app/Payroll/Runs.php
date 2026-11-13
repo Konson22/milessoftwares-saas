@@ -12,6 +12,7 @@ use App\Models\TimesheetEntry;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Support\DocumentNumbers;
+use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -33,8 +34,10 @@ use Miles\PlatformClient\Events\Outbox;
  */
 class Runs
 {
-    /** Overtime hours are paid at this multiple of the hourly rate. */
-    public const OVERTIME_MULTIPLIER = 1.5;
+    /** Overtime hours are paid at 3/2 (time and a half) of the hourly rate. */
+    public const OVERTIME_NUMERATOR = 3;
+
+    public const OVERTIME_DENOMINATOR = 2;
 
     public function __construct(
         private readonly Calculator $calculator,
@@ -152,7 +155,7 @@ class Runs
         $start = $run->period_start;
         $end = $run->period_end;
         $rule = StatutoryRule::inForceOn($end);
-        $daysInPeriod = $start->diffInDays($end) + 1;
+        $daysInPeriod = (int) $start->diffInDays($end) + 1;
         $totals = ['headcount' => 0, 'earnings_minor' => 0, 'income_tax_minor' => 0, 'social_security_employee_minor' => 0, 'social_security_employer_minor' => 0, 'other_deductions_minor' => 0, 'net_minor' => 0];
         $refused = [];
 
@@ -180,20 +183,22 @@ class Runs
                     ->whereDate('work_date', '>=', $from->toDateString())
                     ->whereDate('work_date', '<=', $to->toDateString())
                     ->get();
-                $ordinary = (float) $entries->where('kind', '!=', 'overtime')->sum(fn (TimesheetEntry $entry) => (float) $entry->hours);
-                $extra = (float) $entries->where('kind', 'overtime')->sum(fn (TimesheetEntry $entry) => (float) $entry->hours);
-                $hours = $ordinary + $extra;
+                // Hours in hundredths (7.25 h is 725): whole numbers throughout.
+                $ordinary = (int) $entries->where('kind', '!=', 'overtime')->sum(fn (TimesheetEntry $entry) => Money::hundredths($entry->hours));
+                $extra = (int) $entries->where('kind', 'overtime')->sum(fn (TimesheetEntry $entry) => Money::hundredths($entry->hours));
                 // Paid by the hour with no hours this month: not on this payroll.
-                if ($hours <= 0) {
+                if ($ordinary + $extra <= 0) {
                     continue;
                 }
-                $basic = (int) round($ordinary * $pay->amount_minor);
-                $overtime = (int) round($extra * $pay->amount_minor * self::OVERTIME_MULTIPLIER);
-                $factor = 1.0;
+                $hours = Money::fromHundredths($ordinary + $extra);
+                $basic = Money::share($pay->amount_minor, $ordinary, 100);
+                $overtime = Money::share($pay->amount_minor, $extra * self::OVERTIME_NUMERATOR, 100 * self::OVERTIME_DENOMINATOR);
+                // Fixed allowances are paid in full.
+                [$worked, $ofDays] = [1, 1];
             } else {
-                $days = $from->diffInDays($to) + 1;
-                $factor = $days / $daysInPeriod;
-                $basic = (int) round($pay->amount_minor * $factor);
+                $days = (int) $from->diffInDays($to) + 1;
+                [$worked, $ofDays] = [$days, $daysInPeriod];
+                $basic = Money::share($pay->amount_minor, $worked, $ofDays);
             }
 
             $components = $overtime > 0 ? [['kind' => 'earning', 'name' => 'Overtime', 'amount_minor' => $overtime, 'taxable' => true]] : [];
@@ -206,7 +211,7 @@ class Runs
                 $amount = $assigned->component->calculation === PayComponent::PERCENT
                     ? Calculator::percent($basic, (int) $assigned->rate_bp)
                     // A fixed allowance follows the days worked; a fixed deduction does not.
-                    : (int) round((int) $assigned->amount_minor * ($kind === 'earning' ? $factor : 1.0));
+                    : ($kind === 'earning' ? Money::share((int) $assigned->amount_minor, $worked, $ofDays) : (int) $assigned->amount_minor);
                 $components[] = ['kind' => $kind, 'name' => $assigned->component->name, 'amount_minor' => $amount, 'taxable' => $assigned->component->taxable];
             }
 

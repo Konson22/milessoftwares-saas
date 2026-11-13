@@ -118,15 +118,15 @@ class SettingsController extends Controller
                 throw ValidationException::withMessages(["bands.{$i}.up_to" => 'Each band must go higher than the one before.']);
             }
             $previous = $upTo ?? $previous;
-            $bands[] = ['up_to_minor' => $upTo, 'rate_bp' => (int) round(((float) $band['rate']) * 100)];
+            $bands[] = ['up_to_minor' => $upTo, 'rate_bp' => Money::hundredths($band['rate'])];
         }
 
         (new StatutoryRule([
             'name' => $validated['name'],
             'effective_from' => $validated['effective_from'],
             'income_tax_bands' => $bands,
-            'social_security_employee_bp' => (int) round(((float) $validated['employee_rate']) * 100),
-            'social_security_employer_bp' => (int) round(((float) $validated['employer_rate']) * 100),
+            'social_security_employee_bp' => Money::hundredths($validated['employee_rate']),
+            'social_security_employer_bp' => Money::hundredths($validated['employer_rate']),
             'social_security_cap_minor' => isset($validated['cap']) ? Money::toMinor($validated['cap']) : null,
             'social_security_deductible' => $request->boolean('deductible'),
             'created_by' => $this->user($request)->id,
