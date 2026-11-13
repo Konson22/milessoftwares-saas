@@ -12,8 +12,9 @@ Built from `templates/product-app` and connected through
  HR ─────────── payroll.employee.joined / .left ──┐
  Restaurant, ── payroll.timesheet.submitted ──────┤
  Pharmacy, …    (and .employee.* without HR)      ▼
-                                              Payroll ── finance.payroll.posted ──▶ Finance
-                                                      └─ finance.payroll.paid ───▶
+                                              Payroll ── finance.payroll.posted ───▶ Finance
+                                                      ├─ finance.payroll.paid ─────▶ (per batch)
+                                                      └─ finance.payroll.reversed ─▶
 ```
 
 - Events never carry pay. Pay, allowances, deductions and payment accounts are entered here.
@@ -32,12 +33,22 @@ Built from `templates/product-app` and connected through
 - **Settings**: the organization's allowances and deductions; income tax bands (monthly, progressive)
   and social security (employee, employer, optional cap, optionally taken off taxable pay), from a
   date. The South Sudan preset (`App\Payroll\Presets`) fills the form; check it before saving.
-- **Runs** (`App\Payroll\Runs`, `App\Payroll\Calculator`): one per month. Prepare → recalculate as
-  often as needed → approve (never by whoever last prepared it; the run then never changes, and a
-  PostgreSQL trigger keeps its payslips that way) → record as paid. Joiners and leavers are paid for
-  the days they worked; hourly staff for their timesheet hours, overtime at 1.5×. A run whose
-  deductions exceed someone's pay is refused, naming them.
-- **Payslips**: a printable page per person.
+- **Runs** (`App\Payroll\Runs`, `App\Payroll\Calculator`): one live run per month, in the
+  currency it was prepared in. Prepare → recalculate or add one-off adjustments (bonus, arrears,
+  advance recovered) as often as needed → optionally reviewed by someone else → approved (never by
+  whoever last prepared or adjusted it; the run then never changes, and a PostgreSQL trigger keeps
+  its payslips that way) → paid in one or more batches (`PR-00001-P1`…, all unpaid payslips or the
+  ticked ones), with **payment instructions** in Excel for the bank or cashier. An approved run
+  nobody has been paid from can be **reversed** with a reason; the month can then be prepared again.
+- **Maths**: whole numbers throughout (`App\Support\Money`). Hours are hundredths, overtime is 3/2
+  of the rate, joiners and leavers are paid days worked / days in the month; each figure is
+  rounded half up once. A run whose deductions exceed someone's pay is refused, naming them.
+- **Payslips**: a printable page and PDF per person, a PDF of the whole run, the register in Excel.
+- **Audit trail** (`App\Payroll\AuditTrail`, `payroll.audit.view`): who prepared, reviewed,
+  approved, adjusted, paid or reversed each run, and who changed people, pay, payment details
+  (the method, never the account) and rules. Append-only (a PostgreSQL trigger refuses changes).
+- **Roles** (catalog 1.1.0): clerk, officer, reviewer, approver, administrator, auditor
+  (`docs/runbooks/payroll.md`).
 - **Events in** (`POST /payroll/events`, `App\Http\Controllers\EventController`): verified like
   Finance's (platform-signed event token, inbox applied once).
 
@@ -56,5 +67,5 @@ Open `http://<workspace-slug>.milesoftwares.localhost/payroll` (proxy entry in
 `PLATFORM_PAYROLL_EVENTS_URL=http://127.0.0.1:9200/payroll/events` in `hr-app/.env` (and any product
 that sends hours), to connect the modules.
 
-Production: `ops/nginx/products/payroll.conf`, `ops/php-fpm/payroll.conf`, a `payroll` database
-and `.env`, then add `payroll` to `PRODUCTS` for `ops/deploy/deploy.sh`.
+Production: `docs/runbooks/payroll.md` (database, `.env`, registration, nginx, php-fpm, systemd,
+roles, and what to do when an event to Finance is stuck).

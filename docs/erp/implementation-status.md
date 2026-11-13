@@ -25,7 +25,7 @@
 | HR H1 Staff records | Done 2026-10-19 |
 | HR H2 Documents | Done 2026-10-19 |
 | HR H3 Leave | Done 2026-10-23 |
-| Payroll P1 `payroll-app` (people, pay, rules, runs, payslips, events to Finance, from HR) | Built 2026-11-09; moved into `finance-app` 2026-11-12 (ADR-0009), `payroll-app` deleted |
+| Payroll P1 `payroll-app` (people, pay, rules, runs, payslips, events to Finance, from HR) | Built 2026-11-09; into `finance-app` 2026-11-12 (ADR-0009); standalone again 2026-11-12 (ADR-0010). Phase 1 finished 2026-11-13: integer maths, review, part payments, payment instructions, reversal, adjustments, audit trail, catalog 1.1.0. Committed, not deployed, not run in a browser |
 | Finance F1 Periods and close | Done 2026-10-20 |
 | Finance F2 Reports | Done 2026-10-20 |
 | Finance F3 Bank reconciliation | Done 2026-10-20 |
@@ -43,6 +43,25 @@ Decisions accepted 2026-10-16: D1 → `docs/adr/0003-erp-workspace-application.m
 D2 → `docs/adr/0004-companies-as-organizations.md`. Accepted 2026-10-19: D3 →
 `docs/adr/0005-hr-and-payroll-application.md` (HR phases: `hr-roadmap.md`). Accepted
 2026-11-09: Payroll as its own module, `docs/adr/0008-payroll-separate-application.md`.
+
+## Payroll Phase 1 finished — 2026-11-13 (local, Windows)
+
+`payroll-app` (ADR-0010), commits 15c30ab..HEAD on `products/school-app`:
+
+- Integer maths only (`App\Support\Money`): hours in hundredths, overtime ×3/2, pro-rata days
+  worked / days in the month, typed amounts and rates read from the decimal string.
+- Runs keep their currency; optional review by someone other than the preparer; payments per
+  payslip in batches (`PR-00001-P1`…) with Excel payment instructions; reversal of an approved,
+  unpaid run (the month frees up); one-off adjustments on a draft (the editor becomes preparer).
+- Append-only audit trail and page; catalog 1.1.0 (`payroll.runs.review`, `payroll.audit.view`;
+  reviewer and auditor roles).
+- Finance: `finance.payroll.paid` takes an optional `payment_reference`; new
+  `finance.payroll.reversed` mirrors the run's journal. Contracts updated.
+- Tests: payroll 49 passing (2 PostgreSQL-only skipped on SQLite), finance 269 passing.
+
+**Not done yet:** the new migrations have not been run on PostgreSQL (local `payroll` DB needs
+a password in `payroll-app/.env`); nothing checked in a browser; not deployed (go-live steps in
+`docs/runbooks/payroll.md`).
 
 ## Payroll moved into Finance — 2026-11-12 (local, Windows)
 

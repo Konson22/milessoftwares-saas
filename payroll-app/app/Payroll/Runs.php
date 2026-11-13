@@ -375,7 +375,7 @@ class Runs
             // This run's one-off amounts, as entered.
             foreach ($adjustments->get($employee->id, []) as $adjustment) {
                 /** @var RunAdjustment $adjustment */
-                $components[] = ['kind' => $adjustment->kind, 'name' => $adjustment->name, 'amount_minor' => $adjustment->amount_minor, 'taxable' => $adjustment->taxable];
+                $components[] = ['kind' => $adjustment->kind === RunAdjustment::DEDUCTION ? 'deduction' : 'earning', 'name' => $adjustment->name, 'amount_minor' => $adjustment->amount_minor, 'taxable' => $adjustment->taxable];
             }
 
             $label = $employee->pay_basis === Employee::HOURLY ? 'Hours worked' : 'Basic salary';
