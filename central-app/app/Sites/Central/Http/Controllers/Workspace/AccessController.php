@@ -65,7 +65,7 @@ class AccessController extends Controller
                 ->map(fn (OrganizationMembership $membership) => [
                     'id' => $membership->id,
                     'name' => $membership->user->name,
-                    'email' => $membership->user->email,
+                    'email' => $membership->user->signInName(),
                     'isOwner' => $this->access->isOwner($membership),
                     'assignments' => RoleAssignment::query()
                         ->live()

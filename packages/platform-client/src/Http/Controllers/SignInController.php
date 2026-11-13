@@ -59,7 +59,7 @@ final class SignInController
         $user->forceFill([
             $user->getKeyName() => $identity->subject,
             'name' => $identity->name,
-            'email' => $identity->email,
+            'email' => $identity->signInName(),
         ])->save();
 
         Auth::login($user);

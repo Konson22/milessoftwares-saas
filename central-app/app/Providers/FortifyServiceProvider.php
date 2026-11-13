@@ -49,7 +49,9 @@ class FortifyServiceProvider extends ServiceProvider
         // Suspended and deactivated accounts get the same generic failure as a
         // wrong password, so account status is not disclosed.
         Fortify::authenticateUsing(function (Request $request): ?User {
-            $user = User::query()->where(Fortify::username(), $request->input(Fortify::username()))->first();
+            // The one sign-in field takes an email or, for accounts added
+            // without one, a username (which never contains "@").
+            $user = User::findForSignIn((string) $request->input(Fortify::username()));
 
             if ($user === null || ! Hash::check((string) $request->input('password'), $user->password)) {
                 return null;

@@ -233,6 +233,40 @@ final class PlatformApi
     }
 
     /**
+     * Adds a member with a username and the temporary password this
+     * application's administrator chose (Petrol: a pump attendant with no
+     * email), optionally with one of this application's roles at the
+     * organization or one branch. The person chooses their own password at
+     * first sign-in. The acting user must be a member who may manage access.
+     *
+     * @return array{user_id: string, name: string, username: string, expires_at: string, role_note: string|null}
+     *
+     * @throws PlatformRefused with the errors by field (username taken, password too short, not allowed...)
+     * @throws NotVisible when the organization is not entitled to this application
+     * @throws PlatformUnavailable
+     */
+    public function addMemberAccount(string $organizationId, string $actorUserId, string $name, string $username, string $password, ?string $role = null, ?string $branchId = null): array
+    {
+        $data = $this->send('post', '/api/v1/member-accounts', 'members.write', array_filter([
+            'organization_id' => $organizationId,
+            'actor_user_id' => $actorUserId,
+            'name' => $name,
+            'username' => $username,
+            'password' => $password,
+            'role' => $role,
+            'branch_id' => $branchId,
+        ], fn ($value) => $value !== null));
+
+        return [
+            'user_id' => (string) ($data['user_id'] ?? ''),
+            'name' => (string) ($data['name'] ?? $name),
+            'username' => (string) ($data['username'] ?? $username),
+            'expires_at' => (string) ($data['expires_at'] ?? ''),
+            'role_note' => isset($data['role_note']) && is_string($data['role_note']) ? $data['role_note'] : null,
+        ];
+    }
+
+    /**
      * Drops every cached organization lookup and access answer for the
      * organization (called for each webhook about it).
      */
@@ -301,7 +335,7 @@ final class PlatformApi
         $data = $response->json();
 
         // Only these calls answer with a reason to show; the others keep failing as unavailable.
-        if (str_starts_with($path, '/api/v1/sponsored-organizations') && in_array($response->status(), [409, 422], true)) {
+        if ((str_starts_with($path, '/api/v1/sponsored-organizations') || $path === '/api/v1/member-accounts') && in_array($response->status(), [409, 422], true)) {
             $errors = is_array($data) && is_array($data['errors'] ?? null) ? $data['errors'] : [];
             $message = is_array($data) && is_string($data['message'] ?? null) ? $data['message'] : 'Refused.';
 

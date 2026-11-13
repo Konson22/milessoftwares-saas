@@ -182,7 +182,7 @@ final class Invitations
                 throw new MembershipActionDenied('This invitation has expired. Ask for a new one.');
             }
 
-            if (mb_strtolower($user->email) !== mb_strtolower($invitation->email)) {
+            if (mb_strtolower((string) $user->email) !== mb_strtolower($invitation->email)) {
                 throw new MembershipActionDenied('This invitation was sent to a different email address.');
             }
 

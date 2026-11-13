@@ -84,6 +84,10 @@ return [
 
     'sponsoring_applications' => ['projects'],
 
+    // Applications whose backend may add a member with a username and a
+    // temporary password its own form collected (Api\MemberAccountController).
+    'member_account_applications' => ['petrol'],
+
     'slug' => [
         'min_length' => 4,
         'max_length' => 32,

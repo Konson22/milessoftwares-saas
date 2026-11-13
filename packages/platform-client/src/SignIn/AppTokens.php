@@ -63,6 +63,7 @@ final class AppTokens
             name: is_string($claims->get('name')) ? $claims->get('name') : '',
             email: is_string($claims->get('email')) ? $claims->get('email') : '',
             emailVerified: $claims->get('email_verified') === true,
+            username: is_string($claims->get('preferred_username')) ? $claims->get('preferred_username') : '',
         );
     }
 

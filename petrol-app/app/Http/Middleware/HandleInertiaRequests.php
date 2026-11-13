@@ -98,6 +98,8 @@ class HandleInertiaRequests extends Middleware
             ),
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
+                // A sign-in just made for an attendant, shown once (AttendantController).
+                'attendantSignIn' => fn () => $request->session()->get('attendantSignIn'),
             ],
         ];
     }

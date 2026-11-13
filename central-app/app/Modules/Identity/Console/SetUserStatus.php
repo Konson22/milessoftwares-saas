@@ -79,7 +79,7 @@ class SetUserStatus extends Command
             return [$revokedSessions, $revokedTokens];
         });
 
-        $this->components->info("{$user->email}: {$previous} → {$status}; {$revokedSessions} session(s) and {$revokedTokens} token(s) revoked.");
+        $this->components->info("{$user->signInName()}: {$previous} → {$status}; {$revokedSessions} session(s) and {$revokedTokens} token(s) revoked.");
 
         return self::SUCCESS;
     }

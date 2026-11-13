@@ -73,6 +73,7 @@ class IdentityServiceProvider extends ServiceProvider
             'events.issue' => 'Obtain organization-bound tokens for sending events to shared modules',
             'health.write' => 'Report service health',
             'organizations.sponsor' => 'Create a workspace for another organization, for its owner to claim',
+            'members.write' => 'Add a member with a username and a temporary password, for the calling application',
         ]);
 
         // Access tokens are short-lived and held server-side by each product (BFF).

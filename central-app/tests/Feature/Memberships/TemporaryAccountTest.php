@@ -35,7 +35,7 @@ function membersAt(string $path): string
 /**
  * Adds someone as the owner and returns the credentials shown once.
  *
- * @return array{name: string, email: string, password: string, expiresAt: string, signInUrl: string, roleNote: string|null}
+ * @return array{name: string, login: string, loginKind: string, password: string, expiresAt: string, signInUrl: string, roleNote: string|null}
  */
 function addMember(string $email = 'deng@example.test', array $extra = []): array
 {
@@ -58,7 +58,8 @@ it('adds a member with a temporary password shown once to the administrator', fu
     $credentials = addMember('Deng@Example.test');
 
     $user = addedUser();
-    expect($credentials['email'])->toBe('deng@example.test')
+    expect($credentials['login'])->toBe('deng@example.test')
+        ->and($credentials['loginKind'])->toBe('email')
         ->and($credentials['password'])->toMatch('/^[a-zA-Z2-9]{4}-[a-zA-Z2-9]{4}-[a-zA-Z2-9]{4}$/')
         ->and(Hash::check($credentials['password'], $user->password))->toBeTrue()
         ->and($user->mustChangePassword())->toBeTrue()
@@ -117,7 +118,8 @@ it('lists people still on their temporary password on the invitations page', fun
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->has('awaiting', 1)
-            ->where('awaiting.0.email', 'deng@example.test')
+            ->where('awaiting.0.login', 'deng@example.test')
+            ->where('awaiting.0.pending', true)
             ->where('awaiting.0.expired', false));
 });
 
@@ -229,4 +231,58 @@ it('adds someone with several roles at once', function () {
     expect($credentials['roleNote'])->toBeNull()
         ->and(RoleAssignment::acrossTenants()->where('membership_id', $membership->id)->with('role')->get()->pluck('role.key')->sort()->values()->all())
         ->toBe(['auditor', 'cashier']);
+});
+
+it('adds someone with a username and no email, who signs in with it', function () {
+    $this->actingAs($this->owner->user)
+        ->post(membersAt('/manage/members'), ['name' => 'Achol Deng', 'username' => ' Achol.Deng '])
+        ->assertSessionHasNoErrors();
+    $credentials = session(SessionKey::FLASH_DATA)['credentials'];
+
+    $user = User::query()->where('username', 'achol.deng')->sole();
+    expect($user->email)->toBeNull()
+        ->and($credentials['login'])->toBe('achol.deng')
+        ->and($credentials['loginKind'])->toBe('username')
+        ->and($user->hasVerifiedEmail())->toBeTrue()
+        ->and((new UserIdentity($user))->getClaims())->toMatchArray(['email' => null, 'preferred_username' => 'achol.deng']);
+
+    auth()->logout();
+    $this->post(route('login.store'), ['email' => 'ACHOL.deng', 'password' => 'wrong-password'])->assertSessionHasErrors('email');
+    $this->assertGuest();
+    $this->post(route('login.store'), ['email' => 'ACHOL.deng', 'password' => $credentials['password']]);
+    $this->assertAuthenticatedAs($user);
+});
+
+it('refuses a username that is taken, malformed, or given with an email', function () {
+    $this->actingAs($this->owner->user)
+        ->post(membersAt('/manage/members'), ['name' => 'Achol Deng', 'username' => 'achol'])
+        ->assertSessionHasNoErrors();
+
+    $this->post(membersAt('/manage/members'), ['name' => 'Another', 'username' => 'ACHOL'])->assertSessionHasErrors('username');
+    $this->post(membersAt('/manage/members'), ['name' => 'Another', 'username' => 'a@b'])->assertSessionHasErrors('username');
+    $this->post(membersAt('/manage/members'), ['name' => 'Another', 'username' => 'ab'])->assertSessionHasErrors('username');
+    $this->post(membersAt('/manage/members'), ['name' => 'Another', 'username' => 'other', 'email' => 'other@example.test'])->assertSessionHasErrors('email');
+    $this->post(membersAt('/manage/members'), ['name' => 'Another'])->assertSessionHasErrors(['email', 'username']);
+
+    expect(User::query()->where('name', 'Another')->exists())->toBeFalse();
+});
+
+it('gives a username account a new password at any time, as it has no email to reset by', function () {
+    $this->actingAs($this->owner->user)
+        ->post(membersAt('/manage/members'), ['name' => 'Achol Deng', 'username' => 'achol'])
+        ->assertSessionHasNoErrors();
+    $user = User::query()->where('username', 'achol')->sole();
+    $user->forceFill(['password' => 'her-Own-password-77', 'password_change_required_at' => null, 'temporary_password_expires_at' => null])->save();
+    $membership = OrganizationMembership::query()->withoutGlobalScopes()->where('user_id', $user->id)->sole();
+
+    $this->get(membersAt('/manage/invitations'))->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('awaiting.0.login', 'achol')
+        ->where('awaiting.0.loginKind', 'username')
+        ->where('awaiting.0.pending', false));
+
+    $this->post(membersAt("/manage/members/{$membership->id}/temporary-password"))->assertSessionHasNoErrors();
+
+    $password = session(SessionKey::FLASH_DATA)['credentials']['password'];
+    expect(Hash::check($password, $user->refresh()->password))->toBeTrue()
+        ->and($user->mustChangePassword())->toBeTrue();
 });

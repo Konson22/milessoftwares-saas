@@ -3,7 +3,7 @@ import { create } from 'zustand';
 
 import { ApiError, currentWorkspace, request, setRequestContext } from '@/lib/api/client';
 import { platform, type BusinessChoice } from '@/lib/api/platform';
-import { accessToken, freshIdToken, loadTokens, saveTokens, signInOnPlatform, signInWithCode, signInWithGoogle, signInWithPassword } from '@/lib/auth/tokens';
+import { accessToken, freshIdToken, loadTokens, saveTokens, signInOnPlatform, signInWithCode, signInWithGoogle, signInWithNewPassword, signInWithPassword } from '@/lib/auth/tokens';
 import { setCurrency } from '@/lib/format';
 import type { Branch, Me, User } from '@/lib/types';
 import { forgetPages } from '@/offline/cache';
@@ -25,6 +25,8 @@ type Status = 'loading' | 'signedOut' | 'noBusiness' | 'chooseBusiness' | 'needs
 export type SignInWith =
   | { with: 'password'; email: string; password: string }
   | { with: 'code'; code: string; recovery?: boolean }
+  /** Replacing a temporary password, after the platform asked for it. */
+  | { with: 'newPassword'; password: string }
   | { with: 'google' }
   | { with: 'browser' };
 
@@ -49,10 +51,11 @@ interface AuthState {
   hydrate(): Promise<void>;
 
   /**
-   * 'twoFactor' wants a code next; 'choose' lists the stations;
+   * 'twoFactor' wants a code next; 'setPassword' wants the person's own
+   * password in place of a temporary one; 'choose' lists the stations;
    * 'noBusiness' stays signed in, to create one without signing in again.
    */
-  signIn(how: SignInWith): Promise<'signedIn' | 'choose' | 'noBusiness' | 'twoFactor'>;
+  signIn(how: SignInWith): Promise<'signedIn' | 'choose' | 'noBusiness' | 'twoFactor' | 'setPassword'>;
   /** Open a business of whoever is signed in: one they chose, or one just created. */
   chooseBusiness(workspace: string): Promise<void>;
   chooseBranch(branchId: string): Promise<void>;
@@ -174,10 +177,12 @@ export const useAuth = create<AuthState>((set, get) => {
           ? await signInWithPassword(how.email, how.password)
           : how.with === 'code'
             ? await signInWithCode(how.code, how.recovery)
+            : how.with === 'newPassword'
+              ? await signInWithNewPassword(how.password)
             : how.with === 'google'
               ? await signInWithGoogle()
               : await signInOnPlatform();
-      if (tokens === 'twoFactor') return 'twoFactor';
+      if (tokens === 'twoFactor' || tokens === 'setPassword') return tokens;
 
       let businesses: BusinessChoice[];
       try {

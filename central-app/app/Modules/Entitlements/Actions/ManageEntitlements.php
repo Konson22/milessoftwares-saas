@@ -214,7 +214,7 @@ final class ManageEntitlements
             $application,
             $entitlement,
             array_values(Application::query()->whereIn('code', array_keys($alongside))->orderBy('sort_order')->pluck('name')->all()),
-            $owner->email,
+            (string) $owner->email,
         )));
 
         return $entitlement;

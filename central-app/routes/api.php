@@ -5,6 +5,7 @@ use App\Sites\Central\Http\Controllers\Api\AppInvitationController;
 use App\Sites\Central\Http\Controllers\Api\AppOrganizationController;
 use App\Sites\Central\Http\Controllers\Api\IntegrationController;
 use App\Sites\Central\Http\Controllers\Api\LicenceActivationController;
+use App\Sites\Central\Http\Controllers\Api\MemberAccountController;
 use App\Sites\Central\Http\Controllers\Api\ProvisioningCallbackController;
 use App\Sites\Central\Http\Controllers\Api\SharedModulesController;
 use App\Sites\Central\Http\Controllers\Api\SponsoredOrganizationController;
@@ -48,6 +49,12 @@ Route::prefix('api/v1')->middleware('throttle:600,1')->name('api.')->group(funct
     Route::post('health', [SharedModulesController::class, 'health'])
         ->middleware('api.client:health.write')
         ->name('health.store');
+
+    // A member a product adds with a username and a temporary password its
+    // administrator chose (Petrol: a pump attendant without an email).
+    Route::post('member-accounts', [MemberAccountController::class, 'store'])
+        ->middleware(['api.client:members.write', 'throttle:30,60'])
+        ->name('member-accounts.store');
 
     // A workspace one organization creates for another (a donor for its
     // grantee), waiting for its owner to claim it.

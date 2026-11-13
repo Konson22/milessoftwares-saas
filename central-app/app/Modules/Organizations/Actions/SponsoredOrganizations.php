@@ -194,7 +194,7 @@ final class SponsoredOrganizations
                     default => 'This link is no longer valid.',
                 });
             }
-            if (mb_strtolower($user->email) !== $claim->email) {
+            if (mb_strtolower((string) $user->email) !== $claim->email) {
                 throw $refuse('This workspace was created for a different email address.');
             }
             if ($user->email_verified_at === null) {

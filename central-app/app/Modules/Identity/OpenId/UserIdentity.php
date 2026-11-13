@@ -43,6 +43,8 @@ final class UserIdentity implements IdentityEntityInterface
             'updated_at' => $this->user->updated_at?->getTimestamp(),
             'email' => $this->user->email,
             'email_verified' => $this->user->email_verified_at !== null,
+            // Accounts added without an email sign in with this instead.
+            'preferred_username' => $this->user->username,
         ];
     }
 }

@@ -34,7 +34,7 @@ class PasswordSetupController extends Controller
         }
 
         return Inertia::render('central/auth/set-password', [
-            'email' => $user->email,
+            'email' => $user->signInName(),
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
         ]);
     }

@@ -62,7 +62,7 @@ class AuthenticateAppUser
         if (! $user->hasVerifiedEmail()) {
             return response()->json([
                 'error' => 'email_unverified',
-                'message' => __('Confirm your email address first: open the link we sent to :email.', ['email' => $user->email]),
+                'message' => __('Confirm your email address first: open the link we sent to :email.', ['email' => $user->signInName()]),
             ], 403);
         }
 

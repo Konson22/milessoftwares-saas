@@ -72,20 +72,24 @@ class InvitationController extends Controller
                     ]))
                 ->values()
                 ->all(),
-            // People added with a temporary password who have not chosen their own yet.
+            // People added here who may get a new temporary password: those who
+            // have not chosen their own yet, and username accounts at any time
+            // (no email to reset by). See TemporaryAccounts::mayReissue().
             'awaiting' => OrganizationMembership::query()
                 ->where('status', MembershipStatus::Active)
                 ->whereHas('user', fn ($query) => $query
                     ->where('created_by_organization_id', $actor->organization_id)
-                    ->whereNotNull('password_change_required_at'))
+                    ->where(fn ($query) => $query->whereNotNull('password_change_required_at')->orWhereNull('email')))
                 ->with('user')
                 ->get()
                 ->map(fn (OrganizationMembership $membership) => [
                     'id' => $membership->id,
                     'name' => $membership->user->name,
-                    'email' => $membership->user->email,
-                    'expiresAt' => $membership->user->temporary_password_expires_at?->toDateString(),
-                    'expired' => $membership->user->temporary_password_expires_at?->isPast() ?? false,
+                    'login' => $membership->user->signInName(),
+                    'loginKind' => $membership->user->hasUsernameOnly() ? 'username' : 'email',
+                    'pending' => $membership->user->mustChangePassword(),
+                    'expiresAt' => $membership->user->mustChangePassword() ? $membership->user->temporary_password_expires_at?->toDateString() : null,
+                    'expired' => $membership->user->mustChangePassword() && ($membership->user->temporary_password_expires_at?->isPast() ?? false),
                 ])
                 ->all(),
             'branches' => Branch::query()->where('status', 'active')->orderBy('name')->get(['id', 'name']),

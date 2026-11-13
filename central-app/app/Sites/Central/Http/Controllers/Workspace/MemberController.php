@@ -74,7 +74,7 @@ class MemberController extends Controller
         return [
             'id' => $membership->id,
             'name' => $membership->user->name,
-            'email' => $membership->user->email,
+            'email' => $membership->user->signInName(),
             'status' => $membership->status->value,
             'joinedAt' => $membership->joined_at?->toDateString(),
         ];

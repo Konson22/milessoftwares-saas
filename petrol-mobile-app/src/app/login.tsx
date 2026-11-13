@@ -17,7 +17,8 @@ import { colors } from '@/lib/theme';
 import { useAuth, type SignInWith } from '@/store/auth';
 
 /**
- * Online: sign in with the platform, email and password here (and a
+ * Online: sign in with the platform, email (or the username of an account
+ * a manager added without one, such as a pump attendant) and password here (and a
  * two-step code when the account has one), no workspace address. The
  * person's business opens; in more than one, they choose which next; with
  * none yet, they create one, still signed in. Google signs in natively (the
@@ -35,6 +36,11 @@ export default function LoginScreen() {
   const [twoFactor, setTwoFactor] = useState(false);
   const [recovery, setRecovery] = useState(false);
   const [code, setCode] = useState('');
+  /** Signed in with a temporary password: choosing one's own before going on. */
+  const [choosing, setChoosing] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+  const confirmRef = useRef<ComponentRef<typeof TextInput>>(null);
   const [error, setError] = useState<string | null>(null);
   const [needsBrowser, setNeedsBrowser] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -44,15 +50,21 @@ export default function LoginScreen() {
   const keyboard = useKeyboardHeight();
 
   async function submit(how: SignInWith) {
-    if (how.with === 'password' && (!how.email || !how.password)) return setError('Enter your email and password.');
+    if (how.with === 'password' && (!how.email || !how.password)) return setError('Enter your email or username, and your password.');
     if (how.with === 'code' && !how.code) return setError(recovery ? 'Enter a recovery code.' : 'Enter the code from your authenticator app.');
     setBusy(how.with);
     setError(null);
     setNeedsBrowser(false);
     try {
-      if ((await signIn(how)) === 'twoFactor') {
+      const next = await signIn(how);
+      if (next === 'twoFactor') {
         setTwoFactor(true);
         setCode('');
+      } else if (next === 'setPassword') {
+        setTwoFactor(false);
+        setChoosing(true);
+        setNewPassword('');
+        setConfirmation('');
       }
     } catch (e) {
       if (e instanceof SignInCancelled) return;
@@ -60,6 +72,7 @@ export default function LoginScreen() {
       if (e instanceof NeedsBrowser) setNeedsBrowser(true);
       // Starting again: the platform forgot the password step.
       if (how.with === 'code' && /start again/i.test(errorMessage(e))) setTwoFactor(false);
+      if (how.with === 'newPassword' && /start again/i.test(errorMessage(e))) setChoosing(false);
     } finally {
       setBusy(null);
     }
@@ -67,6 +80,12 @@ export default function LoginScreen() {
 
   const withPassword = () => submit({ with: 'password', email: email.trim(), password });
   const withCode = () => submit({ with: 'code', code: code.trim(), recovery });
+  const withNewPassword = () => {
+    if (newPassword.length < 8) return setError('Use at least 8 characters.');
+    if (newPassword !== confirmation) return setError('The two passwords do not match.');
+    if (newPassword === password) return setError('Choose a password of your own, not the temporary one.');
+    return submit({ with: 'newPassword', password: newPassword });
+  };
 
   return (
     <ArtBackground>
@@ -86,20 +105,84 @@ export default function LoginScreen() {
           style={{ paddingBottom: (keyboard ? 0 : insets.bottom) + 16 }}>
           <View className="mb-1">
             <Text accessibilityRole="header" className="text-2xl font-bold text-white">
-              {twoFactor ? 'Two-step sign-in' : 'Welcome back'}
+              {choosing ? 'Choose your password' : twoFactor ? 'Two-step sign-in' : 'Welcome back'}
             </Text>
             <Text className="text-base text-brand-100">
-              {twoFactor
+              {choosing
+                ? 'You signed in with a temporary password. Choose one only you know; you use it from now on.'
+                : twoFactor
                 ? recovery
                   ? 'Enter one of your recovery codes.'
                   : 'Enter the code from your authenticator app.'
-                : 'Sign in with your Miles Softwares account.'}
+                : 'Sign in with your email, or the username your manager gave you.'}
             </Text>
           </View>
 
           {error ? <Banner tone="error">{error}</Banner> : null}
 
-          {twoFactor ? (
+          {choosing ? (
+            <>
+              <Field
+                dark
+                icon="lock-closed-outline"
+                accessibilityLabel="New password"
+                value={newPassword}
+                onChangeText={setNewPassword}
+                secureTextEntry={!showPassword}
+                autoFocus
+                autoCapitalize="none"
+                autoCorrect={false}
+                textContentType="newPassword"
+                autoComplete="new-password"
+                returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => confirmRef.current?.focus()}
+                placeholder="New password (8 or more characters)"
+                trailing={
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                    onPress={() => setShowPassword(!showPassword)}
+                    className="h-11 w-11 items-center justify-center active:bg-white/10">
+                    <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.brand[100]} />
+                  </Pressable>
+                }
+              />
+              <Field
+                dark
+                ref={confirmRef}
+                icon="checkmark-done-outline"
+                accessibilityLabel="Repeat the new password"
+                value={confirmation}
+                onChangeText={setConfirmation}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                textContentType="newPassword"
+                autoComplete="new-password"
+                returnKeyType="go"
+                onSubmitEditing={withNewPassword}
+                placeholder="Repeat the new password"
+              />
+              <Button
+                title={busy ? 'Saving…' : 'Save and sign in'}
+                size="lg"
+                variant="accent"
+                icon="checkmark-circle-outline"
+                onPress={withNewPassword}
+                loading={!!busy}
+              />
+              <View className="flex-row justify-end">
+                <TextLink
+                  title="Back"
+                  onPress={() => {
+                    setChoosing(false);
+                    setError(null);
+                  }}
+                />
+              </View>
+            </>
+          ) : twoFactor ? (
             <>
               <Field
                 dark
@@ -141,19 +224,19 @@ export default function LoginScreen() {
             <>
               <Field
                 dark
-                icon="mail-outline"
-                accessibilityLabel="Email"
+                icon="person-outline"
+                accessibilityLabel="Email or username"
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="email-address"
                 textContentType="username"
-                autoComplete="email"
+                autoComplete="username"
                 returnKeyType="next"
                 submitBehavior="submit"
                 onSubmitEditing={() => passwordRef.current?.focus()}
-                placeholder="Email"
+                placeholder="Email or username"
               />
               <Field
                 dark

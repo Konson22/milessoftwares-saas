@@ -22,7 +22,17 @@ export type SharedProps = {
     branchPermissions: string[];
     /** The branches open to the member, for the branch switcher. */
     branches: { id: string; name: string; main: boolean }[];
-    flash: { success: string | null };
+    flash: {
+        success: string | null;
+        /** A sign-in just made for an attendant, shown once. */
+        attendantSignIn: {
+            name: string;
+            username: string;
+            expiresAt: string;
+            signInUrl: string;
+            roleNote: string | null;
+        } | null;
+    };
     errors: Record<string, string>;
 };
 

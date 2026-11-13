@@ -28,7 +28,7 @@ class InvitationAcceptanceController extends Controller
         $status = match (true) {
             $invitation === null => 'invalid',
             $invitation->effectiveStatus() !== 'pending' => $invitation->effectiveStatus(),
-            mb_strtolower($user->email) !== $invitation->email => 'wrong_account',
+            mb_strtolower((string) $user->email) !== $invitation->email => 'wrong_account',
             default => 'pending',
         };
 

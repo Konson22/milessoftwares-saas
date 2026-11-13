@@ -112,7 +112,7 @@ export async function signInOnPlatform(): Promise<SignInResult> {
  */
 let pending: { auth: Authorization; web: WebSession } | null = null;
 
-export async function signInWithPassword(email: string, password: string): Promise<SignInResult | 'twoFactor'> {
+export async function signInWithPassword(email: string, password: string): Promise<SignInResult | SignInStep> {
   pending = null;
   const auth = await authorization();
   const web = new WebSession();
@@ -126,7 +126,7 @@ export async function signInWithPassword(email: string, password: string): Promi
     pending = { auth, web };
     return 'twoFactor';
   }
-  return finish(auth, web);
+  return finishOrSetPassword(auth, web);
 }
 
 /**
@@ -148,15 +148,15 @@ export async function signUpWithPassword(name: string, email: string, password: 
 }
 
 /** The two-step code (or a recovery code) after a password the platform took. */
-export async function signInWithCode(code: string, recovery = false): Promise<SignInResult> {
-  if (!pending) throw new Error('Start again with your email and password.');
+export async function signInWithCode(code: string, recovery = false): Promise<SignInResult | 'setPassword'> {
+  if (!pending) throw new Error('Start again with your email or username and password.');
   const { auth, web } = pending;
 
   const response = await reachable(web.post('/two-factor-challenge', recovery ? { recovery_code: code } : { code }));
   await refusal(response);
 
   pending = null;
-  return finish(auth, web);
+  return finishOrSetPassword(auth, web);
 }
 
 /**
@@ -165,7 +165,7 @@ export async function signInWithCode(code: string, recovery = false): Promise<Si
  * sign-in alone, as a password is posted to /login, with the same answer (a
  * two-step code may come next) and the same finish.
  */
-export async function signInWithGoogle(): Promise<SignInResult | 'twoFactor'> {
+export async function signInWithGoogle(): Promise<SignInResult | SignInStep> {
   pending = null;
   const idToken = await googleIdToken();
   const auth = await authorization();
@@ -181,7 +181,7 @@ export async function signInWithGoogle(): Promise<SignInResult | 'twoFactor'> {
     pending = { auth, web };
     return 'twoFactor';
   }
-  return finish(auth, web);
+  return finishOrSetPassword(auth, web);
 }
 
 /** Whether this build can offer Google (its client IDs were set when it was built). */
@@ -233,6 +233,41 @@ function googleSignIn(): GoogleModule | null {
 }
 
 /** Signed in: the authorization request again, now answered with a redirect to the app. */
+/**
+ * What the platform asks for before the app gets its tokens: a two-step
+ * code, or (signed in with a temporary password a manager handed over)
+ * the person's own password, chosen here with signInWithNewPassword.
+ */
+export type SignInStep = 'twoFactor' | 'setPassword';
+
+/**
+ * The person's own password, replacing the temporary one, in the same
+ * sign-in: the platform's "choose a password" page takes it, then goes on
+ * to the authorization request and so to the app.
+ */
+export async function signInWithNewPassword(password: string): Promise<SignInResult | 'setPassword'> {
+  if (!pending) throw new Error('Start again with your email or username and password.');
+  const { auth, web } = pending;
+
+  const response = await reachable(web.post('/password/setup', { password, password_confirmation: password }));
+  // It answers with a redirect onwards once the password is taken.
+  if (response.status < 300 || response.status >= 400) await refusal(response);
+
+  pending = null;
+  return finishOrSetPassword(auth, web);
+}
+
+/** As finish, but a temporary password stops at choosing one's own. */
+async function finishOrSetPassword(auth: Authorization, web: WebSession): Promise<SignInResult | 'setPassword'> {
+  const location = (await reachable(web.get(auth.url))).headers.get('location') ?? '';
+  if (location.startsWith(auth.redirect)) return redeem(auth, location);
+  if (location.includes('/password/setup')) {
+    pending = { auth, web };
+    return 'setPassword';
+  }
+  throw new NeedsBrowser('Your account needs something done on the web first. Sign in with the browser to finish.');
+}
+
 async function finish(auth: Authorization, web: WebSession): Promise<SignInResult> {
   const location = (await reachable(web.get(auth.url))).headers.get('location') ?? '';
   if (location.startsWith(auth.redirect)) return redeem(auth, location);
@@ -258,7 +293,7 @@ async function refusal(response: Response) {
   // 419: the sign-in session ran out (a code entered long after the password).
   if (response.status === 419) {
     pending = null;
-    throw new Error('That took too long. Start again with your email and password.');
+    throw new Error('That took too long. Start again with your email or username and password.');
   }
   throw new Error('Sign-in failed. Try again.');
 }

@@ -37,7 +37,7 @@ class StaffController extends Controller
                 ->map(fn (PlatformStaff $staff) => [
                     'id' => $staff->id,
                     'name' => $staff->user->name,
-                    'email' => $staff->user->email,
+                    'email' => $staff->user->signInName(),
                     'status' => $staff->status,
                     'mfa' => $staff->user->two_factor_confirmed_at !== null,
                     'roles' => $staff->roles->map(fn (PlatformRole $role) => ['key' => $role->key, 'name' => $role->name])->all(),

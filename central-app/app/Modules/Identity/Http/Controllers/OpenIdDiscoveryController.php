@@ -25,7 +25,7 @@ class OpenIdDiscoveryController
             'id_token_signing_alg_values_supported' => ['RS256'],
             'token_endpoint_auth_methods_supported' => ['client_secret_basic', 'client_secret_post', 'none'],
             'code_challenge_methods_supported' => ['S256'],
-            'claims_supported' => ['sub', 'iss', 'aud', 'exp', 'iat', 'nonce', 'name', 'updated_at', 'email', 'email_verified'],
+            'claims_supported' => ['sub', 'iss', 'aud', 'exp', 'iat', 'nonce', 'name', 'updated_at', 'email', 'email_verified', 'preferred_username'],
             'prompt_values_supported' => ['none', 'login', 'consent'],
         ])->header('Cache-Control', 'public, max-age=3600');
     }

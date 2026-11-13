@@ -56,6 +56,12 @@ final class PlatformFake
     /** @var array<string, list<string>>|null the errors the next sponsorOrganization call is refused with */
     public ?array $refuseSponsoring = null;
 
+    /** @var array<string, array<string, mixed>> username accounts added (addMemberAccount), by username */
+    public array $memberAccounts = [];
+
+    /** @var array<string, list<string>>|null the errors the next addMemberAccount call is refused with */
+    public ?array $refuseMemberAccount = null;
+
     /** @var list<string> modules the organization is not entitled to: event tokens answer 404 */
     public array $notEntitledTo = [];
 
@@ -164,6 +170,24 @@ final class PlatformFake
                 $this->sponsored[$m[1]]['resent']++;
 
                 return Http::response($this->sponsoredAnswer($m[1]));
+            }
+
+            if ($path === '/api/v1/member-accounts') {
+                $username = mb_strtolower(trim((string) $request['username']));
+                $errors = $this->refuseMemberAccount ?? (isset($this->memberAccounts[$username]) ? ['username' => ['That username is taken. Choose another.']] : null);
+                $this->refuseMemberAccount = null;
+                if ($errors !== null) {
+                    return Http::response(['message' => 'Refused.', 'errors' => $errors], 422);
+                }
+                $this->memberAccounts[$username] = [...$request->data(), 'username' => $username, 'user_id' => (string) Str::uuid()];
+
+                return Http::response([
+                    'user_id' => $this->memberAccounts[$username]['user_id'],
+                    'name' => (string) $request['name'],
+                    'username' => $username,
+                    'expires_at' => now()->addDays(7)->toIso8601String(),
+                    'role_note' => null,
+                ], 201);
             }
 
             if ($path === '/api/v1/health') {

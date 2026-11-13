@@ -38,13 +38,13 @@ final class AppSessionController
         $user->forceFill([
             $user->getKeyName() => $identity->subject,
             'name' => $identity->name,
-            'email' => $identity->email,
+            'email' => $identity->signInName(),
         ])->save();
 
         $organization = $tenant->require();
 
         return response()->json([
-            'user' => ['id' => $identity->subject, 'name' => $identity->name, 'email' => $identity->email],
+            'user' => ['id' => $identity->subject, 'name' => $identity->name, 'email' => $identity->signInName()],
             'organization' => [
                 'id' => $organization->id,
                 'slug' => $organization->slug,

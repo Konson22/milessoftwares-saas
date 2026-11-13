@@ -42,6 +42,13 @@ final class TemporaryAccounts
 {
     public const VALID_DAYS = 7;
 
+    /** Lowercase; no "@", so the sign-in field tells it from an email. */
+    public const USERNAME_PATTERN = '/^[a-z0-9][a-z0-9._-]{2,31}$/';
+
+    private const EMAIL_TAKEN = 'An account with that email already exists. Invite them instead: they sign in with their own password.';
+
+    private const USERNAME_TAKEN = 'That username is taken. Choose another.';
+
     /** No 0/O, 1/l/I: the password is read out or written down. */
     private const ALPHABET = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -58,8 +65,17 @@ final class TemporaryAccounts
      * @throws MembershipActionDenied
      * @throws SeparationOfDutiesWarning before anything is created, when the roles warn and it was not acknowledged
      */
-    public function add(OrganizationMembership $actor, string $name, string $email, array $proposed = [], bool $acknowledgeSeparationOfDuties = false): array
+    public function add(OrganizationMembership $actor, string $name, ?string $email, array $proposed = [], bool $acknowledgeSeparationOfDuties = false, ?string $username = null, ?string $password = null): array
     {
+        $email = $email === null || trim($email) === '' ? null : mb_strtolower(trim($email));
+        $username = $username === null || trim($username) === '' ? null : mb_strtolower(trim($username));
+        if (($email === null) === ($username === null)) {
+            throw new InvalidArgumentException('Give an email or a username, not both.');
+        }
+        if ($username !== null && preg_match(self::USERNAME_PATTERN, $username) !== 1) {
+            throw new MembershipActionDenied('A username is 3 to 32 letters, digits, dots, dashes or underscores, starting with a letter or digit.');
+        }
+
         $this->assertMayAdd($actor);
 
         $organization = $this->tenant->require();
@@ -67,22 +83,26 @@ final class TemporaryAccounts
             throw new MembershipActionDenied('This organization is not accepting new members right now.');
         }
 
-        $email = mb_strtolower(trim($email));
-        if (User::query()->whereRaw('lower(email) = ?', [$email])->exists()) {
-            throw new MembershipActionDenied('An account with that email already exists. Invite them instead: they sign in with their own password.');
+        if ($email !== null && User::query()->whereRaw('lower(email) = ?', [$email])->exists()) {
+            throw new MembershipActionDenied(self::EMAIL_TAKEN);
+        }
+        if ($username !== null && User::query()->whereRaw('lower(username) = ?', [$username])->exists()) {
+            throw new MembershipActionDenied(self::USERNAME_TAKEN);
         }
 
         $acknowledged = $proposed !== [] && app(ProposedRoleCheck::class)->separationOfDuties($proposed, $acknowledgeSeparationOfDuties);
 
-        $password = $this->generate();
+        // The administrator may choose it (a product's own form); otherwise one is made.
+        $password ??= $this->generate();
         $expiresAt = now()->addDays(self::VALID_DAYS);
 
         try {
-            $membership = DB::transaction(function () use ($name, $email, $password, $expiresAt, $organization): OrganizationMembership {
+            $membership = DB::transaction(function () use ($name, $email, $username, $password, $expiresAt, $organization): OrganizationMembership {
                 $user = new User;
                 $user->forceFill([
                     'name' => trim($name),
                     'email' => $email,
+                    'username' => $username,
                     'password' => $password,
                     'password_change_required_at' => now(),
                     'temporary_password_expires_at' => $expiresAt,
@@ -99,9 +119,9 @@ final class TemporaryAccounts
                 return $membership;
             });
         } catch (QueryException $e) {
-            // Someone registered that address in the meantime.
+            // Someone registered that address or username in the meantime.
             if ($e->getCode() === '23505') {
-                throw new MembershipActionDenied('An account with that email already exists. Invite them instead: they sign in with their own password.');
+                throw new MembershipActionDenied($email !== null ? self::EMAIL_TAKEN : self::USERNAME_TAKEN);
             }
 
             throw $e;
@@ -113,6 +133,7 @@ final class TemporaryAccounts
         // The password itself is never logged.
         $this->audit->record('member.added_with_temporary_password', $membership, [
             'email' => $email,
+            'username' => $username,
             'expires_at' => $expiresAt->toIso8601String(),
             'proposed_access' => $proposed === [] ? null : $proposed,
             'role_note' => $roleNote,
@@ -135,8 +156,8 @@ final class TemporaryAccounts
         $this->assertMayAdd($actor);
 
         $user = $membership->user;
-        if (! $this->awaitingFirstSignIn($membership)) {
-            throw new MembershipActionDenied('Only people this organization added, who have not chosen their own password yet, can get a new temporary password.');
+        if (! $this->mayReissue($membership)) {
+            throw new MembershipActionDenied('Only people this organization added can get a new temporary password: before they choose their own, or at any time for a username account (it has no email to reset by).');
         }
 
         $password = $this->generate();
@@ -154,13 +175,17 @@ final class TemporaryAccounts
         return ['password' => $password, 'expiresAt' => $expiresAt];
     }
 
-    public function awaitingFirstSignIn(OrganizationMembership $membership): bool
+    /**
+     * Added by this organization, and either still on the temporary password
+     * or a username account, which has no email to reset a password by.
+     */
+    public function mayReissue(OrganizationMembership $membership): bool
     {
         $user = $membership->user;
 
         return $membership->isActive()
             && $user->created_by_organization_id === $membership->organization_id
-            && $user->mustChangePassword();
+            && ($user->mustChangePassword() || $user->hasUsernameOnly());
     }
 
     /**

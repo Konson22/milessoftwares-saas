@@ -46,7 +46,7 @@ class AddPlatformStaff extends Command
             $staff->grantRole($record, $role, actor: null);
         }
 
-        $this->components->info("{$user->email} is platform staff with: ".($record->roles()->pluck('key')->implode(', ') ?: 'no roles'));
+        $this->components->info("{$user->signInName()} is platform staff with: ".($record->roles()->pluck('key')->implode(', ') ?: 'no roles'));
 
         if ($user->two_factor_confirmed_at === null) {
             $this->components->warn('They have no two-factor authentication yet and cannot open admin until they set it up.');

@@ -40,7 +40,9 @@ const props = {
         {
             id: 'membership-1',
             name: 'Deng Garang',
-            email: 'deng@example.test',
+            login: 'deng@example.test',
+            loginKind: 'email' as const,
+            pending: true,
             expiresAt: '2026-10-23',
             expired: false,
         },
@@ -93,6 +95,37 @@ describe('manage invitations', () => {
         expect(form?.querySelector('input[name="name"]')).not.toBeNull();
         expect(form?.querySelector('input[name="email"]')).not.toBeNull();
         expect(form?.querySelector('#application_id')).not.toBeNull();
+    });
+
+    it('adds someone with a username instead of an email', () => {
+        const { container } = render(<Invitations {...props} />);
+        fireEvent.click(screen.getByRole('tab', { name: 'Add directly' }));
+        fireEvent.click(
+            screen.getByRole('radio', { name: 'Username (no email)' }),
+        );
+
+        const form = container.querySelector('form');
+        expect(form?.querySelector('input[name="email"]')).toBeNull();
+        expect(form?.querySelector('input[name="username"]')).not.toBeNull();
+    });
+
+    it('shows the username to hand over for an account without an email', () => {
+        page.flash = {
+            credentials: {
+                name: 'Achol Deng',
+                login: 'achol',
+                loginKind: 'username',
+                password: 'hK7m-Qx3p-Tz9a',
+                expiresAt: '2026-10-23',
+                signInUrl: 'http://acme.milesoftwares.local',
+                roleNote: null,
+            },
+        };
+        render(<Invitations {...props} />);
+
+        expect(screen.getByText('Username')).toBeTruthy();
+        expect(screen.getByText('achol')).toBeTruthy();
+        page.flash = {};
     });
 
     it('asks for the application first, then offers only its roles', () => {
@@ -165,7 +198,8 @@ describe('manage invitations', () => {
         page.flash = {
             credentials: {
                 name: 'Deng Garang',
-                email: 'deng@example.test',
+                login: 'deng@example.test',
+                loginKind: 'email',
                 password: 'hK7m-Qx3p-Tz9a',
                 expiresAt: '2026-10-23',
                 signInUrl: 'http://acme.milesoftwares.local',
@@ -189,7 +223,8 @@ describe('manage invitations', () => {
         page.flash = {
             credentials: {
                 name: 'Deng Garang',
-                email: 'deng@example.test',
+                login: 'deng@example.test',
+                loginKind: 'email',
                 password: 'hK7m-Qx3p-Tz9a',
                 expiresAt: '2026-10-23',
                 signInUrl: 'http://acme.milesoftwares.local',

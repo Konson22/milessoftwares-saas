@@ -17,10 +17,16 @@ type Invitation = {
     proposedRoles: number;
 };
 
+type LoginKind = 'email' | 'username';
+
+/** Added here: before they choose their own password, or a username account. */
 type Awaiting = {
     id: string;
     name: string;
-    email: string;
+    login: string;
+    loginKind: LoginKind;
+    /** Still on the temporary password. */
+    pending: boolean;
     expiresAt: string | null;
     expired: boolean;
 };
@@ -30,7 +36,9 @@ type Option = { id: string; name: string };
 /** Flashed once after adding someone or issuing a new temporary password. */
 type Credentials = {
     name: string;
-    email: string;
+    /** The email, or the username of an account without one. */
+    login: string;
+    loginKind: LoginKind;
     password: string;
     expiresAt: string;
     signInUrl: string;
@@ -53,6 +61,7 @@ export default function Invitations({
     departments,
 }: Props) {
     const [mode, setMode] = useState<'invite' | 'add'>('invite');
+    const [addWith, setAddWith] = useState<LoginKind>('email');
     // Remounts the role picker after each submit, clearing its choices.
     const [round, setRound] = useState(0);
     const credentials = usePage().flash.credentials as Credentials | undefined;
@@ -138,12 +147,11 @@ export default function Invitations({
 
                     {awaiting.length > 0 && (
                         <section className="space-y-3">
-                            <h2 className="text-lg font-medium">
-                                Awaiting first sign-in
-                            </h2>
+                            <h2 className="text-lg font-medium">Added here</h2>
                             <p className="text-sm text-muted-foreground">
-                                Added with a temporary password and have not
-                                chosen their own yet.
+                                People who have not chosen their own password
+                                yet, and username accounts, which have no email
+                                to reset a forgotten password by.
                             </p>
                             <ul className="divide-y rounded-lg border text-sm">
                                 {awaiting.map((person) => (
@@ -156,7 +164,11 @@ export default function Invitations({
                                                 {person.name}
                                             </p>
                                             <p className="text-xs text-muted-foreground">
-                                                {person.email}
+                                                {person.loginKind === 'username'
+                                                    ? `Username: ${person.login}`
+                                                    : person.login}
+                                                {!person.pending &&
+                                                    ' · signed in'}
                                                 {person.expiresAt &&
                                                     ` · password ${person.expired ? 'expired' : 'expires'} ${person.expiresAt}`}
                                             </p>
@@ -268,7 +280,68 @@ export default function Invitations({
                                         <Input id="name" name="name" required />
                                         <InputError message={errors.name} />
                                     </div>
-                                    <EmailField error={errors.email} />
+                                    <fieldset className="grid gap-1.5">
+                                        <legend className="mb-1.5 text-sm font-medium">
+                                            Signs in with
+                                        </legend>
+                                        <div className="flex gap-4 text-sm">
+                                            {(
+                                                [
+                                                    ['email', 'Email'],
+                                                    [
+                                                        'username',
+                                                        'Username (no email)',
+                                                    ],
+                                                ] as const
+                                            ).map(([value, label]) => (
+                                                <label
+                                                    key={value}
+                                                    className="flex items-center gap-2"
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        name="add_with"
+                                                        checked={
+                                                            addWith === value
+                                                        }
+                                                        onChange={() =>
+                                                            setAddWith(value)
+                                                        }
+                                                    />
+                                                    {label}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </fieldset>
+                                    {addWith === 'email' ? (
+                                        <EmailField error={errors.email} />
+                                    ) : (
+                                        <div className="grid gap-1.5">
+                                            <Label htmlFor="username">
+                                                Username
+                                            </Label>
+                                            <Input
+                                                id="username"
+                                                name="username"
+                                                required
+                                                autoCapitalize="none"
+                                                autoComplete="off"
+                                                spellCheck={false}
+                                                maxLength={32}
+                                                placeholder="e.g. john.deng"
+                                            />
+                                            <p className="text-xs text-muted-foreground">
+                                                For someone without an email,
+                                                such as a pump attendant. They
+                                                sign in with this and their
+                                                password, on the web or in the
+                                                mobile app.
+                                            </p>
+                                            <InputError
+                                                message={errors.username}
+                                            />
+                                        </div>
+                                    )}
                                     <RolePicker
                                         key={round}
                                         roles={roles}
@@ -331,14 +404,16 @@ function EmailField({ error }: { error?: string }) {
  */
 function CredentialsCard({
     name,
-    email,
+    login,
+    loginKind,
     password,
     expiresAt,
     signInUrl,
     roleNote,
 }: Credentials) {
     const [copied, setCopied] = useState(false);
-    const text = `Sign in at ${signInUrl}\nEmail: ${email}\nTemporary password: ${password}\n(Choose your own at first sign-in. Expires ${expiresAt}.)`;
+    const loginLabel = loginKind === 'username' ? 'Username' : 'Email';
+    const text = `Sign in at ${signInUrl}\n${loginLabel}: ${login}\nTemporary password: ${password}\n(Choose your own at first sign-in. Expires ${expiresAt}.)`;
 
     return (
         <section
@@ -351,8 +426,8 @@ function CredentialsCard({
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
                 <dt className="text-muted-foreground">Sign in at</dt>
                 <dd className="break-all">{signInUrl}</dd>
-                <dt className="text-muted-foreground">Email</dt>
-                <dd>{email}</dd>
+                <dt className="text-muted-foreground">{loginLabel}</dt>
+                <dd>{login}</dd>
                 <dt className="text-muted-foreground">Temporary password</dt>
                 <dd className="font-mono text-base font-semibold tracking-wide">
                     {password}

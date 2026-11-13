@@ -2729,3 +2729,80 @@ it('totals fuel and goods across the stations a member may see', function () {
     $this->get(at('inventory'))->assertOk()
         ->assertInertia(fn (Assert $page) => $page->where('fuel', null)->has('goods'));
 });
+
+it('lists each grade with its price, tanks and nozzles at this station', function () {
+    forecourt();
+    $this->post(at('products'), ['name' => 'Diesel', 'code' => 'AGO', 'active' => 1])->assertSessionHasNoErrors();
+
+    $this->get(at('products'))->assertInertia(fn (Assert $page) => $page
+        ->component('products/index')
+        ->where('canManage', true)
+        ->where('canPrice', true)
+        ->has('products', 2)
+        ->where('products.0.code', 'AGO')
+        ->where('products.0.priceMinor', null)
+        ->where('products.0.tanks', 0)
+        ->where('products.1.code', 'PMS')
+        ->where('products.1.priceMinor', 1000)
+        ->where('products.1.tanks', 1)
+        ->where('products.1.nozzles', 1));
+});
+
+it('gives a new attendant a username sign-in with the temporary password the manager typed', function () {
+    manager();
+
+    $this->post(at('attendants'), [
+        'name' => 'Amina Lual',
+        'employee_code' => 'a7',
+        'phone' => '0912000000',
+        'create_sign_in' => 1,
+        'username' => ' Amina.Lual ',
+        'password' => 'pump-start-42',
+        'active' => 1,
+        'at_station' => 1,
+    ])->assertSessionHasNoErrors()->assertSessionHas('attendantSignIn.username', 'amina.lual');
+
+    $request = $this->platform()->memberAccounts['amina.lual'];
+    expect($request['password'])->toBe('pump-start-42')
+        ->and($request['role'])->toBe('attendant')
+        ->and($request['branch_id'])->toBe($this->juba);
+
+    $attendant = $this->asTenant('acme', fn () => Attendant::query()->where('employee_code', 'A7')->sole());
+    expect($attendant->user_id)->toBe($request['user_id'])
+        ->and(User::query()->findOrFail($attendant->user_id)->email)->toBe('amina.lual');
+
+    // Saving the attendant later keeps the phone and the sign-in.
+    $this->put(at("attendants/{$attendant->id}"), [
+        'name' => 'Amina Lual',
+        'employee_code' => 'A7',
+        'phone' => '0912000000',
+        'user_id' => $attendant->user_id,
+        'active' => 1,
+        'at_station' => 1,
+    ])->assertSessionHasNoErrors();
+    expect($attendant->refresh()->user_id)->toBe($request['user_id'])
+        ->and($attendant->phone)->toBe('0912000000');
+});
+
+it('adds no attendant when the platform refuses the sign-in', function () {
+    manager();
+    $this->platform()->refuseMemberAccount = ['username' => ['That username is taken. Choose another.']];
+
+    $this->post(at('attendants'), [
+        'name' => 'Amina Lual',
+        'employee_code' => 'A7',
+        'create_sign_in' => 1,
+        'username' => 'amina',
+        'password' => 'pump-start-42',
+    ])->assertSessionHasErrors(['username' => 'That username is taken. Choose another.']);
+
+    $this->post(at('attendants'), [
+        'name' => 'Amina Lual',
+        'employee_code' => 'A7',
+        'create_sign_in' => 1,
+        'username' => 'amina',
+        'password' => 'short',
+    ])->assertSessionHasErrors('password');
+
+    expect($this->asTenant('acme', fn () => Attendant::query()->count()))->toBe(0);
+});

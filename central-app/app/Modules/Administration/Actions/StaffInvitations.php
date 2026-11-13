@@ -123,7 +123,7 @@ final class StaffInvitations
         return DB::transaction(function () use ($invitation, $user): PlatformStaff {
             $locked = StaffInvitation::query()->whereKey($invitation->getKey())->lockForUpdate()->first();
 
-            if ($locked === null || $locked->status() !== 'pending' || mb_strtolower($user->email) !== $locked->email) {
+            if ($locked === null || $locked->status() !== 'pending' || mb_strtolower((string) $user->email) !== $locked->email) {
                 throw new StaffChangeDenied('This invitation is no longer valid.');
             }
 

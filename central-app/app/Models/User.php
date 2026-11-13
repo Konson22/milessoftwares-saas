@@ -19,7 +19,8 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 /**
  * @property string $id
  * @property string $name
- * @property string $email
+ * @property string|null $email null for a username account (see username)
+ * @property string|null $username sign-in name of an account added without an email; unique, compared case-insensitively
  * @property string|null $avatar_url the Google profile picture, refreshed on each Google sign-in
  * @property string $status
  * @property Carbon|null $suspended_at
@@ -93,6 +94,37 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function hasVerifiedEmail(): bool
     {
         return $this->email_verified_at !== null || $this->created_by_organization_id !== null;
+    }
+
+    /**
+     * The account for what was typed in the sign-in field: an email when it
+     * contains "@", otherwise a username. Both compared case-insensitively.
+     */
+    public static function findForSignIn(string $login): ?self
+    {
+        $login = mb_strtolower(trim($login));
+
+        if ($login === '') {
+            return null;
+        }
+
+        return self::query()
+            ->whereRaw(str_contains($login, '@') ? 'lower(email) = ?' : 'lower(username) = ?', [$login])
+            ->first();
+    }
+
+    /**
+     * What the person signs in with: their email, or their username when
+     * the account has no email. For showing who someone is.
+     */
+    public function signInName(): string
+    {
+        return $this->email ?? (string) $this->username;
+    }
+
+    public function hasUsernameOnly(): bool
+    {
+        return $this->email === null;
     }
 
     public function mustChangePassword(): bool

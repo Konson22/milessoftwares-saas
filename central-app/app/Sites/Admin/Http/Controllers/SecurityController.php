@@ -34,7 +34,7 @@ class SecurityController extends Controller
                 ->through(fn (AuthenticationEvent $record) => [
                     'id' => $record->id,
                     'event' => $record->event,
-                    'user' => $record->user?->email,
+                    'user' => $record->user?->signInName(),
                     'host' => $record->host,
                     'ip' => $record->ip_address,
                     'occurredAt' => $record->occurred_at->toIso8601String(),

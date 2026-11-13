@@ -36,18 +36,26 @@ class MemberAccountController extends Controller
     {
         $actor = $this->authorizeAccessManagement($request, $this->access);
 
+        // Either an email or, for someone without one (a pump attendant, say), a username.
+        if (is_string($request->input('username'))) {
+            $request->merge(['username' => mb_strtolower(trim($request->input('username')))]);
+        }
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255'],
+            'email' => ['nullable', 'required_without:username', 'prohibits:username', 'email', 'max:255'],
+            'username' => ['nullable', 'required_without:email', 'string', 'regex:'.TemporaryAccounts::USERNAME_PATTERN],
             ...ProposedAccess::rules(),
+        ], [
+            'username.regex' => __('A username is 3 to 32 letters, digits, dots, dashes or underscores, starting with a letter or digit.'),
         ]);
 
         $proposed = ProposedAccess::fromInput($validated);
+        $field = filled($validated['email'] ?? null) ? 'email' : 'username';
 
         try {
-            $result = $this->accounts->add($actor, $validated['name'], $validated['email'], $proposed, (bool) ($validated['acknowledge_sod'] ?? false));
+            $result = $this->accounts->add($actor, $validated['name'], $validated['email'] ?? null, $proposed, (bool) ($validated['acknowledge_sod'] ?? false), $validated['username'] ?? null);
         } catch (MembershipActionDenied $e) {
-            throw ValidationException::withMessages(['email' => $e->getMessage()]);
+            throw ValidationException::withMessages([$field => $e->getMessage()]);
         } catch (SeparationOfDutiesWarning $warning) {
             throw ValidationException::withMessages(['acknowledge_sod' => $warning->conflicts]);
         }
@@ -76,7 +84,8 @@ class MemberAccountController extends Controller
     {
         Inertia::flash('credentials', [
             'name' => $membership->user->name,
-            'email' => $membership->user->email,
+            'login' => $membership->user->signInName(),
+            'loginKind' => $membership->user->hasUsernameOnly() ? 'username' : 'email',
             'password' => $password,
             'expiresAt' => $expiresAt->toDateString(),
             'signInUrl' => PlatformHosts::url(PlatformHosts::workspace((string) $membership->organization->primarySlug?->slug)),

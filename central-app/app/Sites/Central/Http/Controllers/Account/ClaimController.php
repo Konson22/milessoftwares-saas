@@ -29,7 +29,7 @@ class ClaimController extends Controller
         $status = match (true) {
             $claim === null => 'invalid',
             $claim->effectiveStatus() !== OrganizationClaim::PENDING => $claim->effectiveStatus(),
-            mb_strtolower($user->email) !== $claim->email => 'wrong_account',
+            mb_strtolower((string) $user->email) !== $claim->email => 'wrong_account',
             default => 'pending',
         };
 
