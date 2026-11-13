@@ -28,6 +28,7 @@ use App\Sites\Central\Http\Middleware\RememberTrialChoice;
 use App\Sites\Public\Http\Controllers\SeoController;
 use App\Support\Hosts\PlatformHosts;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
+use Illuminate\Routing\RedirectController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -154,6 +155,8 @@ Route::domain('{tenant}.'.PlatformHosts::root())
                 Route::post('positions', [StructureController::class, 'storePosition'])->name('positions.store');
                 Route::put('positions/{position}', [StructureController::class, 'updatePosition'])->whereUuid('position')->name('positions.update');
 
+                // The list is /members; this address only takes the add form, so opening it goes there.
+                Route::get('members', RedirectController::class)->defaults('destination', '/members')->defaults('status', 302);
                 Route::put('members/{membership}/status', [MemberController::class, 'updateStatus'])->whereUuid('membership')->name('members.status');
                 // Adding someone directly with a temporary password.
                 Route::post('members', [MemberAccountController::class, 'store'])->middleware('throttle:30,60')->name('members.store');
@@ -182,9 +185,12 @@ Route::domain('{tenant}.'.PlatformHosts::root())
                     ->middleware('throttle:10,60')
                     ->name('slug.update');
 
-                // Plans and subscriptions: changes are requests that staff decide.
+                // Plans and subscriptions: a plan's free trial starts at once; other changes are requests that staff decide.
                 Route::get('subscription', [SubscriptionController::class, 'show'])->name('subscription');
                 Route::get('plans', [SubscriptionController::class, 'plans'])->name('plans');
+                Route::post('plan-trials', [SubscriptionController::class, 'startTrial'])
+                    ->middleware('throttle:10,60')
+                    ->name('plan-trials.store');
                 Route::post('plan-requests', [SubscriptionController::class, 'requestPlan'])
                     ->middleware('throttle:20,60')
                     ->name('plan-requests.store');

@@ -18,7 +18,8 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * The owner's view of plans and subscriptions. Changes are requests: staff
+ * The owner's view of plans and subscriptions. A plan's free trial starts
+ * at once (once per plan); other changes are requests: staff
  * on admin.<root> approve them, which assigns or cancels the plan.
  */
 class SubscriptionController extends Controller
@@ -92,6 +93,7 @@ class SubscriptionController extends Controller
             ->pluck('plan_id')
             ->all();
         $requested = PlanRequest::query()->where('status', 'pending')->where('type', 'subscribe')->pluck('id', 'plan_id');
+        $had = SubscriptionItem::query()->distinct()->pluck('plan_id')->all();
 
         return Inertia::render('central/workspace/manage/plans', [
             'organization' => ['displayName' => $organization->display_name],
@@ -113,6 +115,7 @@ class SubscriptionController extends Controller
                     'applications' => $plan->applications->pluck('name')->all(),
                     'subscribed' => in_array($plan->id, $subscribed, true),
                     'requestId' => $requested[$plan->id] ?? null,
+                    'canStartTrial' => $plan->trial_days > 0 && ! in_array($plan->id, $had, true),
                 ])
                 ->all(),
             'requests' => $this->recentRequests(),
@@ -132,6 +135,20 @@ class SubscriptionController extends Controller
         $this->requests->requestPlan($organization, $plan, $request->user(), $validated['note'] ?? null);
 
         return $this->done(__('Request sent. We will be in touch about :plan.', ['plan' => $plan->name]));
+    }
+
+    public function startTrial(Request $request): RedirectResponse
+    {
+        $organization = $this->ownedOrganization($request, $this->tenant);
+        $request->validate(['plan_id' => ['required', 'uuid', Rule::exists('plans', 'id')]]);
+
+        $plan = Plan::query()->findOrFail($request->string('plan_id')->toString());
+        $subscription = $this->requests->startTrial($organization, $plan, $request->user());
+
+        return $this->done(__(':plan is on. Your free trial ends on :date.', [
+            'plan' => $plan->name,
+            'date' => $subscription->trial_ends_at?->toFormattedDateString(),
+        ]));
     }
 
     public function requestCancellation(Request $request, string $subscription): RedirectResponse

@@ -34,6 +34,7 @@ type Plan = {
     applications: string[];
     subscribed: boolean;
     requestId: string | null;
+    canStartTrial: boolean;
 };
 
 type Props = {
@@ -133,10 +134,10 @@ function PlanCard({ plan }: { plan: Plan }) {
                         {application}
                     </li>
                 ))}
-                {plan.trialDays > 0 && (
+                {plan.canStartTrial && (
                     <li className="flex items-center gap-2 text-muted-foreground">
                         <Check className="size-4 shrink-0" aria-hidden />
-                        {plan.trialDays}-day free trial available
+                        {plan.trialDays}-day free trial
                     </li>
                 )}
             </ul>
@@ -146,6 +147,8 @@ function PlanCard({ plan }: { plan: Plan }) {
                     <Button className="w-full" variant="outline" disabled>
                         Subscribed
                     </Button>
+                ) : plan.canStartTrial ? (
+                    <StartTrialButton plan={plan} />
                 ) : plan.requestId ? (
                     <Button className="w-full" variant="outline" disabled>
                         Request sent
@@ -155,6 +158,33 @@ function PlanCard({ plan }: { plan: Plan }) {
                 )}
             </div>
         </li>
+    );
+}
+
+function StartTrialButton({ plan }: { plan: Plan }) {
+    return (
+        <Form
+            action={workspaceRoutes.planTrials}
+            method="post"
+            options={{ preserveScroll: true }}
+        >
+            {({ errors, processing }) => (
+                <>
+                    <input type="hidden" name="plan_id" value={plan.id} />
+                    <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={processing}
+                    >
+                        Start {plan.trialDays}-day free trial
+                    </Button>
+                    <p className="mt-2 text-center text-xs text-muted-foreground">
+                        Nothing to pay now.
+                    </p>
+                    <InputError message={errors.plan_id} />
+                </>
+            )}
+        </Form>
     );
 }
 

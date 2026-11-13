@@ -281,6 +281,38 @@ it('starts a plan the owner asked for once staff approve', function () {
     $this->post(billingAppUrl('manage/plan-requests'), ['plan_id' => $this->plan->id])->assertSessionHasErrors('plan_id');
 });
 
+it('lets the owner start a plan\'s free trial without a request, once', function () {
+    billingWorkAs($this->owner);
+    $this->post(billingAppUrl('manage/plan-requests'), ['plan_id' => $this->plan->id])->assertSessionHasNoErrors();
+    $this->get(billingAppUrl('manage/plans'))->assertInertia(fn (AssertableInertia $page) => $page->where('plans.0.canStartTrial', true));
+
+    $this->post(billingAppUrl('manage/plan-trials'), ['plan_id' => $this->plan->id])->assertSessionHasNoErrors();
+
+    $subscription = app(TenantContext::class)->run($this->organization, fn () => Subscription::query()->sole());
+    expect($subscription->status)->toBe('trialing')
+        ->and($subscription->trial_ends_at->toDateString())->toBe(now()->addDays(14)->toDateString())
+        ->and(app(TenantContext::class)->run($this->organization, fn () => Entitlement::query()->current()->where('application_id', $this->retail->id)->value('source')))->toBe('trial')
+        ->and(app(TenantContext::class)->run($this->organization, fn () => PlanRequest::query()->sole()->status))->toBe('withdrawn')
+        ->and(AuditLog::query()->where('action', 'plan_trial.started')->exists())->toBeTrue();
+
+    $this->get(billingAppUrl('manage/plans'))->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('plans.0.subscribed', true)
+        ->where('plans.0.canStartTrial', false));
+
+    // Ended, the trial cannot be started again: the plan goes through a request.
+    app(ManageEntitlements::class)->cancel($this->organization, $subscription, null, 'Trial over');
+    $this->post(billingAppUrl('manage/plan-trials'), ['plan_id' => $this->plan->id])->assertSessionHasErrors('plan_id');
+    expect(app(TenantContext::class)->run($this->organization, fn () => Subscription::query()->count()))->toBe(1);
+});
+
+it('refuses a free trial for a plan without one', function () {
+    $this->plan->forceFill(['trial_days' => 0])->save();
+    billingWorkAs($this->owner);
+
+    $this->get(billingAppUrl('manage/plans'))->assertInertia(fn (AssertableInertia $page) => $page->where('plans.0.canStartTrial', false));
+    $this->post(billingAppUrl('manage/plan-trials'), ['plan_id' => $this->plan->id])->assertSessionHasErrors('plan_id');
+});
+
 it('lets the owner withdraw a request, and staff decline one with a note', function () {
     billingWorkAs($this->owner);
     $this->post(billingAppUrl('manage/plan-requests'), ['plan_id' => $this->plan->id]);

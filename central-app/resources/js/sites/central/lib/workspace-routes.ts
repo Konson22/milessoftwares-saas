@@ -15,6 +15,7 @@ export const workspaceRoutes = {
     slug: '/manage/slug',
     subscription: '/manage/subscription',
     plans: '/manage/plans',
+    planTrials: '/manage/plan-trials',
     planRequests: '/manage/plan-requests',
     withdrawRequest: (id: string) => `/manage/plan-requests/${id}/withdraw`,
     cancellation: (subscription: string) =>

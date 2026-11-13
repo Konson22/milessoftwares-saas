@@ -43,6 +43,8 @@ class LocalPlansSeeder extends Seeder
         'finance-standard' => ['Finance Standard', 'Finance & Accounting on its own: ledger, invoices, bills and reports.', 'finance_accounting', ['finance'], 2000],
         'hr-standard' => ['HR Standard', 'Staff records, leave and payroll.', null, ['hr'], 1500],
         'logistics-standard' => ['Logistics Standard', 'Shipments, fleet and deliveries.', null, ['logistics'], 2000],
+        'petrol-standard' => ['Petrol Standard', 'The petrol station: pumps and tanks, shifts, fuel sales and deliveries.', null, ['petrol'], 3000],
+        'petrol-plus' => ['Petrol Plus', 'The petrol station with Finance & Accounting for the books.', null, ['petrol', 'finance'], 4500],
     ];
 
     public function run(): void

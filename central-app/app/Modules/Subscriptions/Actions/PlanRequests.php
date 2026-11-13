@@ -54,6 +54,55 @@ final class PlanRequests
         return $request;
     }
 
+    /**
+     * Self-serve: the owner starts a plan's free trial straight away, with
+     * no request for staff. Once per plan, ever: a plan the organization has
+     * had in any state (trial, paid, ended) goes through a request instead.
+     * Concurrent clicks are serialized, so a double submit starts it once.
+     */
+    public function startTrial(Organization $organization, Plan $plan, User $owner): Subscription
+    {
+        if ($plan->status !== 'active' || ! $plan->is_public) {
+            throw ValidationException::withMessages(['plan_id' => __('This plan is not available.')]);
+        }
+
+        if ($plan->trial_days < 1) {
+            throw ValidationException::withMessages(['plan_id' => __(':plan has no free trial. Request it instead.', ['plan' => $plan->name])]);
+        }
+
+        $plan->loadMissing('applications');
+
+        return $this->tenant->run($organization, fn () => DB::transaction(function () use ($organization, $plan, $owner): Subscription {
+            DB::select('SELECT pg_advisory_xact_lock(hashtext(?))', ["plan-trial:{$organization->id}:{$plan->id}"]);
+
+            if (self::hadPlan($plan->id)) {
+                throw ValidationException::withMessages(['plan_id' => __('You have already had :plan. Request it to switch it on again.', ['plan' => $plan->name])]);
+            }
+
+            $subscription = $this->entitlements->assignPlan($organization, $plan, null, startTrial: true);
+
+            PlanRequest::query()
+                ->where('status', 'pending')
+                ->where('type', 'subscribe')
+                ->where('plan_id', $plan->id)
+                ->update(['status' => 'withdrawn', 'decided_at' => now()]);
+
+            $this->audit->record('plan_trial.started', $subscription, ['plan' => $plan->code, 'trial_ends_at' => $subscription->trial_ends_at?->toIso8601String()], actor: $owner, organizationId: $organization->id);
+
+            return $subscription;
+        }));
+    }
+
+    /**
+     * Whether the current tenant has ever subscribed to the plan, in any state.
+     */
+    public static function hadPlan(string $planId): bool
+    {
+        return Subscription::query()
+            ->whereHas('items', fn ($items) => $items->where('plan_id', $planId))
+            ->exists();
+    }
+
     public function requestCancellation(Organization $organization, Subscription $subscription, User $owner, ?string $note): PlanRequest
     {
         if (! in_array($subscription->status, self::LIVE_STATUSES, true)) {
