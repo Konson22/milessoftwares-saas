@@ -81,7 +81,7 @@ class ApplyEvent
 
         // Hours already paid stay as they were paid.
         $locked = PayrollRun::query()
-            ->where('status', '!=', PayrollRun::DRAFT)
+            ->whereNotIn('status', [PayrollRun::DRAFT, PayrollRun::REVIEWED, PayrollRun::REVERSED])
             ->get(['number', 'period_start', 'period_end']);
 
         foreach ($payload['entries'] as $entry) {

@@ -140,7 +140,7 @@ it('needs someone else to approve, then locks the run and sends one summarised j
     expect(onlyRun()->status)->toBe(PayrollRun::PAID);
     $paid = outboxRows()[1];
     expect($paid->event_type)->toBe('finance.payroll.paid')
-        ->and(json_decode($paid->payload, true))->toBe(['run_reference' => 'PR-00001', 'currency' => 'SSP', 'amount_minor' => $run->net_minor, 'method' => 'bank_transfer']);
+        ->and(json_decode($paid->payload, true))->toBe(['run_reference' => 'PR-00001', 'payment_reference' => 'PR-00001-P1', 'currency' => 'SSP', 'amount_minor' => $run->net_minor, 'method' => 'bank_transfer']);
 });
 
 it('recalculates a draft with pay changed since, and discards a draft', function () {
@@ -199,8 +199,8 @@ it('sends a run to Finance once when an approval or a payment arrives twice', fu
 
         $paying = PayrollRun::query()->sole();
         $again = PayrollRun::query()->sole();
-        $runs->markPaid($paying, $this->approver, 'bank', CarbonImmutable::parse('2026-03-28'));
-        expect(fn () => $runs->markPaid($again, $this->approver, 'bank', CarbonImmutable::parse('2026-03-28')))->toThrow(ValidationException::class);
+        $runs->pay($paying, $this->approver, 'bank', CarbonImmutable::parse('2026-03-28'));
+        expect(fn () => $runs->pay($again, $this->approver, 'bank', CarbonImmutable::parse('2026-03-28')))->toThrow(ValidationException::class);
     });
 
     expect(array_column(outboxRows(), 'event_type'))->toBe(['finance.payroll.posted', 'finance.payroll.paid']);

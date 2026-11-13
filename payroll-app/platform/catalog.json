@@ -6,7 +6,7 @@
         "kind": "shared_module",
         "status": "beta"
     },
-    "version": "1.0.0",
+    "version": "1.1.0",
     "permissions": [
         {
             "key": "payroll.employees.view",
@@ -47,15 +47,30 @@
             "scopes": ["organization"]
         },
         {
+            "key": "payroll.runs.review",
+            "name": "Review payroll runs",
+            "description": "Records a second check of a prepared payroll before approval. Never a run one prepared.",
+            "sensitivity": 4,
+            "scopes": ["organization"]
+        },
+        {
             "key": "payroll.runs.approve",
             "name": "Approve payroll runs",
-            "description": "Never a run one prepared. Approval locks the run and sends the journal to Finance.",
+            "description": "Never a run one prepared. Approval locks the run and sends the journal to Finance; an approved run nobody has been paid from can be reversed.",
             "sensitivity": 4,
             "scopes": ["organization"]
         },
         {
             "key": "payroll.runs.pay",
-            "name": "Record that a payroll was paid",
+            "name": "Record payroll payments",
+            "sensitivity": 4,
+            "scopes": ["organization"],
+            "description": "Records net pay that went out, for all or some payslips, and downloads payment instructions with account details."
+        },
+        {
+            "key": "payroll.audit.view",
+            "name": "View the payroll audit trail",
+            "description": "Who prepared, reviewed, approved, paid or reversed each run, and who changed pay, payment details and rules.",
             "sensitivity": 4,
             "scopes": ["organization"]
         }
@@ -89,22 +104,38 @@
             ]
         },
         {
-            "key": "payroll_approver",
-            "name": "Payroll approver",
-            "description": "Checks and approves prepared payrolls, and records them paid.",
+            "key": "payroll_reviewer",
+            "name": "Payroll reviewer",
+            "description": "Checks prepared payrolls and marks them reviewed. Cannot approve or pay them.",
             "sensitivity": 4,
             "delegable": false,
             "scopes": ["organization"],
             "permissions": [
                 "payroll.employees.view",
                 "payroll.pay.view",
+                "payroll.runs.review",
+                "payroll.audit.view"
+            ]
+        },
+        {
+            "key": "payroll_approver",
+            "name": "Payroll approver",
+            "description": "Checks and approves prepared payrolls, records payments, and reverses an approved payroll nobody has been paid from.",
+            "sensitivity": 4,
+            "delegable": false,
+            "scopes": ["organization"],
+            "permissions": [
+                "payroll.employees.view",
+                "payroll.pay.view",
+                "payroll.runs.review",
                 "payroll.runs.approve",
-                "payroll.runs.pay"
+                "payroll.runs.pay",
+                "payroll.audit.view"
             ]
         },
         {
             "key": "payroll_manager",
-            "name": "Payroll manager",
+            "name": "Payroll administrator",
             "description": "Everything in Payroll, including income tax and social security rules. Still cannot approve a run they prepared.",
             "sensitivity": 4,
             "delegable": false,
@@ -116,8 +147,23 @@
                 "payroll.pay.manage",
                 "payroll.settings",
                 "payroll.runs.prepare",
+                "payroll.runs.review",
                 "payroll.runs.approve",
-                "payroll.runs.pay"
+                "payroll.runs.pay",
+                "payroll.audit.view"
+            ]
+        },
+        {
+            "key": "payroll_auditor",
+            "name": "Payroll auditor",
+            "description": "Sees everything in Payroll, including pay and the audit trail. Changes nothing.",
+            "sensitivity": 4,
+            "delegable": false,
+            "scopes": ["organization"],
+            "permissions": [
+                "payroll.employees.view",
+                "payroll.pay.view",
+                "payroll.audit.view"
             ]
         }
     ],
@@ -126,6 +172,11 @@
             "permissions": ["payroll.runs.prepare", "payroll.runs.approve"],
             "mode": "warn",
             "description": "Payroll refuses approval by whoever prepared the run; one person holding both still removes a check when nobody else does."
+        },
+        {
+            "permissions": ["payroll.runs.prepare", "payroll.runs.review"],
+            "mode": "warn",
+            "description": "Payroll refuses a review by whoever prepared the run."
         }
     ]
 }

@@ -10,9 +10,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Miles\PlatformClient\Tenancy\BelongsToTenant;
 
 /**
- * One pay period's payroll: prepared (a draft, recalculated as often as
- * needed), approved by someone else (locked; Finance gets one summarised
- * journal), then paid.
+ * One pay period's payroll:
+ *
+ *   draft      prepared, recalculated as often as needed
+ *   reviewed   checked by someone other than the preparer (optional);
+ *              recalculating sends it back to draft
+ *   approved   by someone other than the preparer: locked, and Finance gets
+ *              one summarised journal
+ *   part_paid  some payslips paid
+ *   paid       every payslip paid
+ *   reversed   approved by mistake and taken back before any pay went out;
+ *              Finance reverses the journal and the month is free again
  *
  * @property string $id
  * @property string $organization_id
@@ -21,6 +29,7 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property CarbonImmutable $period_end
  * @property CarbonImmutable $pay_date
  * @property string $status
+ * @property string|null $currency
  * @property int $headcount
  * @property int $earnings_minor
  * @property int $income_tax_minor
@@ -28,17 +37,25 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property int $social_security_employer_minor
  * @property int $other_deductions_minor
  * @property int $net_minor
+ * @property int $paid_minor
  * @property string $prepared_by
  * @property CarbonImmutable $prepared_at
+ * @property string|null $reviewed_by
+ * @property CarbonImmutable|null $reviewed_at
  * @property string|null $approved_by
  * @property CarbonImmutable|null $approved_at
  * @property string|null $paid_by
  * @property CarbonImmutable|null $paid_at
  * @property string|null $payment_method
+ * @property string|null $reversed_by
+ * @property CarbonImmutable|null $reversed_at
+ * @property string|null $reversal_reason
  * @property string|null $note
  * @property-read User $preparer
+ * @property-read User|null $reviewer
  * @property-read User|null $approver
  * @property-read User|null $payer
+ * @property-read User|null $reverser
  */
 class PayrollRun extends Model
 {
@@ -47,9 +64,15 @@ class PayrollRun extends Model
 
     public const DRAFT = 'draft';
 
+    public const REVIEWED = 'reviewed';
+
     public const APPROVED = 'approved';
 
+    public const PART_PAID = 'part_paid';
+
     public const PAID = 'paid';
+
+    public const REVERSED = 'reversed';
 
     public const PAYMENT_METHODS = ['bank', 'cash', 'mobile_money'];
 
@@ -62,8 +85,10 @@ class PayrollRun extends Model
             'period_end' => 'immutable_date',
             'pay_date' => 'immutable_date',
             'prepared_at' => 'immutable_datetime',
+            'reviewed_at' => 'immutable_datetime',
             'approved_at' => 'immutable_datetime',
             'paid_at' => 'immutable_datetime',
+            'reversed_at' => 'immutable_datetime',
             'headcount' => 'integer',
             'earnings_minor' => 'integer',
             'income_tax_minor' => 'integer',
@@ -71,12 +96,20 @@ class PayrollRun extends Model
             'social_security_employer_minor' => 'integer',
             'other_deductions_minor' => 'integer',
             'net_minor' => 'integer',
+            'paid_minor' => 'integer',
         ];
     }
 
+    /** Still being worked on: payslips can be recalculated. */
     public function isDraft(): bool
     {
-        return $this->status === self::DRAFT;
+        return in_array($this->status, [self::DRAFT, self::REVIEWED], true);
+    }
+
+    /** Approved and not reversed: pay can go out. */
+    public function isPayable(): bool
+    {
+        return in_array($this->status, [self::APPROVED, self::PART_PAID], true);
     }
 
     public function label(): string
@@ -93,11 +126,27 @@ class PayrollRun extends Model
     }
 
     /**
+     * @return HasMany<PayrollPayment, $this>
+     */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(PayrollPayment::class);
+    }
+
+    /**
      * @return BelongsTo<User, $this>
      */
     public function preparer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'prepared_by');
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
     }
 
     /**
@@ -114,5 +163,13 @@ class PayrollRun extends Model
     public function payer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'paid_by');
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function reverser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reversed_by');
     }
 }

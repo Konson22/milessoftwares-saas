@@ -1,0 +1,28 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milesoftwares.com/contracts/events/finance.payroll.reversed.v1.schema.json",
+    "title": "finance.payroll.reversed, schema_version 1",
+    "description": "An approved payroll run taken back before any of its net pay went out: the mirror image of its finance.payroll.posted journal, dated reversed_on. Arriving before that journal, it waits for it. Sent only when the run's journal had lines.",
+    "type": "object",
+    "required": [
+        "run_reference",
+        "reversed_on",
+        "reason"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "run_reference": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "The run reference of finance.payroll.posted."
+        },
+        "reversed_on": {
+            "type": "string",
+            "format": "date"
+        },
+        "reason": {
+            "type": "string",
+            "maxLength": 255
+        }
+    }
+}

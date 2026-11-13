@@ -5,8 +5,10 @@ namespace App\Payroll;
 use App\Models\Employee;
 use App\Models\EmployeeComponent;
 use App\Models\PayComponent;
+use App\Models\PayrollPayment;
 use App\Models\PayrollRun;
 use App\Models\Payslip;
+use App\Models\PayslipPayment;
 use App\Models\StatutoryRule;
 use App\Models\TimesheetEntry;
 use App\Models\User;
@@ -23,11 +25,17 @@ use Miles\PlatformClient\Events\Outbox;
  * Payroll runs, one calendar month each:
  *
  *   prepare   a draft with a payslip for everyone employed in the month who
- *             has basic pay set; recalculated on demand while a draft
+ *             has basic pay set; recalculated on demand until approved
+ *   review    optional: someone other than the preparer records that they
+ *             checked it; recalculating clears it
  *   approve   by someone other than whoever last prepared it; the run and
  *             its payslips never change again, and Finance gets one
  *             summarised journal (finance.payroll.posted)
- *   pay       records that the net pay went out (finance.payroll.paid)
+ *   pay       net pay that went out, for all the unpaid payslips or some of
+ *             them; one finance.payroll.paid per batch
+ *   reverse   an approved run nobody has been paid from yet: Finance
+ *             reverses the journal (finance.payroll.reversed) and the month
+ *             can be prepared again
  *
  * Events to Finance carry run totals only, never one person's pay; the
  * outbox skips them when the organization does not have Finance.
@@ -43,6 +51,7 @@ class Runs
         private readonly Calculator $calculator,
         private readonly DocumentNumbers $numbers,
         private readonly Outbox $outbox,
+        private readonly AuditTrail $audit,
     ) {}
 
     public function prepare(CarbonImmutable $month, CarbonImmutable $payDate, User $preparer, ?string $note = null): PayrollRun
@@ -50,7 +59,7 @@ class Runs
         $start = $month->startOfMonth();
         $end = $month->endOfMonth()->startOfDay();
 
-        if (PayrollRun::query()->whereDate('period_start', $start->toDateString())->exists()) {
+        if (PayrollRun::query()->whereDate('period_start', $start->toDateString())->where('status', '!=', PayrollRun::REVERSED)->exists()) {
             throw ValidationException::withMessages(['month' => "There is already a payroll for {$start->format('F Y')}."]);
         }
 
@@ -61,6 +70,8 @@ class Runs
                 'period_end' => $end,
                 'pay_date' => $payDate,
                 'status' => PayrollRun::DRAFT,
+                // The run stays in the currency it was prepared in.
+                'currency' => $this->currency(),
                 'prepared_by' => $preparer->id,
                 'prepared_at' => now(),
                 'note' => $note,
@@ -68,6 +79,7 @@ class Runs
             $run->save();
 
             $this->calculate($run);
+            $this->audit->record('run.prepared', $run, $preparer, ['period' => $run->label(), 'headcount' => $run->headcount, 'net_minor' => $run->net_minor]);
 
             return $run;
         });
@@ -78,19 +90,40 @@ class Runs
         DB::transaction(function () use ($run, $preparer) {
             $this->lock($run);
             $this->ensureDraft($run);
+            // Back to draft first: the database refuses payslip changes otherwise.
+            $run->forceFill(['status' => PayrollRun::DRAFT, 'reviewed_by' => null, 'reviewed_at' => null, 'prepared_by' => $preparer->id, 'prepared_at' => now()])->save();
             $run->payslips()->delete();
-            $run->forceFill(['prepared_by' => $preparer->id, 'prepared_at' => now()])->save();
             $this->calculate($run);
+            $this->audit->record('run.recalculated', $run, $preparer, ['headcount' => $run->headcount, 'net_minor' => $run->net_minor]);
         });
     }
 
-    public function discard(PayrollRun $run): void
+    public function discard(PayrollRun $run, User $user): void
     {
-        DB::transaction(function () use ($run) {
+        DB::transaction(function () use ($run, $user) {
             $this->lock($run);
             $this->ensureDraft($run);
+            $run->forceFill(['status' => PayrollRun::DRAFT])->save();
             $run->payslips()->delete();
+            $this->audit->record('run.discarded', $run, $user, ['period' => $run->label()]);
             $run->delete();
+        });
+    }
+
+    public function review(PayrollRun $run, User $reviewer): void
+    {
+        DB::transaction(function () use ($run, $reviewer) {
+            $this->lock($run);
+            if ($run->status !== PayrollRun::DRAFT) {
+                throw ValidationException::withMessages(['run' => 'Only a draft payroll can be marked as reviewed.']);
+            }
+            if ($run->prepared_by === $reviewer->id) {
+                throw ValidationException::withMessages(['run' => 'Someone other than whoever prepared this payroll must review it.']);
+            }
+            $this->ensureSomeonePaid($run);
+
+            $run->forceFill(['status' => PayrollRun::REVIEWED, 'reviewed_by' => $reviewer->id, 'reviewed_at' => now()])->save();
+            $this->audit->record('run.reviewed', $run, $reviewer);
         });
     }
 
@@ -104,17 +137,16 @@ class Runs
             if ($run->prepared_by === $approver->id) {
                 throw ValidationException::withMessages(['run' => 'Someone other than whoever prepared this payroll must approve it.']);
             }
-            if ($run->headcount === 0) {
-                throw ValidationException::withMessages(['run' => 'Nobody is paid on this payroll: set basic pay first, then recalculate.']);
-            }
+            $this->ensureSomeonePaid($run);
 
             $run->forceFill(['status' => PayrollRun::APPROVED, 'approved_by' => $approver->id, 'approved_at' => now()])->save();
+            $this->audit->record('run.approved', $run, $approver, ['net_minor' => $run->net_minor]);
 
             $this->outbox->record('finance', 'finance.payroll.posted', 1, "payroll:{$run->number}:posted", [
                 'run_reference' => $run->number,
                 'period_start' => $run->period_start->toDateString(),
                 'period_end' => $run->period_end->toDateString(),
-                'currency' => $this->currency(),
+                'currency' => $this->currencyOf($run),
                 'headcount' => $run->headcount,
                 'earnings_minor' => $run->earnings_minor,
                 'employer_contributions_minor' => $run->social_security_employer_minor,
@@ -127,26 +159,95 @@ class Runs
     }
 
     /**
+     * Records net pay that went out: for every payslip not yet paid, or only
+     * those listed. One batch, one finance.payroll.paid.
+     *
      * @param  'bank'|'cash'|'mobile_money'  $method
+     * @param  list<string>|null  $payslipIds  null: every unpaid payslip
      */
-    public function markPaid(PayrollRun $run, User $payer, string $method, CarbonImmutable $paidOn): void
+    public function pay(PayrollRun $run, User $payer, string $method, CarbonImmutable $paidOn, ?string $reference = null, ?array $payslipIds = null): PayrollPayment
     {
-        DB::transaction(function () use ($run, $payer, $method, $paidOn) {
-            // Locked first: the net pay must be recorded as paid once.
+        return DB::transaction(function () use ($run, $payer, $method, $paidOn, $reference, $payslipIds) {
+            // Locked first: each payslip's net pay must be recorded once.
             $this->lock($run);
-            if ($run->status !== PayrollRun::APPROVED) {
-                throw ValidationException::withMessages(['run' => 'Only an approved payroll can be marked as paid.']);
+            if (! $run->isPayable()) {
+                throw ValidationException::withMessages(['run' => 'Only an approved payroll can be paid.']);
             }
 
-            $run->forceFill(['status' => PayrollRun::PAID, 'paid_by' => $payer->id, 'paid_at' => $paidOn, 'payment_method' => $method])->save();
+            $unpaid = $run->payslips()
+                ->whereDoesntHave('payment')
+                ->when($payslipIds !== null, fn ($query) => $query->whereIn('id', $payslipIds))
+                ->orderBy('employee_number')
+                ->get(['id', 'net_minor']);
+            if ($unpaid->isEmpty()) {
+                throw ValidationException::withMessages(['payslips' => 'Choose at least one payslip that has not been paid.']);
+            }
+            if ($payslipIds !== null && $unpaid->count() !== count(array_unique($payslipIds))) {
+                throw ValidationException::withMessages(['payslips' => 'Some of the chosen payslips are already paid or are not on this payroll.']);
+            }
 
-            $this->outbox->record('finance', 'finance.payroll.paid', 1, "payroll:{$run->number}:paid", [
+            $amount = (int) $unpaid->sum('net_minor');
+            $payment = PayrollPayment::query()->create([
+                'payroll_run_id' => $run->id,
+                'number' => "{$run->number}-P".($run->payments()->count() + 1),
+                'method' => $method,
+                'paid_on' => $paidOn,
+                'reference' => $reference,
+                'amount_minor' => $amount,
+                'headcount' => $unpaid->count(),
+                'recorded_by' => $payer->id,
+            ]);
+            foreach ($unpaid as $payslip) {
+                PayslipPayment::query()->create(['payroll_payment_id' => $payment->id, 'payslip_id' => $payslip->id, 'amount_minor' => $payslip->net_minor]);
+            }
+
+            $everyone = ! $run->payslips()->whereDoesntHave('payment')->exists();
+            $run->forceFill([
+                'paid_minor' => $run->paid_minor + $amount,
+                'status' => $everyone ? PayrollRun::PAID : PayrollRun::PART_PAID,
+                // Fully paid: when, how (the last batch) and who finished it.
+                ...($everyone ? ['paid_by' => $payer->id, 'paid_at' => $paidOn, 'payment_method' => $method] : []),
+            ])->save();
+            $this->audit->record('run.paid', $run, $payer, ['payment' => $payment->number, 'headcount' => $payment->headcount, 'amount_minor' => $amount, 'method' => $method, 'reference' => $reference]);
+
+            $this->outbox->record('finance', 'finance.payroll.paid', 1, "payroll:{$payment->number}:paid", [
                 'run_reference' => $run->number,
-                'currency' => $this->currency(),
-                'amount_minor' => $run->net_minor,
+                'payment_reference' => $payment->number,
+                'currency' => $this->currencyOf($run),
+                'amount_minor' => $amount,
                 // Finance's payment methods (finance.payment.received).
                 'method' => $method === 'bank' ? 'bank_transfer' : $method,
             ], $paidOn);
+
+            return $payment;
+        });
+    }
+
+    /**
+     * Takes back an approved run before any of its pay went out. Finance
+     * reverses the journal; the payslips stay, marked reversed, and the
+     * month can be prepared again.
+     */
+    public function reverse(PayrollRun $run, User $user, string $reason): void
+    {
+        DB::transaction(function () use ($run, $user, $reason) {
+            $this->lock($run);
+            if ($run->status !== PayrollRun::APPROVED || $run->paid_minor > 0) {
+                throw ValidationException::withMessages(['run' => 'Only an approved payroll that nobody has been paid from can be reversed.']);
+            }
+
+            $on = CarbonImmutable::today();
+            $run->forceFill(['status' => PayrollRun::REVERSED, 'reversed_by' => $user->id, 'reversed_at' => now(), 'reversal_reason' => $reason])->save();
+            $this->audit->record('run.reversed', $run, $user, ['reason' => $reason]);
+
+            // Finance posted nothing for an all-zero run: nothing to take back.
+            if ($run->earnings_minor + $run->social_security_employer_minor > 0) {
+                $this->outbox->record('finance', 'finance.payroll.reversed', 1, "payroll:{$run->number}:reversed", [
+                    'run_reference' => $run->number,
+                    'reversed_on' => $on->toDateString(),
+                    'reason' => $reason,
+                ], $on);
+            }
         });
     }
 
@@ -264,12 +365,27 @@ class Runs
     private function ensureDraft(PayrollRun $run): void
     {
         if (! $run->isDraft()) {
-            throw ValidationException::withMessages(['run' => 'This payroll is approved and can no longer change.']);
+            throw ValidationException::withMessages(['run' => $run->status === PayrollRun::REVERSED
+                ? 'This payroll was reversed and can no longer change.'
+                : 'This payroll is approved and can no longer change.']);
+        }
+    }
+
+    private function ensureSomeonePaid(PayrollRun $run): void
+    {
+        if ($run->headcount === 0) {
+            throw ValidationException::withMessages(['run' => 'Nobody is paid on this payroll: set basic pay first, then recalculate.']);
         }
     }
 
     private function currency(): string
     {
         return Workspace::current()->currency ?? 'USD';
+    }
+
+    /** The currency the run was prepared in (runs from before it was kept: today's). */
+    private function currencyOf(PayrollRun $run): string
+    {
+        return $run->currency ?? $this->currency();
     }
 }

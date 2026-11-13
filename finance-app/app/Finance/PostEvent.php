@@ -47,6 +47,9 @@ use Miles\SharedModuleKit\Envelope;
  *                             Cr PAYE, social security payable, other deductions
  *                             payable, salaries payable (run totals only)
  *   finance.payroll.paid      Dr salaries payable  Cr bank/cash/mobile money
+ *                             (one per payment batch)
+ *   finance.payroll.reversed  the run's journal mirrored (approved by
+ *                             mistake, nothing paid yet)
  *   finance.project_expense.paid
  *                             Dr the cost category (project dimension)
  *                                                  Cr bank/cash/mobile money/employee advances
@@ -102,6 +105,7 @@ class PostEvent
             'finance.credit_note.received.v1' => $this->creditNoteReceived($event),
             'finance.payroll.posted.v1' => $this->payrollPosted($event),
             'finance.payroll.paid.v1' => $this->payrollPaid($event),
+            'finance.payroll.reversed.v1' => $this->payrollReversed($event),
             'finance.project_expense.paid.v1' => $this->projectExpensePaid($event),
             'finance.project_expense.voided.v1' => $this->projectExpenseVoided($event),
             'finance.grant.received.v1' => $this->grantReceived($event),
@@ -671,6 +675,8 @@ class PostEvent
     {
         $p = Validator::validate($event->payload, [
             'run_reference' => ['required', 'string', 'max:64'],
+            // One run can be paid in several batches, each with its own reference.
+            'payment_reference' => ['nullable', 'string', 'max:64'],
             'amount_minor' => ['required', 'integer', 'min:0'],
             'method' => ['required', Rule::enum(PaymentMethod::class)],
         ]);
@@ -678,10 +684,38 @@ class PostEvent
             return;
         }
 
-        $this->ledger->post(CarbonImmutable::instance($event->occurredAt)->startOfDay(), "Net pay for payroll {$p['run_reference']}", [
+        $reference = $p['payment_reference'] ?? "{$p['run_reference']}-PAID";
+        $this->ledger->post(CarbonImmutable::instance($event->occurredAt)->startOfDay(), "Net pay for payroll {$p['run_reference']}".($reference === "{$p['run_reference']}-PAID" ? '' : " ({$reference})"), [
             ['account' => $this->chart->payrollAccount(Account::SALARIES_PAYABLE), 'debit' => (int) $p['amount_minor']],
             ['account' => $this->moneyAccount(PaymentMethod::from($p['method'])), 'credit' => (int) $p['amount_minor']],
-        ], $this->source($event, "{$p['run_reference']}-PAID"));
+        ], $this->source($event, $reference));
+    }
+
+    /**
+     * A payroll approved by mistake and taken back before any of it was
+     * paid: its journal mirrored. Arriving before the journal, it waits.
+     */
+    private function payrollReversed(Envelope $event): void
+    {
+        $p = Validator::validate($event->payload, [
+            'run_reference' => ['required', 'string', 'max:64'],
+            'reversed_on' => ['required', 'date_format:Y-m-d'],
+            'reason' => ['required', 'string', 'max:255'],
+        ]);
+
+        $journal = Journal::query()
+            ->where('source_app', $event->sourceApp)
+            ->where('source_type', 'finance.payroll.posted')
+            ->where('source_reference', $p['run_reference'])
+            ->first();
+        if ($journal === null) {
+            throw new NotYetPostable("Payroll {$p['run_reference']} has not reached Finance yet.");
+        }
+        if ($journal->reversed_by_id !== null) {
+            return;
+        }
+
+        $this->ledger->reverse($journal, CarbonImmutable::parse($p['reversed_on']), mb_substr("Reversal of payroll {$p['run_reference']}: {$p['reason']}", 0, 255), sourceType: $event->eventType, periods: Periods::MOVE);
     }
 
     /**

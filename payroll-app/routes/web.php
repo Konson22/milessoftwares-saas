@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuditController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmployeePayController;
 use App\Http\Controllers\HomeController;
@@ -61,9 +62,14 @@ Route::prefix(app(PlatformConfig::class)->path())
                 Route::post('runs/{run}/recalculate', [RunController::class, 'recalculate'])->whereUuid('run')->name('runs.recalculate');
                 Route::delete('runs/{run}', [RunController::class, 'destroy'])->whereUuid('run')->name('runs.destroy');
             });
+            Route::post('runs/{run}/review', [RunController::class, 'review'])->whereUuid('run')->can('payroll.runs.review')->name('runs.review');
             Route::post('runs/{run}/approve', [RunController::class, 'approve'])->whereUuid('run')->can('payroll.runs.approve')->name('runs.approve');
+            Route::post('runs/{run}/reverse', [RunController::class, 'reverse'])->whereUuid('run')->can('payroll.runs.approve')->name('runs.reverse');
             Route::post('runs/{run}/pay', [RunController::class, 'pay'])->whereUuid('run')->can('payroll.runs.pay')->name('runs.pay');
         });
+
+        // Who did what: runs, pay, payment details and rules.
+        Route::get('audit', AuditController::class)->can('payroll.audit.view')->name('audit');
 
         // Allowances, deductions, income tax and social security.
         Route::middleware('can:payroll.settings')->group(function () {

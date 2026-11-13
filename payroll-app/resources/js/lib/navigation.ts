@@ -1,6 +1,12 @@
-import { Banknote, LayoutDashboard, Settings, Users } from 'lucide-react';
+import {
+    Banknote,
+    History,
+    LayoutDashboard,
+    Settings,
+    Users,
+} from 'lucide-react';
 import type { ShellNavItem } from '@miles/ui/shell/navigation';
-import { home, settings } from '@/routes';
+import { audit, home, settings } from '@/routes';
 import { index as employees } from '@/routes/employees';
 import { index as runs } from '@/routes/runs';
 
@@ -40,6 +46,12 @@ export const navigation: NavGroup[] = [
                 href: runs(),
                 icon: Banknote,
                 permission: 'payroll.pay.view',
+            },
+            {
+                title: 'Audit trail',
+                href: audit(),
+                icon: History,
+                permission: 'payroll.audit.view',
             },
             {
                 title: 'Settings',

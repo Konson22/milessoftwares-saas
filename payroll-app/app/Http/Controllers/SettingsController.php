@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PayComponent;
 use App\Models\StatutoryRule;
+use App\Payroll\AuditTrail;
 use App\Payroll\Presets;
 use App\Support\Money;
 use Illuminate\Http\RedirectResponse;
@@ -49,7 +50,7 @@ class SettingsController extends Controller
         ]);
     }
 
-    public function storeComponent(Request $request): RedirectResponse
+    public function storeComponent(Request $request, AuditTrail $audit): RedirectResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100', Rule::unique('pay_components', 'name')->where('organization_id', $this->organizationId())],
@@ -58,17 +59,19 @@ class SettingsController extends Controller
             'taxable' => ['boolean'],
         ]);
 
-        (new PayComponent([
+        $component = new PayComponent([
             ...$validated,
             // A deduction never changes taxable pay.
             'taxable' => $validated['kind'] === PayComponent::EARNING && $request->boolean('taxable'),
             'active' => true,
-        ]))->save();
+        ]);
+        $component->save();
+        $audit->record('settings.component_added', $component, $this->user($request), ['kind' => $component->kind, 'calculation' => $component->calculation, 'taxable' => $component->taxable]);
 
         return back()->with('success', "{$validated['name']} added.");
     }
 
-    public function updateComponent(Request $request, PayComponent $component): RedirectResponse
+    public function updateComponent(Request $request, PayComponent $component, AuditTrail $audit): RedirectResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100', Rule::unique('pay_components', 'name')->where('organization_id', $this->organizationId())->ignore($component->id)],
@@ -81,11 +84,15 @@ class SettingsController extends Controller
             'taxable' => $component->kind === PayComponent::EARNING && $request->boolean('taxable'),
             'active' => $request->boolean('active'),
         ])->save();
+        $changes = array_diff_key($component->getChanges(), ['updated_at' => true]);
+        if ($changes !== []) {
+            $audit->record('settings.component_changed', $component, $this->user($request), $changes);
+        }
 
         return back()->with('success', 'Saved.');
     }
 
-    public function storeRule(Request $request): RedirectResponse
+    public function storeRule(Request $request, AuditTrail $audit): RedirectResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
@@ -121,7 +128,7 @@ class SettingsController extends Controller
             $bands[] = ['up_to_minor' => $upTo, 'rate_bp' => Money::hundredths($band['rate'])];
         }
 
-        (new StatutoryRule([
+        $rule = new StatutoryRule([
             'name' => $validated['name'],
             'effective_from' => $validated['effective_from'],
             'income_tax_bands' => $bands,
@@ -130,7 +137,13 @@ class SettingsController extends Controller
             'social_security_cap_minor' => isset($validated['cap']) ? Money::toMinor($validated['cap']) : null,
             'social_security_deductible' => $request->boolean('deductible'),
             'created_by' => $this->user($request)->id,
-        ]))->save();
+        ]);
+        $rule->save();
+        $audit->record('settings.rule_added', $rule, $this->user($request), [
+            'bands' => count($bands),
+            'social_security_employee_bp' => $rule->social_security_employee_bp,
+            'social_security_employer_bp' => $rule->social_security_employer_bp,
+        ]);
 
         return back()->with('success', "Rules from {$validated['effective_from']} saved.");
     }

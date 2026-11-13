@@ -10,7 +10,7 @@ pest()->extend(TestCase::class)->in('Feature', 'Unit');
 
 const PAYROLL_ALL = [
     'payroll.employees.view', 'payroll.employees.manage', 'payroll.pay.view', 'payroll.pay.manage',
-    'payroll.settings', 'payroll.runs.prepare', 'payroll.runs.approve', 'payroll.runs.pay',
+    'payroll.settings', 'payroll.runs.prepare', 'payroll.runs.review', 'payroll.runs.approve', 'payroll.runs.pay', 'payroll.audit.view',
 ];
 
 /**

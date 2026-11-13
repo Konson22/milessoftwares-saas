@@ -83,3 +83,41 @@ it('adopts an older chart\'s Salaries and wages account', function () {
             ->and(Account::system(Account::SALARIES_PAYABLE)->type)->toBe(AccountType::Liability);
     });
 });
+
+it('posts a run paid in batches once per batch', function () {
+    payrollPosted()->assertCreated();
+
+    foreach ([['PR-00001-P1', 10_000_000, 'bank_transfer'], ['PR-00001-P2', 2_635_000, 'cash']] as [$reference, $amount, $method]) {
+        $paid = fn () => $this->sendEvent('finance.payroll.paid', "payroll:{$reference}:paid", [
+            'run_reference' => 'PR-00001', 'payment_reference' => $reference, 'currency' => 'SSP', 'amount_minor' => $amount, 'method' => $method,
+        ], source: 'payroll');
+        $paid()->assertCreated();
+        // Delivered twice: posted once.
+        $paid()->assertSuccessful();
+    }
+
+    expect(payrollBalance(Account::SALARIES_PAYABLE))->toBe(0)
+        ->and(payrollBalance(Account::BANK))->toBe(-10_000_000);
+    $this->asTenant('acme', fn () => expect(Journal::query()->where('source_type', 'finance.payroll.paid')->pluck('source_reference')->sort()->values()->all())->toBe(['PR-00001-P1', 'PR-00001-P2']));
+});
+
+it('reverses a payroll journal approved by mistake, waiting for it if need be', function () {
+    $reversed = fn () => $this->sendEvent('finance.payroll.reversed', 'payroll:PR-00001:reversed', [
+        'run_reference' => 'PR-00001', 'reversed_on' => '2026-04-02', 'reason' => 'Prepared before the pay rise',
+    ], source: 'payroll');
+
+    // Before the journal: not yet.
+    $reversed()->assertStatus(503);
+
+    payrollPosted()->assertCreated();
+    $reversed()->assertSuccessful();
+
+    expect(payrollBalance(Account::SALARIES))->toBe(0)
+        ->and(payrollBalance(Account::SALARIES_PAYABLE))->toBe(0)
+        ->and(payrollBalance(Account::PAYE))->toBe(0);
+    $this->asTenant('acme', function () {
+        $journal = Journal::query()->where('source_type', 'finance.payroll.posted')->sole();
+        expect($journal->reversed_by_id)->not->toBeNull()
+            ->and(Journal::query()->whereKey($journal->reversed_by_id)->sole()->entry_date->toDateString())->toBe('2026-04-02');
+    });
+});

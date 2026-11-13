@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Employee;
 use App\Models\EmployeeComponent;
 use App\Models\PayComponent;
+use App\Payroll\AuditTrail;
 use App\Payroll\Staff;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
@@ -20,7 +21,7 @@ use Illuminate\Validation\ValidationException;
  */
 class EmployeePayController extends Controller
 {
-    public function storePay(Request $request, Employee $employee, Staff $staff): RedirectResponse
+    public function storePay(Request $request, Employee $employee, Staff $staff, AuditTrail $audit): RedirectResponse
     {
         $this->ensureActive($employee);
         $validated = $request->validate([
@@ -29,12 +30,13 @@ class EmployeePayController extends Controller
             'note' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $staff->setPay($employee, CarbonImmutable::parse($validated['effective_from']), Money::toMinor($validated['amount']), $validated['note'] ?? null, $this->user($request));
+        $pay = $staff->setPay($employee, CarbonImmutable::parse($validated['effective_from']), Money::toMinor($validated['amount']), $validated['note'] ?? null, $this->user($request));
+        $audit->record('employee.pay_set', $employee, $this->user($request), ['effective_from' => $pay->effective_from->toDateString(), 'amount_minor' => $pay->amount_minor, 'note' => $pay->note]);
 
         return back()->with('success', 'Pay saved.');
     }
 
-    public function storeComponent(Request $request, Employee $employee): RedirectResponse
+    public function storeComponent(Request $request, Employee $employee, AuditTrail $audit): RedirectResponse
     {
         $this->ensureActive($employee);
         $validated = $request->validate([
@@ -56,29 +58,38 @@ class EmployeePayController extends Controller
             throw ValidationException::withMessages([$percent ? 'rate' : 'amount' => $percent ? 'Enter the percentage of basic pay.' : 'Enter the amount.']);
         }
 
-        (new EmployeeComponent([
+        $assigned = new EmployeeComponent([
             'employee_id' => $employee->id,
             'pay_component_id' => $component->id,
             'amount_minor' => $percent ? null : Money::toMinor($value),
             'rate_bp' => $percent ? Money::hundredths($value) : null,
             'starts_on' => $validated['starts_on'],
             'ends_on' => $validated['ends_on'] ?? null,
-        ]))->save();
+        ]);
+        $assigned->save();
+        $audit->record('employee.component_added', $employee, $this->user($request), [
+            'component' => $component->name,
+            'amount_minor' => $assigned->amount_minor,
+            'rate_bp' => $assigned->rate_bp,
+            'starts_on' => $validated['starts_on'],
+            'ends_on' => $validated['ends_on'] ?? null,
+        ]);
 
         return back()->with('success', "{$component->name} added.");
     }
 
-    public function endComponent(Request $request, Employee $employee, EmployeeComponent $assigned): RedirectResponse
+    public function endComponent(Request $request, Employee $employee, EmployeeComponent $assigned, AuditTrail $audit): RedirectResponse
     {
         abort_unless($assigned->employee_id === $employee->id, 404);
         $validated = $request->validate(['ends_on' => ['required', 'date', Rule::date()->afterOrEqual($assigned->starts_on->toDateString())]]);
 
         $assigned->forceFill(['ends_on' => $validated['ends_on']])->save();
+        $audit->record('employee.component_ended', $employee, $this->user($request), ['component' => $assigned->component->name, 'ends_on' => $validated['ends_on']]);
 
         return back()->with('success', 'Ended.');
     }
 
-    public function updatePaymentDetails(Request $request, Employee $employee): RedirectResponse
+    public function updatePaymentDetails(Request $request, Employee $employee, AuditTrail $audit): RedirectResponse
     {
         $validated = $request->validate([
             'method' => ['required', Rule::in(['bank', 'mobile_money', 'cash'])],
@@ -89,6 +100,8 @@ class EmployeePayController extends Controller
         ]);
 
         $employee->forceFill(['payment_details' => $validated])->save();
+        // Which way they are paid, never the account itself.
+        $audit->record('employee.payment_details_changed', $employee, $this->user($request), ['method' => $validated['method']]);
 
         return back()->with('success', 'Payment details saved.');
     }

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Miles\PlatformClient\Tenancy\BelongsToTenant;
 
 /**
@@ -30,6 +31,8 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property int $net_minor
  * @property list<array{kind: string, name: string, amount_minor: int}> $lines
  * @property-read PayrollRun $run
+ * @property-read Employee $employee
+ * @property-read PayslipPayment|null $payment
  */
 class Payslip extends Model
 {
@@ -59,5 +62,23 @@ class Payslip extends Model
     public function run(): BelongsTo
     {
         return $this->belongsTo(PayrollRun::class, 'payroll_run_id');
+    }
+
+    /**
+     * @return BelongsTo<Employee, $this>
+     */
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class);
+    }
+
+    /**
+     * The batch this payslip's net pay went out in, once paid.
+     *
+     * @return HasOne<PayslipPayment, $this>
+     */
+    public function payment(): HasOne
+    {
+        return $this->hasOne(PayslipPayment::class);
     }
 }

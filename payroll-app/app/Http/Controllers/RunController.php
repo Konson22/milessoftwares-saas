@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PayrollPayment;
 use App\Models\PayrollRun;
 use App\Models\Payslip;
+use App\Models\PayslipPayment;
 use App\Models\Workspace;
 use App\Payroll\Runs;
 use App\Support\Structure;
@@ -62,11 +64,19 @@ class RunController extends Controller
         if ($request->query('export') === 'payslips') {
             return $this->register($run, $names);
         }
-        $run->load(['preparer:id,name', 'approver:id,name', 'payer:id,name']);
+        if ($request->query('export') === 'instructions') {
+            return $this->instructions($run, $request->query('payment'));
+        }
+        $run->load(['preparer:id,name', 'reviewer:id,name', 'approver:id,name', 'payer:id,name', 'reverser:id,name']);
         $user = $this->user($request);
+        $paidIn = PayslipPayment::query()
+            ->whereIn('payslip_id', $run->payslips()->select('id'))
+            ->with('payment:id,number')
+            ->get()
+            ->mapWithKeys(fn (PayslipPayment $line) => [$line->payslip_id => $line->payment->number]);
 
         return Inertia::render('runs/show', [
-            'currency' => Workspace::current()?->currency,
+            'currency' => $run->currency ?? Workspace::current()?->currency,
             'run' => [
                 ...$this->summary($run),
                 'periodStart' => $run->period_start->toDateString(),
@@ -77,15 +87,31 @@ class RunController extends Controller
                 'socialSecurityEmployeeMinor' => $run->social_security_employee_minor,
                 'socialSecurityEmployerMinor' => $run->social_security_employer_minor,
                 'otherDeductionsMinor' => $run->other_deductions_minor,
+                'paidMinor' => $run->paid_minor,
                 'preparedBy' => $run->preparer->name,
                 'preparedAt' => $run->prepared_at->toIso8601String(),
+                'reviewedBy' => $run->reviewer?->name,
+                'reviewedAt' => $run->reviewed_at?->toIso8601String(),
                 'approvedBy' => $run->approver?->name,
                 'approvedAt' => $run->approved_at?->toIso8601String(),
                 'paidBy' => $run->payer?->name,
                 'paidAt' => $run->paid_at?->toDateString(),
                 'paymentMethod' => $run->payment_method,
+                'reversedBy' => $run->reverser?->name,
+                'reversedAt' => $run->reversed_at?->toIso8601String(),
+                'reversalReason' => $run->reversal_reason,
                 'note' => $run->note,
             ],
+            'payments' => $run->payments()->with('recorder:id,name')->orderBy('created_at')->get()->map(fn (PayrollPayment $payment) => [
+                'id' => $payment->id,
+                'number' => $payment->number,
+                'method' => $payment->method,
+                'paidOn' => $payment->paid_on->toDateString(),
+                'reference' => $payment->reference,
+                'amountMinor' => $payment->amount_minor,
+                'headcount' => $payment->headcount,
+                'recordedBy' => $payment->recorder->name,
+            ]),
             'payslips' => $run->payslips()->orderBy('employee_number')->get()->map(fn (Payslip $payslip) => [
                 'id' => $payslip->id,
                 'number' => $payslip->employee_number,
@@ -97,12 +123,15 @@ class RunController extends Controller
                 'socialSecurityMinor' => $payslip->social_security_employee_minor,
                 'otherDeductionsMinor' => $payslip->other_deductions_minor,
                 'netMinor' => $payslip->net_minor,
+                'paidIn' => $paidIn[$payslip->id] ?? null,
             ]),
             'can' => [
                 'prepare' => $run->isDraft() && $this->can('payroll.runs.prepare'),
+                'review' => $run->status === PayrollRun::DRAFT && $this->can('payroll.runs.review'),
                 'approve' => $run->isDraft() && $this->can('payroll.runs.approve'),
                 'approveSelf' => $run->prepared_by === $user->id,
-                'pay' => $run->status === PayrollRun::APPROVED && $this->can('payroll.runs.pay'),
+                'pay' => $run->isPayable() && $this->can('payroll.runs.pay'),
+                'reverse' => $run->status === PayrollRun::APPROVED && $run->paid_minor === 0 && $this->can('payroll.runs.approve'),
             ],
             'paymentMethods' => PayrollRun::PAYMENT_METHODS,
         ]);
@@ -113,6 +142,13 @@ class RunController extends Controller
         $runs->recalculate($run, $this->user($request));
 
         return back()->with('success', 'Recalculated with the pay and rules in force now.');
+    }
+
+    public function review(Request $request, PayrollRun $run, Runs $runs): RedirectResponse
+    {
+        $runs->review($run, $this->user($request));
+
+        return back()->with('success', "Payroll {$run->number} marked as reviewed.");
     }
 
     public function approve(Request $request, PayrollRun $run, Runs $runs): RedirectResponse
@@ -127,16 +163,36 @@ class RunController extends Controller
         $validated = $request->validate([
             'method' => ['required', Rule::in(PayrollRun::PAYMENT_METHODS)],
             'paid_on' => ['required', 'date'],
+            'reference' => ['nullable', 'string', 'max:100'],
+            // Left out: every payslip not paid yet.
+            'payslips' => ['nullable', 'array', 'min:1'],
+            'payslips.*' => ['uuid'],
         ]);
 
-        $runs->markPaid($run, $this->user($request), $validated['method'], CarbonImmutable::parse($validated['paid_on']));
+        $payment = $runs->pay(
+            $run,
+            $this->user($request),
+            $validated['method'],
+            CarbonImmutable::parse($validated['paid_on']),
+            $validated['reference'] ?? null,
+            isset($validated['payslips']) ? array_values($validated['payslips']) : null,
+        );
 
-        return back()->with('success', "Payroll {$run->number} recorded as paid.");
+        return back()->with('success', "Payment {$payment->number} recorded: {$payment->headcount} ".Str::plural('payslip', $payment->headcount).'.');
     }
 
-    public function destroy(PayrollRun $run, Runs $runs): RedirectResponse
+    public function reverse(Request $request, PayrollRun $run, Runs $runs): RedirectResponse
     {
-        $runs->discard($run);
+        $validated = $request->validate(['reason' => ['required', 'string', 'max:255']]);
+
+        $runs->reverse($run, $this->user($request), $validated['reason']);
+
+        return back()->with('success', "Payroll {$run->number} reversed. {$run->label()} can be prepared again.");
+    }
+
+    public function destroy(Request $request, PayrollRun $run, Runs $runs): RedirectResponse
+    {
+        $runs->discard($run, $this->user($request));
 
         return to_route('runs.index')->with('success', "Draft payroll {$run->number} discarded.");
     }
@@ -235,6 +291,57 @@ class RunController extends Controller
             'Net pay' => 'netMinor',
             'Social security (employer)' => 'socialSecurityEmployerMinor',
         ], [...$rows, $total], decimals: 2);
+    }
+
+    /**
+     * What to pay into whose account, as an Excel file for the bank or the
+     * cashier: the payslips not paid yet, or those of one payment batch.
+     */
+    private function instructions(PayrollRun $run, mixed $paymentId): StreamedResponse
+    {
+        abort_unless($run->isPayable() || $run->status === PayrollRun::PAID, 404);
+
+        $payment = is_string($paymentId) && Str::isUuid($paymentId)
+            ? $run->payments()->whereKey($paymentId)->firstOrFail()
+            : null;
+        $payslips = $run->payslips()
+            ->when(
+                $payment === null,
+                fn ($query) => $query->whereDoesntHave('payment'),
+                fn ($query) => $query->whereHas('payment', fn ($line) => $line->where('payroll_payment_id', $payment?->id)),
+            )
+            ->with('employee')
+            ->orderBy('employee_number')
+            ->get();
+
+        $methods = ['bank' => 'Bank transfer', 'mobile_money' => 'Mobile money', 'cash' => 'Cash'];
+        $rows = $payslips->map(function (Payslip $payslip) use ($methods) {
+            /** @var array<string, string|null> $details */
+            $details = $payslip->employee->payment_details ?? [];
+
+            return [
+                'number' => $payslip->employee_number,
+                'name' => $payslip->employee_name,
+                'method' => $methods[$details['method'] ?? ''] ?? 'Not set',
+                'bank' => $details['bank_name'] ?? null,
+                'accountName' => $details['account_name'] ?? null,
+                'accountNumber' => $details['account_number'] ?? null,
+                'mobileNumber' => $details['mobile_number'] ?? null,
+                'netMinor' => $payslip->net_minor,
+            ];
+        })->all();
+        $rows[] = ['name' => 'Total', 'netMinor' => array_sum(array_column($rows, 'netMinor'))];
+
+        return XlsxExport::download(Str::slug('payment instructions '.($payment->number ?? "{$run->number} unpaid")), [
+            'Employee no.' => 'number',
+            'Name' => 'name',
+            'Paid by' => 'method',
+            'Bank' => 'bank',
+            'Account name' => 'accountName',
+            'Account number' => 'accountNumber',
+            'Mobile number' => 'mobileNumber',
+            'Net pay' => 'netMinor',
+        ], $rows, decimals: 2);
     }
 
     /**

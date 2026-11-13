@@ -6,6 +6,7 @@ use App\Models\Employee;
 use App\Models\EmployeeComponent;
 use App\Models\EmployeePay;
 use App\Models\PayComponent;
+use App\Payroll\AuditTrail;
 use App\Payroll\Staff;
 use App\Support\StaffScope;
 use App\Support\Structure;
@@ -78,7 +79,7 @@ class EmployeeController extends Controller
         return Inertia::render('employees/create', $this->structure->options());
     }
 
-    public function store(Request $request, Staff $staff): RedirectResponse
+    public function store(Request $request, Staff $staff, AuditTrail $audit): RedirectResponse
     {
         $validated = $request->validate([
             ...$this->workRules(),
@@ -90,6 +91,7 @@ class EmployeeController extends Controller
         abort_unless($this->scope->allowsAt('payroll.employees.manage', $validated['branch_id'] ?? null, $validated['department_id'] ?? null), 403, 'You cannot add people there.');
 
         $employee = $staff->add($validated, $this->user($request));
+        $audit->record('employee.added', $employee, $this->user($request), ['hired_on' => $employee->hired_on->toDateString(), 'pay_basis' => $employee->pay_basis]);
 
         return to_route('employees.show', $employee)->with('success', "{$employee->name()} is on the payroll as {$employee->employee_number}.");
     }
@@ -152,7 +154,7 @@ class EmployeeController extends Controller
         ]);
     }
 
-    public function update(Request $request, Employee $employee, Staff $staff): RedirectResponse
+    public function update(Request $request, Employee $employee, Staff $staff, AuditTrail $audit): RedirectResponse
     {
         abort_unless($this->scope->allows('payroll.employees.view', $employee), 404);
         abort_unless($employee->isActive() && $this->scope->allows('payroll.employees.manage', $employee), 403);
@@ -169,17 +171,22 @@ class EmployeeController extends Controller
         }
 
         $staff->update($employee, $validated);
+        $changed = array_values(array_diff(array_keys($employee->getChanges()), ['updated_at']));
+        if ($changed !== []) {
+            $audit->record('employee.updated', $employee, $this->user($request), ['changed' => $changed]);
+        }
 
         return back()->with('success', 'Saved.');
     }
 
-    public function leave(Request $request, Employee $employee, Staff $staff): RedirectResponse
+    public function leave(Request $request, Employee $employee, Staff $staff, AuditTrail $audit): RedirectResponse
     {
         abort_unless($this->scope->allows('payroll.employees.view', $employee), 404);
         abort_unless($employee->isActive() && ! $employee->isLinked() && $this->scope->allows('payroll.employees.manage', $employee), 403);
 
         $validated = $request->validate(['left_on' => ['required', 'date']]);
         $staff->leave($employee, CarbonImmutable::parse($validated['left_on']));
+        $audit->record('employee.left', $employee, $this->user($request), ['left_on' => $validated['left_on']]);
 
         return back()->with('success', "{$employee->name()} is paid up to {$validated['left_on']}.");
     }
