@@ -23,7 +23,7 @@ export default function Contact({ formToken, subject, canonical }: Props) {
         <>
             <Seo
                 title="Contact us"
-                description="Questions about Tatook, pricing or partnerships? Send us a message."
+                description="Contact Tatook about ERP, accounting, HR or custom software: pricing, free trials, partnerships and support. Send us a message or chat on WhatsApp."
                 canonical={canonical}
             />
 

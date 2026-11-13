@@ -4,7 +4,7 @@
  */
 
 /** The platform's auth host (OpenID provider): sign-in and tokens. */
-export const AUTH_URL = (process.env.EXPO_PUBLIC_AUTH_URL ?? 'https://auth.milesoftwares.com').replace(/\/$/, '');
+export const AUTH_URL = (process.env.EXPO_PUBLIC_AUTH_URL ?? 'https://auth.tatook.com').replace(/\/$/, '');
 
 /** The mobile app's public client, registered on the platform for the restaurant. */
 export const CLIENT_ID = process.env.EXPO_PUBLIC_CLIENT_ID ?? '';
@@ -23,7 +23,7 @@ export const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
  * it at the dev PC (http://{workspace}.milesoftwares.localhost does not
  * resolve on a phone).
  */
-const WORKSPACE_URL = (process.env.EXPO_PUBLIC_WORKSPACE_URL ?? 'https://{workspace}.milesoftwares.com').replace(/\/$/, '');
+const WORKSPACE_URL = (process.env.EXPO_PUBLIC_WORKSPACE_URL ?? 'https://{workspace}.tatook.com').replace(/\/$/, '');
 
 /** The restaurant's path on workspace hosts. */
 export const PRODUCT_PATH = (process.env.EXPO_PUBLIC_PRODUCT_PATH ?? 'restaurant').replace(/^\/|\/$/g, '');

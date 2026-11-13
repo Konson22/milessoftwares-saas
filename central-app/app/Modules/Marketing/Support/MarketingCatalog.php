@@ -101,6 +101,13 @@ final class MarketingCatalog
 
             $entries[] = [
                 ...$entry,
+                // The search title says what searchers can have today, from
+                // the registry rather than the copy: it changes on release.
+                'seoTitle' => $entry['seoTitle'].match ($status) {
+                    'coming_soon' => ' (coming soon)',
+                    'early_access' => ' (early access)',
+                    default => '',
+                },
                 'url' => self::url($entry['category'], $entry['slug']),
                 'status' => $status,
                 'includes' => $includes,
@@ -108,7 +115,17 @@ final class MarketingCatalog
             ];
         }
 
-        return $this->catalog = $entries;
+        $this->catalog = $entries;
+
+        // Each included application links to its page: the catalog's own
+        // where it has one, so links never pass through a redirect.
+        foreach ($this->catalog as $i => $entry) {
+            foreach ($entry['includes'] as $j => $application) {
+                $this->catalog[$i]['includes'][$j]['url'] = '/'.($this->pageForProduct($application['code']) ?? 'products/'.$application['code']);
+            }
+        }
+
+        return $this->catalog;
     }
 
     /**
@@ -133,6 +150,26 @@ final class MarketingCatalog
     {
         foreach ($this->catalog() as $entry) {
             if (($entry['registry']['type'] ?? null) === $type && ($entry['registry']['code'] ?? null) === $code) {
+                return $entry['url'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The catalog page for a registry application (/products/{code}): the
+     * entry that names it, else the one with the same slug (the pharmacy
+     * application's page is /erp/pharmacy). Null keeps /products/{code}.
+     */
+    public function pageForProduct(string $code): ?string
+    {
+        if (($url = $this->catalogUrlFor('application', $code)) !== null) {
+            return $url;
+        }
+
+        foreach ($this->catalog() as $entry) {
+            if ($entry['slug'] === $code) {
                 return $entry['url'];
             }
         }

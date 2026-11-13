@@ -27,4 +27,16 @@ final class SitePages
 
         return 'resources/js/sites/'.$site.'/pages/'.substr($component, $slash + 1).'.tsx';
     }
+
+    /**
+     * Source path of the page's site module (its layouts). The page script
+     * imports it on demand; naming it in the HTML too lets the browser fetch
+     * it alongside the page instead of after it.
+     */
+    public static function sitePath(string $component): string
+    {
+        self::path($component);
+
+        return 'resources/js/sites/'.strstr($component, '/', true).'/index.ts';
+    }
 }

@@ -41,6 +41,15 @@ return [
         // client ID above (the apps' webClientId) and these, comma-separated
         // (iOS client IDs, should a token be issued for one).
         'native_client_ids' => env('GOOGLE_NATIVE_CLIENT_IDS'),
+        // Public site only (resources/views/app.blade.php). Empty: off.
+        // Search Console's HTML-tag token (the content="..." value); not
+        // needed when the domain is verified by DNS TXT record.
+        'site_verification' => env('GOOGLE_SITE_VERIFICATION'),
+        // Google Analytics 4 measurement ID, G-XXXXXXXXXX. Ignored while a
+        // Tag Manager container is set: GA4 is then a tag in the container.
+        'analytics_id' => env('GOOGLE_ANALYTICS_ID'),
+        // Google Tag Manager container ID, GTM-XXXXXXX.
+        'tag_manager_id' => env('GOOGLE_TAG_MANAGER_ID'),
     ],
 
     'slack' => [

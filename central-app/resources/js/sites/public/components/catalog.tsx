@@ -77,6 +77,8 @@ export type CatalogEntry = {
         name: string;
         requirement: 'required' | 'optional';
         listed: boolean;
+        /** The application's public page, from the root: /apps/finance. */
+        url: string;
     }[];
     /** Application code whose free trial this product starts; null: no trial today. */
     trial: string | null;
@@ -256,7 +258,7 @@ export function StatusBadge({
 }) {
     if (status === 'coming_soon') {
         return (
-            <span className="absolute -top-3 right-4 z-10 block size-[5.75rem] rotate-[-12deg] motion-safe:transition-transform motion-safe:duration-500 group-hover:rotate-[4deg] group-hover:scale-105">
+            <span className="absolute -top-3 right-4 z-10 block size-[5.75rem] rotate-[-12deg] group-hover:scale-105 group-hover:rotate-[4deg] motion-safe:transition-transform motion-safe:duration-500">
                 {/* The ribbon tails, under the seal. */}
                 <span
                     aria-hidden
@@ -304,7 +306,7 @@ export function StatusBadge({
 
     if (trialDays) {
         return (
-            <span className="absolute -top-1 right-6 z-10 flex flex-col items-center motion-safe:origin-top motion-safe:transition-transform motion-safe:duration-500 group-hover:rotate-[6deg]">
+            <span className="absolute -top-1 right-6 z-10 flex flex-col items-center group-hover:rotate-[6deg] motion-safe:origin-top motion-safe:transition-transform motion-safe:duration-500">
                 {/* The string. */}
                 <span aria-hidden className="h-5 w-px bg-white/60" />
                 <span className="relative flex flex-col items-center rounded-b-lg bg-site-highlight px-3 pt-4 pb-2 leading-none font-extrabold text-site-night uppercase shadow-[0_8px_16px_rgb(1_27_14/0.35)] [clip-path:polygon(50%_0,100%_14%,100%_100%,0_100%,0_14%)]">
@@ -365,15 +367,15 @@ export function ProductCard({
             <div className="site-dark relative flex min-h-32 items-end overflow-hidden rounded-t-xl bg-linear-160 from-[#0a5a26] via-[#063519] to-[#032a16] px-6 pt-12 pr-28 pb-5 sm:px-7 sm:pr-28">
                 <span
                     aria-hidden
-                    className="absolute inset-0 bg-[radial-gradient(rgb(255_255_255/0.14)_1px,transparent_1.5px)] [background-size:14px_14px] [mask-image:linear-gradient(to_bottom,black,transparent)]"
+                    className="absolute inset-0 bg-[radial-gradient(rgb(255_255_255/0.14)_1px,transparent_1.5px)] [mask-image:linear-gradient(to_bottom,black,transparent)] [background-size:14px_14px]"
                 />
                 <span
                     aria-hidden
-                    className="absolute -bottom-12 -left-10 size-44 rounded-full bg-site-accent/25 blur-2xl motion-safe:transition-transform motion-safe:duration-500 group-hover:translate-x-6"
+                    className="absolute -bottom-12 -left-10 size-44 rounded-full bg-site-accent/25 blur-2xl group-hover:translate-x-6 motion-safe:transition-transform motion-safe:duration-500"
                 />
                 <span
                     aria-hidden
-                    className="absolute bottom-0 left-6 h-1 w-10 origin-left rounded-t-full bg-site-highlight motion-safe:transition-transform motion-safe:duration-300 group-hover:scale-x-[2.5] sm:left-7"
+                    className="absolute bottom-0 left-6 h-1 w-10 origin-left rounded-t-full bg-site-highlight group-hover:scale-x-[2.5] motion-safe:transition-transform motion-safe:duration-300 sm:left-7"
                 />
                 <Heading
                     className={`relative text-xl leading-snug sm:text-[1.375rem] ${display}`}

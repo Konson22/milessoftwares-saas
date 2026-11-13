@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, render } from '@testing-library/react';
 import axe from 'axe-core';
-import type { ReactNode } from 'react';
+import { Children, isValidElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import MarketingLayout from '@/sites/public/layouts/marketing-layout';
 import About from './about';
@@ -23,10 +24,19 @@ import Start from './start';
 import Terms from './terms';
 import Thanks from './thanks';
 
+// What each page hands to <Head>, for the search metadata checks below.
+const heads = vi.hoisted(
+    () => [] as { title?: string; children?: ReactNode }[],
+);
+
 // Inertia's components need a running app; for checking markup they are
 // replaced with their plain HTML equivalents.
 vi.mock('@inertiajs/react', () => ({
-    Head: () => null,
+    Head: (props: { title?: string; children?: ReactNode }) => {
+        heads.push(props);
+
+        return null;
+    },
     router: { on: () => () => {} },
     usePage: () => ({ url: '/pricing', props: { trialDays: 60 } }),
     Link: ({
@@ -94,12 +104,14 @@ const erpProduct = {
             name: 'Pharmacy',
             requirement: 'required' as const,
             listed: true,
+            url: '/erp/pharmacy',
         },
         {
             code: 'hr',
             name: 'HR',
             requirement: 'optional' as const,
             listed: false,
+            url: '/apps/hr',
         },
     ],
 };
@@ -225,7 +237,10 @@ const pages: [string, ReactNode][] = [
                     mobile: [],
                 },
             }}
-            plans={[plan, { ...plan, code: 'bundle', name: 'Bundle', isBundle: true }]}
+            plans={[
+                plan,
+                { ...plan, code: 'bundle', name: 'Bundle', isBundle: true },
+            ]}
             trialDays={60}
             canonical="https://example.test/apps/finance"
         />,
@@ -427,4 +442,66 @@ describe('marketing pages', () => {
 
         expect(container.querySelectorAll('h1')).toHaveLength(1);
     });
+});
+
+/** The tags a page puts in <head>, by their props. */
+function headTags(): Record<string, unknown>[] {
+    return heads.flatMap((head) =>
+        Children.toArray(head.children)
+            .filter(isValidElement)
+            .map((tag) => (tag as ReactElement<Record<string, unknown>>).props),
+    );
+}
+
+describe('search metadata', () => {
+    // Pages whose wording is written here. Thanks is a step after a form,
+    // kept out of search (noindex); product pages take their title and
+    // description from the catalog, checked in tests/Feature/Marketing/SeoTest.php.
+    const fromCatalog = [
+        'thanks',
+        'product',
+        'finance',
+        'landing',
+        'coming-soon landing',
+    ];
+
+    it.each(pages.filter(([name]) => !fromCatalog.includes(name)))(
+        '%s has a search title, description and canonical URL',
+        (_name, page) => {
+            heads.length = 0;
+            render(page);
+
+            const title = heads.find((head) => head.title)?.title ?? '';
+            const tags = headTags();
+            const content = tags.find(
+                (tag) => tag.name === 'description',
+            )?.content;
+            const description = typeof content === 'string' ? content : '';
+            const canonical = tags.find((tag) => tag.rel === 'canonical')?.href;
+
+            // Google shows about 60 characters of a title, " - Tatook" included.
+            expect(`${title} - Tatook`.length).toBeLessThanOrEqual(65);
+            expect(title.length).toBeGreaterThan(3);
+            // And up to about 160 of a description.
+            expect(description.length).toBeGreaterThanOrEqual(50);
+            expect(description.length).toBeLessThanOrEqual(165);
+            expect(String(canonical).startsWith('https://example.test')).toBe(
+                true,
+            );
+            expect(tags.some((tag) => tag.name === 'robots')).toBe(false);
+
+            const jsonLd = tags.find(
+                (tag) => tag.type === 'application/ld+json',
+            );
+            if (jsonLd) {
+                const html = (
+                    jsonLd.dangerouslySetInnerHTML as { __html: string }
+                ).__html;
+                const data = JSON.parse(html) as Record<string, unknown>;
+                expect(data['@context']).toBe('https://schema.org');
+                // No invented ratings or reviews.
+                expect(html).not.toMatch(/aggregateRating|"review"/);
+            }
+        },
+    );
 });

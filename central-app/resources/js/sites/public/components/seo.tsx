@@ -11,6 +11,8 @@ type Props = {
     jsonLd?: Record<string, unknown>;
     /** The picture shown when the page is shared; a path on this site. */
     image?: string;
+    /** Keep the page out of search results (a step in a flow, not a landing page). */
+    noindex?: boolean;
 };
 
 /** The company that makes Tatook. */
@@ -27,7 +29,7 @@ export function organization(origin: string): Record<string, unknown> {
         name: siteName,
         url: `${origin}/`,
         logo: `${origin}/images/logo-icon.png`,
-        slogan: 'Business software that works together',
+        slogan: 'Bring it all together',
         parentOrganization: {
             '@type': 'Organization',
             name: companyName,
@@ -56,6 +58,7 @@ export default function Seo({
     canonical,
     jsonLd,
     image = '/images/og-image.jpg',
+    noindex = false,
 }: Props) {
     const imageUrl = new URL(image, canonical).href;
     const fullTitle = `${title} - ${siteName}`;
@@ -68,6 +71,9 @@ export default function Seo({
                 content={description}
             />
             <link head-key="canonical" rel="canonical" href={canonical} />
+            {noindex && (
+                <meta head-key="robots" name="robots" content="noindex" />
+            )}
             <meta head-key="og:type" property="og:type" content="website" />
             <meta
                 head-key="og:site_name"

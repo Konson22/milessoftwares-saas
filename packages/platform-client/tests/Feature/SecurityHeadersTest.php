@@ -23,6 +23,8 @@ it('sends the platform browser policy with a per-request nonce', function () {
 
     $response->assertHeader('X-Frame-Options', 'DENY')
         ->assertHeader('X-Content-Type-Options', 'nosniff')
+        // A workspace's product pages are never for search engines.
+        ->assertHeader('X-Robots-Tag', 'noindex, nofollow')
         ->assertHeaderMissing('Strict-Transport-Security');
 
     $other = $this->get('https://acme.milesoftwares.test/headers')->headers->get('Content-Security-Policy');

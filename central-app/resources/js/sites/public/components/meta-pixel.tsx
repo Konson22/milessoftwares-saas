@@ -45,13 +45,26 @@ function ensurePixel(): void {
         window._fbq = fbq;
     }
 
-    const script = document.createElement('script');
-    script.async = true;
-    script.src = 'https://connect.facebook.net/en_US/fbevents.js';
-    const first = document.getElementsByTagName('script')[0];
-    first?.parentNode?.insertBefore(script, first);
-
     window.fbq('init', PIXEL_ID);
+
+    // Meta's script (~180 KB, ~250 ms of main-thread work) is fetched on the
+    // visitor's first scroll, tap, click or key press, so it never holds up
+    // the page or its first input. Calls made before then wait in
+    // fbq.queue, so the first PageView is still sent. A visitor who leaves
+    // without touching the page is not counted.
+    const events = ['scroll', 'pointerdown', 'keydown', 'touchstart'] as const;
+    const load = () => {
+        events.forEach((name) => window.removeEventListener(name, load));
+
+        const script = document.createElement('script');
+        script.async = true;
+        script.src = 'https://connect.facebook.net/en_US/fbevents.js';
+        document.head.appendChild(script);
+    };
+
+    events.forEach((name) =>
+        window.addEventListener(name, load, { once: true, passive: true }),
+    );
 }
 
 export default function MetaPixel() {

@@ -29,7 +29,7 @@ export default function Platform({ canonical }: Props) {
         <>
             <Seo
                 title="Tatook Workspace: one place for every application"
-                description="Tatook Workspace gives your organization one account for every Tatook application, subscriptions for only the apps you need, roles per branch and an audit log."
+                description="One Tatook account for every application: subscribe only to the apps you need, with roles per branch and an audit log across your organization."
                 canonical={canonical}
             />
 

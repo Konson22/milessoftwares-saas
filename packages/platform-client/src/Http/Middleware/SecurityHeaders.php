@@ -32,6 +32,9 @@ final class SecurityHeaders
         $headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
         $headers->set('Cross-Origin-Opener-Policy', 'same-origin');
+        // Products only serve workspaces ({slug}.<root>/{product}): a
+        // business's own data, never for search engines.
+        $headers->set('X-Robots-Tag', 'noindex, nofollow');
 
         if (config('platform-client.security_headers.csp', true)) {
             $name = config('platform-client.security_headers.csp_report_only')

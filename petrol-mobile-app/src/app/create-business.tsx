@@ -18,7 +18,7 @@ import { workspaceUrl } from '@/lib/config';
 import { colors } from '@/lib/theme';
 import { useAuth, type SignInWith } from '@/store/auth';
 
-/** ".milesoftwares.com", as the workspace address ends. */
+/** ".tatook.com", as the workspace address ends. */
 const ROOT = workspaceUrl('x').replace(/^https?:\/\/x/, '');
 
 /** Every new business starts with this branch, so the app opens straight in it. More can be added on the web. */

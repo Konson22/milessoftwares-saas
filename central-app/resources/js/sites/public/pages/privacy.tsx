@@ -10,7 +10,7 @@ type Props = {
 };
 
 /** Change with the text, so the page says when it last changed. */
-const updated = '2026-10-26';
+const updated = '2026-11-13';
 
 const email = <a href={`mailto:${supportEmail}`}>{supportEmail}</a>;
 
@@ -23,9 +23,9 @@ const sections: LegalSection[] = [
                 <p>
                     Tatook is a product of Miles Global Link Co. Ltd ("Miles
                     Global Link", "we", "us"). This policy explains what
-                    personal information we collect through tatook.com,
-                    our applications and our desktop and mobile apps, why we
-                    collect it and what you can ask us to do with it.
+                    personal information we collect through tatook.com, our
+                    applications and our desktop and mobile apps, why we collect
+                    it and what you can ask us to do with it.
                 </p>
                 <p>
                     For anything in this policy, write to {email} or message us
@@ -130,6 +130,29 @@ const sections: LegalSection[] = [
                     . You can block it with your browser's privacy settings or
                     in your Facebook ad preferences.
                 </p>
+                <p>
+                    The public website also uses Google Analytics, which sets
+                    its own cookies to count visits and show us which pages are
+                    read, how visitors arrived and roughly where they are. We
+                    see these figures in aggregate, not who you are. Google
+                    handles the data under{' '}
+                    <a
+                        href="https://policies.google.com/privacy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        its own privacy policy
+                    </a>
+                    . You can opt out with Google's{' '}
+                    <a
+                        href="https://tools.google.com/dlpage/gaoptout"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        browser add-on
+                    </a>{' '}
+                    or your browser's privacy settings.
+                </p>
             </>
         ),
     },
@@ -151,7 +174,10 @@ const sections: LegalSection[] = [
                         Cloudflare, which delivers and protects our websites.
                     </li>
                     <li>Resend, which sends our emails.</li>
-                    <li>Google, if you choose to sign in with Google.</li>
+                    <li>
+                        Google, if you choose to sign in with Google, and
+                        through Google Analytics on our public website.
+                    </li>
                     <li>Meta, through the Meta Pixel on our public website.</li>
                 </ul>
                 <p>

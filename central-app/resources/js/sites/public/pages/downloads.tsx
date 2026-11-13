@@ -103,7 +103,7 @@ export default function Downloads({ apps, canonical }: Props) {
         <>
             <Seo
                 title="Download the Tatook apps"
-                description="Download the Tatook apps for Windows and Android: the pharmacy and shop counter (online or fully offline), the restaurant, and the mobile counter apps. Setup help and release notes."
+                description="Download Tatook for Windows and Android: pharmacy and shop counters that work online or fully offline, the restaurant app and mobile counters."
                 canonical={canonical}
             />
 

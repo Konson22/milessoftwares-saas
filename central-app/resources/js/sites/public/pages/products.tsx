@@ -93,8 +93,8 @@ export default function Products({ catalog, trialDays, canonical }: Props) {
     return (
         <>
             <Seo
-                title="Products"
-                description="ERP solutions and business applications from Tatook, on one connected platform: pharmacy, retail, restaurant, school, logistics and NGO systems, and finance, HR, CRM and more."
+                title="ERP software and business applications"
+                description="Tatook ERP for pharmacy, retail, restaurant, school, logistics and NGOs, plus accounting, HR, payroll, inventory, procurement and project management."
                 canonical={canonical}
                 jsonLd={{
                     '@context': 'https://schema.org',

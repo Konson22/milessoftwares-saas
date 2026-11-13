@@ -4,6 +4,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import { milesProducts } from '@/sites/public/components/content';
+import Analytics from '@/sites/public/components/analytics';
 import MetaPixel from '@/sites/public/components/meta-pixel';
 import { demoUrl } from '@/sites/public/components/offerings';
 import {
@@ -76,12 +77,12 @@ function Brand({ light = false }: { light?: boolean }) {
             <img
                 src={
                     light
-                        ? '/images/logo-site-light.png'
-                        : '/images/logo-site.png'
+                        ? '/images/logo-site-light.webp'
+                        : '/images/logo-site.webp'
                 }
                 alt="Tatook"
-                width={913}
-                height={230}
+                width={508}
+                height={128}
                 className="h-10 w-auto sm:h-11"
             />
         </Link>
@@ -229,6 +230,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
 
     return (
         <div className="site-public flex min-h-screen flex-col overflow-x-clip bg-white font-public text-site-ink">
+            <Analytics />
             <MetaPixel />
             <a
                 href="#main"
@@ -368,7 +370,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                     <div className="col-span-2 md:col-span-3 lg:col-span-1">
                         <Brand light />
                         <p className="mt-5 max-w-xs leading-relaxed">
-                            Business software that works together: Tatook
+                            Bring it all together: Tatook
                             products in one workspace, and custom software for
                             web, desktop and mobile.
                         </p>

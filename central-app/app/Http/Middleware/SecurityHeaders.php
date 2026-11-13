@@ -27,6 +27,13 @@ class SecurityHeaders
         $headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
         $headers->set('Cross-Origin-Opener-Policy', 'same-origin');
 
+        // Only the public site (apex and www) is for search engines. Every
+        // other host (auth., admin., app. and each workspace) is signed-in
+        // or account-specific: never indexed, even when linked from elsewhere.
+        if (! in_array(strtolower($request->getHost()), [PlatformHosts::root(), PlatformHosts::www()], true)) {
+            $headers->set('X-Robots-Tag', 'noindex, nofollow');
+        }
+
         if (config('platform.security_headers.csp')) {
             $name = config('platform.security_headers.csp_report_only')
                 ? 'Content-Security-Policy-Report-Only'
@@ -59,24 +66,42 @@ class SecurityHeaders
             $devSocket = ' '.preg_replace('#^http#', 'ws', $origin);
         }
 
-        // Meta Pixel only runs on the public marketing site.
-        $fbScript = '';
-        $fbImg = '';
-        $fbConnect = '';
+        // Meta Pixel and Google tags only run on the public marketing site.
+        $trackingScript = '';
+        $trackingImg = '';
+        $trackingConnect = '';
+        $trackingFrame = '';
         if (strtolower($request->getHost()) === PlatformHosts::root()) {
-            $fbScript = ' https://connect.facebook.net';
-            $fbImg = ' https://www.facebook.com';
-            $fbConnect = ' https://www.facebook.com https://connect.facebook.net';
+            $trackingScript = ' https://connect.facebook.net';
+            $trackingImg = ' https://www.facebook.com';
+            $trackingConnect = ' https://www.facebook.com https://connect.facebook.net';
+
+            // Google Tag Manager or Analytics 4, when configured
+            // (app.blade.php): Google's documented hosts for gtm.js and
+            // gtag.js and GA4's collection endpoints, which a container's
+            // GA4 tag uses too. Other vendors added in the container need
+            // their hosts here as well.
+            $tagManager = filled(config('services.google.tag_manager_id'));
+            if ($tagManager) {
+                $trackingFrame = ' https://www.googletagmanager.com';
+            }
+
+            if ($tagManager || filled(config('services.google.analytics_id'))) {
+                $trackingScript .= ' https://www.googletagmanager.com';
+                $trackingImg .= ' https://*.google-analytics.com https://*.googletagmanager.com';
+                $trackingConnect .= ' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com';
+            }
         }
 
         $directives = [
             "default-src 'self'",
-            "script-src 'self' 'nonce-{$nonce}'{$dev}{$fbScript}",
+            "script-src 'self' 'nonce-{$nonce}'{$dev}{$trackingScript}",
             "style-src 'self' 'unsafe-inline'{$dev}",
             // Google profile pictures (users.avatar_url) come from googleusercontent.com.
-            "img-src 'self' data: blob: https://*.googleusercontent.com{$dev}{$fbImg}",
+            "img-src 'self' data: blob: https://*.googleusercontent.com{$dev}{$trackingImg}",
             "font-src 'self' data:{$dev}",
-            "connect-src 'self'{$dev}{$devSocket}{$fbConnect}",
+            "connect-src 'self'{$dev}{$devSocket}{$trackingConnect}",
+            "frame-src 'self'{$trackingFrame}",
             "object-src 'none'",
             "base-uri 'self'",
             "frame-ancestors 'none'",

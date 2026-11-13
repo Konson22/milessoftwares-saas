@@ -118,7 +118,8 @@ function ApplicationTiles() {
                                 alt=""
                                 width={192}
                                 height={192}
-                                loading="lazy"
+                                // Not lazy: the hero shows the same files, so
+                                // they are fetched (high priority) already.
                                 decoding="async"
                                 className="mx-auto w-12 drop-shadow-[0_6px_10px_rgb(0_0_0/0.25)] transition-transform duration-300 group-hover:scale-110 sm:w-16 lg:w-20"
                             />
@@ -165,8 +166,8 @@ export default function MarketingHome({
     return (
         <>
             <Seo
-                title="Run your whole business in one place"
-                description="Pharmacy, retail, finance and HR, connected under one Tatook account."
+                title="ERP and business software: bring it all together"
+                description="Tatook brings it all together: ERP for pharmacies, shops, restaurants and schools, with accounting, HR and project management under one account."
                 canonical={canonical}
                 jsonLd={{
                     '@context': 'https://schema.org',
@@ -408,7 +409,7 @@ export default function MarketingHome({
                                 height={1024}
                                 loading="lazy"
                                 decoding="async"
-                                className="w-full mix-blend-multiply [mask-image:radial-gradient(closest-side,black_72%,transparent)]"
+                                className="w-full [mask-image:radial-gradient(closest-side,black_72%,transparent)] mix-blend-multiply"
                             />
                         </figure>
                     </div>

@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import {
     heroApplications,
@@ -19,6 +19,9 @@ const {
     icon: ICON,
     turn: TURN,
 } = heroStage;
+
+/** Where each line starts: just inside the icon's edge. It ends at the centre. */
+const FLOW_FROM = RX - ICON * 0.42;
 
 /** A stage length as a percentage of the stage's width or height. */
 const pct = (value: number, total: number) => `${(value / total) * 100}%`;
@@ -51,9 +54,29 @@ export default function HeroEcosystem() {
     const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
     const [active, setActive] = useState<string | null>(null);
     const lineId = (id: string) => `${uid}-line-${id}`;
+    const figure = useRef<HTMLElement>(null);
+
+    // Once scrolled away, the endless turning and floating stop (see
+    // .is-offscreen in app.css), so the rest of the page scrolls on an idle
+    // main thread.
+    useEffect(() => {
+        const el = figure.current;
+
+        if (!el || !('IntersectionObserver' in window)) {
+            return;
+        }
+
+        const observer = new IntersectionObserver(([entry]) => {
+            el.classList.toggle('is-offscreen', !entry.isIntersecting);
+        });
+        observer.observe(el);
+
+        return () => observer.disconnect();
+    }, []);
 
     return (
         <figure
+            ref={figure}
             aria-labelledby={`${uid}-caption`}
             className="eco-orbit @container relative mx-auto aspect-[700/650] w-full max-w-[40rem]"
             style={
@@ -100,8 +123,7 @@ export default function HeroEcosystem() {
                         {heroApplications.map((app, index) => {
                             const on = active === app.id;
                             const a = (app.angle * Math.PI) / 180;
-                            // From just inside the icon's edge to the centre.
-                            const r = RX - ICON * 0.42;
+                            const r = FLOW_FROM;
 
                             return (
                                 <path
@@ -123,43 +145,42 @@ export default function HeroEcosystem() {
                                 />
                             );
                         })}
-                        {heroDataFlows.map((flow) => (
-                            <g
-                                key={flow.id}
-                                className="eco-particle"
-                                opacity={0}
-                            >
-                                <circle
-                                    r={7}
-                                    fill="#A3E635"
-                                    fillOpacity={0.25}
-                                />
-                                <circle r={3} fill="#A3E635" />
-                                <animateMotion
-                                    dur="6s"
-                                    begin={`${flow.begin}s`}
-                                    repeatCount="indefinite"
-                                    calcMode="linear"
-                                    keyPoints={
-                                        flow.direction === 'in'
-                                            ? '0;1;1'
-                                            : '1;0;0'
-                                    }
-                                    keyTimes="0;0.4;1"
-                                >
-                                    <mpath href={`#${lineId(flow.id)}`} />
-                                </animateMotion>
-                                <animate
-                                    attributeName="opacity"
-                                    dur="6s"
-                                    begin={`${flow.begin}s`}
-                                    repeatCount="indefinite"
-                                    values="0;1;1;0;0"
-                                    keyTimes="0;0.06;0.34;0.4;1"
-                                />
-                            </g>
-                        ))}
                     </svg>
+
+                    {/*
+                      Dots travelling along a few lines, in or out. HTML moved
+                      by transform and opacity (eco-flow-* in app.css), which
+                      the compositor runs; SVG animateMotion repainted the
+                      whole ring on the main thread every frame.
+                    */}
+                    {heroDataFlows.map((flow) => {
+                        const angle =
+                            heroApplications.find((app) => app.id === flow.id)
+                                ?.angle ?? 0;
+
+                        return (
+                            <div
+                                key={flow.id}
+                                aria-hidden
+                                className="eco-particle pointer-events-none absolute inset-0"
+                                style={{ transform: `rotate(${angle}deg)` }}
+                            >
+                                <span className="absolute top-1/2 left-1/2 -mt-[1.1667%] -ml-[1.1667%] w-[2.3333%]">
+                                    <span
+                                        className={`grid aspect-square place-items-center rounded-full bg-[#A3E63540] opacity-0 ${flow.direction === 'in' ? 'eco-flow-in' : 'eco-flow-out'}`}
+                                        style={
+                                            {
+                                                '--r': `${(FLOW_FROM / (RX * 2)) * 100}cqw`,
+                                                animationDelay: `${flow.begin}s`,
+                                            } as CSSProperties
+                                        }
+                                    >
+                                        <span className="aspect-square w-[43%] rounded-full bg-[#A3E635]" />
+                                    </span>
+                                </span>
+                            </div>
+                        );
+                    })}
 
                     <ul>
                         {heroApplications.map((app, index) => (
@@ -258,10 +279,12 @@ function ApplicationIcon({
                 alt=""
                 width={192}
                 height={192}
-                decoding="async"
-                className="mx-auto block h-auto w-full drop-shadow-[0_6px_10px_rgb(0_0_0/0.25)] motion-safe:transition-transform motion-safe:duration-300 group-hover:scale-110 group-focus-visible:scale-110"
+                // The hero's pictures, the page's largest paint: fetched
+                // ahead of everything else.
+                fetchPriority="high"
+                className="mx-auto block h-auto w-full drop-shadow-[0_6px_10px_rgb(0_0_0/0.25)] group-hover:scale-110 group-focus-visible:scale-110 motion-safe:transition-transform motion-safe:duration-300"
             />
-            <span className="absolute top-full left-1/2 mt-[0.5cqw] block w-max -translate-x-1/2 text-center text-[clamp(0.5rem,2.6cqw,0.8125rem)] whitespace-nowrap leading-tight font-semibold text-slate-200 transition-colors group-hover:text-site-highlight group-focus-visible:text-site-highlight">
+            <span className="absolute top-full left-1/2 mt-[0.5cqw] block w-max -translate-x-1/2 text-center text-[clamp(0.5rem,2.6cqw,0.8125rem)] leading-tight font-semibold whitespace-nowrap text-slate-200 transition-colors group-hover:text-site-highlight group-focus-visible:text-site-highlight">
                 {app.name}
             </span>
         </>

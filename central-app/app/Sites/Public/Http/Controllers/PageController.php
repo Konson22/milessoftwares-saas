@@ -61,8 +61,9 @@ class PageController extends Controller
      */
     public function product(string $code): Response|RedirectResponse
     {
-        if (($moved = $this->moved('application', $code)) !== null) {
-            return $moved;
+        // A product with a catalog page is described there; one URL per page.
+        if (($url = $this->catalog->pageForProduct($code)) !== null) {
+            return redirect(PlatformHosts::url(PlatformHosts::root(), $url), 301);
         }
 
         $product = $this->catalog->product($code);

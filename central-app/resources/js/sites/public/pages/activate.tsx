@@ -68,6 +68,7 @@ export default function Activate({
                 title={`Activate ${app.name}`}
                 description={`Activate ${app.name} on a ${app.device} with no internet, using your licence key.`}
                 canonical={canonical}
+                noindex
             />
 
             <PageHero
@@ -81,7 +82,7 @@ export default function Activate({
 
             <section
                 aria-label="Activation"
-                className="mx-auto grid max-w-5xl gap-8 px-4 py-12 sm:px-6 lg:px-8 sm:py-16 lg:grid-cols-[18rem_1fr]"
+                className="mx-auto grid max-w-5xl gap-8 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[18rem_1fr] lg:px-8"
             >
                 <aside className="space-y-4 text-sm text-slate-600">
                     <span className={`${iconChip} size-12`}>

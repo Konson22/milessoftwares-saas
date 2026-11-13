@@ -19,7 +19,7 @@ class SeoController extends Controller
 
         // Registry applications without a catalog page keep their own.
         foreach ($catalog->products() as $product) {
-            if ($catalog->catalogUrlFor('application', $product['code']) === null) {
+            if ($catalog->pageForProduct($product['code']) === null) {
                 $paths[] = 'products/'.$product['code'];
             }
         }
@@ -44,6 +44,17 @@ class SeoController extends Controller
         $body = "User-agent: *\nAllow: /\nSitemap: ".PlatformHosts::url(PlatformHosts::root(), 'sitemap.xml')."\n";
 
         return response($body, 200, ['Content-Type' => 'text/plain']);
+    }
+
+    /**
+     * The auth host's sign-in and sign-up pages are linked from the public
+     * site. A robots.txt block would leave those bare URLs in results;
+     * crawled, they carry X-Robots-Tag: noindex (SecurityHeaders), which
+     * keeps them out.
+     */
+    public function crawlButNoindex(): Response
+    {
+        return response("User-agent: *\nAllow: /\n", 200, ['Content-Type' => 'text/plain']);
     }
 
     public function disallowAll(): Response

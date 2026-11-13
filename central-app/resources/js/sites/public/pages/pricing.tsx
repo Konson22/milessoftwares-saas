@@ -83,7 +83,7 @@ export default function Pricing({
     return (
         <>
             <Seo
-                title="Pricing"
+                title="Pricing for ERP and business software"
                 description={`Subscriptions for ready-made Tatook software, one-time licences where offered, and quotations for customization and custom software. ${trial} free trial.`}
                 canonical={canonical}
             />

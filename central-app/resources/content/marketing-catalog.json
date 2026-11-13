@@ -38,7 +38,7 @@
             "subhead": "Batch and expiry tracking, a fast counter, prescriptions and a controlled-drugs register. Add Finance & Accounting and sales, stock and cash post to your books on their own.",
             "audience": "Retail pharmacies, medical stores and pharmaceutical wholesalers, from one branch to many.",
             "seoTitle": "Pharmacy ERP with batch and expiry tracking",
-            "seoDescription": "Pharmacy software with batch and expiry tracking, expiry-first selling, prescriptions, a controlled-drugs register and tills, with optional Finance & Accounting.",
+            "seoDescription": "Pharmacy software with batch and expiry tracking, expiry-first selling, prescriptions, a controlled-drugs register and tills, with optional accounting.",
             "features": [
                 {
                     "icon": "pill",
@@ -139,7 +139,7 @@
             "subhead": "A barcode till for walk-in customers, credit accounts and wholesale documents for trade customers, and stock that never disagrees with the till. Add Finance & Accounting for the books.",
             "audience": "Shops, supermarkets, hardware and electronics stores, wholesalers and trading companies.",
             "seoTitle": "Retail ERP: POS, wholesale and stock",
-            "seoDescription": "Retail and wholesale software with barcode checkout, credit customers, price lists, quotations to invoices, stock and reports, with optional Finance & Accounting.",
+            "seoDescription": "Retail and wholesale software with barcode checkout, credit customers, price lists, quotations to invoices, stock and reports, with optional accounting.",
             "features": [
                 {
                     "icon": "tags",
@@ -301,7 +301,7 @@
             "headline": "Run the school, from admissions to fees.",
             "subhead": "School ERP for primary schools, institutes, colleges and universities, each run its own way, with optional Finance & Accounting for the books.",
             "audience": "Primary schools, technical and vocational institutes, colleges and universities.",
-            "seoTitle": "School ERP",
+            "seoTitle": "School ERP: admissions, attendance and fees",
             "seoDescription": "School management software: admissions, classes, attendance, examinations and student fees, with optional Finance & Accounting.",
             "features": [
                 {
@@ -369,7 +369,7 @@
             "headline": "Every shipment tracked, every trip costed.",
             "subhead": "Logistics ERP is planned for transport and distribution businesses, with trip costs and customer billing.",
             "audience": "Transport, freight, courier and distribution companies.",
-            "seoTitle": "Logistics ERP (coming soon)",
+            "seoTitle": "Logistics ERP",
             "seoDescription": "Logistics software on the way: shipments, fleet, deliveries, trip costs and customer billing.",
             "features": [
                 {
@@ -431,7 +431,7 @@
             "headline": "Programs delivered, every grant accounted for.",
             "subhead": "NGO ERP is being built for NGOs and development organizations, with optional Finance & Accounting for fund accounting.",
             "audience": "NGOs, charities and development organizations.",
-            "seoTitle": "NGO ERP (coming soon)",
+            "seoTitle": "NGO ERP",
             "seoDescription": "NGO software on the way: programs, donors and grants, budgets, procurement and donor reporting, with optional Finance & Accounting.",
             "features": [
                 {
@@ -484,7 +484,6 @@
                 "Invoices, bills and payments",
                 "Bank reconciliation",
                 "Tax, budgets and fixed assets",
-                "Payroll and payslips",
                 "Financial reports"
             ],
             "offering": {
@@ -494,12 +493,12 @@
                 "desktop": [],
                 "mobile": []
             },
-            "summary": "Double-entry accounting with bank reconciliation, tax, budgets, fixed assets and payroll.",
+            "summary": "Double-entry accounting with bank reconciliation, tax, budgets and fixed assets.",
             "headline": "Accounting your accountant will trust.",
-            "subhead": "A double-entry ledger with periods, bank reconciliation, tax, budgets, fixed assets and payroll, fed automatically by our ERPs or used on its own.",
+            "subhead": "A double-entry ledger with periods, bank reconciliation, tax, budgets and fixed assets, fed automatically by our ERPs or used on its own.",
             "audience": "Businesses that want proper books, the accountants who serve them, and every customer of our ERPs.",
-            "seoTitle": "Finance & Accounting software with bank reconciliation",
-            "seoDescription": "Accounting software with a double-entry ledger, bank reconciliation, tax returns, budgets, fixed assets, multi-currency and payroll.",
+            "seoTitle": "Accounting software with bank reconciliation",
+            "seoDescription": "Accounting software with a double-entry ledger, bank reconciliation, tax returns, budgets, fixed assets and multi-currency.",
             "features": [
                 {
                     "icon": "landmark",
@@ -537,11 +536,6 @@
                     "body": "Budget against actuals, and an asset register with monthly depreciation."
                 },
                 {
-                    "icon": "users",
-                    "title": "Payroll",
-                    "body": "Monthly and hourly pay, allowances, deductions, income tax and social security, a payroll approved by a second person, payslips, and one journal of totals in the books."
-                },
-                {
                     "icon": "file-spreadsheet",
                     "title": "Reports",
                     "body": "Trial balance, profit and loss, balance sheet, aged receivables and payables, and cash flow."
@@ -569,10 +563,6 @@
                 {
                     "question": "Can I bring my opening balances?",
                     "answer": "Yes. Opening balances are set when you start, so the books carry on from where you are."
-                },
-                {
-                    "question": "Is payroll included?",
-                    "answer": "Yes. Payroll is part of Finance & Accounting. Add people there yourself, or add Tatook HR and hires and leavers arrive on their own. Seeing who is on the payroll and seeing what they earn are separate permissions."
                 }
             ]
         },
@@ -602,7 +592,7 @@
             "headline": "Every litre, from the tank to the receipt.",
             "subhead": "Pumps and nozzles, attendant shifts, meter readings and fuel sales, with credit, deliveries and a cash count at closing. Add Finance & Accounting and sales, deliveries and shortages post to your books.",
             "audience": "Petrol stations, from one station to several.",
-            "seoTitle": "Petrol station software: tanks, shifts and fuel sales",
+            "seoTitle": "Petrol station software: tanks, shifts, fuel sales",
             "seoDescription": "Petrol station software for tanks, pumps, shifts, meter readings, fuel sales, credit and deliveries, with optional Finance & Accounting.",
             "features": [
                 {
@@ -678,7 +668,7 @@
             "headline": "Deliver projects on time and on budget.",
             "subhead": "Now in early access for teams that run projects: plans, tasks and team assignments, with actual costs coming straight from Finance & Accounting.",
             "audience": "Consultancies, contractors, NGOs and any team that runs projects.",
-            "seoTitle": "Project Management software (early access)",
+            "seoTitle": "Project Management software",
             "seoDescription": "Project management in early access: projects, tasks and milestones, team assignments, and budgets against actual costs from Finance & Accounting.",
             "features": [
                 {
@@ -737,12 +727,12 @@
                 "desktop": [],
                 "mobile": []
             },
-            "summary": "Staff records, contracts and documents, kept in step with payroll.",
+            "summary": "Staff records, contracts and documents, kept in step with Payroll.",
             "headline": "Your people, on record and in order.",
-            "subhead": "Staff profiles, employment history, contracts and documents with expiry reminders. Add Finance & Accounting and the people you hire and let go are kept in step on its payroll. Leave and attendance are being built.",
+            "subhead": "Staff profiles, employment history, contracts and documents with expiry reminders. Add Payroll and the people you hire and let go are kept in step there. Leave and attendance are being built.",
             "audience": "Any organization with staff to keep records for.",
             "seoTitle": "HR software: staff records, contracts and documents",
-            "seoDescription": "HR software for staff profiles, employment history, contracts and documents with expiry reminders, kept in step with payroll.",
+            "seoDescription": "HR software for staff profiles, employment history, contracts and documents with expiry reminders, kept in step with Payroll.",
             "features": [
                 {
                     "icon": "users",
@@ -782,7 +772,108 @@
             "faqs": [
                 {
                     "question": "Is payroll included?",
-                    "answer": "Payroll is part of Finance & Accounting. Add it and everyone you hire, move or let go in HR is kept in step on the payroll. Pay itself is entered only in Finance & Accounting."
+                    "answer": "Payroll is a separate application. Add it and everyone you hire, move or let go in HR is kept in step on the payroll. Pay itself is entered only in Payroll."
+                }
+            ]
+        },
+        {
+            "slug": "payroll",
+            "category": "application",
+            "name": "Payroll",
+            "icon": "banknote",
+            "registry": { "type": "application", "code": "payroll" },
+            "highlights": [
+                "Monthly and hourly pay",
+                "Allowances and deductions",
+                "Income tax and social security",
+                "Approved by a second person",
+                "Payslips and one journal to Finance"
+            ],
+            "offering": {
+                "platforms": ["web"],
+                "connectivity": ["online"],
+                "licensing": ["subscription"],
+                "desktop": [],
+                "mobile": []
+            },
+            "summary": "Monthly payroll and payslips, with any Tatook ERP or on its own.",
+            "headline": "Payday, worked out and signed off.",
+            "subhead": "Basic pay, allowances and deductions, income tax and social security, a monthly payroll approved by a second person, and payslips. Takes staff from HR and posts one journal to Finance & Accounting.",
+            "audience": "Any organization that pays staff, with or without Tatook HR: restaurants, pharmacies, shops, schools and offices.",
+            "seoTitle": "Payroll software: payslips, tax and social security",
+            "seoDescription": "Payroll software for monthly and hourly pay, allowances, deductions, income tax and social security, approved pay runs and payslips, with optional HR.",
+            "features": [
+                {
+                    "icon": "users",
+                    "title": "People on the payroll",
+                    "body": "Add them in Payroll, or add Tatook HR and hires, transfers and leavers arrive on their own."
+                },
+                {
+                    "icon": "wallet",
+                    "title": "Pay",
+                    "body": "A monthly salary or an hourly rate, with each change dated. Joiners and leavers are paid for the days they worked."
+                },
+                {
+                    "icon": "hand-coins",
+                    "title": "Allowances and deductions",
+                    "body": "Fixed amounts or a percentage of basic pay, taxable or not, from a start date to an end date."
+                },
+                {
+                    "icon": "calculator",
+                    "title": "Income tax and social security",
+                    "body": "Tax bands and employee and employer rates you set, dated so a new law starts in the right month."
+                },
+                {
+                    "icon": "user-check",
+                    "title": "Two people for every payroll",
+                    "body": "One person prepares the month, another approves it. Once approved, it never changes."
+                },
+                {
+                    "icon": "receipt",
+                    "title": "Payslips",
+                    "body": "A payslip for each person, with every earning and deduction on it."
+                },
+                {
+                    "icon": "lock",
+                    "title": "Pay kept private",
+                    "body": "Seeing who is on the payroll and seeing what they earn are separate permissions."
+                },
+                {
+                    "icon": "landmark",
+                    "title": "Into the books",
+                    "body": "Add Finance & Accounting and each approved payroll posts one journal of totals, then the payment when it goes out."
+                }
+            ],
+            "workflow": [
+                {
+                    "title": "Prepare",
+                    "body": "Choose the month and the pay date. Every payslip is worked out."
+                },
+                {
+                    "title": "Approve",
+                    "body": "A second person checks and approves. The payroll and its payslips are locked."
+                },
+                {
+                    "title": "Pay",
+                    "body": "Pay by bank, cash or mobile money and record it as paid."
+                }
+            ],
+            "faqs": [
+                {
+                    "question": "Do I need Tatook HR?",
+                    "answer": "No. Add people in Payroll yourself. With HR, they arrive from HR and only their pay is entered in Payroll."
+                },
+                {
+                    "question": "Can I add it to my restaurant, pharmacy or shop?",
+                    "answer": "Yes. Payroll works next to any Tatook ERP, or on its own."
+                },
+                {
+                    "question": "Are tax rates set for my country?",
+                    "answer": "You enter your tax bands and social security rates, or start from a South Sudan preset and check it against the current law before your first payroll."
+                },
+                {
+                    "question": "Is accounting included?",
+                    "answer": "Finance & Accounting is a separate application. Add it and each payroll posts to your books, without anyone's individual pay."
                 }
             ]
         },
@@ -803,7 +894,7 @@
             "headline": "Buy right, with approvals.",
             "subhead": "Procurement is planned for organizations that need requests, approvals and supplier quotes before they buy.",
             "audience": "Organizations with purchasing approvals: NGOs, schools, companies with several departments.",
-            "seoTitle": "Procurement software (coming soon)",
+            "seoTitle": "Procurement software",
             "seoDescription": "Procurement software on the way: purchase requests, approvals, supplier quotes and purchase orders that flow into stock and Finance & Accounting.",
             "features": [
                 {
@@ -857,7 +948,7 @@
             "headline": "Know what you have and where it is.",
             "subhead": "Inventory is planned as a standalone stock application, on the same stock engine the ERPs use today.",
             "audience": "Businesses that hold stock in several places.",
-            "seoTitle": "Inventory management software (coming soon)",
+            "seoTitle": "Inventory management software",
             "seoDescription": "Inventory software on the way: stock across shelves, stores and branches, counts, transfers and reorder alerts.",
             "features": [
                 {
@@ -911,7 +1002,7 @@
             "headline": "Win customers and keep them.",
             "subhead": "CRM is planned for sales teams, with every customer's invoices and payments from Finance & Accounting in view.",
             "audience": "Sales teams and businesses that sell to other businesses.",
-            "seoTitle": "CRM software (coming soon)",
+            "seoTitle": "CRM software",
             "seoDescription": "CRM on the way: leads, quotations, follow-ups and customer history beside invoices and payments in Finance & Accounting.",
             "features": [
                 {
@@ -965,7 +1056,7 @@
             "headline": "Every asset tracked, from purchase to disposal.",
             "subhead": "Asset Management is planned for tracking equipment and vehicles day to day. Asset accounting and depreciation are already in Finance & Accounting.",
             "audience": "Organizations with equipment, vehicles or property to look after.",
-            "seoTitle": "Asset Management software (coming soon)",
+            "seoTitle": "Asset Management software",
             "seoDescription": "Asset management on the way: equipment, vehicles and property, assignments and maintenance, with depreciation in Finance & Accounting.",
             "features": [
                 {
@@ -1019,7 +1110,7 @@
             "headline": "Paperwork that moves.",
             "subhead": "Document Management is planned for routing documents for approval, with a record of who signed what.",
             "audience": "Any organization that approves documents: contracts, requests, policies.",
-            "seoTitle": "Document Management software (coming soon)",
+            "seoTitle": "Document Management software",
             "seoDescription": "Document management on the way: upload, route and approve documents with a full trail of who signed what.",
             "features": [
                 {

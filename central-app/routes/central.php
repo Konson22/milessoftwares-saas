@@ -120,8 +120,9 @@ Route::domain(PlatformHosts::app())->group(function () {
     Route::get('{path?}', RetiredAppHostController::class)->where('path', '.*');
 });
 
-// Signed-in hosts are never indexed.
-Route::domain(PlatformHosts::auth())->get('robots.txt', [SeoController::class, 'disallowAll']);
+// Signed-in hosts are never indexed: the auth host by its noindex header,
+// which crawlers must be allowed to fetch to see (SeoController).
+Route::domain(PlatformHosts::auth())->get('robots.txt', [SeoController::class, 'crawlButNoindex']);
 
 // {business}.milesoftwares.com — tenant workspace shell. Signs in through
 // the auth host with the shared workspace client and keeps a host-only session.

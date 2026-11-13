@@ -83,8 +83,16 @@ it('always shows the public site in the light theme', function () {
         ->assertDontSee('data-forced-appearance', false);
 });
 
+it('sends a product with a catalog page there, one URL per page', function () {
+    // Retail's registry application is described on the Retail ERP page.
+    $this->get(site('products/retail'))->assertRedirect(site('erp/retail'))->assertStatus(301);
+});
+
 it('shows a product page with only its public active plans', function () {
-    $this->get(site('products/retail'))
+    // An application with no catalog page keeps its own.
+    $this->retail->forceFill(['code' => 'laundry'])->save();
+
+    $this->get(site('products/laundry'))
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('public/product')
@@ -108,7 +116,8 @@ it('publishes a sitemap and robots rules', function () {
     $this->get(site('sitemap.xml'))
         ->assertOk()
         ->assertHeader('Content-Type', 'application/xml')
-        ->assertSee(site('products/retail'), false)
+        ->assertSee(site('erp/retail'), false)
+        ->assertDontSee(site('products/retail'), false)
         ->assertSee(site('start'), false)
         ->assertDontSee(site('demo'), false)
         ->assertSee(site('pricing'), false)
@@ -264,9 +273,9 @@ it('publishes marketing copy edited in the registry', function () {
         ])
         ->assertSessionHasNoErrors();
 
-    $this->get(site('products/retail'))->assertInertia(fn (AssertableInertia $page) => $page
-        ->where('product.tagline', 'Every branch, one stock count.')
-        ->where('product.features', ['Stock transfers', 'Daily cash-up', 'Loyalty points']));
+    $this->get(site())->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('products.0.tagline', 'Every branch, one stock count.')
+        ->where('products.0.features', ['Stock transfers', 'Daily cash-up', 'Loyalty points']));
 });
 
 it('serves the products, platform, coming-soon, about, services and legal pages', function (string $path, string $component) {
@@ -358,7 +367,7 @@ it('lists every product of the brief on the products page', function () {
             $slugs = fn (string $category) => collect($catalog)->where('category', $category)->pluck('slug')->values()->all();
 
             return $slugs('erp') === ['pharmacy', 'retail', 'restaurant', 'school', 'logistics', 'ngo']
-                && $slugs('application') === ['finance', 'petrol', 'projects', 'hr', 'procurement', 'inventory', 'crm', 'assets', 'documents'];
+                && $slugs('application') === ['finance', 'petrol', 'projects', 'hr', 'payroll', 'procurement', 'inventory', 'crm', 'assets', 'documents'];
         }));
 });
 
