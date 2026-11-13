@@ -5,6 +5,7 @@
 @php
     $money = fn (int $minor) => number_format($minor / 100, 2);
     $draft = $run->isDraft();
+    $reversed = $run->status === \App\Models\PayrollRun::REVERSED;
 @endphp
 <!doctype html>
 <html lang="en">
@@ -35,8 +36,8 @@
     </style>
 </head>
 <body>
-@if ($draft)
-    <div class="draft">DRAFT</div>
+@if ($draft || $reversed)
+    <div class="draft">{{ $reversed ? 'REVERSED' : 'DRAFT' }}</div>
 @endif
 
 @foreach ($payslips as $payslip)
@@ -53,7 +54,7 @@
                     <div class="org">{{ $organization }}</div>
                     <h1 style="margin-top: 2mm">Payslip</h1>
                     <div class="muted">{{ $run->label() }} · paid {{ $run->pay_date->format('j M Y') }}</div>
-                    <div class="muted">Payroll {{ $run->number }}@if ($draft) (draft, not approved)@endif</div>
+                    <div class="muted">Payroll {{ $run->number }}@if ($draft) (draft, not approved)@elseif ($reversed) (reversed, not paid)@endif</div>
                 </td>
                 <td class="right">
                     <div style="font-weight: bold">{{ $payslip['name'] }}</div>

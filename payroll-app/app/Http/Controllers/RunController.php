@@ -243,7 +243,7 @@ class RunController extends Controller
         abort_unless($payslip->payroll_run_id === $run->id, 404);
 
         return Inertia::render('runs/payslip', [
-            'currency' => Workspace::current()?->currency,
+            'currency' => $run->currency ?? Workspace::current()?->currency,
             'organization' => Workspace::current()?->display_name,
             'run' => $this->summary($run) + ['payDate' => $run->pay_date->toDateString()],
             'payslip' => $this->payslipData($payslip, $structure->names()),
@@ -279,7 +279,7 @@ class RunController extends Controller
 
         return Pdf::loadView('payroll.payslips-pdf', [
             'organization' => $workspace?->display_name,
-            'currency' => $workspace?->currency,
+            'currency' => $run->currency ?? $workspace?->currency,
             'run' => $run,
             'payslips' => $payslips->map(fn (Payslip $payslip) => $this->payslipData($payslip, $names)),
         ])->setPaper('a4')->setOption(['isFontSubsettingEnabled' => true, 'isRemoteEnabled' => false]);

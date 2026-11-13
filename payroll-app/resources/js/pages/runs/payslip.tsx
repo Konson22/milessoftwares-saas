@@ -4,6 +4,7 @@ import { PageHeader } from '@miles/ui/components/page-header';
 import { Panel, PanelBody } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
 import { formatDate } from '@/components/fields';
+import { RunStatus } from '@/components/run-status';
 import { formatMoney } from '@/lib/money';
 import { show } from '@/routes/runs';
 import { pdf } from '@/routes/runs/payslip';
@@ -13,7 +14,13 @@ type Line = { kind: string; name: string; amount_minor: number };
 type Props = {
     currency: string | null;
     organization: string | null;
-    run: { id: string; number: string; period: string; payDate: string };
+    run: {
+        id: string;
+        number: string;
+        period: string;
+        payDate: string;
+        status: string;
+    };
     payslip: {
         id: string;
         number: string;
@@ -70,6 +77,11 @@ export default function Payslip({
             <div className="print:hidden">
                 <PageHeader
                     title={`Payslip: ${payslip.name}`}
+                    badges={
+                        ['draft', 'reviewed', 'reversed'].includes(
+                            run.status,
+                        ) && <RunStatus status={run.status} />
+                    }
                     actions={
                         <>
                             <Button asChild variant="ghost">
