@@ -2,25 +2,25 @@ import { Platform } from 'react-native';
 
 /**
  * Brand colors for places className can't reach: icon tints, spinners, navigation options and
- * the status bar. Values mirror tailwind.config.js (fuel orange, pump yellow, navy neutrals).
+ * the status bar. Values mirror tailwind.config.js (the icon's navy, fuel orange, navy neutrals).
  */
 export const colors = {
   brand: {
-      50: '#fff7ed',
-      100: '#ffedd5',
-      200: '#fed7aa',
-      300: '#fdba74',
-      400: '#f97316',
-      500: '#ea580c',
-      600: '#c2410c',
-      700: '#9a3412',
-      800: '#7c2d12',
-      900: '#5c2410',
-      950: '#3b1608',
-      logo: '#b83a0a',
+    50: '#eef4fb',
+    100: '#d9e6f5',
+    200: '#b6cdea',
+    300: '#86a9d8',
+    400: '#4f7fc0',
+    500: '#2a5ea6',
+    600: '#1a4a8c',
+    700: '#123b74',
+    800: '#0b3062',
+    900: '#052a5a',
+    950: '#011c40',
+    logo: '#002657',
   },
-  accent: '#facc15',
-  accentDark: '#ca8a04',
+  accent: '#fd9800',
+  accentDark: '#b45309',
   canvas: '#f3f6fa',
   white: '#ffffff',
 

@@ -8,13 +8,13 @@ type Variant = 'primary' | 'accent' | 'secondary' | 'outline' | 'danger' | 'ghos
 
 const container: Record<Variant, string> = {
   primary: 'bg-brand-600 active:bg-brand-700',
-  // The icon's orange: taking payment, and the main action on red.
+  // The icon's orange: taking payment, and the main action on navy.
   accent: 'bg-accent active:bg-accent-600',
   secondary: 'bg-brand-50 active:bg-brand-100',
   outline: 'border border-brand-200 bg-white active:bg-brand-50',
   danger: 'bg-red-600 active:bg-red-700',
   ghost: 'active:bg-brand-50',
-  // For use on the dark artwork / red surfaces.
+  // For use on the dark artwork / navy surfaces.
   glass: 'border border-white/25 bg-white/10 active:bg-white/20',
 };
 
@@ -97,7 +97,7 @@ export function IconButton({
   onPress?: () => void;
   label: string;
   color?: string;
-  /** Sits on a red surface: white icon with a translucent press state. */
+  /** Sits on a navy surface: white icon with a translucent press state. */
   onDark?: boolean;
   className?: string;
   disabled?: boolean;

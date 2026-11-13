@@ -14,9 +14,10 @@
     "android": {
       "package": "com.milesoftwares.petrol",
       "adaptiveIcon": {
-        "backgroundColor": "#B83A0A",
+        "backgroundColor": "#002657",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png"
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -31,9 +32,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#3B1608",
+          "backgroundColor": "#002657",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 150
+          "imageWidth": 200
         }
       ]
     ],

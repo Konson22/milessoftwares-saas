@@ -3,6 +3,8 @@ import { useEffect } from 'react';
 import { Text, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 
+import { colors } from '@/lib/theme';
+
 import { ArtBackground } from './art-background';
 
 const BAR = 160;
@@ -25,7 +27,7 @@ export function LoadingScreen() {
     <ArtBackground>
       <View className="flex-1 items-center justify-center gap-8" accessible accessibilityRole="progressbar" accessibilityLabel="Miles Petrol is opening">
         <View className="items-center justify-center">
-          <Animated.View style={[{ position: 'absolute', width: 150, height: 150, borderRadius: 75, backgroundColor: '#ffffff' }, halo]} />
+          <Animated.View style={[{ position: 'absolute', width: 150, height: 150, borderRadius: 75, backgroundColor: colors.brand[500] }, halo]} />
           <Animated.View style={logo}>
             <Image source={require('../../assets/images/logo-light.png')} contentFit="contain" style={{ width: 112, height: 112 }} accessible={false} />
           </Animated.View>

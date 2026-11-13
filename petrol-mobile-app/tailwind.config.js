@@ -5,33 +5,33 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Miles Petrol palette: fuel orange (600, white text reads on it) is the main hue, 500 its bright
-        // highlight, 700-800 the burnt shadows, 900-950 the same orange deepened for the dark backdrops.
+        // Miles Petrol palette, from the app icon: navy (the icon's tile) is the main hue, 600 for
+        // primary buttons (white text), 900-950 for the dark backdrops; logo is the tile exactly, for
+        // the app bars, so the mark sits on them without an edge.
         // Keep src/lib/theme.ts in sync — it carries the same values for icons and navigation.
         brand: {
+          50: '#eef4fb',
+          100: '#d9e6f5',
+          200: '#b6cdea',
+          300: '#86a9d8',
+          400: '#4f7fc0',
+          500: '#2a5ea6',
+          600: '#1a4a8c',
+          700: '#123b74',
+          800: '#0b3062',
+          900: '#052a5a',
+          950: '#011c40',
+          logo: '#002657',
+        },
+        // Fuel orange, the icon's drop and nozzle: the second brand colour, for payment actions,
+        // sign-in and markers. Dark text on it (brand-950); DEFAULT for buttons, bars and borders.
+        accent: {
           50: '#fff7ed',
           100: '#ffedd5',
-          200: '#fed7aa',
           300: '#fdba74',
-          400: '#f97316',
-          500: '#ea580c',
-          600: '#c2410c',
-          700: '#9a3412',
-          800: '#7c2d12',
-          900: '#5c2410',
-          950: '#3b1608',
-          // The app icon's orange, exactly: the app bars.
-          logo: '#b83a0a',
-        },
-        // Pump yellow: the second brand colour, for payment actions and
-        // markers. Dark text on it (brand-950); DEFAULT for buttons, bars and borders on white or orange.
-        accent: {
-          50: '#fefce8',
-          100: '#fef9c3',
-          300: '#fde047',
-          DEFAULT: '#facc15',
-          600: '#eab308',
-          700: '#ca8a04',
+          DEFAULT: '#fd9800',
+          600: '#ea7c00',
+          700: '#b45309',
         },
         canvas: '#f3f6fa',
         // Slate tuned toward navy, so the neutrals sit on the accent's hue.

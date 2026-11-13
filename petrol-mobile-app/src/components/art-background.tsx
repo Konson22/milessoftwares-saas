@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-/** Deep red backdrop with soft glass circles, for the screens before signing in. */
+/** Deep navy backdrop with soft glass circles, for the screens before signing in. */
 export function ArtBackground({ children }: { children: ReactNode }) {
   return (
     <View className="flex-1 overflow-hidden bg-brand-950">
