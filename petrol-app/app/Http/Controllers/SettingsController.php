@@ -66,7 +66,7 @@ class SettingsController extends Controller
                 'kind' => $method->kind,
                 'active' => $method->active,
             ]),
-            'accessUrl' => $request->getSchemeAndHttpHost().'/manage/members',
+            'accessUrl' => $request->getSchemeAndHttpHost().'/members',
             'currencies' => app(Currencies::class)->accepted($branchId),
         ]);
     }
