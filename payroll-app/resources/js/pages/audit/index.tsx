@@ -49,6 +49,8 @@ const ACTIONS: Record<string, string> = {
     'run.approved': 'Approved',
     'run.paid': 'Recorded a payment',
     'run.reversed': 'Reversed',
+    'run.adjustment_added': 'Added a one-off adjustment',
+    'run.adjustment_removed': 'Removed a one-off adjustment',
     'employee.added': 'Added to the payroll',
     'employee.updated': 'Changed work details',
     'employee.left': 'Recorded leaving',
@@ -75,6 +77,7 @@ function describe(details: Record<string, unknown>): string {
     const number = (key: string) =>
         typeof details[key] === 'number' ? details[key] : null;
 
+    if (text('employee')) parts.push(text('employee') ?? '');
     if (text('component')) parts.push(text('component') ?? '');
     if (text('payment')) parts.push(text('payment') ?? '');
     if (number('amount_minor') !== null) {

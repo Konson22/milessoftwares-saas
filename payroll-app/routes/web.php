@@ -61,6 +61,8 @@ Route::prefix(app(PlatformConfig::class)->path())
                 Route::post('runs', [RunController::class, 'store'])->name('runs.store');
                 Route::post('runs/{run}/recalculate', [RunController::class, 'recalculate'])->whereUuid('run')->name('runs.recalculate');
                 Route::delete('runs/{run}', [RunController::class, 'destroy'])->whereUuid('run')->name('runs.destroy');
+                Route::post('runs/{run}/adjustments', [RunController::class, 'storeAdjustment'])->whereUuid('run')->name('runs.adjustments.store');
+                Route::delete('runs/{run}/adjustments/{adjustment}', [RunController::class, 'destroyAdjustment'])->whereUuid(['run', 'adjustment'])->name('runs.adjustments.destroy');
             });
             Route::post('runs/{run}/review', [RunController::class, 'review'])->whereUuid('run')->can('payroll.runs.review')->name('runs.review');
             Route::post('runs/{run}/approve', [RunController::class, 'approve'])->whereUuid('run')->can('payroll.runs.approve')->name('runs.approve');

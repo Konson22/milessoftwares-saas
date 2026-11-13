@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Employee;
 use App\Models\PayrollPayment;
 use App\Models\PayrollRun;
 use App\Models\Payslip;
 use App\Models\PayslipPayment;
+use App\Models\RunAdjustment;
 use App\Models\Workspace;
 use App\Payroll\Runs;
+use App\Support\Money;
 use App\Support\Structure;
 use App\Support\XlsxExport;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -18,6 +21,7 @@ use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Miles\PlatformClient\Access\CurrentAccess;
@@ -112,8 +116,18 @@ class RunController extends Controller
                 'headcount' => $payment->headcount,
                 'recordedBy' => $payment->recorder->name,
             ]),
+            'adjustments' => RunAdjustment::query()->where('payroll_run_id', $run->id)->with(['employee', 'creator:id,name'])->orderBy('created_at')->orderBy('id')->get()->map(fn (RunAdjustment $adjustment) => [
+                'id' => $adjustment->id,
+                'employee' => "{$adjustment->employee->name()} ({$adjustment->employee->employee_number})",
+                'kind' => $adjustment->kind,
+                'name' => $adjustment->name,
+                'amountMinor' => $adjustment->amount_minor,
+                'taxable' => $adjustment->taxable,
+                'by' => $adjustment->creator->name,
+            ]),
             'payslips' => $run->payslips()->orderBy('employee_number')->get()->map(fn (Payslip $payslip) => [
                 'id' => $payslip->id,
+                'employeeId' => $payslip->employee_id,
                 'number' => $payslip->employee_number,
                 'name' => $payslip->employee_name,
                 'branch' => $names['branches'][$payslip->branch_id] ?? null,
@@ -142,6 +156,33 @@ class RunController extends Controller
         $runs->recalculate($run, $this->user($request));
 
         return back()->with('success', 'Recalculated with the pay and rules in force now.');
+    }
+
+    public function storeAdjustment(Request $request, PayrollRun $run, Runs $runs): RedirectResponse
+    {
+        $validated = $request->validate([
+            'employee_id' => ['required', 'uuid'],
+            'kind' => ['required', Rule::in([RunAdjustment::EARNING, RunAdjustment::DEDUCTION])],
+            'name' => ['required', 'string', 'max:100'],
+            'amount' => Money::RULES,
+            'taxable' => ['boolean'],
+        ], [], ['employee_id' => 'person']);
+
+        $employee = Employee::query()->whereKey($validated['employee_id'])->first();
+        if ($employee === null) {
+            throw ValidationException::withMessages(['employee_id' => 'Choose someone on this payroll.']);
+        }
+
+        $runs->addAdjustment($run, $employee, $validated['kind'], $validated['name'], Money::toMinor($validated['amount']), $request->boolean('taxable'), $this->user($request));
+
+        return back()->with('success', "{$validated['name']} added for {$employee->name()}; payroll recalculated.");
+    }
+
+    public function destroyAdjustment(Request $request, PayrollRun $run, RunAdjustment $adjustment, Runs $runs): RedirectResponse
+    {
+        $runs->removeAdjustment($run, $adjustment, $this->user($request));
+
+        return back()->with('success', "{$adjustment->name} removed; payroll recalculated.");
     }
 
     public function review(Request $request, PayrollRun $run, Runs $runs): RedirectResponse

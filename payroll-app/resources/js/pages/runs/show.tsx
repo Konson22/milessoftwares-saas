@@ -28,6 +28,10 @@ import {
     review,
     show,
 } from '@/routes/runs';
+import {
+    destroy as destroyAdjustment,
+    store as storeAdjustment,
+} from '@/routes/runs/adjustments';
 import { pdf as payslipsPdf } from '@/routes/runs/payslips';
 
 type Props = {
@@ -78,8 +82,18 @@ type Props = {
         headcount: number;
         recordedBy: string;
     }[];
+    adjustments: {
+        id: string;
+        employee: string;
+        kind: 'earning' | 'deduction';
+        name: string;
+        amountMinor: number;
+        taxable: boolean;
+        by: string;
+    }[];
     payslips: {
         id: string;
+        employeeId: string;
         number: string;
         name: string;
         branch: string | null;
@@ -115,6 +129,7 @@ export default function ShowRun({
     currency,
     run,
     payments,
+    adjustments,
     payslips,
     can,
     paymentMethods,
@@ -491,6 +506,181 @@ export default function ShowRun({
                             )}
                         </Form>
                     </PanelBody>
+                </Panel>
+            )}
+
+            {(can.prepare || adjustments.length > 0) && (
+                <Panel className="mt-3">
+                    <PanelHeader title="One-off adjustments" />
+                    {adjustments.length > 0 && (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Person</TableHead>
+                                    <TableHead>What</TableHead>
+                                    <TableHead>Added by</TableHead>
+                                    <TableHead className="text-right">
+                                        Amount
+                                    </TableHead>
+                                    {can.prepare && <TableHead />}
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {adjustments.map((adjustment) => (
+                                    <TableRow key={adjustment.id}>
+                                        <TableCell>
+                                            {adjustment.employee}
+                                        </TableCell>
+                                        <TableCell>
+                                            {adjustment.name}
+                                            <span className="ml-2 text-xs text-muted-foreground">
+                                                {adjustment.kind === 'earning'
+                                                    ? adjustment.taxable
+                                                        ? 'taxable earning'
+                                                        : 'earning, not taxed'
+                                                    : 'deduction'}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell>{adjustment.by}</TableCell>
+                                        <TableCell className="text-right tabular-nums">
+                                            {adjustment.kind === 'deduction'
+                                                ? '−'
+                                                : ''}
+                                            {formatMoney(
+                                                adjustment.amountMinor,
+                                            )}
+                                        </TableCell>
+                                        {can.prepare && (
+                                            <TableCell className="text-right">
+                                                <Form
+                                                    {...destroyAdjustment.form({
+                                                        run: run.id,
+                                                        adjustment:
+                                                            adjustment.id,
+                                                    })}
+                                                    options={{
+                                                        preserveScroll: true,
+                                                    }}
+                                                >
+                                                    {({ processing }) => (
+                                                        <Button
+                                                            type="submit"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            disabled={
+                                                                processing
+                                                            }
+                                                        >
+                                                            Remove
+                                                        </Button>
+                                                    )}
+                                                </Form>
+                                            </TableCell>
+                                        )}
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
+                    {can.prepare && (
+                        <PanelBody>
+                            <Form
+                                {...storeAdjustment.form(run.id)}
+                                options={{ preserveScroll: true }}
+                                resetOnSuccess
+                                className="flex flex-wrap items-end gap-2"
+                            >
+                                {({ errors: adjustErrors, processing }) => (
+                                    <>
+                                        <Field
+                                            id="employee_id"
+                                            label="Person"
+                                            error={adjustErrors.employee_id}
+                                        >
+                                            <select
+                                                id="employee_id"
+                                                name="employee_id"
+                                                className={selectClass}
+                                                required
+                                            >
+                                                <option value="">Choose</option>
+                                                {payslips.map((slip) => (
+                                                    <option
+                                                        key={slip.employeeId}
+                                                        value={slip.employeeId}
+                                                    >
+                                                        {slip.name} (
+                                                        {slip.number})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </Field>
+                                        <Field
+                                            id="kind"
+                                            label="Kind"
+                                            error={adjustErrors.kind}
+                                        >
+                                            <select
+                                                id="kind"
+                                                name="kind"
+                                                className={selectClass}
+                                            >
+                                                <option value="earning">
+                                                    Earning
+                                                </option>
+                                                <option value="deduction">
+                                                    Deduction
+                                                </option>
+                                            </select>
+                                        </Field>
+                                        <TextField
+                                            name="name"
+                                            label="What for"
+                                            required
+                                            error={adjustErrors.name}
+                                            prefix="adjustment-"
+                                        />
+                                        <TextField
+                                            name="amount"
+                                            label="Amount"
+                                            required
+                                            error={adjustErrors.amount}
+                                            prefix="adjustment-"
+                                        />
+                                        <label className="flex h-9 items-center gap-2 text-sm">
+                                            <input
+                                                type="hidden"
+                                                name="taxable"
+                                                value="0"
+                                            />
+                                            <input
+                                                type="checkbox"
+                                                name="taxable"
+                                                value="1"
+                                                defaultChecked
+                                                className="size-4"
+                                            />
+                                            Taxable (earnings only)
+                                        </label>
+                                        <Button
+                                            type="submit"
+                                            size="sm"
+                                            disabled={processing}
+                                        >
+                                            Add
+                                        </Button>
+                                        <p className="basis-full text-xs text-muted-foreground">
+                                            For this payroll only: a bonus,
+                                            arrears, an advance recovered.
+                                            Adding or removing one recalculates
+                                            the payroll and makes you its
+                                            preparer.
+                                        </p>
+                                    </>
+                                )}
+                            </Form>
+                        </PanelBody>
+                    )}
                 </Panel>
             )}
 

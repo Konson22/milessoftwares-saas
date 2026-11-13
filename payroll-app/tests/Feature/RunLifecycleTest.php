@@ -4,6 +4,7 @@ use App\Models\AuditEvent;
 use App\Models\PayrollPayment;
 use App\Models\PayrollRun;
 use App\Models\Payslip;
+use App\Models\RunAdjustment;
 use App\Models\Workspace;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -182,3 +183,39 @@ it('refuses to change or delete the audit trail in the database itself', functio
     expect(fn () => DB::table('payroll_audit_events')->update(['action' => 'x']))->toThrow(QueryException::class, 'append-only')
         ->and(fn () => DB::table('payroll_audit_events')->delete())->toThrow(QueryException::class, 'append-only');
 })->skip(fn () => DB::getDriverName() !== 'pgsql', 'PostgreSQL only');
+
+it('adds one-off adjustments to a draft, recalculating it and making the editor its preparer', function () {
+    $akol = addEmployee('Akol', salary: '1000');
+    $this->post($this->workspaceUrl('acme', 'runs'), ['month' => '2026-03', 'pay_date' => '2026-03-28'])->assertSessionHasNoErrors();
+    $run = lifecycleRun();
+    $before = $this->asTenant('acme', fn () => Payslip::query()->sole());
+
+    $this->post($this->workspaceUrl('acme', "runs/{$run->id}/adjustments"), ['employee_id' => $akol->id, 'kind' => 'earning', 'name' => 'Eid bonus', 'amount' => '250.50', 'taxable' => '0'])->assertSessionHasNoErrors();
+    $this->post($this->workspaceUrl('acme', "runs/{$run->id}/adjustments"), ['employee_id' => $akol->id, 'kind' => 'deduction', 'name' => 'Advance recovered', 'amount' => '100', 'taxable' => '1'])->assertSessionHasNoErrors();
+
+    $after = $this->asTenant('acme', fn () => Payslip::query()->sole());
+    expect($after->earnings_minor)->toBe($before->earnings_minor + 25_050)
+        // Untaxed bonus: tax unchanged; the deduction comes straight off.
+        ->and($after->income_tax_minor)->toBe($before->income_tax_minor)
+        ->and($after->net_minor)->toBe($before->net_minor + 25_050 - 10_000)
+        ->and(array_column($after->lines, 'name'))->toContain('Eid bonus', 'Advance recovered');
+
+    // Someone else adding one becomes the preparer: they cannot approve their own change.
+    $this->actingAsMember('acme', ['payroll.pay.view', 'payroll.runs.prepare', 'payroll.runs.approve'], user: $this->approver);
+    $this->post($this->workspaceUrl('acme', "runs/{$run->id}/adjustments"), ['employee_id' => $akol->id, 'kind' => 'earning', 'name' => 'Arrears', 'amount' => '10', 'taxable' => '1'])->assertSessionHasNoErrors();
+    expect(lifecycleRun()->prepared_by)->toBe($this->approver->id);
+    $this->post($this->workspaceUrl('acme', "runs/{$run->id}/approve"))->assertSessionHasErrors('run');
+
+    $arrears = $this->asTenant('acme', fn () => RunAdjustment::query()->where('name', 'Arrears')->sole());
+    $this->delete($this->workspaceUrl('acme', "runs/{$run->id}/adjustments/{$arrears->id}"))->assertSessionHasNoErrors();
+    $this->asTenant('acme', fn () => expect(RunAdjustment::query()->count())->toBe(2));
+
+    // Approved: no more adjustments.
+    $this->actingAsMember('acme', ['payroll.pay.view', 'payroll.runs.approve'], user: $this->reviewer);
+    $this->post($this->workspaceUrl('acme', "runs/{$run->id}/approve"))->assertSessionHasNoErrors();
+    $this->actingAsMember('acme', PAYROLL_ALL, user: $this->officer);
+    $this->post($this->workspaceUrl('acme', "runs/{$run->id}/adjustments"), ['employee_id' => $akol->id, 'kind' => 'earning', 'name' => 'Late', 'amount' => '10'])->assertSessionHasErrors('run');
+
+    $actions = $this->asTenant('acme', fn () => AuditEvent::query()->where('subject_type', 'run')->pluck('action')->all());
+    expect(array_count_values($actions))->toMatchArray(['run.adjustment_added' => 3, 'run.adjustment_removed' => 1]);
+});

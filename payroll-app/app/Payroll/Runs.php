@@ -9,6 +9,7 @@ use App\Models\PayrollPayment;
 use App\Models\PayrollRun;
 use App\Models\Payslip;
 use App\Models\PayslipPayment;
+use App\Models\RunAdjustment;
 use App\Models\StatutoryRule;
 use App\Models\TimesheetEntry;
 use App\Models\User;
@@ -90,12 +91,21 @@ class Runs
         DB::transaction(function () use ($run, $preparer) {
             $this->lock($run);
             $this->ensureDraft($run);
-            // Back to draft first: the database refuses payslip changes otherwise.
-            $run->forceFill(['status' => PayrollRun::DRAFT, 'reviewed_by' => null, 'reviewed_at' => null, 'prepared_by' => $preparer->id, 'prepared_at' => now()])->save();
-            $run->payslips()->delete();
-            $this->calculate($run);
+            $this->rebuild($run, $preparer);
             $this->audit->record('run.recalculated', $run, $preparer, ['headcount' => $run->headcount, 'net_minor' => $run->net_minor]);
         });
+    }
+
+    /**
+     * The payslips worked out again. Whoever changed the figures becomes the
+     * preparer (so cannot approve them), and any review no longer stands.
+     */
+    private function rebuild(PayrollRun $run, User $preparer): void
+    {
+        // Back to draft first: the database refuses payslip changes otherwise.
+        $run->forceFill(['status' => PayrollRun::DRAFT, 'reviewed_by' => null, 'reviewed_at' => null, 'prepared_by' => $preparer->id, 'prepared_at' => now()])->save();
+        $run->payslips()->delete();
+        $this->calculate($run);
     }
 
     public function discard(PayrollRun $run, User $user): void
@@ -107,6 +117,52 @@ class Runs
             $run->payslips()->delete();
             $this->audit->record('run.discarded', $run, $user, ['period' => $run->label()]);
             $run->delete();
+        });
+    }
+
+    /**
+     * A one-off earning or deduction on one person's payslip in this draft;
+     * the run is recalculated with it (and any review cleared).
+     *
+     * @param  'earning'|'deduction'  $kind
+     */
+    public function addAdjustment(PayrollRun $run, Employee $employee, string $kind, string $name, int $amountMinor, bool $taxable, User $user): void
+    {
+        DB::transaction(function () use ($run, $employee, $kind, $name, $amountMinor, $taxable, $user) {
+            $this->lock($run);
+            $this->ensureDraft($run);
+            if ($amountMinor <= 0) {
+                throw ValidationException::withMessages(['amount' => 'Enter an amount above zero.']);
+            }
+            if (! $run->payslips()->where('employee_id', $employee->id)->exists()) {
+                throw ValidationException::withMessages(['employee_id' => 'Only people on this payroll can have an adjustment: set their pay, then recalculate.']);
+            }
+
+            RunAdjustment::query()->create([
+                'payroll_run_id' => $run->id,
+                'employee_id' => $employee->id,
+                'kind' => $kind,
+                'name' => $name,
+                'amount_minor' => $amountMinor,
+                // A deduction never changes taxable pay.
+                'taxable' => $kind === RunAdjustment::EARNING && $taxable,
+                'created_by' => $user->id,
+            ]);
+            $this->audit->record('run.adjustment_added', $run, $user, ['employee' => "{$employee->name()} ({$employee->employee_number})", 'component' => $name, 'kind' => $kind, 'amount_minor' => $amountMinor]);
+            $this->rebuild($run, $user);
+        });
+    }
+
+    public function removeAdjustment(PayrollRun $run, RunAdjustment $adjustment, User $user): void
+    {
+        DB::transaction(function () use ($run, $adjustment, $user) {
+            $this->lock($run);
+            $this->ensureDraft($run);
+            abort_unless($adjustment->payroll_run_id === $run->id, 404);
+
+            $adjustment->delete();
+            $this->audit->record('run.adjustment_removed', $run, $user, ['employee' => "{$adjustment->employee->name()} ({$adjustment->employee->employee_number})", 'component' => $adjustment->name, 'kind' => $adjustment->kind, 'amount_minor' => $adjustment->amount_minor]);
+            $this->rebuild($run, $user);
         });
     }
 
@@ -266,6 +322,7 @@ class Runs
             ->with(['components' => fn ($query) => $query->with('component')])
             ->orderBy('employee_number')
             ->get();
+        $adjustments = RunAdjustment::query()->where('payroll_run_id', $run->id)->orderBy('created_at')->orderBy('id')->get()->groupBy('employee_id');
 
         foreach ($employees as $employee) {
             $from = $employee->hired_on->max($start);
@@ -314,6 +371,11 @@ class Runs
                     // A fixed allowance follows the days worked; a fixed deduction does not.
                     : ($kind === 'earning' ? Money::share((int) $assigned->amount_minor, $worked, $ofDays) : (int) $assigned->amount_minor);
                 $components[] = ['kind' => $kind, 'name' => $assigned->component->name, 'amount_minor' => $amount, 'taxable' => $assigned->component->taxable];
+            }
+            // This run's one-off amounts, as entered.
+            foreach ($adjustments->get($employee->id, []) as $adjustment) {
+                /** @var RunAdjustment $adjustment */
+                $components[] = ['kind' => $adjustment->kind, 'name' => $adjustment->name, 'amount_minor' => $adjustment->amount_minor, 'taxable' => $adjustment->taxable];
             }
 
             $label = $employee->pay_basis === Employee::HOURLY ? 'Hours worked' : 'Basic salary';
