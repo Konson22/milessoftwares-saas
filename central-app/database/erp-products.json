@@ -57,14 +57,27 @@
             "code": "ngo",
             "name": "NGO ERP",
             "tagline": "Programs, grants and donor reporting.",
-            "description": "For NGOs and development organizations: programs and projects, donors and grants, budgets, expenses, procurement and staff. Finance & Accounting can be added for fund accounting.",
+            "description": "For NGOs and development organizations: programs and projects, donors and grants, budgets, expenses, procurement and staff. Finance & Accounting can be added for fund accounting, and Monitoring & Evaluation for results and donor reporting.",
             "status": "planned",
             "sort_order": 40,
             "applications": [
                 { "code": "projects", "requirement": "required" },
                 { "code": "finance", "requirement": "optional" },
                 { "code": "hr", "requirement": "optional" },
-                { "code": "payroll", "requirement": "optional" }
+                { "code": "payroll", "requirement": "optional" },
+                { "code": "mel", "requirement": "optional" }
+            ]
+        },
+        {
+            "code": "monitoring_evaluation",
+            "name": "Monitoring & Evaluation",
+            "tagline": "Results frameworks, indicators and verified results for donors.",
+            "description": "For NGOs, humanitarian agencies, donors and government programmes: results frameworks, indicators with baselines and targets, results reported by site or partner with evidence, review and verification, and donor reports built only from verified results. Links to Project Management projects without copying them.",
+            "status": "planned",
+            "sort_order": 45,
+            "applications": [
+                { "code": "mel", "requirement": "required" },
+                { "code": "projects", "requirement": "optional" }
             ]
         },
         {

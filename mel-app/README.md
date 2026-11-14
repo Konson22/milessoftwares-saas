@@ -1,42 +1,51 @@
-# Product template ("mel")
+# M&E (`mel-app`)
 
-The starting point for every Miles Softwares product (Pharmacy, Retail, School, ...): Laravel 13 +
-Inertia + React, connected to the platform through
-[`miles/platform-client`](../../packages/platform-client/README.md).
+Tatook Monitoring, Evaluation & Learning, served at `{workspace}/mel`. A standalone application
+(registry application `mel`) with its own database: sold on its own or with the NGO ERP, linking
+to Project Management projects without copying them
+([ADR-0011](../docs/adr/0011-monitoring-evaluation-learning.md)). Built from
+`templates/product-app` and connected through
+[`miles/platform-client`](../packages/platform-client/README.md).
 
-```bash
-php templates/new-product.php pharmacy "Pharmacy" 8400   # creates pharmacy-app/ and prints the next steps
-```
+## What is here
 
-The script renames every `mel` (code, URL path, permissions, cookie, database) and the
-display name, and leaves this folder untouched. Change the template here when every future product
-should get the change.
-
-## What a product gets
-
-- **Lives at `{workspace}/mel`.** Every route is registered under the path
-  (`routes/web.php`); the web server passes it through unchanged. Built assets go to
-  `public/mel/build`.
-- **Platform sign-in**, no passwords. `users` mirrors platform users (uuid = platform subject).
-- **Every page behind `platform`**: the workspace comes from the host, the member's platform
-  access is checked on every request, catalog permissions work with `->can(...)` and `@can`.
-- **Tenant-owned data** with `BelongsToTenant` (`app/Models/Record.php`), fail closed.
-- **Provisioning**: `App\Platform\SetUpWorkspace` prepares each newly entitled organization
-  (`workspaces` row with its currency and time zone).
-- **The platform's browser policy** (CSP with nonces, frame denial) and its look (Tailwind theme,
-  UI kit, fonts), with the workspace header in `resources/js/layouts/product-layout.tsx`.
-- **Tests** with `InteractsWithPlatform`: `actingAsMember('acme', ['mel.records.view'])`, no
-  network.
-
-`Record` and the records pages are an example: replace them with the product's own features.
+- **Programmes** (`App\Mel\Programmes`): donors, dates, reporting units (sites, partners,
+  locations), each optionally linked to a Projects project. Access per person through programme
+  grants (units × one period window); roles with "every programme" need none.
+- **Results frameworks** (`App\Mel\Frameworks`): goal → outcomes → outputs, any depth.
+- **Indicators** (`App\Mel\Indicators`, `App\Mel\Measures`): count, number, percentage, rate,
+  ratio, amount or yes/no, with definition, unit, direction, frequency, how units combine (add,
+  latest, highest, lowest, recompute from the parts, or not at all), breakdowns (age band, sex, …) with their rule, baselines and targets with a reason
+  for every change. Editing a definition with results under it creates a new version.
+- **Results** (`App\Mel\Submissions`, `App\Mel\Import`, `App\Mel\Evidence`): one open result per
+  indicator, unit and period; entered by hand or imported from CSV/XLSX in two steps (check, then
+  apply; a sheet with any error applies nothing). Evidence files (allow-listed types, 20 MB) with a
+  "share with donors" flag. Aggregate counts only, never personal data.
+- **Review** (`App\Mel\Review`): submitted → verified or rejected with a reason → published.
+  Separation of duties from Settings. A verified figure is never changed: a correction replaces it
+  only once verified itself (PostgreSQL triggers on `verified_results` and `review_decisions`).
+- **Reports** (`App\Mel\Reporting`, `App\Mel\Performance`): IPTT, framework, target vs actual,
+  completeness and verification, programme summary; on screen and in Excel. Only verified data
+  (published only, for donors). No universal sums, averages or programme-wide percentages.
+- **Audit trail** (`App\Mel\AuditTrail`): append-only (a PostgreSQL trigger refuses changes).
+- **Roles** (catalog 1.0.0): administrator, manager, officer, field officer, project manager,
+  implementing partner, donor viewer, independent evaluator (`docs/runbooks/mel.md`).
+- **Maths**: decimal strings throughout (`App\Mel\Numbers`, bcmath, 6 places); percentages are
+  recomputed from their numerators and denominators.
 
 ## Develop
 
 ```bash
-composer setup        # install, .env, key, migrate, build
-composer dev          # php artisan serve on :9400, queue, Vite
-composer ci:check     # format, lint, types, Pint, PHPStan, Pest
+createdb mel                     # owner: your local DB user
+composer setup                   # install, .env, key, migrate, build
+cd ../central-app && php artisan platform:local-product mel-app --url=http://127.0.0.1:9400 --entitle=<workspace-slug>
+cd ../mel-app && composer dev    # :9400, queue, Vite
+composer ci:check                # format, lint, types, Pint, PHPStan, Pest
 ```
 
-Catalog (roles and permissions): `platform/catalog.json`. Register with the local platform:
-`cd ../../central-app && php artisan platform:local-product templates/product-app --url=http://127.0.0.1:9400`.
+Open `http://<workspace-slug>.milesoftwares.localhost/mel` (proxy entry in
+`ops/local-dev/apache-dev.conf`). Tests run on in-memory SQLite locally and on PostgreSQL in CI,
+where the triggers are exercised.
+
+Production: `docs/runbooks/mel.md` (database, `.env`, registration, nginx, php-fpm, systemd,
+roles, and the checks for the database protections).

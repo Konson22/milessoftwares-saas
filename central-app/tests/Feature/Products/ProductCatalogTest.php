@@ -194,6 +194,7 @@ describe('catalog', function () {
             'restaurant' => 'planned',
             'education' => 'planned',
             'ngo' => 'planned',
+            'monitoring_evaluation' => 'planned',
             'finance_accounting' => 'pilot',
             // Payroll is not registered in this test: kept planned.
             'payroll' => 'planned',
