@@ -31,7 +31,7 @@ class ImportController extends Controller
             'programme' => ['id' => $programme->id, 'code' => $programme->code, 'name' => $programme->name],
             'periods' => $periods->map(fn (ReportingPeriod $period) => ['value' => $period->id, 'label' => "{$period->label} ({$period->frequency})"]),
             'selectedPeriod' => $request->string('period')->toString() ?: $periods->first()?->id,
-            'batches' => ImportBatch::query()->where('programme_id', $programme->id)->with(['period', 'creator'])->latest()->limit(10)->get()
+            'batches' => ImportBatch::query()->where('programme_id', $programme->id)->where('created_by', $this->user()->id)->with(['period', 'creator'])->latest()->limit(10)->get()
                 ->map(fn (ImportBatch $batch) => [
                     'id' => $batch->id,
                     'fileName' => $batch->file_name,

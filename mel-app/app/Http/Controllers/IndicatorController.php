@@ -233,7 +233,7 @@ class IndicatorController extends Controller
         $indicator = $programme->indicators()->with('currentVersion')->findOrFail($indicator);
         $data = $request->validate([
             'unit_id' => ['nullable', 'uuid'],
-            'value' => ['required'],
+            'value' => ['nullable'],
             'numerator' => ['nullable'],
             'denominator' => ['nullable'],
             'measured_on' => ['required', 'date'],

@@ -58,7 +58,7 @@ class SubmissionController extends Controller
                 'programme' => ['id' => $submission->programme_id, 'code' => $submission->programme->code],
                 'indicator' => ['id' => $submission->indicator_id, 'code' => $submission->indicator->code],
                 'period' => ['id' => $submission->reporting_period_id, 'label' => $submission->period->label],
-                'unit' => ['code' => $submission->unit->code, 'name' => $submission->unit->name],
+                'unit' => ['id' => $submission->unit_id, 'code' => $submission->unit->code, 'name' => $submission->unit->name],
                 'value' => $submission->value,
                 'numerator' => $submission->numerator,
                 'denominator' => $submission->denominator,
