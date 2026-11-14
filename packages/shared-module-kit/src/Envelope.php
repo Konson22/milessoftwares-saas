@@ -53,7 +53,7 @@ final readonly class Envelope
         if (! preg_match($uuid, (string) $string('event_id'))) {
             $errors[] = 'event_id must be a UUID';
         }
-        if (! preg_match('/^(finance|hr|payroll)(\.[a-z][a-z0-9_]*){2}$/', (string) $string('event_type'))) {
+        if (! preg_match('/^(finance|hr|payroll|mel)(\.[a-z][a-z0-9_]*){2}$/', (string) $string('event_type'))) {
             $errors[] = 'event_type must look like finance.invoice.issued';
         }
         if (! is_int($data['schema_version'] ?? null) || $data['schema_version'] < 1) {
@@ -99,7 +99,7 @@ final readonly class Envelope
     }
 
     /**
-     * The module the event is addressed to: "finance", "hr" or "payroll".
+     * The module the event is addressed to: "finance", "hr", "payroll" or "mel".
      * Payroll is part of Finance (ADR-0009): Finance takes payroll.* events.
      */
     public function module(): string

@@ -3,7 +3,7 @@
         "code": "mel",
         "name": "Tatook M&E",
         "category": "products",
-        "kind": "standalone",
+        "kind": "shared_module",
         "status": "beta"
     },
     "version": "1.0.0",

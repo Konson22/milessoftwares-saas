@@ -6,6 +6,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 use Miles\PlatformClient\Http\Middleware\SecurityHeaders;
 use Miles\PlatformClient\PlatformConfig;
 
@@ -14,6 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
+        then: function () {
+            Route::middleware('api')->group(base_path('routes/events.php'));
+        },
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // The product shares the workspace's origin: same browser policy.
@@ -30,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is(app(PlatformConfig::class)->path().'/platform/*')
+                || $request->is(app(PlatformConfig::class)->path().'/events')
                 || $request->expectsJson(),
         );
     })->create();

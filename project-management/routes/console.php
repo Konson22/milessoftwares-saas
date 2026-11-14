@@ -5,6 +5,7 @@ use App\Actions\PettyCash;
 use App\Actions\Reminders;
 use App\Models\Organization;
 use App\Models\PettyCashFund;
+use App\Support\MelEvents;
 use App\Support\Money;
 use App\Tenancy\CurrentOrganization;
 use Carbon\CarbonImmutable;
@@ -83,3 +84,36 @@ Artisan::command('petty-cash:move-to-finance {--dry-run : list what would move}'
 
     return $failed ? 1 : 0;
 })->purpose('Move petty cash boxes into Finance for organizations that have it');
+
+// M&E (mel-app): each project's snapshot, sent when it changed
+// (App\Support\MelEvents). Organizations without M&E have it skipped by
+// the outbox and are probed once a day. Nothing to do until
+// PLATFORM_MEL_EVENTS_URL is set. Safe to run again.
+Artisan::command('projects:publish-to-mel {--organization= : one workspace, by slug}', function (CurrentOrganization $current) {
+    if (! MelEvents::configured()) {
+        $this->warn('PLATFORM_MEL_EVENTS_URL is not set: nothing sent.');
+
+        return 0;
+    }
+
+    $failed = false;
+    $organizations = Organization::query()->where('status', Organization::ACTIVE)
+        ->when($this->option('organization'), fn ($query, $slug) => $query->where('slug', $slug))
+        ->orderBy('slug')
+        ->get();
+    foreach ($organizations as $organization) {
+        try {
+            $sent = $current->run($organization, fn () => app(MelEvents::class)->publish());
+            if ($sent > 0) {
+                $this->info("{$organization->slug}: {$sent} sent");
+            }
+        } catch (Throwable $e) {
+            report($e);
+            $failed = true;
+            $this->error("{$organization->slug}: {$e->getMessage()}");
+        }
+    }
+
+    return $failed ? 1 : 0;
+})->purpose('Send changed project snapshots to M&E');
+Schedule::command('projects:publish-to-mel')->everyFifteenMinutes()->withoutOverlapping();

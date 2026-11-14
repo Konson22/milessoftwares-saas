@@ -1,0 +1,36 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milesoftwares.com/contracts/events/mel.project.updated.v1.schema.json",
+    "title": "mel.project.updated, schema_version 1",
+    "description": "A snapshot of one Projects project, sent when it changed: M&E keeps a read-only copy that programme units link to. No tasks, people, suppliers or spending lines.",
+    "type": "object",
+    "required": ["project_id", "code", "name", "status", "milestones"],
+    "additionalProperties": false,
+    "properties": {
+        "project_id": { "type": "string", "format": "uuid" },
+        "code": { "type": "string", "maxLength": 32 },
+        "name": { "type": "string", "maxLength": 255 },
+        "status": { "type": "string", "maxLength": 24 },
+        "starts_on": { "type": ["string", "null"], "format": "date" },
+        "ends_on": { "type": ["string", "null"], "format": "date" },
+        "progress_percent": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
+        "currency": { "type": ["string", "null"], "minLength": 3, "maxLength": 3 },
+        "approved_budget_minor": { "type": ["integer", "null"] },
+        "spent_minor": { "type": ["integer", "null"] },
+        "milestones": {
+            "type": "array",
+            "maxItems": 500,
+            "items": {
+                "type": "object",
+                "required": ["milestone_id", "name"],
+                "additionalProperties": false,
+                "properties": {
+                    "milestone_id": { "type": "string", "format": "uuid" },
+                    "name": { "type": "string", "maxLength": 255 },
+                    "due_on": { "type": ["string", "null"], "format": "date" },
+                    "reached_on": { "type": ["string", "null"], "format": "date" }
+                }
+            }
+        }
+    }
+}
