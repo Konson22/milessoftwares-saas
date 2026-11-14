@@ -1,0 +1,8 @@
+@import 'tailwindcss';
+
+@import 'tw-animate-css';
+@import '../../node_modules/@miles/ui/theme.css';
+
+@source '../views';
+@source '../../node_modules/@miles/ui';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
