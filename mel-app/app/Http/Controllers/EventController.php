@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Workspace;
 use App\Mel\ApplyEvent;
 use App\Mel\NotYetApplicable;
 use App\Mel\UnsupportedEvent;
+use App\Models\Workspace;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;

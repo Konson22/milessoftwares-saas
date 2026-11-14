@@ -17,12 +17,15 @@ deploys like any product (`docs/runbooks/deploy.md`, Products); this page is wha
 3. Storage: `/srv/miles/shared/products/mel/storage/{app,framework/{cache,sessions,views},logs}`.
    **Evidence files and import sheets live in `storage/app/private`**: include it in the backups
    with the database. A verified result's evidence cannot be uploaded again.
-4. Register the application in admin → Applications (code `mel`) for its sign-in and service
-   clients and webhook secret, then copy those values into its `.env`.
+4. Register the application in admin → Applications (code `mel`, kind **shared module**, as the
+   catalog says: the platform issues event tokens only to shared modules) for its sign-in and
+   service clients and webhook secret, then copy those values into its `.env`.
 5. nginx: `ops/nginx/products/mel.conf` into `/etc/nginx/miles-products/`, `nginx -t`, reload
    (it allows 22 MB bodies for evidence). php-fpm: `ops/php-fpm/mel.conf` into the pool
    directory, reload.
-6. Make sure `mel` is in `PRODUCTS` for the deploy. Until step 4 is done, the `miles-deploy`
+6. Projects: `PLATFORM_MEL_EVENTS_URL=https://tatook.com/mel/events` in its `.env`, then
+   `artisan optimize` and a php-fpm reload. Its next deploy migrates `mel_project_snapshots`.
+7. Make sure `mel` is in `PRODUCTS` for the deploy. Until step 4 is done, the `miles-deploy`
    wrapper leaves it out ("not registered yet, left out: mel").
 
 ## After the first deploy
@@ -42,6 +45,19 @@ deploys like any product (`docs/runbooks/deploy.md`, Products); this page is wha
     ```
 
   (No rows yet: the statements succeed trivially. Check again after the first verified result.)
+
+## Projects → M&E
+
+- Projects' scheduler runs `projects:publish-to-mel` every 15 minutes: each project whose snapshot
+  changed (code, name, status, dates, progress, approved budget, spent, milestones) is sent as
+  `mel.project.updated` (`contracts/events/mel.project.updated.v1.schema.json`). Run it by hand
+  with `--organization=<slug>` to send one workspace now.
+- An organization without M&E has the event skipped by the outbox; it is then probed with one
+  project a day, and everything goes once one gets through. The first run is a one-project probe too.
+- M&E applies snapshots at `POST /mel/events`, once each; an older snapshot than the copy changes
+  nothing. Linked projects show "as of" their last snapshot.
+- Stuck: Projects' `platform_outbox` rows with audience `mel` (`pending`/`failed`). A 503 from M&E
+  means M&E is not set up for that organization yet; it clears on retry.
 
 ## Roles (catalog 1.0.0)
 
