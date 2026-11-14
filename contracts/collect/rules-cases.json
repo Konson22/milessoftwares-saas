@@ -1,0 +1,390 @@
+{
+    "$comment": "Conformance cases for the data collection rules engine (ADR-0012 §4). Both engines run every case: mel-app/app/Collect/Rules.php (tests/Unit/CollectRulesTest.php) and mel-app/resources/js/collect/rules.ts (rules.test.ts), and later the field app's copy. expect.visible and expect.required are in document order. Add a case here, never to one engine only.",
+    "forms": {
+        "wash": {
+            "schema_version": 1,
+            "settings": { "title": "WASH household survey" },
+            "items": [
+                { "type": "yes_no", "name": "safe_water", "label": "Safe drinking water?", "required": true },
+                { "type": "select_one", "name": "main_source", "label": "Main source", "choices": "sources", "required": true,
+                  "relevant": { "q": "safe_water", "op": "eq", "value": "no" } },
+                { "type": "integer", "name": "members", "label": "People", "required": true, "constraint": { "min": 1, "max": 50 } },
+                { "type": "integer", "name": "children", "label": "Children", "constraint": { "max": 49 },
+                  "relevant": { "q": "members", "op": "gte", "value": 2 } },
+                { "type": "date", "name": "visit_date", "label": "Visit date", "constraint": { "min": "today-30d", "max": "today" } },
+                { "type": "textarea", "name": "notes", "label": "Notes", "constraint": { "max_length": 10 } },
+                { "type": "text", "name": "phone", "label": "Phone", "constraint": { "pattern": "phone" } },
+                { "type": "group", "name": "hh", "label": "Household needs",
+                  "relevant": { "any": [ { "q": "members", "op": "gt", "value": 5 }, { "q": "safe_water", "op": "eq", "value": "no" } ] },
+                  "items": [
+                      { "type": "select_multiple", "name": "concerns", "label": "Concerns", "choices": "concerns", "required": true,
+                        "constraint": { "min_choices": 1, "max_choices": 2 } },
+                      { "type": "note", "name": "n1", "label": "Thank the household." }
+                  ] },
+                { "type": "geopoint", "name": "location", "label": "Location" },
+                { "type": "photo", "name": "photo1", "label": "Water point",
+                  "required_if": { "q": "safe_water", "op": "eq", "value": "no" } }
+            ],
+            "choices": {
+                "sources": [ { "name": "river", "label": "River" }, { "name": "vendor", "label": "Vendor" }, { "name": "borehole", "label": "Borehole" } ],
+                "concerns": [ { "name": "cost", "label": "Cost" }, { "name": "distance", "label": "Distance" }, { "name": "quality", "label": "Quality" } ]
+            }
+        },
+        "ops": {
+            "schema_version": 1,
+            "settings": { "title": "Operators" },
+            "items": [
+                { "type": "integer", "name": "n", "label": "n" },
+                { "type": "decimal", "name": "d", "label": "d" },
+                { "type": "select_one", "name": "s", "label": "s", "choices": "abc" },
+                { "type": "select_multiple", "name": "m", "label": "m", "choices": "abc" },
+                { "type": "text", "name": "t", "label": "t" },
+                { "type": "date", "name": "dt", "label": "dt" },
+                { "type": "time", "name": "tm", "label": "tm" },
+                { "type": "datetime", "name": "dtm", "label": "dtm" },
+                { "type": "yes_no", "name": "y", "label": "y" },
+                { "type": "note", "name": "n_gt5", "label": ".", "relevant": { "q": "n", "op": "gt", "value": 5 } },
+                { "type": "note", "name": "n_ne5", "label": ".", "relevant": { "q": "n", "op": "ne", "value": 5 } },
+                { "type": "note", "name": "n_eq5f", "label": ".", "relevant": { "q": "n", "op": "eq", "value": 5.0 } },
+                { "type": "note", "name": "d_lte", "label": ".", "relevant": { "q": "d", "op": "lte", "value": 2.5 } },
+                { "type": "note", "name": "s_in", "label": ".", "relevant": { "q": "s", "op": "in", "value": ["a", "b"] } },
+                { "type": "note", "name": "s_eq_c", "label": ".", "relevant": { "q": "s", "op": "eq", "value": "c" } },
+                { "type": "note", "name": "m_inc", "label": ".", "relevant": { "q": "m", "op": "includes", "value": "b" } },
+                { "type": "note", "name": "t_eq", "label": ".", "relevant": { "q": "t", "op": "eq", "value": "Juba" } },
+                { "type": "note", "name": "t_num", "label": ".", "relevant": { "q": "t", "op": "eq", "value": 5 } },
+                { "type": "note", "name": "dt_lt", "label": ".", "relevant": { "q": "dt", "op": "lt", "value": "2026-06-01" } },
+                { "type": "note", "name": "tm_gte", "label": ".", "relevant": { "q": "tm", "op": "gte", "value": "08:30" } },
+                { "type": "note", "name": "dtm_gt", "label": ".", "relevant": { "q": "dtm", "op": "gt", "value": "2026-01-01T12:00" } },
+                { "type": "note", "name": "y_ne", "label": ".", "relevant": { "q": "y", "op": "ne", "value": "yes" } },
+                { "type": "note", "name": "n_ans", "label": ".", "relevant": { "q": "n", "op": "answered" } },
+                { "type": "note", "name": "n_not", "label": ".", "relevant": { "q": "n", "op": "not_answered" } },
+                { "type": "note", "name": "not_any", "label": ".",
+                  "relevant": { "not": { "any": [ { "q": "n", "op": "gt", "value": 5 }, { "q": "y", "op": "eq", "value": "yes" } ] } } },
+                { "type": "note", "name": "always", "label": ".", "relevant": { "all": [] } },
+                { "type": "note", "name": "never", "label": ".", "relevant": { "any": [] } }
+            ],
+            "choices": { "abc": [ { "name": "a", "label": "A" }, { "name": "b", "label": "B" }, { "name": "c", "label": "C" } ] }
+        },
+        "chain": {
+            "schema_version": 1,
+            "settings": { "title": "Chained visibility" },
+            "items": [
+                { "type": "yes_no", "name": "a", "label": "a" },
+                { "type": "text", "name": "b", "label": "b", "relevant": { "q": "a", "op": "eq", "value": "yes" } },
+                { "type": "text", "name": "c", "label": "c", "relevant": { "q": "b", "op": "answered" } },
+                { "type": "group", "name": "g", "label": "g", "relevant": { "q": "a", "op": "eq", "value": "yes" },
+                  "items": [ { "type": "integer", "name": "d", "label": "d", "required": true } ] },
+                { "type": "integer", "name": "e", "label": "e", "required_if": { "q": "d", "op": "gt", "value": 10 } }
+            ],
+            "choices": {}
+        },
+        "times": {
+            "schema_version": 1,
+            "settings": { "title": "Times" },
+            "items": [
+                { "type": "datetime", "name": "dt", "label": "dt", "constraint": { "min": "today-1d", "max": "today" } },
+                { "type": "time", "name": "tm", "label": "tm", "constraint": { "min": "06:00", "max": "18:00" } }
+            ],
+            "choices": {}
+        }
+    },
+    "cases": [
+        {
+            "name": "nothing answered: required questions report, conditional ones stay hidden",
+            "form": "wash", "today": "2026-11-15", "answers": {},
+            "expect": {
+                "visible": ["safe_water", "members", "visit_date", "notes", "phone", "location", "photo1"],
+                "required": ["safe_water", "members"],
+                "answers": {},
+                "errors": { "safe_water": "required", "members": "required" }
+            }
+        },
+        {
+            "name": "a valid short household",
+            "form": "wash", "today": "2026-11-15", "answers": { "safe_water": "yes", "members": 3 },
+            "expect": {
+                "visible": ["safe_water", "members", "children", "visit_date", "notes", "phone", "location", "photo1"],
+                "required": ["safe_water", "members"],
+                "answers": { "safe_water": "yes", "members": 3 },
+                "errors": {}
+            }
+        },
+        {
+            "name": "no safe water opens the follow-up, the section and the photo",
+            "form": "wash", "today": "2026-11-15",
+            "answers": { "safe_water": "no", "main_source": "river", "members": 7, "concerns": ["cost"],
+                         "photo1": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08" },
+            "expect": {
+                "visible": ["safe_water", "main_source", "members", "children", "visit_date", "notes", "phone", "hh", "concerns", "n1", "location", "photo1"],
+                "required": ["safe_water", "main_source", "members", "concerns", "photo1"],
+                "answers": { "safe_water": "no", "main_source": "river", "members": 7, "concerns": ["cost"],
+                             "photo1": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08" },
+                "errors": {}
+            }
+        },
+        {
+            "name": "a hidden question's answer and unknown names are dropped, not validated",
+            "form": "wash", "today": "2026-11-15",
+            "answers": { "safe_water": "yes", "main_source": "lake", "members": 2, "zzz": "anything", "concerns": "bad" },
+            "expect": {
+                "visible": ["safe_water", "members", "children", "visit_date", "notes", "phone", "location", "photo1"],
+                "required": ["safe_water", "members"],
+                "answers": { "safe_water": "yes", "members": 2 },
+                "errors": {}
+            }
+        },
+        {
+            "name": "an invalid answer is an error and counts as unanswered for later rules",
+            "form": "wash", "today": "2026-11-15", "answers": { "safe_water": "yes", "members": "3" },
+            "expect": {
+                "visible": ["safe_water", "members", "visit_date", "notes", "phone", "location", "photo1"],
+                "required": ["safe_water", "members"],
+                "answers": { "safe_water": "yes" },
+                "errors": { "members": "type" }
+            }
+        },
+        {
+            "name": "integers: fractions refused, a whole decimal accepted",
+            "form": "wash", "today": "2026-11-15", "answers": { "safe_water": "yes", "members": 3.0, "children": 1.5 },
+            "expect": {
+                "visible": ["safe_water", "members", "children", "visit_date", "notes", "phone", "location", "photo1"],
+                "required": ["safe_water", "members"],
+                "answers": { "safe_water": "yes", "members": 3 },
+                "errors": { "children": "type" }
+            }
+        },
+        {
+            "name": "numeric minimum",
+            "form": "wash", "today": "2026-11-15", "answers": { "safe_water": "yes", "members": 0 },
+            "expect": {
+                "visible": ["safe_water", "members", "visit_date", "notes", "phone", "location", "photo1"],
+                "required": ["safe_water", "members"],
+                "answers": { "safe_water": "yes" },
+                "errors": { "members": "min" }
+            }
+        },
+        {
+            "name": "numeric maximums",
+            "form": "wash", "today": "2026-11-15", "answers": { "safe_water": "yes", "members": 3, "children": 50 },
+            "expect": {
+                "visible": ["safe_water", "members", "children", "visit_date", "notes", "phone", "location", "photo1"],
+                "required": ["safe_water", "members"],
+                "answers": { "safe_water": "yes", "members": 3 },
+                "errors": { "children": "max" }
+            }
+        },
+        {
+            "name": "date after today",
+            "form": "wash", "today": "2026-11-15", "answers": { "safe_water": "yes", "members": 1, "visit_date": "2026-11-16" },
+            "expect": {
+                "visible": ["safe_water", "members", "visit_date", "notes", "phone", "location", "photo1"],
+                "required": ["safe_water", "members"],
+                "answers": { "safe_water": "yes", "members": 1 },
+                "errors": { "visit_date": "max" }
+            }
+        },
+        {
+            "name": "date more than 30 days ago",
+            "form": "wash", "today": "2026-11-15", "answers": { "safe_water": "yes", "members": 1, "visit_date": "2026-10-15" },
+            "expect": {
+                "visible": ["safe_water", "members", "visit_date", "notes", "phone", "location", "photo1"],
+                "required": ["safe_water", "members"],
+                "answers": { "safe_water": "yes", "members": 1 },
+                "errors": { "visit_date": "min" }
+            }
+        },
+        {
+            "name": "date exactly 30 days ago, short text in code points, a phone number",
+            "form": "wash", "today": "2026-11-15",
+            "answers": { "safe_water": "yes", "members": 1, "visit_date": "2026-10-16", "notes": "😀😀😀😀😀😀😀😀😀😀", "phone": "+211 912 345" },
+            "expect": {
+                "visible": ["safe_water", "members", "visit_date", "notes", "phone", "location", "photo1"],
+                "required": ["safe_water", "members"],
+                "answers": { "safe_water": "yes", "members": 1, "visit_date": "2026-10-16", "notes": "😀😀😀😀😀😀😀😀😀😀", "phone": "+211 912 345" },
+                "errors": {}
+            }
+        },
+        {
+            "name": "an impossible date, text too long, a bad phone number",
+            "form": "wash", "today": "2026-11-15",
+            "answers": { "safe_water": "yes", "members": 1, "visit_date": "2026-02-30", "notes": "ééééééééééé", "phone": "abc" },
+            "expect": {
+                "visible": ["safe_water", "members", "visit_date", "notes", "phone", "location", "photo1"],
+                "required": ["safe_water", "members"],
+                "answers": { "safe_water": "yes", "members": 1 },
+                "errors": { "visit_date": "type", "notes": "max_length", "phone": "pattern" }
+            }
+        },
+        {
+            "name": "a choice not in the list; too many choices",
+            "form": "wash", "today": "2026-11-15",
+            "answers": { "safe_water": "no", "main_source": "lake", "members": 2, "concerns": ["cost", "distance", "quality"] },
+            "expect": {
+                "visible": ["safe_water", "main_source", "members", "children", "visit_date", "notes", "phone", "hh", "concerns", "n1", "location", "photo1"],
+                "required": ["safe_water", "main_source", "members", "concerns", "photo1"],
+                "answers": { "safe_water": "no", "members": 2 },
+                "errors": { "main_source": "choice", "concerns": "max_choices", "photo1": "required" }
+            }
+        },
+        {
+            "name": "a repeated choice; an empty list is unanswered",
+            "form": "wash", "today": "2026-11-15",
+            "answers": { "safe_water": "no", "main_source": "vendor", "members": 9, "concerns": ["cost", "cost"] },
+            "expect": {
+                "visible": ["safe_water", "main_source", "members", "children", "visit_date", "notes", "phone", "hh", "concerns", "n1", "location", "photo1"],
+                "required": ["safe_water", "main_source", "members", "concerns", "photo1"],
+                "answers": { "safe_water": "no", "main_source": "vendor", "members": 9 },
+                "errors": { "concerns": "type", "photo1": "required" }
+            }
+        },
+        {
+            "name": "empty list, empty string and null are all unanswered",
+            "form": "wash", "today": "2026-11-15",
+            "answers": { "safe_water": "", "members": 6, "concerns": [], "location": null },
+            "expect": {
+                "visible": ["safe_water", "members", "children", "visit_date", "notes", "phone", "hh", "concerns", "n1", "location", "photo1"],
+                "required": ["safe_water", "members", "concerns"],
+                "answers": { "members": 6 },
+                "errors": { "safe_water": "required", "concerns": "required" }
+            }
+        },
+        {
+            "name": "yes/no takes only yes or no; booleans are refused",
+            "form": "wash", "today": "2026-11-15", "answers": { "safe_water": true, "members": 1 },
+            "expect": {
+                "visible": ["safe_water", "members", "visit_date", "notes", "phone", "location", "photo1"],
+                "required": ["safe_water", "members"],
+                "answers": { "members": 1 },
+                "errors": { "safe_water": "type" }
+            }
+        },
+        {
+            "name": "a location with accuracy",
+            "form": "wash", "today": "2026-11-15",
+            "answers": { "safe_water": "yes", "members": 1, "location": { "lat": 4.8594, "lng": 31.5713, "accuracy": 12.5 } },
+            "expect": {
+                "visible": ["safe_water", "members", "visit_date", "notes", "phone", "location", "photo1"],
+                "required": ["safe_water", "members"],
+                "answers": { "safe_water": "yes", "members": 1, "location": { "lat": 4.8594, "lng": 31.5713, "accuracy": 12.5 } },
+                "errors": {}
+            }
+        },
+        {
+            "name": "a location off the globe; a photo that is not a file hash",
+            "form": "wash", "today": "2026-11-15",
+            "answers": { "safe_water": "yes", "members": 1, "location": { "lat": 100, "lng": 0 }, "photo1": "abc" },
+            "expect": {
+                "visible": ["safe_water", "members", "visit_date", "notes", "phone", "location", "photo1"],
+                "required": ["safe_water", "members"],
+                "answers": { "safe_water": "yes", "members": 1 },
+                "errors": { "location": "type", "photo1": "type" }
+            }
+        },
+        {
+            "name": "a location given as a list",
+            "form": "wash", "today": "2026-11-15", "answers": { "safe_water": "yes", "members": 1, "location": [4.85, 31.57] },
+            "expect": {
+                "visible": ["safe_water", "members", "visit_date", "notes", "phone", "location", "photo1"],
+                "required": ["safe_water", "members"],
+                "answers": { "safe_water": "yes", "members": 1 },
+                "errors": { "location": "type" }
+            }
+        },
+        {
+            "name": "operators with nothing answered: only presence tests and negations hold",
+            "form": "ops", "today": "2026-11-15", "answers": {},
+            "expect": {
+                "visible": ["n", "d", "s", "m", "t", "dt", "tm", "dtm", "y", "n_not", "not_any", "always"],
+                "required": [], "answers": {}, "errors": {}
+            }
+        },
+        {
+            "name": "operators, first set",
+            "form": "ops", "today": "2026-11-15",
+            "answers": { "n": 6, "d": 2.5, "s": "a", "m": ["b", "c"], "t": "Juba", "dt": "2026-05-31", "tm": "08:30", "dtm": "2026-01-01T12:01", "y": "no" },
+            "expect": {
+                "visible": ["n", "d", "s", "m", "t", "dt", "tm", "dtm", "y", "n_gt5", "n_ne5", "d_lte", "s_in", "m_inc", "t_eq", "dt_lt", "tm_gte", "dtm_gt", "y_ne", "n_ans", "always"],
+                "required": [],
+                "answers": { "n": 6, "d": 2.5, "s": "a", "m": ["b", "c"], "t": "Juba", "dt": "2026-05-31", "tm": "08:30", "dtm": "2026-01-01T12:01", "y": "no" },
+                "errors": {}
+            }
+        },
+        {
+            "name": "operators, second set: boundaries, case and type matter",
+            "form": "ops", "today": "2026-11-15",
+            "answers": { "n": 5, "d": 2.51, "s": "c", "m": ["a"], "t": "juba", "dt": "2026-06-01", "tm": "08:29", "dtm": "2026-01-01T12:00", "y": "yes" },
+            "expect": {
+                "visible": ["n", "d", "s", "m", "t", "dt", "tm", "dtm", "y", "n_eq5f", "s_eq_c", "n_ans", "always"],
+                "required": [],
+                "answers": { "n": 5, "d": 2.51, "s": "c", "m": ["a"], "t": "juba", "dt": "2026-06-01", "tm": "08:29", "dtm": "2026-01-01T12:00", "y": "yes" },
+                "errors": {}
+            }
+        },
+        {
+            "name": "a text answer never equals a number",
+            "form": "ops", "today": "2026-11-15", "answers": { "t": "5" },
+            "expect": {
+                "visible": ["n", "d", "s", "m", "t", "dt", "tm", "dtm", "y", "n_not", "not_any", "always"],
+                "required": [], "answers": { "t": "5" }, "errors": {}
+            }
+        },
+        {
+            "name": "hiding a question hides what depends on it, and lifts its conditional requirement",
+            "form": "chain", "today": "2026-11-15", "answers": { "a": "no", "b": "x", "c": "y", "d": 20 },
+            "expect": {
+                "visible": ["a", "e"], "required": [], "answers": { "a": "no" }, "errors": {}
+            }
+        },
+        {
+            "name": "conditional requirement applies once its condition holds",
+            "form": "chain", "today": "2026-11-15", "answers": { "a": "yes", "b": "x", "c": "y", "d": 20 },
+            "expect": {
+                "visible": ["a", "b", "c", "g", "d", "e"],
+                "required": ["d", "e"],
+                "answers": { "a": "yes", "b": "x", "c": "y", "d": 20 },
+                "errors": { "e": "required" }
+            }
+        },
+        {
+            "name": "an invalid answer does not trigger a conditional requirement",
+            "form": "chain", "today": "2026-11-15", "answers": { "a": "yes", "d": "20" },
+            "expect": {
+                "visible": ["a", "b", "g", "d", "e"],
+                "required": ["d"],
+                "answers": { "a": "yes" },
+                "errors": { "d": "type" }
+            }
+        },
+        {
+            "name": "date-times and times within their bounds",
+            "form": "times", "today": "2026-03-01", "answers": { "dt": "2026-02-28T23:59", "tm": "18:00" },
+            "expect": {
+                "visible": ["dt", "tm"], "required": [],
+                "answers": { "dt": "2026-02-28T23:59", "tm": "18:00" }, "errors": {}
+            }
+        },
+        {
+            "name": "date-times and times below their bounds",
+            "form": "times", "today": "2026-03-01", "answers": { "dt": "2026-02-27T10:00", "tm": "05:59" },
+            "expect": {
+                "visible": ["dt", "tm"], "required": [], "answers": {},
+                "errors": { "dt": "min", "tm": "min" }
+            }
+        },
+        {
+            "name": "an impossible hour; a time above its bound",
+            "form": "times", "today": "2026-03-01", "answers": { "dt": "2026-03-01T24:00", "tm": "18:01" },
+            "expect": {
+                "visible": ["dt", "tm"], "required": [], "answers": {},
+                "errors": { "dt": "type", "tm": "max" }
+            }
+        },
+        {
+            "name": "relative bounds cross a leap day",
+            "form": "times", "today": "2024-03-01", "answers": { "dt": "2024-02-29T00:00" },
+            "expect": {
+                "visible": ["dt", "tm"], "required": [], "answers": { "dt": "2024-02-29T00:00" }, "errors": {}
+            }
+        }
+    ]
+}

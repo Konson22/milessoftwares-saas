@@ -139,4 +139,7 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::post('dimensions/{dimension?}', [SettingsController::class, 'saveDimension'])->name('settings.dimensions');
         });
         Route::get('audit', AuditController::class)->middleware('can:mel.audit.view')->name('audit.index');
+
+        // Data collection (ADR-0012)
+        require __DIR__.'/collect.php';
     });

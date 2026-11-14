@@ -3,6 +3,10 @@
 namespace App\Mel;
 
 use App\Models\AuditEvent;
+use App\Models\Collect\Assignment as CollectAssignment;
+use App\Models\Collect\Export as CollectExport;
+use App\Models\Collect\Form as CollectForm;
+use App\Models\Collect\Submission as CollectSubmission;
 use App\Models\Dimension;
 use App\Models\ImportBatch;
 use App\Models\Indicator;
@@ -40,6 +44,10 @@ class AuditTrail
             $subject instanceof Location => ['location', $subject->name],
             $subject instanceof Partner => ['partner', $subject->name],
             $subject instanceof Dimension => ['dimension', $subject->name],
+            $subject instanceof CollectForm => ['form', $subject->name],
+            $subject instanceof CollectSubmission => ['collected', $subject->label()],
+            $subject instanceof CollectAssignment => ['assignment', $subject->user->name.' · '.$subject->form->name],
+            $subject instanceof CollectExport => ['export', $subject->form->name.' · '.strtoupper($subject->format)],
             $subject instanceof Workspace => ['settings', 'M&E settings'],
             default => throw new InvalidArgumentException('M&E does not audit '.$subject::class),
         };

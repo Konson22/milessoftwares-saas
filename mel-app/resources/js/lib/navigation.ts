@@ -1,6 +1,7 @@
 import {
     BarChart3,
     ClipboardCheck,
+    ClipboardList,
     FolderKanban,
     Gauge,
     History,
@@ -8,10 +9,13 @@ import {
     ListTree,
     Settings,
     SquarePen,
+    UserCheck,
 } from 'lucide-react';
 import type { ShellNavItem } from '@miles/ui/shell/navigation';
 import { home } from '@/routes';
 import { index as audit } from '@/routes/audit';
+import { index as collectAssignments } from '@/routes/collect/assignments';
+import { index as collectForms } from '@/routes/collect/forms';
 import { index as data } from '@/routes/data';
 import { index as frameworks } from '@/routes/frameworks';
 import { index as indicators } from '@/routes/indicators';
@@ -85,6 +89,23 @@ export const navigation: NavGroup[] = [
                 href: reports(),
                 icon: BarChart3,
                 permission: 'mel.reports.view',
+            },
+        ],
+    },
+    {
+        title: 'Data collection',
+        items: [
+            {
+                title: 'Forms & surveys',
+                href: collectForms(),
+                icon: ClipboardList,
+                permission: 'mel.collect.view',
+            },
+            {
+                title: 'Field assignments',
+                href: collectAssignments(),
+                icon: UserCheck,
+                permission: 'mel.collect.view',
             },
         ],
     },

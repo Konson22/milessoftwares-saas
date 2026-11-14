@@ -18,6 +18,10 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property bool $publisher_must_differ
  * @property int $on_track_percent
  * @property int $attention_percent
+ * @property bool $collect_reviewer_must_differ
+ * @property int $collect_photo_max_kb
+ * @property int $collect_keep_on_device_days
+ * @property int|null $collect_retention_months
  */
 class Workspace extends Model
 {
@@ -27,6 +31,7 @@ class Workspace extends Model
     protected $fillable = [
         'display_name', 'currency', 'timezone',
         'verifier_must_differ', 'publisher_must_differ', 'on_track_percent', 'attention_percent',
+        'collect_reviewer_must_differ', 'collect_photo_max_kb', 'collect_keep_on_device_days', 'collect_retention_months',
     ];
 
     protected $attributes = [
@@ -34,6 +39,9 @@ class Workspace extends Model
         'publisher_must_differ' => false,
         'on_track_percent' => 90,
         'attention_percent' => 70,
+        'collect_reviewer_must_differ' => true,
+        'collect_photo_max_kb' => 800,
+        'collect_keep_on_device_days' => 30,
     ];
 
     protected function casts(): array
@@ -43,6 +51,10 @@ class Workspace extends Model
             'publisher_must_differ' => 'boolean',
             'on_track_percent' => 'integer',
             'attention_percent' => 'integer',
+            'collect_reviewer_must_differ' => 'boolean',
+            'collect_photo_max_kb' => 'integer',
+            'collect_keep_on_device_days' => 'integer',
+            'collect_retention_months' => 'integer',
         ];
     }
 

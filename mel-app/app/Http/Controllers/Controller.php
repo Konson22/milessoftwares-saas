@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Collect\Scope;
 use App\Mel\Access;
 use App\Models\Programme;
 use App\Models\Submission;
@@ -21,6 +22,14 @@ abstract class Controller
     protected function access(): Access
     {
         return app(Access::class);
+    }
+
+    /**
+     * What the member reaches in data collection.
+     */
+    protected function scope(): Scope
+    {
+        return app(Scope::class);
     }
 
     /**
