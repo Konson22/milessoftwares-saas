@@ -58,7 +58,7 @@ type Unit = {
         progressPercent: number | null;
         currency: string | null;
         approvedBudgetMinor: number | null;
-        spentMinor: number | null;
+        paidMinor: number | null;
         milestones: {
             name: string;
             dueOn: string | null;
@@ -632,7 +632,7 @@ function ProjectSummary({
             {project.progressPercent !== null &&
                 ` · ${project.progressPercent}% done`}
             {project.approvedBudgetMinor !== null &&
-                ` · spent ${money(project.spentMinor, project.currency)} of ${money(project.approvedBudgetMinor, project.currency)}`}
+                ` · paid ${money(project.paidMinor, project.currency)} of the approved ${money(project.approvedBudgetMinor, project.currency)}`}
             {next &&
                 ` · next milestone ${next.name}${next.dueOn ? ` (${formatDate(next.dueOn)})` : ''}`}
             <span className="block">

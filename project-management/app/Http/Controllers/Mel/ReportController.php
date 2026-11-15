@@ -262,7 +262,7 @@ class ReportController extends Controller
         })->filter(fn (array $row) => $row['indicators'] > 0)->values();
 
         $units = $this->reporting->units($programme);
-        $projects = LinkedProjects::figures($units);
+        $projects = LinkedProjects::figures($units, $this->access());
 
         return [
             'byPeriod' => $byPeriod,
@@ -274,7 +274,7 @@ class ReportController extends Controller
                 'progressPercent' => $projects[(string) $unit->linked_project_id]['progressPercent'],
                 'currency' => $projects[(string) $unit->linked_project_id]['currency'],
                 'approvedBudgetMinor' => $projects[(string) $unit->linked_project_id]['approvedBudgetMinor'],
-                'spentMinor' => $projects[(string) $unit->linked_project_id]['spentMinor'],
+                'paidMinor' => $projects[(string) $unit->linked_project_id]['paidMinor'],
             ])->values(),
         ];
     }

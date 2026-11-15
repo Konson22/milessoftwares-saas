@@ -896,7 +896,7 @@ type ProgrammeData = {
         progressPercent: number | null;
         currency: string | null;
         approvedBudgetMinor: number | null;
-        spentMinor: number | null;
+        paidMinor: number | null;
     }[];
 };
 
@@ -968,7 +968,7 @@ function ProgrammeReport({ data }: { data: ProgrammeData }) {
                                     Done
                                 </TableHead>
                                 <TableHead className="text-right">
-                                    Spent of budget
+                                    Paid of approved budget
                                 </TableHead>
                             </TableRow>
                         </TableHeader>
@@ -988,7 +988,7 @@ function ProgrammeReport({ data }: { data: ProgrammeData }) {
                                     <TableCell className="text-right tabular-nums">
                                         {project.approvedBudgetMinor === null
                                             ? '—'
-                                            : `${((project.spentMinor ?? 0) / 100).toLocaleString()} of ${(project.approvedBudgetMinor / 100).toLocaleString()} ${project.currency ?? ''}`}
+                                            : `${((project.paidMinor ?? 0) / 100).toLocaleString()} of ${(project.approvedBudgetMinor / 100).toLocaleString()} ${project.currency ?? ''}`}
                                     </TableCell>
                                 </TableRow>
                             ))}

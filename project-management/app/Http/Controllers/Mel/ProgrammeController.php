@@ -80,7 +80,7 @@ class ProgrammeController extends Controller
         $unitIds = $access->unitIds($programme);
         $manages = $access->can('mel.programmes.manage');
         // Live from Projects: progress and spending as Projects works them out.
-        $projects = LinkedProjects::figures($programme->units);
+        $projects = LinkedProjects::figures($programme->units, $access);
 
         return Inertia::render('mel/programmes/show', [
             'programme' => [
