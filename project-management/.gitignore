@@ -31,3 +31,7 @@ Thumbs.db
 /resources/js/wayfinder
 /public/build
 /public/*/build
+
+# A SQLite file artisan creates when DB_DATABASE=projects meets the sqlite
+# driver (committed once by accident in 5490d5a): never tracked.
+/projects
