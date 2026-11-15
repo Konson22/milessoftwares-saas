@@ -104,9 +104,10 @@ it('sends a sub-partner report to its lead, and only publication shows it to the
     $this->get($this->organizationUrl('global-fund', "shared-projects/{$donor->id}/reports"))->assertInertia(fn (Assert $page) => $page->has('reports', 0));
     $this->actingAsMember('acme', ['projects.view', 'projects.reports.review']);
     $this->get($this->organizationUrl('acme', "projects/{$project->id}/reports/{$report->id}"))->assertNotFound();
-    // The owner follows the deadline without reading it.
+    // Sent outside any obligation, it stays between the sub-partner and its
+    // lead: the owner does not even list it until it is published.
     $this->get($this->organizationUrl('acme', "projects/{$project->id}/reports"))->assertInertia(fn (Assert $page) => $page
-        ->component('portal/collaboration/reports')->has('reports', 1)->where('reports.0.url', null));
+        ->component('portal/collaboration/reports')->has('reports', 0));
 
     // The lead approves; approving is not publishing.
     $this->actingAsMember('lead-ngo', PR_PARTNER);
@@ -438,4 +439,101 @@ it('keeps attachments of a draft to its writer, and of a submission to both part
     $donor = Participant::query()->where('participant_organization_id', $this->organization('global-fund')->id)->sole();
     $this->get($this->organizationUrl('global-fund', "shared-projects/{$donor->id}/reports/{$report->id}/attachments/{$attachment->id}"))->assertNotFound();
     expect($writer->id)->toBe($attachment->uploaded_by);
+});
+
+/*
+| Stabilization: what an ended obligation does to its reports, and who reads
+| the financial section.
+*/
+
+it('cancels unsent reports of an ended obligation, and keeps them from showing as overdue or being resubmitted', function () {
+    ['project' => $project, 'lead' => $lead, 'sub' => $sub] = prChain();
+    $this->actingAsMember('acme', ['projects.view', 'projects.reporting.manage']);
+    $this->post($this->organizationUrl('acme', "projects/{$project->id}/reports/obligations"), [
+        'title' => 'Monthly progress', 'category' => 'monthly', 'frequency' => 'monthly', 'starts_on' => '2026-08-01', 'ends_on' => '2026-12-31', 'due_days' => 10,
+        'responsible' => $sub->id, 'reviewer' => $lead->id,
+    ])->assertSessionHasNoErrors();
+    $byMonth = fn () => Report::query()->orderBy('period_start')->get()->keyBy(fn (Report $report) => $report->period_start->format('M'));
+    $subUrl = fn (string $path = '') => $this->organizationUrl('field-ngo', "shared-projects/{$sub->id}/reports".$path);
+    $leadUrl = fn (string $path = '') => $this->organizationUrl('lead-ngo', "shared-projects/{$lead->id}/reports".$path);
+
+    // August: submitted, then withdrawn by field-ngo. September: the lead asks for changes.
+    $field = $this->actingAsMember('field-ngo', PR_PARTNER);
+    foreach (['Aug', 'Sep'] as $month) {
+        $this->put($subUrl("/{$byMonth()[$month]->id}"), prContent())->assertSessionHasNoErrors();
+        $this->post($subUrl("/{$byMonth()[$month]->id}/action"), ['action' => 'submit'])->assertSessionHasNoErrors();
+    }
+    $this->post($subUrl("/{$byMonth()['Aug']->id}/action"), ['action' => 'withdraw'])->assertSessionHasNoErrors();
+    $this->actingAsMember('lead-ngo', PR_PARTNER);
+    $this->post($leadUrl("/{$byMonth()['Sep']->id}/action"), ['action' => 'changes', 'comment' => 'Add the October figures'])->assertSessionHasNoErrors();
+    $reviewsBefore = DB::table('project_report_reviews')->count();
+
+    // The owner ends the obligation.
+    $this->actingAsMember('acme', ['projects.view', 'projects.reporting.manage']);
+    $obligation = DB::table('report_obligations')->value('id');
+    $this->post($this->organizationUrl('acme', "projects/{$project->id}/reports/obligations/{$obligation}/end"))->assertSessionHasNoErrors();
+
+    $reports = $byMonth();
+    expect($reports['Aug']->status)->toBe(Report::WITHDRAWN)
+        ->and($reports['Sep']->status)->toBe(Report::CHANGES_REQUESTED)
+        ->and(collect(['Oct', 'Nov', 'Dec'])->map(fn ($month) => $reports[$month]->status)->unique()->values()->all())->toBe([Report::CANCELLED])
+        // Nothing of an ended obligation is overdue, whatever its status.
+        ->and($reports->filter->isOverdue()->count())->toBe(0)
+        // History stays: three "cancelled" steps added, nothing removed.
+        ->and(DB::table('project_report_reviews')->count())->toBe($reviewsBefore + 3)
+        ->and(DB::table('project_report_reviews')->where('action', 'cancelled')->count())->toBe(3);
+
+    // A cancelled report and a withdrawn one can no longer be written or sent;
+    // the changes the lead asked for can.
+    $this->actingAsMember('field-ngo', PR_PARTNER, user: $field);
+    $this->put($subUrl("/{$reports['Oct']->id}"), prContent())->assertSessionHasErrors('report');
+    $this->post($subUrl("/{$reports['Aug']->id}/action"), ['action' => 'submit'])->assertSessionHasErrors('report');
+    $this->put($subUrl("/{$reports['Aug']->id}"), prContent())->assertSessionHasErrors('report');
+    $this->put($subUrl("/{$reports['Sep']->id}"), prContent('Five wells'))->assertSessionHasNoErrors();
+    $this->post($subUrl("/{$reports['Sep']->id}/action"), ['action' => 'submit'])->assertSessionHasNoErrors();
+    expect($reports['Sep']->refresh()->status)->toBe(Report::SUBMITTED);
+
+    // And the daily run reminds nobody of them.
+    app(CurrentOrganization::class)->run($this->organization('field-ngo'), fn () => Reminders::run());
+    expect($this->asTenant('field-ngo', fn () => UserNotification::query()->where('dedupe_key', 'like', 'partner-report-%')->count()))->toBe(0);
+});
+
+it('refuses changes to a frozen version and to review history in the application, on any database', function () {
+    ['sub' => $sub] = prChain();
+    $report = prSubmitted('field-ngo', $sub);
+    $version = ReportVersion::query()->findOrFail($report->current_version_id);
+
+    expect(fn () => $version->forceFill(['content' => ['changed' => true]])->save())->toThrow(LogicException::class)
+        ->and(fn () => $version->delete())->toThrow(LogicException::class)
+        ->and(fn () => $report->reviews()->firstOrFail()->forceFill(['comment' => 'edited'])->save())->toThrow(LogicException::class)
+        ->and(fn () => $report->reviews()->firstOrFail()->delete())->toThrow(LogicException::class);
+});
+
+it('keeps the reported financial section from owner members without the finance permission', function () {
+    ['project' => $project, 'lead' => $lead] = prChain();
+    // The lead reports straight to the owner.
+    $this->actingAsMember('lead-ngo', PR_PARTNER);
+    $this->post($this->organizationUrl('lead-ngo', "shared-projects/{$lead->id}/reports"), ['title' => 'Q3', 'category' => 'quarterly', 'reviewer' => 'owner'])->assertSessionHasNoErrors();
+    $report = Report::query()->where('title', 'Q3')->sole();
+    $this->put($this->organizationUrl('lead-ngo', "shared-projects/{$lead->id}/reports/{$report->id}"), prContent())->assertSessionHasNoErrors();
+    $this->post($this->organizationUrl('lead-ngo', "shared-projects/{$lead->id}/reports/{$report->id}/action"), ['action' => 'submit'])->assertSessionHasNoErrors();
+    $url = $this->organizationUrl('acme', "projects/{$project->id}/reports/{$report->id}");
+
+    // A reviewer reads the figures it is asked to review.
+    $this->actingAsMember('acme', ['projects.view', 'projects.reports.review']);
+    $this->get($url)->assertOk()->assertInertia(fn (Assert $page) => $page->where('version.content.financial.lines.0.label', 'Drilling')->missing('version.content.financialHidden'));
+    // Someone who only sees projects does not open the unpublished report at all.
+    $this->actingAsMember('acme', ['projects.view']);
+    $this->get($url)->assertNotFound();
+    $this->get($this->organizationUrl('acme', "projects/{$project->id}/reports"))->assertInertia(fn (Assert $page) => $page->has('reports', 0));
+
+    // Approved and published: everyone with projects.view reads it, the
+    // reported figures only with projects.finance.view.
+    $this->actingAsMember('acme', ['projects.view', 'projects.reports.review', 'projects.reports.publish']);
+    $this->post("{$url}/action", ['action' => 'approve'])->assertSessionHasNoErrors();
+    $this->post("{$url}/action", ['action' => 'publish'])->assertSessionHasNoErrors();
+    $this->actingAsMember('acme', ['projects.view']);
+    $this->get($url)->assertOk()->assertInertia(fn (Assert $page) => $page->where('version.content.financialHidden', true)->where('version.content.financial.lines', []));
+    $this->actingAsMember('acme', ['projects.view', 'projects.finance.view']);
+    $this->get($url)->assertOk()->assertInertia(fn (Assert $page) => $page->where('version.content.financial.lines.0.amountMinor', 1200000));
 });

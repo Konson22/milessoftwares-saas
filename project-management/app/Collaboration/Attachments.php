@@ -32,7 +32,7 @@ final class Attachments
         abort_unless(Reports::isSubmitter($report, $acting), 403);
         $acting->require('projects.reports.prepare', Capability::REPORTS_SUBMIT);
         $version = $report->currentVersion;
-        if (! in_array($report->status, Report::EDITABLE, true) || $version === null || $version->isFrozen()) {
+        if (! $report->isEditable() || $version === null || $version->isFrozen()) {
             throw ValidationException::withMessages(['file' => 'Save the report as a draft first; submitted versions keep their files.']);
         }
 

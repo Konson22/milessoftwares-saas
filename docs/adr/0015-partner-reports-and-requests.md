@@ -14,7 +14,7 @@
 | Budget versions | draft → submitted → approved (`finance.budgets.approve`) → superseded | **The authoritative route** for any budget revision. A request never edits a budget |
 | Funding schedule and receipts | `grant_disbursements` (scheduled → received; receipt sends `finance.grant.received`) | A funding request **links** to a disbursement. It never creates or receives one |
 | Payments, advances, expense approvals | `expenses` with bands and SoD, `staff_advances`, Finance events | Not duplicated. A payment request is an expense or a Finance payment request, never a project request |
-| Procurement requisitions | `purchase_requests` and their approvals | Not duplicated. The requests page links to Procurement |
+| Procurement requisitions | `purchase_requests` and their approvals | Not duplicated. (Corrected 2026-11-16: no link from the requests page to Procurement was built; procurement stays in its own pages.) |
 | M&E verification | `mel_verified_results` (verified, published, superseded) | Reports **snapshot** verified results of units linked to the project, read-only |
 | Participants, capabilities, representatives | ADR-0014 | The routing and visibility foundation |
 | Attachments | `documents` (organization-scoped library), `grant_report_documents` | One small attachment table shared by reports and requests, on the private disk, because files cross organizations |
@@ -215,3 +215,30 @@ changed.
 
 **Deploy:** back up the database, run `php artisan migrate`, then
 `php artisan platform:catalog-reassign projects` (catalog 3.2.0), then the usual build.
+
+## 8. Amendment (2026-11-16, stabilization milestone)
+
+- **Ended obligations.** Ending an obligation now *cancels* every report of
+  it never submitted (new final status `cancelled`, migration
+  `2026_11_16_000200`), whatever its period; before, only future periods were
+  withdrawn and past ones kept showing as overdue. A report of an ended
+  obligation is never overdue and is not reminded. A withdrawn report of an
+  ended obligation can no longer be edited or resubmitted; a report the
+  reviewer sent back for changes still can (the reviewer's request is the
+  authorization). Review history is kept; each cancellation is a review step.
+- **Editing rules** are in `Report::isEditable()` and used by the action, the
+  page and attachments.
+- **Immutability in the application.** A submitted version cannot be updated
+  or deleted, and review steps and request decisions cannot be updated or
+  deleted, in the models (`ReportVersion::booted`, `AppendOnly`), on every
+  database, besides the PostgreSQL triggers.
+- **Owner-side visibility.** Owner members who prepare, review or publish
+  reports, or manage reporting, list the owner's own reports, everything
+  published, and the reports due under its obligations (status and due date;
+  content only once published if the owner is not a party). A report two
+  other parties exchange outside any obligation stays between them until
+  published. Members with only `projects.view` see published reports only.
+- **Financial section.** The financial section a party reported is shown to
+  that party (preparers) and to the reviewing party (reviewers); anyone else
+  needs `projects.finance.view` (owner side) or `budget.view` (participant).
+  Checked on the server (`Reports::seesReportedFinance`).

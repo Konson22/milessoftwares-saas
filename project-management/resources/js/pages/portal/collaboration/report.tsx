@@ -41,6 +41,7 @@ type Content = {
     implementation: Record<string, string | null>;
     financial: { lines: Line[]; note: string | null };
     narrative: Record<string, string | null>;
+    financialHidden?: boolean;
     system?: {
         capturedAt: string;
         financial: {
@@ -471,7 +472,12 @@ function ContentView({
                         <p className="text-xs text-muted-foreground">
                             {labels.sources.reported}
                         </p>
-                        {content.financial.lines.length === 0 ? (
+                        {content.financialHidden ? (
+                            <p>
+                                Not shown: you may not see the financial section
+                                of this report.
+                            </p>
+                        ) : content.financial.lines.length === 0 ? (
                             <p>No figures reported.</p>
                         ) : (
                             <ul className="grid gap-1">
@@ -517,7 +523,7 @@ function ContentView({
                                         </span>
                                     </li>
                                     <li className="flex justify-between">
-                                        <span>Recorded spending</span>
+                                        <span>Paid to date</span>
                                         <span className="tabular-nums">
                                             {formatMoney(
                                                 system.financial.spentMinor,

@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use LogicException;
 
 /**
  * A report's content as it stood: edited while a draft, frozen once
@@ -23,6 +24,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ReportVersion extends Model
 {
     use HasUuids;
+
+    /**
+     * A submitted version is frozen: refused here on every database, in
+     * addition to the PostgreSQL trigger. Submitting itself (setting
+     * submitted_at on an open version) is the last change it takes.
+     */
+    protected static function booted(): void
+    {
+        static::updating(function (self $version) {
+            if ($version->getOriginal('submitted_at') !== null) {
+                throw new LogicException('A submitted report version cannot be changed; make a new version.');
+            }
+        });
+        static::deleting(fn () => throw new LogicException('Report versions are kept: a version cannot be deleted.'));
+    }
 
     protected $table = 'project_report_versions';
 

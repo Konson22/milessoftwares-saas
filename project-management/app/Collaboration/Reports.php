@@ -119,13 +119,17 @@ final class Reports
 
         DB::transaction(function () use ($obligation, $acting) {
             $obligation->forceFill(['status' => Obligation::ENDED])->save();
-            $later = Report::query()->where('obligation_id', $obligation->id)->where('status', Report::DRAFT)
-                ->whereNull('submitted_at')->whereDate('period_start', '>', today()->toDateString())->get();
-            foreach ($later as $report) {
-                $report->forceFill(['status' => Report::WITHDRAWN])->save();
-                self::step($report, $acting, 'withdrawn', 'The obligation ended.');
+            // Every scheduled report never submitted is no longer expected:
+            // cancelled, a final state (Report::isEditable). Reports already
+            // submitted keep their history and status; withdrawn ones can no
+            // longer be resubmitted, changes the reviewer asked for still can.
+            $unsent = Report::query()->where('obligation_id', $obligation->id)->where('status', Report::DRAFT)
+                ->whereNull('submitted_at')->get();
+            foreach ($unsent as $report) {
+                $report->forceFill(['status' => Report::CANCELLED])->save();
+                self::step($report, $acting, 'cancelled', 'The obligation ended.');
             }
-            self::audit($acting, 'report_obligation.ended', $obligation, ['project' => $acting->project->code, 'title' => $obligation->title, 'withdrawn' => $later->count()]);
+            self::audit($acting, 'report_obligation.ended', $obligation, ['project' => $acting->project->code, 'title' => $obligation->title, 'cancelled' => $unsent->count()]);
         });
     }
 
@@ -395,10 +399,13 @@ final class Reports
         if ($report->project_id !== $acting->project->id) {
             return false;
         }
-        if ($acting->is($report->submitter_participant_id)) {
+        // On the owner's side only members who work on reports open the
+        // owner's own unpublished ones; projects.view alone reads published.
+        $works = ! $acting->isOwner() || self::worksOnReports($acting);
+        if ($works && $acting->is($report->submitter_participant_id)) {
             return true;
         }
-        if ($acting->is($report->reviewer_participant_id) && $report->submitted_at !== null) {
+        if ($works && $acting->is($report->reviewer_participant_id) && $report->submitted_at !== null) {
             return true;
         }
         if ($report->status === Report::PUBLISHED) {
@@ -409,8 +416,15 @@ final class Reports
     }
 
     /**
-     * The reports a party may list. The owner lists every report on its
-     * project, to follow deadlines, but opens only those it may see.
+     * The reports a party may list (it opens only those canSee allows).
+     *
+     * The owner's members who work on reports list the owner's own reports,
+     * everything published, and the reports due under the obligations the
+     * owner set (status and due date only, to follow deadlines: a report
+     * between two other parties is opened by the owner only once published).
+     * A report another party sends to someone else outside any obligation
+     * stays between them. Other members (projects.view only) list what is
+     * published.
      *
      * @return Builder<Report>
      */
@@ -418,7 +432,15 @@ final class Reports
     {
         $query = Report::query()->where('project_id', $acting->project->id);
         if ($acting->isOwner()) {
-            return $query;
+            if (! self::worksOnReports($acting)) {
+                return $query->where('status', Report::PUBLISHED);
+            }
+
+            return $query->where(fn (Builder $query) => $query
+                ->whereNull('submitter_participant_id')
+                ->orWhere(fn (Builder $query) => $query->whereNull('reviewer_participant_id')->whereNotNull('submitted_at'))
+                ->orWhere('status', Report::PUBLISHED)
+                ->orWhereNotNull('obligation_id'));
         }
 
         $id = $acting->partyId();
@@ -431,6 +453,40 @@ final class Reports
                 $query->orWhere('status', Report::PUBLISHED);
             }
         });
+    }
+
+    /**
+     * An owner-side member who prepares, reviews or publishes reports, or
+     * sets reporting obligations.
+     */
+    public static function worksOnReports(Acting $acting): bool
+    {
+        foreach (['projects.reports.prepare', 'projects.reports.review', 'projects.reports.publish', 'projects.reporting.manage'] as $permission) {
+            if ($acting->access->has($permission)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Whether this member may read the financial section a party reported
+     * (separate from seeing the report): the party that wrote it and the one
+     * reviewing it, through members who prepare or review reports; anyone
+     * else only with the budget permission (projects.finance.view on the
+     * owner's side, budget.view on a participation).
+     */
+    public static function seesReportedFinance(Report $report, Acting $acting): bool
+    {
+        if ($acting->is($report->submitter_participant_id) && $acting->may('projects.reports.prepare', Capability::REPORTS_SUBMIT)) {
+            return true;
+        }
+        if ($acting->is($report->reviewer_participant_id) && $acting->may('projects.reports.review', Capability::REPORTS_REVIEW)) {
+            return true;
+        }
+
+        return $acting->seesBudget();
     }
 
     public static function isReviewer(Report $report, Acting $acting): bool
@@ -474,8 +530,10 @@ final class Reports
      */
     private static function ensureEditable(Report $report): void
     {
-        if (! in_array($report->status, Report::EDITABLE, true)) {
-            throw ValidationException::withMessages(['report' => 'This report is '.Report::STATUSES[$report->status].' and cannot be changed.']);
+        if (! $report->isEditable()) {
+            throw ValidationException::withMessages(['report' => $report->obligationEnded() && in_array($report->status, Report::EDITABLE, true)
+                ? 'The obligation this report was due under has ended: it can no longer be submitted.'
+                : 'This report is '.Report::STATUSES[$report->status].' and cannot be changed.']);
         }
     }
 
@@ -586,8 +644,10 @@ final class Reports
     public static function remind(string $organizationId): int
     {
         $told = 0;
-        $reports = Report::query()->with(['project', 'submitter.organization'])
+        $reports = Report::query()->with(['project', 'obligation', 'submitter.organization'])
             ->whereIn('status', Report::EDITABLE)->where('status', '!=', Report::WITHDRAWN)
+            // Nothing is expected under an ended obligation.
+            ->where(fn (Builder $query) => $query->whereNull('obligation_id')->orWhereHas('obligation', fn (Builder $query) => $query->where('status', Obligation::ACTIVE)))
             ->whereNotNull('due_on')->whereDate('due_on', '<=', today()->addDays(7)->toDateString())
             ->where(fn (Builder $query) => $query
                 ->where(fn (Builder $query) => $query->whereNull('submitter_participant_id')->where('organization_id', $organizationId))

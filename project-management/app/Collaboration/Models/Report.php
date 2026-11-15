@@ -62,6 +62,9 @@ class Report extends Model
 
     public const WITHDRAWN = 'withdrawn';
 
+    /** No longer expected: its obligation ended before it was ever submitted. Final. */
+    public const CANCELLED = 'cancelled';
+
     public const STATUSES = [
         self::DRAFT => 'Draft',
         self::SUBMITTED => 'Submitted',
@@ -71,9 +74,10 @@ class Report extends Model
         self::PUBLISHED => 'Published',
         self::REJECTED => 'Rejected',
         self::WITHDRAWN => 'Withdrawn',
+        self::CANCELLED => 'Cancelled',
     ];
 
-    /** The submitting party can change it. */
+    /** The submitting party can change it, subject to isEditable(). */
     public const EDITABLE = [self::DRAFT, self::CHANGES_REQUESTED, self::WITHDRAWN];
 
     /** With the reviewer, waiting for a decision. */
@@ -180,9 +184,39 @@ class Report extends Model
         return $this->belongsTo(Participant::class, 'reviewer_participant_id');
     }
 
+    /**
+     * Late: due before today, still with its submitter, and still expected
+     * (a report of an ended obligation is not, whatever its status).
+     */
     public function isOverdue(): bool
     {
-        return $this->due_on !== null && in_array($this->status, self::EDITABLE, true) && $this->due_on->lt(today());
+        return $this->due_on !== null && in_array($this->status, self::EDITABLE, true) && $this->due_on->lt(today()) && ! $this->obligationEnded();
+    }
+
+    /**
+     * Whether the obligation it was scheduled under has ended.
+     */
+    public function obligationEnded(): bool
+    {
+        return $this->obligation_id !== null && $this->obligation?->status !== Obligation::ACTIVE;
+    }
+
+    /**
+     * Whether its submitter may still change and submit it. Editing rules:
+     *   draft              yes, unless its obligation ended (it is then cancelled);
+     *   changes requested  yes: the reviewer asked for it, even after the
+     *                      obligation ended;
+     *   withdrawn          yes while its obligation is active (or it has
+     *                      none); not after the obligation ended;
+     *   cancelled, and everything submitted or decided: no.
+     */
+    public function isEditable(): bool
+    {
+        if (! in_array($this->status, self::EDITABLE, true)) {
+            return false;
+        }
+
+        return $this->status === self::CHANGES_REQUESTED || ! $this->obligationEnded();
     }
 
     public function categoryLabel(): string

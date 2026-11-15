@@ -27,6 +27,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class ReportReview extends Model
 {
+    use AppendOnly;
     use HasUuids;
 
     public const UPDATED_AT = null;

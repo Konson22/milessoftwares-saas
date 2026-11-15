@@ -39,7 +39,7 @@ class ReportController extends Controller
     public function index(Request $request): Response
     {
         $acting = $this->acting($request);
-        $reports = Reports::listed($acting)->with(['submitter.organization', 'reviewer.organization'])
+        $reports = Reports::listed($acting)->with(['obligation', 'submitter.organization', 'reviewer.organization'])
             ->orderByRaw('due_on is null')->orderBy('due_on')->orderBy('number')->get();
         $obligations = $acting->isOwner()
             ? Obligation::query()->with(['responsible.organization', 'reviewer.organization'])->withCount('reports')->where('project_id', $acting->project->id)->latest()->get()
@@ -157,7 +157,7 @@ class ReportController extends Controller
 
         $submitter = Reports::isSubmitter($report, $acting);
         $reviewer = Reports::isReviewer($report, $acting);
-        $editable = $submitter && in_array($report->status, Report::EDITABLE, true) && $acting->may('projects.reports.prepare', Capability::REPORTS_SUBMIT);
+        $editable = $submitter && $report->isEditable() && $acting->may('projects.reports.prepare', Capability::REPORTS_SUBMIT);
         $reviews = $acting->may('projects.reports.review', Capability::REPORTS_REVIEW) && $reviewer;
         $ownVersion = $report->currentVersion?->submitted_by === $acting->user->id;
 
@@ -175,7 +175,7 @@ class ReportController extends Controller
                 'number' => $shown->number,
                 'frozen' => $shown->isFrozen(),
                 'submittedAt' => $shown->submitted_at?->toIso8601String(),
-                'content' => $this->content($shown->content, $acting),
+                'content' => $this->content($shown->content, $acting, $report),
                 'attachments' => $this->attachments(Attachments::of(Attachment::REPORT_VERSION, $shown->id), $acting, $report),
             ],
             'versions' => $versions->filter(fn (ReportVersion $version) => $submitter || $version->isFrozen())
@@ -198,7 +198,7 @@ class ReportController extends Controller
                 'periodStart' => $source->period_start?->toDateString(),
                 'periodEnd' => $source->period_end?->toDateString(),
                 'status' => $source->status,
-                'content' => $source->currentVersion === null ? null : $this->content($source->currentVersion->content, $acting),
+                'content' => $source->currentVersion === null ? null : $this->content($source->currentVersion->content, $acting, $source),
                 'removeUrl' => $editable ? $this->sideUrl($acting, 'reports.sources.destroy', ['report' => $report->id, 'source' => $source->id]) : null,
             ])->values(),
             'sourceCandidates' => $editable ? Reports::sourceCandidates($report, $acting)->map(fn (Report $candidate) => [
@@ -349,14 +349,20 @@ class ReportController extends Controller
     }
 
     /**
-     * A version's content as this member may read it: the recorded budget
-     * figures only for those who may see the budget.
+     * A version's content as this member may read it, decided here and not
+     * in the page: the project's recorded budget figures only for those who
+     * may see the budget, and the financial section the party reported only
+     * for those Reports::seesReportedFinance allows.
      *
      * @param  array<string, mixed>  $content
      * @return array<string, mixed>
      */
-    private function content(array $content, Acting $acting): array
+    private function content(array $content, Acting $acting, Report $report): array
     {
+        if (isset($content['financial']) && ! Reports::seesReportedFinance($report, $acting)) {
+            $content['financial'] = ['lines' => [], 'note' => null];
+            $content['financialHidden'] = true;
+        }
         if (isset($content['system']) && is_array($content['system']) && ! $acting->seesBudget()) {
             $content['system']['financial'] = null;
             $content['system']['financialHidden'] = true;
