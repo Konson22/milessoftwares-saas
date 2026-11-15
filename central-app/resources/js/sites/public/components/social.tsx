@@ -20,7 +20,7 @@ export const businessAddressLine = `${businessAddress.street}, ${businessAddress
 
 /** The official Facebook page (also verified with rel="me" in the footer). */
 export const facebookUrl =
-    'https://www.facebook.com/profile.php?id=61595274547445';
+    'https://www.facebook.com/profile.php?id=61596215291990';
 
 export const socialLinks = [
     {

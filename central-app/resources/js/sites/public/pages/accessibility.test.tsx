@@ -544,7 +544,7 @@ describe('brand entity', () => {
                 addressLocality: 'Juba',
                 addressCountry: 'SS',
             },
-            sameAs: ['https://www.facebook.com/profile.php?id=61595274547445'],
+            sameAs: ['https://www.facebook.com/profile.php?id=61596215291990'],
         });
         expect(
             graph.some((node) => node['@type'] === 'SoftwareApplication'),
@@ -566,7 +566,7 @@ describe('brand entity', () => {
         expect(address?.textContent).toContain('info@tatook.com');
         const facebook = address?.querySelector('a[rel~="me"]');
         expect(facebook?.getAttribute('href')).toBe(
-            'https://www.facebook.com/profile.php?id=61595274547445',
+            'https://www.facebook.com/profile.php?id=61596215291990',
         );
         expect(container.textContent).toContain(
             'Tatook is a product of Miles Global Link Co. Ltd',
