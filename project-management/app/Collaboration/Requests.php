@@ -343,9 +343,37 @@ final class Requests
             return false;
         }
 
+        if ($acting->isOwner()) {
+            // On the owner's side by what the member does with requests:
+            // raisers see the owner's own, reviewers also those sent to it.
+            // projects.view alone opens none (funding amounts, budget lines).
+            return (self::isRaiser($request, $acting) && self::ownerMay($acting, 'projects.requests.raise'))
+                || (self::isReviewer($request, $acting) && self::ownerMay($acting, 'projects.requests.review'));
+        }
+
         return $acting->is($request->submitter_participant_id)
             || self::isReviewer($request, $acting)
-            || ($acting->participant !== null && in_array($acting->partyId(), self::escalatedFrom($request), true));
+            || in_array($acting->partyId(), self::escalatedFrom($request), true);
+    }
+
+    /**
+     * What an owner-side member may follow. "raise": the owner's own
+     * requests (raisers, and reviewers). "review": requests sent to the
+     * owner (reviewers, and those who carry out an approved one: budget
+     * revisions, timeline changes, grant payments).
+     */
+    private static function ownerMay(Acting $acting, string $side): bool
+    {
+        $permissions = $side === 'projects.requests.raise'
+            ? ['projects.requests.raise', 'projects.requests.review']
+            : ['projects.requests.review', 'projects.manage', 'projects.changes.approve', 'grants.manage'];
+        foreach ($permissions as $permission) {
+            if ($acting->access->has($permission)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -355,6 +383,22 @@ final class Requests
     {
         $query = ProjectRequest::query()->where('project_id', $acting->project->id);
         $id = $acting->partyId();
+        if ($acting->isOwner()) {
+            $raises = self::ownerMay($acting, 'projects.requests.raise');
+            $reviews = self::ownerMay($acting, 'projects.requests.review');
+            if (! $raises && ! $reviews) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            return $query->where(function (Builder $query) use ($raises, $reviews) {
+                if ($raises) {
+                    $query->whereNull('submitter_participant_id');
+                }
+                if ($reviews) {
+                    $query->orWhere(fn (Builder $query) => $query->whereNull('reviewer_participant_id')->whereNotNull('submitted_at'));
+                }
+            });
+        }
 
         return $query->where(function (Builder $query) use ($id, $acting) {
             $id === null ? $query->whereNull('submitter_participant_id') : $query->where('submitter_participant_id', $id);

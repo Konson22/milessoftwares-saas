@@ -21,12 +21,33 @@ portal switches for a funder contact.
 | Revised budget | A newer budget version under preparation or awaiting approval. | `budget_versions` with `status` draft/submitted | `Budgets::working` | Not a reportable figure until approved; then it becomes the approved budget and the previous version is superseded. |
 | Funding committed | Grant money allocated to the project. | `grant_allocations.amount_minor` (grant currency) | `App\Actions\Grants` | A commitment of the funder, not cash. |
 | Funds received | Grant money actually received. | `grant_disbursements` (received) | `App\Actions\Grants`; also sent to Finance as `finance.grant.received` | Cash in. |
-| Procurement commitment | Purchase orders raised but not yet paid. | `purchase_orders` → their `expenses` in status requested/approved | `App\Actions\Procurement`, `Spending` | **Deviation:** a PO is created as an expense request, so the commitment and the payable are the same row (see ADR-0016). |
-| Recognized expenditure | Expenditure recognised in the books. | **Finance** ledger (journals posted from `finance.project_expense.paid`) | finance-app `App\Finance\PostEvent` | Projects does not hold accruals; until ADR-0016 is decided Projects reports paid amounts, not recognised expenditure. |
+| Procurement commitment | Purchase orders raised but not yet paid. | `purchase_orders` → their `expenses` in status requested/approved | `App\Actions\Procurement`, `Spending` | **Deviation:** a PO is created as an expense request, so the commitment and the payable are the same row (see ADR-0017 §5.3). |
+| Recognized expenditure | Expenditure recognised in the books. | **Finance** ledger (journals posted from `finance.project_expense.paid`) | finance-app `App\Finance\PostEvent` | Projects does not hold accruals; until ADR-0017 is decided Projects reports paid amounts, not recognised expenditure. |
 | Paid amount | Money that left for the project. | `expenses` with `status = paid` | `Expense::paid()`, `ProjectFinance::forProjects` (`paidMinor`), `ProjectMetrics::expensesMinor` | What M&E, partner reports and participant views call spending. |
 | Personnel cost (estimated) | Time logged on the project × the person's hourly rate typed in People. | `time_entries.cost_minor` (from `people.hourly_cost_minor`) | `ProjectMetrics::labourMinor` | An **estimate** for internal management. Not expenditure, not payroll. Never added to paid amount outside the project's own pages. Payroll is the source of real staff cost (not yet integrated). |
 | Available budget | What is left to commit against the approved budget. | approved budget − committed (approved, unpaid expenses) − paid | `Spending::approve` (by category) | Only defined once a budget is approved. |
 | Available cash | Cash in hand for the project. | **Finance** (bank and cash accounts) | finance-app | Projects cannot compute it: it does not hold bank balances. Petty cash boxes are a partial view only. |
+| Original budget | The first approved budget version. | `budget_versions` with the lowest `number` among approved/superseded | `Budgets` (history) | Kept for variance against the plan as signed. |
+| Outstanding commitment | Committed but not yet paid. | expenses approved (or PO-linked) and not paid, minus partial payments when ADR-0017 linked mode exists | `Spending` | Never added to paid amount when showing "used"; shown beside it. |
+| Staff cost allocation | Real personnel cost charged to the project. | **Payroll** (not yet integrated) | — | Distinct from personnel cost (estimated). When it exists, the estimate is not shown next to it as spending: one or the other, never both. |
+| Budget variance | Approved budget − (paid + outstanding commitment), per category and total. | derived | — | Uses the approved, not the working, version. Recognized expenditure replaces paid once Finance is linked (labelled). |
+
+## Required attributes of every figure (provenance)
+
+Every money figure leaving the project's own finance pages carries:
+
+| Attribute | Values |
+|---|---|
+| currency | ISO code. Figures in different currencies are never summed; a converted figure states rate and date. |
+| period | as-at date or from–to |
+| source | `projects`, `finance`, `payroll`, or `reported` (typed from external accounts) |
+| status | `recorded` (Projects record, unverified by Finance), `posted` (Finance journal), `reported` (manual, unverified), `estimate` |
+| basis | `paid` (cash), `recognized` (accrual, Finance only), `committed`, `planned` |
+
+Organizations without Finance only ever produce `recorded`, `reported` or
+`estimate` figures; the label "manually reported / unverified" is shown for
+the first two. Labour is counted once: either the estimate or the Payroll
+allocation, never both, and never inside paid amount.
 
 ## Who may see what
 

@@ -5,6 +5,7 @@ use App\Actions\PettyCash;
 use App\Actions\Reminders;
 use App\Models\Organization;
 use App\Models\PettyCashFund;
+use App\Support\FinanceSync;
 use App\Support\Money;
 use App\Tenancy\CurrentOrganization;
 use Carbon\CarbonImmutable;
@@ -83,3 +84,34 @@ Artisan::command('petty-cash:move-to-finance {--dry-run : list what would move}'
 
     return $failed ? 1 : 0;
 })->purpose('Move petty cash boxes into Finance for organizations that have it');
+
+// What Finance did with the money events sent to it (App\Support\FinanceSync).
+// Read-only: it reports refused and stuck events, it never resends or fixes.
+// Exit code 1 when something needs a person, so a scheduler or monitor can alert.
+Artisan::command('projects:finance-sync {--organization= : one workspace, by slug}', function () {
+    $organizationId = null;
+    if ($this->option('organization')) {
+        $organizationId = Organization::query()->where('slug', $this->option('organization'))->value('id');
+        if ($organizationId === null) {
+            $this->error('No such workspace.');
+
+            return 1;
+        }
+    }
+    $names = Organization::query()->pluck('slug', 'id');
+
+    foreach (FinanceSync::summary($organizationId) as $id => $counts) {
+        ksort($counts);
+        $this->line(($names[$id] ?? $id).': '.collect($counts)->map(fn (int $count, string $status) => "{$status} {$count}")->implode(', '));
+    }
+
+    $attention = FinanceSync::needingAttention($organizationId);
+    foreach ($attention as $event) {
+        $this->warn(($names[$event->organization_id] ?? $event->organization_id)." {$event->event_type} {$event->source_transaction_id}: {$event->status} after {$event->attempts} attempt(s)".($event->last_error ? " — {$event->last_error}" : ''));
+    }
+    if ($attention->isEmpty()) {
+        $this->info('Nothing needs attention.');
+    }
+
+    return $attention->isEmpty() ? 0 : 1;
+})->purpose('Report money events Finance refused or has not taken (read-only)');
