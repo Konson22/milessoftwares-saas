@@ -3,14 +3,18 @@
 namespace App\FinanceIntegration;
 
 use App\Audit\Audit;
+use App\Enums\ExpenseStatus;
 use App\Models\Expense;
 use App\Models\FinanceRequest;
 use App\Models\FinanceRequestTransition;
 use App\Models\Organization;
 use App\Models\Project;
+use App\Models\PurchaseOrder;
 use App\Models\User;
 use App\Support\FinanceEvents;
+use App\Support\Money;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -54,11 +58,92 @@ final class FinanceRequests
      */
     public function submit(Expense $expense, Project $project, User $by): ?FinanceRequest
     {
-        $organization = Organization::query()->findOrFail($expense->organization_id);
-        if (FinanceMode::of($organization) !== FinanceMode::Integrated || ! config('finance_integration.enabled')) {
+        if (! self::integrated($expense) || self::awaitingGoods($expense)) {
             return null;
         }
 
+        return $this->send($expense, $project, $expense->amount_minor, null, null, $by);
+    }
+
+    /**
+     * Spending raised by a purchase order goes to Finance only once the
+     * order is payable: everything received and the supplier's invoice
+     * recorded (Procurement::requirePayable, the rule legacy payment keeps).
+     * Approving the order commits the money in Projects; it does not ask
+     * Finance to pay. Called when goods arrive and when the invoice is
+     * recorded; does nothing until both are done, or once a request exists.
+     */
+    public function submitIfPayable(PurchaseOrder $order, User $by): ?FinanceRequest
+    {
+        $expense = Expense::query()->findOrFail($order->expense_id);
+        if ($expense->status !== ExpenseStatus::Approved || FinanceRequest::query()->where('expense_id', $expense->id)->exists()) {
+            return null;
+        }
+
+        return $this->submit($expense, Project::query()->findOrFail($expense->project_id), $by);
+    }
+
+    /** An order is behind the spending, and it is not payable yet. */
+    private static function awaitingGoods(Expense $expense): bool
+    {
+        $order = PurchaseOrder::query()->where('expense_id', $expense->id)->first();
+
+        return $order !== null && (! $order->isFullyReceived() || $order->invoice_reference === null);
+    }
+
+    /**
+     * Sends a request Finance refused (or whose payment it reversed) again,
+     * as a new revision under the same correlation id (contract §5.3). The
+     * refused revision and Finance's reason stay as they were; the new one
+     * says what changed. Nothing is sent while the latest revision is still
+     * with Finance, so two revisions are never open at once, and Finance
+     * refuses an older revision than one it has (ProjectSpending::received).
+     *
+     * @throws ValidationException
+     */
+    public function resubmit(Expense $expense, int $amountMinor, string $note, User $by): FinanceRequest
+    {
+        return DB::transaction(function () use ($expense, $amountMinor, $note, $by) {
+            Expense::query()->whereKey($expense->id)->lockForUpdate()->first();
+            $expense->refresh();
+
+            return $this->revise($expense, $amountMinor, $note, $by);
+        });
+    }
+
+    /**
+     * @throws ValidationException
+     */
+    private function revise(Expense $expense, int $amountMinor, string $note, User $by): FinanceRequest
+    {
+        if (! self::integrated($expense)) {
+            throw ValidationException::withMessages(['expense' => 'Finance does not take spending requests for this organization.']);
+        }
+        if ($expense->status !== ExpenseStatus::Approved) {
+            throw ValidationException::withMessages(['expense' => 'Only approved spending is sent to Finance.']);
+        }
+
+        $latest = FinanceRequest::query()->where('expense_id', $expense->id)->orderByDesc('revision')->lockForUpdate()->first();
+        if ($latest === null) {
+            throw ValidationException::withMessages(['expense' => 'This spending was never sent to Finance.']);
+        }
+        if (! in_array($latest->status, [RequestStatus::Rejected, RequestStatus::Reversed], true)) {
+            throw ValidationException::withMessages(['expense' => 'Finance has revision '.$latest->revision.' ('.$latest->status->label().'): it is sent again only once Finance refused it or reversed its payment.']);
+        }
+
+        $netPaid = (int) FinanceRequest::query()->where('expense_id', $expense->id)->get(['paid_minor', 'reversed_minor'])->sum(fn (FinanceRequest $r) => $r->netPaidMinor());
+        $left = $expense->amount_minor - $netPaid;
+        if ($amountMinor < 1 || $amountMinor > $left) {
+            throw ValidationException::withMessages(['amount' => 'Between 1 and what is left of the approved spending ('.Money::format($left, $latest->currency).').']);
+        }
+
+        $project = Project::query()->findOrFail($expense->project_id);
+
+        return $this->send($expense, $project, $amountMinor, $latest, $note, $by);
+    }
+
+    private function send(Expense $expense, Project $project, int $amountMinor, ?FinanceRequest $previous, ?string $note, User $by): FinanceRequest
+    {
         $revision = (int) FinanceRequest::query()->where('expense_id', $expense->id)->max('revision') + 1;
         $id = (string) Str::uuid();
         $now = CarbonImmutable::now();
@@ -69,15 +154,20 @@ final class FinanceRequests
             'expense_id' => $expense->id,
             'kind' => FinanceRequest::SPENDING,
             'revision' => $revision,
-            'correlation_id' => (string) Str::uuid(),
+            // One chain of attempts: every revision keeps the first one's correlation id.
+            'correlation_id' => $previous === null ? (string) Str::uuid() : $previous->correlation_id,
             'idempotency_key' => "finance-request:{$id}:r{$revision}",
             'contract_version' => self::CONTRACT_VERSION,
             'currency' => $project->currency,
-            'amount_minor' => $expense->amount_minor,
+            'amount_minor' => $amountMinor,
             'status' => RequestStatus::Submitted,
             'submitted_at' => $now,
         ]);
-        self::record($request, null, RequestStatus::Submitted, 'finance.spending.submitted', 'projects', null, null, ['by' => $by->id], $now);
+        $facts = ['by' => $by->id];
+        if ($previous !== null) {
+            $facts += ['supersedes' => $previous->id, 'previous_revision' => $previous->revision, 'note' => $note];
+        }
+        self::record($request, null, RequestStatus::Submitted, 'finance.spending.submitted', 'projects', null, null, $facts, $now);
 
         $expense->loadMissing('grant');
         $this->events->send('finance.spending.submitted', "{$request->idempotency_key}:submitted", [
@@ -90,10 +180,18 @@ final class FinanceRequests
             'supplier' => $expense->supplier,
             'grant_reference' => $expense->grant?->reference,
             'approvals' => $expense->approvals()->count(),
+            ...($previous === null ? [] : ['supersedes_request_id' => $previous->id, 'revision_note' => mb_substr((string) $note, 0, 255)]),
         ], $now);
-        Audit::record('finance_request.submitted', $request, ['expense' => $expense->id, 'amount_minor' => $request->amount_minor, 'currency' => $request->currency], actor: $by);
+        Audit::record($previous === null ? 'finance_request.submitted' : 'finance_request.resubmitted', $request, ['expense' => $expense->id, 'revision' => $revision, 'amount_minor' => $request->amount_minor, 'currency' => $request->currency, ...($previous === null ? [] : ['supersedes' => $previous->id, 'note' => $note])], actor: $by);
 
         return $request;
+    }
+
+    private static function integrated(Expense $expense): bool
+    {
+        $organization = Organization::query()->findOrFail($expense->organization_id);
+
+        return FinanceMode::of($organization) === FinanceMode::Integrated && (bool) config('finance_integration.enabled');
     }
 
     /**

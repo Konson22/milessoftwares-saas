@@ -132,6 +132,16 @@
         "approvals": {
             "type": "integer",
             "minimum": 1
+        },
+        "supersedes_request_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "On a revision (version > 1): the request it replaces, which Finance refused or whose payment it reversed. Same correlation_id."
+        },
+        "revision_note": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "On a revision: what changed."
         }
     }
 }

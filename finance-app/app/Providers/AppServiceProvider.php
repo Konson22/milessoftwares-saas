@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Finance\ProjectSpending;
+use App\Models\Journal;
 use App\Platform\SetUpWorkspace;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -21,6 +23,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Date::use(CarbonImmutable::class);
+
+        // A reversed journal that paid a Projects request: Projects is told (ProjectSpending).
+        Journal::updated(function (Journal $journal): void {
+            if ($journal->wasChanged('reversed_by_id') && $journal->reversed_by_id !== null) {
+                app(ProjectSpending::class)->journalReversed($journal);
+            }
+        });
 
         // Built assets live under the product's path (vite.config.ts).
         $platform = $this->app->make(PlatformConfig::class);

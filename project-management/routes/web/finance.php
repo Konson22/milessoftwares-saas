@@ -39,6 +39,7 @@ Route::prefix('expenses/{expense}')->whereUuid('expense')->middleware('can:proje
     Route::post('approve', [ExpenseController::class, 'approve'])->can('finance.expenses.approve')->name('approve');
     Route::post('reject', [ExpenseController::class, 'reject'])->can('finance.expenses.approve')->name('reject');
     Route::post('pay', [ExpenseController::class, 'pay'])->can('finance.payments.record')->name('pay');
+    Route::post('resubmit', [ExpenseController::class, 'resubmit'])->middleware(['can:projects.finance.view', 'can:finance.expenses.approve'])->name('resubmit');
     Route::post('cancel', [ExpenseController::class, 'cancel'])->name('cancel');
     Route::post('documents', [ExpenseController::class, 'attach'])->name('documents.store');
     Route::get('documents/{document}', [ExpenseController::class, 'document'])->whereUuid('document')->name('documents.show');

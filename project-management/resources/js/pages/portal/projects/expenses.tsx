@@ -18,6 +18,7 @@ import {
     pay,
     reject,
     request as requestSpending,
+    resubmit,
     store as recordExpense,
 } from '@/routes/projects/expenses';
 import {
@@ -44,7 +45,19 @@ type Expense = {
     paidOn: string | null;
     paymentReference: string | null;
     documents: { id: string; name: string; size: number }[];
+    financeRequest: {
+        revision: number;
+        status: string;
+        statusLabel: string;
+        reference: string | null;
+        requestedMinor: number;
+        approvedMinor: number | null;
+        netPaidMinor: number;
+        outstandingMinor: number;
+        reason: string | null;
+    } | null;
     can: {
+        resubmit: boolean;
         decide: boolean;
         pay: boolean;
         cancel: boolean;
@@ -342,6 +355,13 @@ function ExpenseRow({
                 </p>
             )}
 
+            {expense.financeRequest && (
+                <FinanceLine
+                    request={expense.financeRequest}
+                    currency={project.currency}
+                />
+            )}
+
             {expense.documents.length > 0 && (
                 <ul className="flex flex-wrap gap-2">
                     {expense.documents.map((document) => (
@@ -445,6 +465,50 @@ function ExpenseRow({
                         </Form>
                     </Action>
                 )}
+                {expense.can.resubmit && expense.financeRequest && (
+                    <Action label="Send to Finance again">
+                        <Form
+                            {...resubmit.form(ids)}
+                            options={{ preserveScroll: true }}
+                            className="flex flex-wrap items-end gap-2"
+                        >
+                            {({ errors, processing }) => (
+                                <>
+                                    <Field
+                                        id={`resubmit-amount-${expense.id}`}
+                                        label={`Amount (${project.currency})`}
+                                        error={errors.amount ?? errors.expense}
+                                        className="w-36"
+                                    >
+                                        <Input
+                                            id={`resubmit-amount-${expense.id}`}
+                                            name="amount"
+                                            inputMode="decimal"
+                                            required
+                                        />
+                                    </Field>
+                                    <Field
+                                        id={`resubmit-note-${expense.id}`}
+                                        label="What changed (Finance sees this)"
+                                        error={errors.note}
+                                        className="min-w-40 flex-1"
+                                    >
+                                        <Input
+                                            id={`resubmit-note-${expense.id}`}
+                                            name="note"
+                                            maxLength={255}
+                                            required
+                                        />
+                                    </Field>
+                                    <Button type="submit" disabled={processing}>
+                                        Send revision{' '}
+                                        {expense.financeRequest!.revision + 1}
+                                    </Button>
+                                </>
+                            )}
+                        </Form>
+                    </Action>
+                )}
                 {expense.can.pay && (
                     <Action label="Record payment">
                         <PayForm
@@ -541,6 +605,46 @@ function ExpenseRow({
                 )}
             </div>
         </li>
+    );
+}
+
+/**
+ * Where spending handed to Finance stands there. Approval in Finance is not
+ * payment: what Finance approved, paid and still owes are shown apart.
+ */
+function FinanceLine({
+    request,
+    currency,
+}: {
+    request: NonNullable<Expense['financeRequest']>;
+    currency: string;
+}) {
+    const refused =
+        request.status === 'rejected' || request.status === 'reversed';
+
+    return (
+        <p
+            className={
+                refused
+                    ? 'text-xs text-destructive'
+                    : 'text-xs text-muted-foreground'
+            }
+        >
+            {[
+                `Finance: ${request.statusLabel}`,
+                request.revision > 1 && `revision ${request.revision}`,
+                request.reference,
+                request.approvedMinor !== null &&
+                    `approved ${formatMoney(request.approvedMinor, currency)}`,
+                request.netPaidMinor > 0 &&
+                    `paid ${formatMoney(request.netPaidMinor, currency)}`,
+                request.outstandingMinor > 0 &&
+                    `${formatMoney(request.outstandingMinor, currency)} still to pay`,
+                request.reason && `“${request.reason}”`,
+            ]
+                .filter(Boolean)
+                .join(' · ')}
+        </p>
     );
 }
 

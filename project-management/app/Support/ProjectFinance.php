@@ -3,8 +3,10 @@
 namespace App\Support;
 
 use App\Enums\BudgetVersionStatus;
+use App\Enums\ExpenseStatus;
 use App\Models\BudgetVersion;
 use App\Models\Expense;
+use App\Models\FinanceRequest;
 use App\Models\Project;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +24,10 @@ use Illuminate\Support\Facades\DB;
  *                        ("draft"), else the figure typed on the project
  *                        ("estimate"); null with basis "none". Only
  *                        "approved" may be shown outside the organization.
- *   committedMinor       expenses approved and not yet paid.
+ *   committedMinor       expenses approved and not yet paid. Integrated
+ *                        with Finance: the latest request's open
+ *                        commitment instead (awaiting Finance +
+ *                        outstanding authorized, FinanceRequest).
  *   paidMinor            expenses recorded as paid, plus what Finance reports
  *                        paid for requests handed to it (integrated mode, net
  *                        of reversals). Money that left.
@@ -130,30 +135,39 @@ final class ProjectFinance
     }
 
     /**
-     * Payments Finance reported for requests Projects handed it (integrated
-     * mode), net of reversals, per project; and how much of that was still
-     * counted as committed (the expense stays approved in Projects).
+     * Requests Projects handed to Finance (integrated mode), per project:
+     * what Finance reports paid, net of reversals, over every revision; and
+     * how much of the spending still approved in Projects is no longer
+     * committed, because the latest revision's open commitment (awaiting
+     * Finance + outstanding authorized, FinanceRequest) is smaller than the
+     * expense. Refused, cancelled, reversed or paid in full: nothing of the
+     * expense stays committed until it is sent again.
      *
      * @param  array<mixed>  $ids
      * @return array<string, array{paid: int, fromCommitted: int}>
      */
     private static function financeConfirmed(array $ids): array
     {
-        $rows = DB::table('finance_requests')->join('expenses', 'expenses.id', '=', 'finance_requests.expense_id')
-            ->whereIn('finance_requests.project_id', $ids)
-            ->whereColumn('finance_requests.organization_id', 'expenses.organization_id')
-            ->whereRaw('finance_requests.paid_minor > finance_requests.reversed_minor')
-            ->get(['finance_requests.project_id', 'finance_requests.paid_minor', 'finance_requests.reversed_minor', 'expenses.amount_minor', 'expenses.status']);
+        // Across organizations: a partner's or donor's view reads projects it does not own.
+        $requests = FinanceRequest::acrossOrganizations()->with(['expense' => fn ($query) => $query->withoutGlobalScopes()->select(['id', 'organization_id', 'amount_minor', 'status'])])
+            ->whereIn('project_id', $ids)
+            ->orderBy('revision')
+            ->get();
 
         $out = [];
-        foreach ($rows as $row) {
-            $net = (int) $row->paid_minor - (int) $row->reversed_minor;
-            $entry = $out[(string) $row->project_id] ?? ['paid' => 0, 'fromCommitted' => 0];
-            $entry['paid'] += $net;
-            if ($row->status === 'approved') {
-                $entry['fromCommitted'] += min($net, (int) $row->amount_minor);
+        foreach ($requests->groupBy('expense_id') as $revisions) {
+            /** @var FinanceRequest $latest */
+            $latest = $revisions->last();
+            $expense = $latest->expense;
+            if ($expense->organization_id !== $latest->organization_id) {
+                continue;
             }
-            $out[(string) $row->project_id] = $entry;
+            $entry = $out[$latest->project_id] ?? ['paid' => 0, 'fromCommitted' => 0];
+            $entry['paid'] += (int) $revisions->sum(fn (FinanceRequest $r) => $r->netPaidMinor());
+            if ($expense->status === ExpenseStatus::Approved) {
+                $entry['fromCommitted'] += max(0, $expense->amount_minor - $latest->openCommitmentMinor());
+            }
+            $out[$latest->project_id] = $entry;
         }
 
         return $out;

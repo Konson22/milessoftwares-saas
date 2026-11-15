@@ -1,0 +1,28 @@
+{
+    "application": {
+        "code": "projects",
+        "name": "Projects",
+        "category": "products",
+        "kind": "standalone",
+        "status": "available"
+    },
+    "version": "1.0.0",
+    "permissions": [
+        {
+            "key": "projects.view",
+            "name": "View projects",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        }
+    ],
+    "roles": [
+        {
+            "key": "viewer",
+            "name": "Viewer",
+            "sensitivity": 1,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": ["projects.view"]
+        }
+    ]
+}

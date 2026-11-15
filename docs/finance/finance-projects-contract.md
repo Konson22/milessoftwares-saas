@@ -1,10 +1,10 @@
-# Finance ↔ Projects contract (Phase 3B)
+# Finance ↔ Projects contract (Phases 3B and 3C)
 
-Status: **infrastructure built in Projects, switched off.** No organization is
-integrated. Finance does not yet handle `finance.spending.*`, and the platform
-cannot yet issue Finance-to-Projects event tokens (see §9, Blockers). This
-document is the contract both sides build to. ADR-0017 §6 is the decision it
-implements.
+Status: **built on both sides and verified locally end to end (§18), switched
+off.** No organization is integrated and nothing is deployed. Central issues
+Finance → Projects tokens (§9); Finance handles `finance.spending.*` and reports
+every outcome (§12). This document is the contract both sides build to; ADR-0017
+§6 is the decision it implements.
 
 ## 1. Ownership (unchanged by this phase)
 
@@ -88,7 +88,7 @@ These need decisions first (§11):
   procurement. Purchase orders already become approved expenses, so for now
   they travel as `finance.spending.submitted`. A separate commitment event
   belongs to Procurement work, which is out of scope.
-* `finance.advance.requested`: staff advances stay in Projects in this phase.
+* `finance.advance.requested`: staff advances are not integrated; organizations using them stay out of integrated mode (§15).
 * Funding-related requests (grant drawdowns): grant receipts already use
   `finance.grant.received`.
 
@@ -154,6 +154,13 @@ PostgreSQL also has CHECK constraints: `paid_minor ≤ amount_minor` and
 (`ProjectFinance`) read the request: what Finance reports paid, net of
 reversals, moves from committed to paid. The provenance then says
 `source: projects_and_finance`.
+
+**Cancellation crossing Finance (Phase 3C).** When Finance reports
+accepted, approved or failed after Projects asked to cancel, its facts
+(reference, approved amount) are kept, but the request stays
+`cancellation_requested` until Finance answers the cancellation. Finance
+answers with cancelled, rejected or, if it paid anyway, a payment. Nothing
+is committed while a cancellation is asked for.
 
 ## 6. Ordering, idempotency, retries
 
@@ -232,54 +239,253 @@ Projects. The outbox skips organizations without Finance. Figures carry
 "as recorded, not verified by Finance". Projects keeps no second ledger: it
 records the payment fact, not journals.
 
-## 9. Blockers (documented, not worked around)
+## 9. Blockers (resolved in Phase 3C)
 
-1. **The platform cannot mint Finance → Projects tokens.** In central,
-   `EventTokenIssuer::issue` only issues for a `SharedModule` audience;
-   Projects is a `Product`. A central change is needed: allow
-   `aud = projects` when the source is Finance and the organization is
-   entitled to both. Not made here, because it changes the platform's trust
-   model and needs approval.
-2. **Finance has no handler for `finance.spending.*`.** Its EventController
-   answers 422 `unsupported_event`. Finance would need:
-   * a payment request created from the event, idempotent on
-     `idempotency_key`;
-   * its own outbox to Projects emitting the §4 outcomes with a per-request
-     sequence.
+1. **Finance → Projects tokens.** Central's `EventTokenIssuer` keeps its
+   rule (an audience must be a shared module), with one listed exception,
+   `MODULE_TO_PRODUCT = ['finance' => ['projects']]`:
+   * only Finance may send, and only to Projects;
+   * the organization must be entitled to both, and active;
+   * the token is the usual one (RS256, 300 s; `aud` projects, `sub`
+     finance, `org`).
 
-   Not built, because Finance and Payroll are out of scope here.
-3. Until both exist, `PROJECTS_FINANCE_INTEGRATION` stays off, so the
-   integrated check blocks every switch to integrated.
+   Any other product-to-product pair is refused (`unknown_module`), and no
+   general service token exists. Tests: `ModuleToProductTokenTest`.
+2. **Finance's handlers.** `finance.spending.submitted` and
+   `finance.spending.cancelled` are handled by `App\Finance\ProjectSpending`
+   (§12), which reports back through Finance's outbox to
+   `platform-client.modules.projects` (`PLATFORM_PROJECTS_EVENTS_URL`).
+3. `PROJECTS_FINANCE_INTEGRATION` stays **off** in every deployed
+   environment. No organization is integrated.
 
-## 10. Known gaps in integrated mode (decisions in §11)
+## 10. Known gaps in integrated mode
 
-* The Pay action is hidden (expense list, approvals page) and refused
-  server-side where Finance owns payment. Other pages that list commitments
-  (budget, grant) still show the expense as committed until Finance pays,
-  which is correct; they do not yet show Finance's request status.
-* Staff advances and their retirements still record payments in Projects.
-  Readiness requires none open at switch-over, but new ones could be
-  requested afterwards.
-* A request rejected by Finance leaves the expense approved (a commitment).
-  Reconciliation flags it as `rejected_open`. There is no resubmit (revision
-  2) action yet.
+* Payment failures: Finance has no failed-payment state, so
+  `projects.finance_payment.failed` is never sent (§12). Projects handles it
+  if it ever comes.
+* Corrections: Finance corrects by reversal, so
+  `projects.finance_transaction.corrected` is never sent. Projects handles
+  it as references only.
+* Several payments under one approval: a Finance payment request is paid
+  in one disbursement. Projects accepts several payments, but Finance sends
+  one.
+* Budget and grant pages show the expense as committed. Only the expenses
+  page shows Finance's status for now.
 
-## 11. Cutover sequence (not started)
+## 11. Cutover sequence
 
-1. Central: allow Finance → Projects tokens (blocker 1). Deploy.
-2. Finance: the `finance.spending.*` handlers, its outbox to Projects with
-   sequence numbers, and `platform-client.modules.projects` set to the
-   Projects events URL. Deploy.
-3. Projects: decide advances and the resubmit action; show Finance's
-   request status on the expense. Deploy with `PROJECTS_FINANCE_INTEGRATION=false`.
+Steps 1–3 are built (not deployed); step 4 was rehearsed locally (§18).
+
+1. Central: Finance → Projects tokens. Deploy.
+2. Finance: the handlers, the Project requests page, and
+   `PLATFORM_PROJECTS_EVENTS_URL` set. Deploy.
+3. Projects:
+   * the revision index migration (`2026_11_17_000200`);
+   * resubmission;
+   * advances and petty cash refused where Finance pays;
+   * the order gate.
+
+   Deploy with `PROJECTS_FINANCE_INTEGRATION=false`.
 4. Staging, with a test organization:
-   * enable the flag;
-   * walk legacy → reconciliation_required → ready → integrated;
-   * run every outcome end to end, including duplicates, out-of-order
-     delivery and a reversal;
+   * run `ops/e2e/finance-projects/run.php`'s scenarios against the deployed
+     apps;
+   * walk the modes;
    * run `projects:finance-reconcile` until it is clean.
-5. Production: enable the flag, then switch **one** pilot organization after
-   its checks pass. Watch finance-sync and finance-reconcile daily.
-   Rollback means switching it to suspended, never back to legacy while
-   requests are open.
-6. Only then plan moving payment ownership for the remaining organizations.
+5. Production: enable the flag, then switch **one** pilot organization,
+   without staff advances (§15), after its checks pass. Watch
+   finance-sync and finance-reconcile daily. Rollback means suspended,
+   never legacy, while requests are open.
+6. Only then plan payment ownership for the other organizations. Historical
+   payments are not migrated.
+
+## 12. How Finance handles a request (Phase 3C)
+
+`App\Finance\ProjectSpending`, table `project_spending_requests` (one row
+per request revision). Finance's own approval engine is reused: no second
+one exists.
+
+| Projects sends / Finance does | Finance row | Finance → Projects |
+|---|---|---|
+| `finance.spending.submitted` arrives (validated, §12.1) | received | nothing: arrival is not acceptance |
+| A Finance person takes it in on **Project requests**: a payment request (expense, from a bank account in the request's currency, amount ≤ requested, payee = supplier, project dimension, reference `projects:{request_id}`) | prepared | `finance_request.accepted` (finance_reference = the PR number) |
+| The payment request is approved (review/approval rules, limit, separation of duties) | approved | `finance_request.approved` (approved_minor = the PR amount) |
+| Raised below the approval limit (approved as raised) | approved | accepted, then approved |
+| The payment request is disbursed (journal posted) | paid | `finance_payment.completed` (payment_id = PR id, paid_on = journal date, journal_reference) |
+| The payment journal is reversed | reversed | `finance_payment.reversed` (the full amount, memo as reason) |
+| Refused on Project requests | rejected | `finance_request.rejected` (reason) |
+| The payment request is rejected or withdrawn | rejected | `finance_request.rejected` (the PR's note, or "Withdrawn in Finance.") |
+| `finance.spending.cancelled` while received | cancelled | `finance_request.cancelled` |
+| `finance.spending.cancelled` once a PR exists | cancellation flagged ("Projects asked to cancel") | nothing until Finance withdraws or rejects the PR: then `cancelled` |
+
+**Projects' approval is operational only.** Nothing is approved or paid
+because Projects approved it: every request waits for a Finance person, and
+every payment for Finance's approval (`payment_approval_threshold_minor`).
+
+### 12.1 What Finance refuses (422, never retried)
+
+* A sender other than Projects.
+* A payload organization that is not the envelope's.
+* Missing or ill-typed references (strict integers for `amount_minor` and
+  `version`), a currency that is not ISO 4217, and `contract_version` ≠ 1.
+* An `idempotency_key` that is not `finance-request:{request_id}:r{version}`.
+* `project.id` ≠ `project_id`.
+* A `request_id` used before with other content.
+* A revision not newer than one Finance has for the correlation, or a new
+  revision while an earlier one is still open or paid.
+
+A cancellation for a request Finance has not received yet is answered 503
+(retried), so it waits for the submission.
+
+### 12.2 Outcome fields
+
+Every outcome carries:
+* organization_id, request_id and correlation_id;
+* sequence (per request, from 1, no gaps; incremented in the same
+  transaction as the change);
+* Finance's own status and finance_reference;
+* amount and currency where money is involved.
+
+Each outcome is written to the outbox in the transaction that changed
+Finance's record. Delivery never creates an outcome.
+
+## 13. Amounts (Projects, `FinanceRequest`)
+
+| Value | Rule |
+|---|---|
+| requested | `amount_minor` |
+| approved | `approved_minor`, null until Finance approves; may be less |
+| paid / reversed | sums of Finance's payment and reversal events |
+| net paid | paid − reversed |
+| outstanding authorized | approved − net paid, only while approved, partially_paid or failed; 0 otherwise |
+| awaiting Finance | requested, while submitted or accepted; 0 otherwise |
+| open commitment | awaiting Finance + outstanding authorized |
+
+`ProjectFinance` counts the latest revision's open commitment as
+committed, in place of the expense amount. It counts net paid over every
+revision as paid. So:
+* a refused, cancelled, reversed or cancellation-asked request commits
+  nothing;
+* the part Finance did not approve is not committed;
+* an approval is never counted as paid.
+
+Tested in `FinanceIntegrationTest` and in E2E scenarios 04, 05, 11 and 13.
+
+## 14. Rejection and resubmission
+
+* Finance's refusal (and its reason) stays on the rejected revision. The
+  expenses page shows it.
+* Someone with `finance.expenses.approve`, who is not the requester, may
+  send the spending again. This is allowed only when the latest revision
+  was refused or reversed, and the expense is still approved. They give an
+  amount (≤ approved minus what is already net paid) and a note.
+* The new revision has a new request id, `version` n+1 and the same
+  `correlation_id` (unique per revision: migration `2026_11_17_000200`).
+  It carries `supersedes_request_id` and `revision_note`.
+* Finance refuses an older or concurrent revision (§12.1), so an obsolete
+  revision cannot be paid.
+* Reversible: a revision is cancelled like any request.
+
+## 15. Staff advances (assessment)
+
+Advances are not integrated: Finance has no advance-request handler. A
+second disbursement path is not allowed, so:
+* where Finance owns payment, `StaffAdvances::request`, `approve` and
+  `disburse` are refused, and so are new petty cash boxes and payments;
+* Readiness check `advances_not_integrated` blocks ready, integrated and
+  resuming for an organization with an advance policy set.
+
+Advances already paid out are still accounted for as before (retirement,
+returns, write-offs). History is kept and not migrated.
+
+The integration this needs later: Projects requests → Finance approves and
+issues → Finance reports → Projects shows the advance.
+
+## 16. Procurement (decision)
+
+Inspected:
+* purchase requests and orders (`App\Actions\Procurement`);
+* the order's expense (`Spending::request` when the order is raised,
+  approved in Projects);
+* `requirePayable`: received in full and invoiced.
+
+Decision:
+* **No dedicated commitment events.** An approved order is a Projects
+  commitment, as any approved spending.
+* **No request before the order is payable.** In integrated mode the
+  order's spending goes to Finance as `finance.spending.submitted` only once
+  everything is received and the invoice is recorded
+  (`FinanceRequests::submitIfPayable`, called on receipt and on invoice).
+  Without this, Finance could pay an order before the goods arrived.
+* Approving an order is never payment. `finance.commitment.*` stays
+  specified, not emitted (§3), until Procurement work needs Finance to see
+  commitments early.
+
+## 17. Reconciliation and manual recovery
+
+`projects:finance-reconcile [--organization=] [--json]` is read-only. Its
+findings are listed at the top of `Reconciliation`. Phase 3C added:
+* `decision_delayed`: taken in, not decided in time;
+* `unresolved_reversal`: reversed in full, still approved, not sent again;
+* earlier revisions are ignored once a newer one exists.
+
+`projects:finance-sync` covers Projects' legacy payment events.
+Permanently refused events (401, 403, 409, 422, or given up after 8
+attempts) are **never retried by themselves**.
+
+Manual recovery, one event at a time:
+
+1. Find it. Projects side: `projects:finance-reconcile`
+   (`missing_in_finance`, rejected outcomes). Finance side:
+   `platform_outbox` rows with audience `projects` and status `failed`,
+   with `last_error`.
+2. Find the cause in the receiver's log or in `finance_inbox_rejections`
+   (reason, detail). Fix the cause, not the event. Examples:
+   * a key not published;
+   * an organization not entitled or not integrated;
+   * a bug, fixed in a release.
+3. If the event itself is wrong (wrong amount, wrong organization), do
+   **not** resend it. Correct it at the source: Finance reverses or
+   withdraws; Projects cancels or sends a new revision. The source then
+   writes a new event.
+4. If the event is right and the cause is fixed:
+   `php artisan platform:outbox-requeue <id> --reason="…" --by=<who>`. The
+   event is resent unchanged (same transaction id and payload), so the
+   receiver applies it at most once. The command is logged and refuses
+   anything that is not `failed`.
+5. A missing earlier outcome (503) needs nothing: the outbox retries it.
+   Out-of-order outcomes apply when the gap fills (E2E 07–08).
+6. Run reconcile again until it is clean.
+
+## 18. End-to-end verification (local, Phase 3C)
+
+`php ops/e2e/finance-projects/run.php` runs the real apps:
+* Central on :8911, Finance on :8912 and Projects on :8913, as three PHP
+  servers;
+* each on its own PostgreSQL database (`e2e_central`, `e2e_finance`,
+  `e2e_projects`, recreated every run);
+* organizations provisioned by Central calling each product;
+* event tokens signed by Central;
+* every event over HTTP.
+
+People's steps run as the apps' own actions in CLI drivers: the expense
+in Projects; take-in, approval, disbursement and reversal in Finance.
+HTTP permission middleware is therefore not exercised there; feature tests
+cover it. It never touches the development databases.
+
+Scenarios:
+* submission;
+* duplicate delivery, both ways;
+* acceptance, approval and payment;
+* out-of-order delivery and missing-sequence recovery;
+* currency and amount mismatch;
+* partial approval;
+* reversal and revision 2;
+* cancellation while processing;
+* cross-tenant token;
+* forged and expired tokens;
+* revoked entitlement;
+* delivery failure and recovery.
+
+Payment failure (scenario 12) is not produced by Finance (§10). Payloads
+are checked against `contracts/events` (required keys, no extra keys).
+Staging and production were not exercised.

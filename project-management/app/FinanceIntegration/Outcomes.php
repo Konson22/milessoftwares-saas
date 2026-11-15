@@ -57,6 +57,9 @@ final class Outcomes
         }
 
         $p = $event->payload;
+        if (array_key_exists('organization_id', $p) && $p['organization_id'] !== $event->organizationId) {
+            throw OutcomeRefused::invalid('organization_mismatch', 'The payload names another organization than the envelope.');
+        }
         $requestId = self::string($p, 'request_id');
         $request = $requestId !== null && preg_match('/^[0-9a-f-]{36}$/i', $requestId) === 1
             ? FinanceRequest::query()->lockForUpdate()->find($requestId)
@@ -140,8 +143,16 @@ final class Outcomes
                 break;
         }
 
+        // A cancellation Projects asked for crossed with Finance taking the
+        // request in or approving it: Finance's facts are kept, the request
+        // stays waiting for Finance's answer to the cancellation.
+        if ($from === RequestStatus::CancellationRequested && in_array($to, [RequestStatus::Accepted, RequestStatus::Approved, RequestStatus::Failed], true)) {
+            $facts['while_cancellation_requested'] = $to->value;
+            $to = RequestStatus::CancellationRequested;
+        }
+
         $correction = $event->eventType === 'projects.finance_transaction.corrected';
-        if (! $correction && ! $from->allows($to)) {
+        if (! $correction && ! isset($facts['while_cancellation_requested']) && ! $from->allows($to)) {
             throw OutcomeRefused::conflict('invalid_transition', "A request {$from->value} cannot become {$to->value}.");
         }
 

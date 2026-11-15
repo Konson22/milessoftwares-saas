@@ -7,6 +7,7 @@ use App\Enums\CostCategory;
 use App\Enums\ExpenseStatus;
 use App\Enums\GrantStatus;
 use App\Enums\PurchaseRequestStatus;
+use App\FinanceIntegration\FinanceRequests;
 use App\Models\Expense;
 use App\Models\GrantAllocation;
 use App\Models\Project;
@@ -316,6 +317,8 @@ final class Procurement
                 $receipt->lines()->create(['purchase_request_line_id' => $lineId, 'quantity' => $quantity]);
             }
             Audit::record('purchase.goods_received', $order, ['number' => $order->number, 'lines' => $wanted, 'on' => $on->toDateString()], actor: $by);
+            // Integrated with Finance: payable now (received and invoiced)? Then Finance is asked to pay.
+            app(FinanceRequests::class)->submitIfPayable($order->refresh(), $by);
         });
     }
 
@@ -328,8 +331,11 @@ final class Procurement
             throw ValidationException::withMessages(['invoice' => 'Only an order approved and not yet paid takes an invoice.']);
         }
 
-        $order->forceFill(['invoice_reference' => $reference, 'invoice_on' => $on])->save();
-        Audit::record('purchase.invoice_recorded', $order, ['number' => $order->number, 'reference' => $reference], actor: $by);
+        DB::transaction(function () use ($order, $reference, $on, $by) {
+            $order->forceFill(['invoice_reference' => $reference, 'invoice_on' => $on])->save();
+            Audit::record('purchase.invoice_recorded', $order, ['number' => $order->number, 'reference' => $reference], actor: $by);
+            app(FinanceRequests::class)->submitIfPayable($order, $by);
+        });
     }
 
     /**

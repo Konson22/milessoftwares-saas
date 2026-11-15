@@ -20,12 +20,25 @@ use RuntimeException;
 /**
  * Mints organization-bound event tokens: "application S may send events
  * about organization O to shared module M". Issued only while O is active
- * and entitled to both S and M. Five minutes; signed with the platform key,
+ * and entitled to both S and M.
+ *
+ * One narrow exception lets a shared module report back to a product
+ * (MODULE_TO_PRODUCT): Finance may send Projects the outcomes of payment
+ * requests Projects handed it (ADR-0017 §6, docs/finance/finance-projects-contract.md).
+ * Only the listed module may address the listed product, never the other
+ * way round, never product to product. Five minutes; signed with the platform key,
  * so modules verify them against the platform JWKS (miles/shared-module-kit).
  */
 final class EventTokenIssuer
 {
     public const TTL_SECONDS = 300;
+
+    /**
+     * Shared module code => the product codes it may send events to.
+     *
+     * @var array<string, list<string>>
+     */
+    public const MODULE_TO_PRODUCT = ['finance' => ['projects']];
 
     /**
      * @return array{token: string, token_type: string, expires_in: int}
@@ -36,7 +49,7 @@ final class EventTokenIssuer
     {
         $module = Application::query()->where('code', $moduleCode)->first();
 
-        if ($module === null || $module->kind !== ApplicationKind::SharedModule) {
+        if ($module === null || ($module->kind !== ApplicationKind::SharedModule && ! self::reportsBack($source, $module))) {
             throw new EventTokenRefused('unknown_module', 'No shared module with that code.');
         }
 
@@ -73,6 +86,16 @@ final class EventTokenIssuer
             'token_type' => 'Bearer',
             'expires_in' => self::TTL_SECONDS,
         ];
+    }
+
+    /**
+     * The source is a shared module listed as allowed to report to this product.
+     */
+    private static function reportsBack(Application $source, Application $audience): bool
+    {
+        return $source->kind === ApplicationKind::SharedModule
+            && $source->id !== $audience->id
+            && in_array($audience->code, self::MODULE_TO_PRODUCT[$source->code] ?? [], true);
     }
 
     private function entitled(Organization $organization, Application $application): bool

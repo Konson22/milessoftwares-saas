@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Miles\PlatformClient\Events\Outbox;
 use Miles\PlatformClient\Testing\InteractsWithPlatform;
@@ -139,4 +140,31 @@ it('never delivers the same event twice at once', function () {
     $this->outbox->deliver($id);
 
     expect($this->platform()->moduleEvents)->toBe([]);
+});
+
+it('sends a refused event again only when a person asks, unchanged', function () {
+    $this->platform()->moduleAnswers['finance'] = [409, 201];
+    $id = recordSale();
+    expect(outboxRow($id)->status)->toBe('failed');
+
+    // Never by itself: delivery runs skip it.
+    $this->travel(1)->days();
+    Artisan::call('platform:outbox');
+    expect(outboxRow($id)->status)->toBe('failed');
+
+    expect(Artisan::call('platform:outbox-requeue', ['id' => $id]))->toBe(1)
+        ->and(outboxRow($id)->status)->toBe('failed');
+
+    Log::spy();
+    expect(Artisan::call('platform:outbox-requeue', ['id' => $id, '--reason' => 'Organization switched on in Finance', '--by' => 'ops']))->toBe(0);
+    Log::shouldHaveReceived('notice')->withArgs(fn ($message, $context) => $message === 'platform.outbox.requeued' && $context['by'] === 'ops' && $context['reason'] === 'Organization switched on in Finance')->once();
+    $row = outboxRow($id);
+    $events = $this->platform()->moduleEvents['finance'];
+    expect($row->status)->toBe('delivered')
+        ->and($events)->toHaveCount(2)
+        ->and($events[1]['source_transaction_id'])->toBe($events[0]['source_transaction_id'])
+        ->and($events[1]['payload'])->toBe($events[0]['payload']);
+
+    // Delivered events are not sent again.
+    expect(Artisan::call('platform:outbox-requeue', ['id' => $id, '--reason' => 'again']))->toBe(1);
 });

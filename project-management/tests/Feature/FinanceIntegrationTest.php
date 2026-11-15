@@ -1,11 +1,13 @@
 <?php
 
 use App\Actions\Spending;
+use App\Actions\StaffAdvances;
 use App\Enums\BudgetVersionStatus;
 use App\Enums\CostCategory;
 use App\Enums\ExpenseStatus;
 use App\FinanceIntegration\FinanceMode;
 use App\FinanceIntegration\FinanceModes;
+use App\FinanceIntegration\FinanceRequests;
 use App\FinanceIntegration\ModeChangeRefused;
 use App\FinanceIntegration\Readiness;
 use App\FinanceIntegration\Reconciliation;
@@ -323,7 +325,8 @@ it('records failed payments and reversals without rewriting anything else', func
         ->and($payment->status)->toBe(FinancePayment::REVERSED)
         ->and($payment->journal_reference)->toBe('JV-1-corrected')
         ->and($expense->refresh()->status)->toBe(ExpenseStatus::Approved)
-        ->and(test()->asTenant('acme', fn () => ProjectFinance::for($project)))->toMatchArray(['paidMinor' => 0, 'committedMinor' => 120_000]);
+        // Reversed in full: nothing paid, and nothing authorized any more (it is sent again as a revision).
+        ->and(test()->asTenant('acme', fn () => ProjectFinance::for($project)))->toMatchArray(['paidMinor' => 0, 'committedMinor' => 0]);
 
     // History is kept as it happened.
     $first = test()->asTenant('acme', fn () => FinanceRequestTransition::query()->firstOrFail());
@@ -499,4 +502,171 @@ it('reconciles requests with Finance, read-only', function () {
         ->and([DB::table('finance_requests')->count(), DB::table('finance_request_transitions')->count(), DB::table('finance_inbox_rejections')->count(), DB::table('platform_outbox')->count()])->toBe($before);
 
     $this->artisan('projects:finance-reconcile', ['--organization' => 'acme'])->expectsOutputToContain('rejected_open')->assertFailed();
+});
+
+/*
+| Phase 3C: resubmission under one correlation id, the amounts of a request
+| kept apart, cancellation crossing Finance's decisions, and staff advances
+| kept out of integrated mode.
+*/
+
+it('keeps the amounts of a request apart, and never counts unpaid requested money as authorized', function () {
+    fiMode('acme', FinanceMode::Integrated);
+    [$project] = fiApproved();
+    $request = fiRequest();
+    $figures = fn () => test()->asTenant('acme', fn () => ProjectFinance::for($project));
+    $amounts = fn () => [$request->refresh()->awaitingFinanceMinor(), $request->approved_minor, $request->outstandingAuthorizedMinor(), $request->netPaidMinor(), $request->openCommitmentMinor()];
+
+    // Sent and taken in: all of it waits for Finance, none is authorized yet.
+    expect($amounts())->toBe([120_000, null, 0, 0, 120_000])->and($figures()['committedMinor'])->toBe(120_000);
+    fiOutcome($request, 'finance_request.accepted', 1, ['finance_reference' => 'PR-1'])->assertCreated();
+    expect($amounts())->toBe([120_000, null, 0, 0, 120_000]);
+
+    // Finance approves less than asked: only that is authorized; approval is not payment.
+    fiOutcome($request, 'finance_request.approved', 2, ['approved_minor' => 80_000, 'currency' => 'USD'])->assertCreated();
+    expect($amounts())->toBe([0, 80_000, 80_000, 0, 80_000])
+        ->and($figures()['committedMinor'])->toBe(80_000)
+        ->and($figures()['paidMinor'])->toBe(0);
+
+    // Paid in two parts; the 40,000 Finance did not approve is not committed.
+    fiOutcome($request, 'finance_payment.completed', 3, ['payment_id' => 'P-1', 'amount_minor' => 30_000, 'currency' => 'USD', 'paid_on' => '2026-11-17'])->assertCreated();
+    expect($amounts())->toBe([0, 80_000, 50_000, 30_000, 50_000]);
+    fiOutcome($request, 'finance_payment.completed', 4, ['payment_id' => 'P-2', 'amount_minor' => 50_000, 'currency' => 'USD', 'paid_on' => '2026-11-18'])->assertCreated();
+    expect($request->refresh()->status)->toBe(RequestStatus::Paid)
+        ->and($amounts())->toBe([0, 80_000, 0, 80_000, 0])
+        ->and($figures()['committedMinor'])->toBe(0)
+        ->and($figures()['paidMinor'])->toBe(80_000);
+
+    // Part of a payment taken back: paid goes down, the approval still stands for the rest.
+    fiOutcome($request, 'finance_payment.reversed', 5, ['payment_id' => 'P-2', 'amount_minor' => 50_000, 'currency' => 'USD', 'reason' => 'Bounced'])->assertCreated();
+    expect($request->refresh()->status)->toBe(RequestStatus::PartiallyPaid)
+        ->and($request->reversed_minor)->toBe(50_000)
+        ->and($amounts())->toBe([0, 80_000, 50_000, 30_000, 50_000])
+        ->and($figures()['paidMinor'])->toBe(30_000);
+
+    // Refused: nothing of it stays committed.
+    [, $other] = fiApproved('acme', 'SEED');
+    $refused = fiRequest('acme', $other);
+    fiOutcome($refused, 'finance_request.rejected', 1, ['reason' => 'No supporting quote'])->assertCreated();
+    expect($refused->refresh()->openCommitmentMinor())->toBe(0);
+});
+
+it('sends refused spending again as a new revision under the same correlation id', function () {
+    fiMode('acme', FinanceMode::Integrated);
+    [$project, $expense, $approver] = fiApproved();
+    $first = fiRequest();
+    $permissions = ['projects.view', 'projects.finance.view', 'finance.expenses.approve'];
+    $resubmit = function (string $amount, User $by) use ($permissions, $project, $expense) {
+        $this->actingAsMember('acme', $permissions, user: $by);
+
+        return $this->post($this->workspaceUrl('acme', "/projects/{$project->id}/expenses/{$expense->id}/resubmit"), ['amount' => $amount, 'note' => 'Quote attached']);
+    };
+
+    // Still with Finance: not sent again.
+    $resubmit('1200.00', $approver)->assertSessionHasErrors('expense');
+
+    fiOutcome($first, 'finance_request.rejected', 1, ['reason' => 'No supporting quote'])->assertCreated();
+    // The page explains why, and offers to send it again.
+    $this->actingAsMember('acme', $permissions, user: $approver);
+    $this->get($this->workspaceUrl('acme', "/projects/{$project->id}/expenses"))
+        ->assertInertia(fn ($page) => $page->where('expenses.0.financeRequest.status', 'rejected')
+            ->where('expenses.0.financeRequest.reason', 'No supporting quote')
+            ->where('expenses.0.can.resubmit', true));
+
+    $resubmit('1300.00', $approver)->assertSessionHasErrors('amount');
+    $resubmit('1100.00', $approver)->assertSessionHasNoErrors();
+
+    $requests = test()->asTenant('acme', fn () => FinanceRequest::query()->orderBy('revision')->get());
+    $events = $this->financeEvents('acme', 'finance.spending.submitted');
+    $reason = test()->asTenant('acme', fn () => FinanceRequestTransition::query()->where('finance_request_id', $first->id)->where('to_status', 'rejected')->firstOrFail()->facts['reason'] ?? null);
+    expect($requests)->toHaveCount(2)
+        ->and($requests[1]->revision)->toBe(2)
+        ->and($requests[1]->correlation_id)->toBe($first->correlation_id)
+        ->and($requests[1]->amount_minor)->toBe(110_000)
+        ->and($requests[1]->idempotency_key)->toBe("finance-request:{$requests[1]->id}:r2")
+        // The refused revision and its reason stay as they were.
+        ->and($requests[0]->status)->toBe(RequestStatus::Rejected)
+        ->and($reason)->toBe('No supporting quote')
+        ->and($events)->toHaveCount(2)
+        ->and($events[1]['payload'])->toMatchArray(['request_id' => $requests[1]->id, 'correlation_id' => $first->correlation_id, 'version' => 2, 'amount_minor' => 110_000, 'supersedes_request_id' => $first->id, 'revision_note' => 'Quote attached']);
+
+    // One revision open at a time.
+    $resubmit('1100.00', $approver)->assertSessionHasErrors('expense');
+    // The requester does not send their own spending again.
+    fiOutcome($requests[1], 'finance_request.rejected', 1, ['reason' => 'Still no quote'])->assertCreated();
+    $requester = test()->asTenant('acme', fn () => User::query()->findOrFail($expense->recorded_by));
+    $resubmit('1100.00', $requester)->assertForbidden();
+    expect(test()->asTenant('acme', fn () => FinanceRequest::query()->count()))->toBe(2);
+});
+
+it('keeps a cancellation asked for when Finance takes the request in or approves it meanwhile', function () {
+    fiMode('acme', FinanceMode::Integrated);
+    [, $expense, $approver] = fiApproved();
+    $request = fiRequest();
+
+    test()->asTenant('acme', fn () => Spending::cancel($expense, 'Not needed', $approver));
+    fiOutcome($request, 'finance_request.accepted', 1, ['finance_reference' => 'PR-7'])->assertCreated();
+    fiOutcome($request, 'finance_request.approved', 2, ['approved_minor' => 120_000, 'currency' => 'USD'])->assertCreated();
+
+    expect($request->refresh()->status)->toBe(RequestStatus::CancellationRequested)
+        ->and($request->finance_reference)->toBe('PR-7')
+        ->and($request->approved_minor)->toBe(120_000)
+        ->and($request->openCommitmentMinor())->toBe(0);
+
+    fiOutcome($request, 'finance_request.cancelled', 3)->assertCreated();
+    expect($request->refresh()->status)->toBe(RequestStatus::Cancelled);
+});
+
+it('refuses an outcome naming another organization in its payload', function () {
+    fiMode('acme', FinanceMode::Integrated);
+    fiApproved();
+    $request = fiRequest();
+
+    fiOutcome($request, 'finance_request.accepted', 1, ['finance_reference' => 'PR-1', 'organization_id' => $this->organization('globex')->id])->assertStatus(422);
+    expect($request->refresh()->status)->toBe(RequestStatus::Submitted)->and(fiRejections('organization_mismatch'))->toBe(1);
+});
+
+it('keeps staff advances out of integrated mode', function () {
+    $acme = fn () => Organization::query()->findOrFail($this->organization('acme')->id);
+    $acme()->forceFill(['advance_max_minor' => 50_000, 'advance_retire_days' => 14])->save();
+
+    $checks = collect(app(Readiness::class)->check($acme(), FinanceMode::Ready))->keyBy('key');
+    expect($checks['advances_not_integrated'])->toMatchArray(['passed' => false, 'blocking' => true]);
+
+    fiMode('acme', FinanceMode::Integrated);
+    $holder = test()->asTenant('acme', fn () => User::factory()->create());
+    expect(fn () => test()->asTenant('acme', fn () => app(StaffAdvances::class)->request(10_000, 'Field trip', $holder)))
+        ->toThrow(ValidationException::class, 'advances are not handled in Finance');
+
+    $acme()->forceFill(['advance_max_minor' => null, 'advance_retire_days' => null])->save();
+    $checks = collect(app(Readiness::class)->check($acme(), FinanceMode::Integrated))->keyBy('key');
+    expect($checks['advances_not_integrated']['passed'])->toBeTrue();
+});
+
+it('reconciles revisions: a refused revision sent again is no finding, an unresolved reversal is', function () {
+    fiMode('acme', FinanceMode::Integrated);
+    [, $expense, $approver] = fiApproved();
+    $first = fiRequest();
+    fiOutcome($first, 'finance_request.rejected', 1, ['reason' => 'No quote'])->assertCreated();
+    $kinds = fn () => app(Reconciliation::class)->run($this->organization('acme')->id)['counts'];
+    expect($kinds())->toMatchArray(['rejected_open' => 1]);
+
+    $other = test()->asTenant('acme', fn () => User::factory()->create());
+    test()->asTenant('acme', fn () => app(FinanceRequests::class)->resubmit($expense->refresh(), 120_000, 'Quote attached', $other));
+    expect($kinds())->not->toHaveKey('rejected_open');
+
+    [, $paidExpense] = fiApproved('acme', 'SEED');
+    $paid = fiRequest('acme', $paidExpense);
+    fiOutcome($paid, 'finance_request.accepted', 1, ['finance_reference' => 'PR-9'])->assertCreated();
+    fiOutcome($paid, 'finance_request.approved', 2, ['approved_minor' => 120_000, 'currency' => 'USD'])->assertCreated();
+    fiOutcome($paid, 'finance_payment.completed', 3, ['payment_id' => 'P-9', 'amount_minor' => 120_000, 'currency' => 'USD', 'paid_on' => '2026-11-17'])->assertCreated();
+    fiOutcome($paid, 'finance_payment.reversed', 4, ['payment_id' => 'P-9', 'amount_minor' => 120_000, 'currency' => 'USD', 'reason' => 'Wrong payee'])->assertCreated();
+
+    // Taken in, never decided.
+    [, $stuck] = fiApproved('acme', 'EDU');
+    fiOutcome(fiRequest('acme', $stuck), 'finance_request.accepted', 1, ['finance_reference' => 'PR-10'])->assertCreated();
+    $this->travel((int) config('finance_integration.payment_delay_days') + 1)->days();
+
+    expect($kinds())->toMatchArray(['reversed' => 1, 'unresolved_reversal' => 1, 'decision_delayed' => 1])
+        ->and($approver)->not->toBeNull();
 });

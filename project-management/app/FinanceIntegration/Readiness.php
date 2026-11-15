@@ -57,6 +57,11 @@ final class Readiness
             $advances = StaffAdvance::query()->whereIn('status', StaffAdvance::OPEN)->count();
             $checks[] = self::item('open_advances', 'Staff advances requested, approved or not yet accounted for', $advances, $handover, 'Settle them here first: advances stay in Projects in this phase.');
 
+            // Phase 3C: Finance does not take advance requests yet, so an
+            // organization that issues advances keeps paying them here.
+            $advancesOn = $organization->advance_max_minor !== null ? 1 : 0;
+            $checks[] = self::item('advances_not_integrated', 'Staff advances are switched on (not handled in Finance yet)', $advancesOn, $handover || $resume, 'Finance has no advance requests yet: an organization that issues advances stays in legacy. Turn the advance policy off in Settings once none is open to go on.');
+
             $boxes = PettyCashFund::query()->where('status', PettyCashFund::ACTIVE)->count();
             $checks[] = self::item('petty_cash', 'Petty cash boxes still kept in Projects', $boxes, $handover, 'Move them into Finance funds first.');
 

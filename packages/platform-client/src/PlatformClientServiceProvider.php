@@ -9,6 +9,7 @@ use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 use Miles\PlatformClient\Access\CurrentAccess;
 use Miles\PlatformClient\Events\DeliverDueEvents;
+use Miles\PlatformClient\Events\RequeueFailedEvent;
 use Miles\PlatformClient\Http\Middleware\RequirePlatformAccess;
 use Miles\PlatformClient\Http\Middleware\RequirePlatformToken;
 use Miles\PlatformClient\Http\Middleware\ResolveTenant;
@@ -38,7 +39,7 @@ final class PlatformClientServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
 
         if ($this->app->runningInConsole()) {
-            $this->commands([DeliverDueEvents::class]);
+            $this->commands([DeliverDueEvents::class, RequeueFailedEvent::class]);
         }
 
         $router->aliasMiddleware('platform.app', SelectApplication::class);

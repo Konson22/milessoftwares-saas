@@ -2,6 +2,7 @@ import {
     ArrowDownToLine,
     ArrowUpFromLine,
     Banknote,
+    FolderKanban,
     BookOpenText,
     Boxes,
     Building2,
@@ -56,6 +57,7 @@ import { index as journals } from '@/routes/journals';
 import { index as paymentRequests } from '@/routes/payment-requests';
 import { index as periods } from '@/routes/periods';
 import { index as pettyCash } from '@/routes/petty-cash';
+import { index as projectRequests } from '@/routes/project-requests';
 import { index as reconciliation } from '@/routes/reconciliation';
 import { index as recurringJournals } from '@/routes/recurring-journals';
 import {
@@ -114,6 +116,15 @@ export const navigation: NavGroup[] = [
                 title: 'Payment requests',
                 href: paymentRequests(),
                 icon: Banknote,
+                permission: [
+                    'finance.payments.view',
+                    'finance.payments.prepare',
+                ],
+            },
+            {
+                title: 'Project requests',
+                href: projectRequests(),
+                icon: FolderKanban,
                 permission: [
                     'finance.payments.view',
                     'finance.payments.prepare',

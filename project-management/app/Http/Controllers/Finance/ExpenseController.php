@@ -6,10 +6,13 @@ use App\Actions\Spending;
 use App\Enums\CostCategory;
 use App\Enums\ExpenseStatus;
 use App\FinanceIntegration\FinanceMode;
+use App\FinanceIntegration\FinanceRequests;
+use App\FinanceIntegration\RequestStatus;
 use App\Http\Controllers\Concerns\ShowsProject;
 use App\Http\Controllers\Controller;
 use App\Models\Expense;
 use App\Models\ExpenseDocument;
+use App\Models\FinanceRequest;
 use App\Models\GrantAllocation;
 use App\Models\Project;
 use App\Models\User;
@@ -50,6 +53,9 @@ class ExpenseController extends Controller
         // Where Finance pays (integrated mode), nobody pays here: Finance's outcomes do.
         $canPay = $this->can($request, 'finance.payments.record') && ! FinanceMode::of(app(CurrentOrganization::class)->require())->financeOwnsPayment();
         $manage = $this->can($request, 'projects.manage');
+        // Handed to Finance (integrated mode): where each stands there, and why Finance refused.
+        $handed = $finance ? FinanceRequest::query()->with(['transitions' => fn ($query) => $query->whereIn('to_status', [RequestStatus::Rejected->value, RequestStatus::Reversed->value])->latest('occurred_at')])
+            ->whereIn('expense_id', $expenses->pluck('id'))->orderBy('revision')->get()->groupBy('expense_id') : collect();
 
         return Inertia::render('portal/projects/expenses', [
             'project' => $this->projectHeader($request, $project),
@@ -74,7 +80,20 @@ class ExpenseController extends Controller
                     'name' => $document->original_name,
                     'size' => $document->size,
                 ]),
+                'financeRequest' => ($latest = $handed->get($expense->id)?->last()) === null ? null : [
+                    'revision' => $latest->revision,
+                    'status' => $latest->status->value,
+                    'statusLabel' => $latest->status->label(),
+                    'reference' => $latest->finance_reference,
+                    'requestedMinor' => $latest->amount_minor,
+                    'approvedMinor' => $latest->approved_minor,
+                    'netPaidMinor' => (int) $handed->get($expense->id)->sum(fn (FinanceRequest $r) => $r->netPaidMinor()),
+                    'outstandingMinor' => $latest->outstandingAuthorizedMinor(),
+                    'reason' => $latest->transitions->first()?->facts['reason'] ?? null,
+                ],
                 'can' => [
+                    'resubmit' => $canApprove && $expense->status === ExpenseStatus::Approved && $expense->recorded_by !== $me->id
+                        && in_array($handed->get($expense->id)?->last()?->status, [RequestStatus::Rejected, RequestStatus::Reversed], true),
                     'decide' => $canApprove && $expense->status === ExpenseStatus::Requested && $expense->recorded_by !== $me->id,
                     'pay' => $canPay && $expense->status === ExpenseStatus::Approved && $expense->recorded_by !== $me->id,
                     'cancel' => $this->mayCancel($request, $expense, $me),
@@ -185,6 +204,23 @@ class ExpenseController extends Controller
      * Cancels open spending, or voids a payment (with the reason). Nothing
      * is deleted.
      */
+    /**
+     * Sends spending Finance refused (or whose payment it reversed) to
+     * Finance again, as a new revision (FinanceRequests::resubmit).
+     */
+    public function resubmit(Request $request, Project $project, Expense $expense, FinanceRequests $requests): RedirectResponse
+    {
+        abort_unless($expense->project_id === $project->id && $expense->recorded_by !== $this->member($request)->id, 403);
+        $validated = $request->validate([
+            'amount' => ['required', 'string', Money::rule($project->currency)],
+            'note' => ['required', 'string', 'max:255'],
+        ]);
+
+        $sent = $requests->resubmit($expense, Money::toMinor((string) $validated['amount'], $project->currency), trim((string) $validated['note']), $this->member($request));
+
+        return back()->with('success', "Sent to Finance again (revision {$sent->revision}).");
+    }
+
     public function cancel(Request $request, Project $project, Expense $expense): RedirectResponse
     {
         abort_unless($this->mayCancel($request, $expense, $this->member($request)), 403);

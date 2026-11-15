@@ -77,6 +77,9 @@ class PostEvent
         'finance.staff_advance.issued',
         'finance.staff_advance.settled',
         'finance.petty_cash.transferred',
+        // Requests in the project's currency: paid from an account in it.
+        'finance.spending.submitted',
+        'finance.spending.cancelled',
     ];
 
     public function __construct(
@@ -112,6 +115,9 @@ class PostEvent
             'finance.staff_advance.issued.v1' => $this->staffAdvanceIssued($event),
             'finance.staff_advance.settled.v1' => $this->staffAdvanceSettled($event),
             'finance.petty_cash.transferred.v1' => $this->pettyCashTransferred($event),
+            // Requests to pay, not postings: Finance's people decide (ProjectSpending).
+            'finance.spending.submitted.v1' => app(ProjectSpending::class)->received($event),
+            'finance.spending.cancelled.v1' => app(ProjectSpending::class)->cancelled($event),
             default => throw new UnsupportedEvent("Finance does not handle {$event->eventType} v{$event->schemaVersion}."),
         };
     }

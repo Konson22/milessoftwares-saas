@@ -149,7 +149,7 @@ final class PlatformFake
                     }
                 }
                 $claim = (string) Str::uuid();
-                $slug =(string) ($request['slug'] ?? '') !== '' ? (string) $request['slug'] : Str::slug((string) $request['display_name']);
+                $slug = (string) ($request['slug'] ?? '') !== '' ? (string) $request['slug'] : Str::slug((string) $request['display_name']);
                 $this->sponsored[$claim] = [...$request->data(), 'claim_id' => $claim, 'organization_id' => (string) Str::uuid(), 'slug' => $slug, 'status' => 'pending', 'resent' => 0];
 
                 return Http::response($this->sponsoredAnswer($claim), 201);

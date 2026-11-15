@@ -1,8 +1,10 @@
 <?php
 
+use App\Actions\Procurement;
 use App\Enums\ExpenseStatus;
 use App\Models\AuditEvent;
 use App\Models\Expense;
+use App\Models\FinanceRequest;
 use App\Models\Funder;
 use App\Models\Grant;
 use App\Models\Project;
@@ -431,4 +433,29 @@ it('warns about the budget only those who may see budgets', function () {
 
     $this->actingAs($this->finance);
     $this->get(procurementUrl($purchase->id))->assertInertia(fn (Assert $page) => $page->where('budget.leftMinor', 500000));
+});
+
+it('sends an order\'s spending to Finance only once the goods arrived and the invoice is recorded, where Finance pays', function () {
+    config(['finance_integration.enabled' => true]);
+    $this->organization('acme')->forceFill(['finance_mode' => 'integrated'])->save();
+    $order = anOrder();
+    financeApproves($order);
+    $requests = fn () => test()->asTenant('acme', fn () => FinanceRequest::query()->where('expense_id', $order->expense_id)->count());
+
+    // Approving the order commits the money; it does not ask Finance to pay.
+    expect($requests())->toBe(0)->and($this->financeEvents('acme', 'finance.spending.submitted'))->toBe([]);
+
+    $lines = test()->asTenant('acme', fn () => PurchaseRequestLine::query()->where('purchase_request_id', $order->purchase_request_id)->get());
+    test()->asTenant('acme', fn () => Procurement::receive($order, $lines->mapWithKeys(fn ($line) => [$line->id => (string) $line->quantity])->all(), CarbonImmutable::parse('2026-11-05'), null, $this->buyer));
+    expect($requests())->toBe(0);
+
+    test()->asTenant('acme', fn () => Procurement::recordInvoice($order->refresh(), 'INV-77', CarbonImmutable::parse('2026-11-06'), $this->buyer));
+    $events = $this->financeEvents('acme', 'finance.spending.submitted');
+    expect($requests())->toBe(1)
+        ->and($events)->toHaveCount(1)
+        ->and($events[0]['payload']['expense_id'])->toBe($order->expense_id);
+
+    // Recorded again (a corrected invoice number): still one request.
+    test()->asTenant('acme', fn () => Procurement::recordInvoice($order->refresh(), 'INV-77A', CarbonImmutable::parse('2026-11-06'), $this->buyer));
+    expect($requests())->toBe(1);
 });

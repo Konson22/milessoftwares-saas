@@ -13,16 +13,22 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Projects' requests against what Finance reported, read-only: nothing is
- * resent, reversed, corrected or deleted. Each finding names a request or
+ * resent, reversed, corrected or deleted. Only the latest revision of a
+ * request speaks for the spending: a refused revision sent again is not a
+ * finding. Recovery is manual (docs/finance/finance-projects-contract.md
+ * §10): a permanently refused event is never retried by itself. Each finding names a request or
  * an event, never an amount owed to a person.
  *
  *   missing_in_finance      the request's event did not reach Finance (failed outbox row)
  *   unacknowledged          Finance has not accepted or rejected it in time
+ *   decision_delayed        Finance took it in, and has not approved or refused it in time
  *   rejected_open           Finance rejected it; the spending is still committed in Projects
  *   payment_delayed         Finance approved it, nothing paid after the delay set
  *   paid_after_cancellation Finance paid spending Projects cancelled
  *   expense_out_of_step     the expense is closed in Projects; the request is still open
  *   reversed                Finance took a payment back
+ *   unresolved_reversal     reversed in full, the spending still approved in
+ *                           Projects, and not sent again (resubmit or release)
  *   missing_in_projects     Finance reported a request or payment Projects does not have
  *   duplicate               the same transaction id came with different content
  *   amount_mismatch         Finance's amount was more than asked, approved or paid
@@ -44,6 +50,7 @@ final class Reconciliation
         'correlation_mismatch' => 'missing_in_projects',
         'invalid_transition' => 'invalid_status',
         'stale_sequence' => 'invalid_status',
+        'organization_mismatch' => 'sync_error',
     ];
 
     public function __construct(private readonly CurrentOrganization $current) {}
@@ -90,10 +97,12 @@ final class Reconciliation
         $failed = DB::table('platform_outbox')->where('organization_id', $organization->id)->where('audience', FinanceEvents::AUDIENCE)
             ->where('status', 'failed')->where('event_type', 'like', 'finance.spending.%')->pluck('last_error', 'source_transaction_id');
 
-        $requests = FinanceRequest::query()->with('expense:id,status')->orderBy('submitted_at')->orderBy('id')->get();
+        $requests = FinanceRequest::query()->with('expense:id,status')->orderBy('submitted_at')->orderBy('revision')->orderBy('id')->get();
+        $latest = $requests->groupBy('expense_id')->map(fn ($revisions) => $revisions->max('revision'));
         foreach ($requests as $request) {
             $reference = "finance-request:{$request->id}";
             $expense = $request->expense;
+            $isLatest = $latest->get($request->expense_id) === $request->revision;
 
             foreach (['submitted', 'cancelled'] as $step) {
                 $key = "{$request->idempotency_key}:{$step}";
@@ -105,7 +114,10 @@ final class Reconciliation
             if ($request->status === RequestStatus::Submitted && $request->submitted_at->lt($ackBefore)) {
                 $findings[] = self::finding($organization->id, 'unacknowledged', $reference, 'Not accepted or rejected by Finance since '.$request->submitted_at->toDateTimeString().'.');
             }
-            if ($request->status === RequestStatus::Rejected && $expense->status === ExpenseStatus::Approved) {
+            if ($request->status === RequestStatus::Accepted && ($request->last_event_at ?? $request->submitted_at)->lt($payBefore)) {
+                $findings[] = self::finding($organization->id, 'decision_delayed', $reference, 'Taken in by Finance, not approved or refused since '.($request->last_event_at ?? $request->submitted_at)->toDateString().'.');
+            }
+            if ($isLatest && $request->status === RequestStatus::Rejected && $expense->status === ExpenseStatus::Approved) {
                 $findings[] = self::finding($organization->id, 'rejected_open', $reference, 'Finance rejected it; release or resubmit the commitment.');
             }
             if ($request->status === RequestStatus::Approved && ($request->last_event_at ?? $request->submitted_at)->lt($payBefore)) {
@@ -118,6 +130,9 @@ final class Reconciliation
             }
             if ($request->reversed_minor > 0) {
                 $findings[] = self::finding($organization->id, 'reversed', $reference, 'Finance reversed a payment.');
+            }
+            if ($isLatest && $request->status === RequestStatus::Reversed && $expense->status === ExpenseStatus::Approved) {
+                $findings[] = self::finding($organization->id, 'unresolved_reversal', $reference, 'Reversed in full by Finance; send it again or release the commitment.');
             }
         }
 

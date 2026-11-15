@@ -5,6 +5,7 @@ namespace App\Actions;
 use App\Audit\Audit;
 use App\Enums\CostCategory;
 use App\Enums\ExpenseStatus;
+use App\FinanceIntegration\FinanceMode;
 use App\Models\Organization;
 use App\Models\PettyCashCount;
 use App\Models\PettyCashFund;
@@ -517,7 +518,7 @@ final class PettyCash
      */
     private function requireOwnPettyCash(): void
     {
-        if ($this->keptInFinance()) {
+        if ($this->keptInFinance() || FinanceMode::of($this->organization())->financeOwnsPayment()) {
             throw ValidationException::withMessages(['fund' => 'Petty cash is kept in Finance: move the box there, and use it there.']);
         }
     }

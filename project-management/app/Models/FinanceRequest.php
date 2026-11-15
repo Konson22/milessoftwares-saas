@@ -64,10 +64,56 @@ class FinanceRequest extends Model
         ];
     }
 
+    /*
+     * The amounts of a request, kept apart (contract §6, tested in
+     * FinanceIntegrationTest "keeps the amounts of a request apart"):
+     *
+     *   requested            amount_minor: what Projects asked for
+     *   approved             approved_minor: what Finance agreed to pay
+     *                        (null until it says; may be less than asked)
+     *   paid                 paid_minor: every payment Finance reported
+     *   reversed             reversed_minor: what Finance took back
+     *   net paid             paid - reversed
+     *   outstanding          approved - net paid, only while Finance's
+     *   authorized           approval stands (approved, partly paid, a
+     *                        payment failed); 0 otherwise. Unpaid requested
+     *                        money is never treated as authorized.
+     *   awaiting Finance     requested, while Finance has not decided
+     *                        (sent, taken in)
+     *   open commitment      awaiting Finance + outstanding authorized: what
+     *                        Projects counts as committed for the request
+     *
+     * Paid in full, refused, cancelled, reversed or with a cancellation
+     * asked for: nothing is outstanding. A reversed request is settled by a
+     * new revision (resubmission), never by paying the old one again.
+     */
+
     /** What Finance has paid and not taken back. */
     public function netPaidMinor(): int
     {
         return $this->paid_minor - $this->reversed_minor;
+    }
+
+    /** Approved by Finance and not yet paid, while the approval stands. */
+    public function outstandingAuthorizedMinor(): int
+    {
+        if (! in_array($this->status, [RequestStatus::Approved, RequestStatus::PartiallyPaid, RequestStatus::Failed], true) || $this->approved_minor === null) {
+            return 0;
+        }
+
+        return max(0, $this->approved_minor - $this->netPaidMinor());
+    }
+
+    /** Asked for and not yet decided by Finance. */
+    public function awaitingFinanceMinor(): int
+    {
+        return in_array($this->status, [RequestStatus::Submitted, RequestStatus::Accepted], true) ? $this->amount_minor : 0;
+    }
+
+    /** What Projects counts as still committed for this request. */
+    public function openCommitmentMinor(): int
+    {
+        return $this->awaitingFinanceMinor() + $this->outstandingAuthorizedMinor();
     }
 
     /**

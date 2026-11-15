@@ -49,6 +49,7 @@ class PaymentRequests
         private readonly Ledger $ledger,
         private readonly Tax $tax,
         private readonly Audit $audit,
+        private readonly ProjectSpending $projects,
     ) {}
 
     /**
@@ -274,6 +275,7 @@ class PaymentRequests
 
             $locked->forceFill(['status' => PaymentRequest::APPROVED, 'approved_by' => $by->id, 'approved_at' => now()])->save();
             $this->audit->record('payment_request.approved', $locked, ['status' => PaymentRequest::PENDING_APPROVAL], $this->terms($locked) + ['status' => $locked->status], $by);
+            $this->projects->followed($locked, 'approved');
 
             return $locked;
         });
@@ -346,6 +348,7 @@ class PaymentRequests
                 'journal_id' => $paid['journal']->id,
                 'supplier_payment_id' => $paid['supplierPaymentId'],
             ])->save();
+            $this->projects->followed($locked, 'disbursed');
             $this->audit->record('payment_request.disbursed', $locked, ['status' => PaymentRequest::APPROVED], $this->terms($locked) + ['status' => $locked->status, 'journal_id' => $locked->journal_id, 'paid_on' => $on->toDateString()], $by);
 
             return $locked;
@@ -482,6 +485,7 @@ class PaymentRequests
         $before = $locked->status;
         $locked->forceFill(['status' => $status, 'closed_by' => $by->id, 'closed_at' => now(), 'close_note' => $note])->save();
         $this->audit->record("payment_request.{$status}", $locked, ['status' => $before], ['status' => $status, 'note' => $note], $by);
+        $this->projects->followed($locked, 'closed');
 
         return $locked;
     }

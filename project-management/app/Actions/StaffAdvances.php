@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Audit\Audit;
 use App\Enums\CostCategory;
+use App\FinanceIntegration\FinanceMode;
 use App\Models\AdvanceRetirement;
 use App\Models\AdvanceRetirementLine;
 use App\Models\AdvanceSettlement;
@@ -68,6 +69,7 @@ final class StaffAdvances
     public function request(int $amountMinor, string $purpose, User $by): StaffAdvance
     {
         $books = $this->organization();
+        $this->requireProjectsPays($books);
         if ($books->advance_max_minor === null || $books->advance_retire_days === null) {
             throw ValidationException::withMessages(['amount' => 'The organization has not set its advance policy: it is set in Administration, Settings.']);
         }
@@ -123,6 +125,7 @@ final class StaffAdvances
     {
         DB::transaction(function () use ($advance, $note, $by) {
             $locked = $this->lock($advance);
+            $this->requireProjectsPays($this->organization());
             $this->requireStatus($locked, [StaffAdvance::REQUESTED]);
             $this->requireNotHolder($locked, $by, 'approves it');
 
@@ -160,6 +163,7 @@ final class StaffAdvances
 
         DB::transaction(function () use ($advance, $method, $on, $reference, $by) {
             $locked = $this->lock($advance);
+            $this->requireProjectsPays($this->organization());
             $this->requireStatus($locked, [StaffAdvance::APPROVED]);
             $this->requireNotHolder($locked, $by, 'pays it out');
 
@@ -554,6 +558,23 @@ final class StaffAdvances
             'method' => $method,
             'note' => $settlement->reason === null ? null : mb_substr($settlement->reason, 0, 255),
         ], $on);
+    }
+
+    /**
+     * Advances are not integrated with Finance yet (Phase 3C assessment,
+     * contract §8): Finance has no handler for advance requests, so where
+     * Finance owns payment nothing is requested, approved or paid out here.
+     * Readiness blocks integrated mode for an organization using advances,
+     * so this is the second line. Advances already paid out are still
+     * accounted for (retirement, returns, write-offs) as before.
+     *
+     * @throws ValidationException
+     */
+    private function requireProjectsPays(Organization $organization): void
+    {
+        if (FinanceMode::of($organization)->financeOwnsPayment()) {
+            throw ValidationException::withMessages(['advance' => 'Finance pays for this organization, and advances are not handled in Finance yet: none is requested or paid out here.']);
+        }
     }
 
     private function organization(): Organization

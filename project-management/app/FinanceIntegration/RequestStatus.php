@@ -72,4 +72,20 @@ enum RequestStatus: string
     {
         return in_array($this, [self::Submitted, self::Accepted, self::Approved, self::PartiallyPaid, self::Failed], true);
     }
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::Submitted => 'Sent to Finance',
+            self::Accepted => 'Taken in by Finance',
+            self::Rejected => 'Refused by Finance',
+            self::Approved => 'Approved by Finance',
+            self::PartiallyPaid => 'Partly paid',
+            self::Paid => 'Paid by Finance',
+            self::Failed => 'Payment failed',
+            self::Reversed => 'Payment reversed',
+            self::CancellationRequested => 'Cancellation asked for',
+            self::Cancelled => 'Cancelled in Finance',
+        };
+    }
 }

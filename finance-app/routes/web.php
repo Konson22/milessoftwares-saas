@@ -26,6 +26,7 @@ use App\Http\Controllers\OpeningBalanceController;
 use App\Http\Controllers\PaymentRequestController;
 use App\Http\Controllers\PeriodController;
 use App\Http\Controllers\PettyCashController;
+use App\Http\Controllers\ProjectSpendingController;
 use App\Http\Controllers\RecurringJournalController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SupplierController;
@@ -152,6 +153,18 @@ Route::prefix(app(PlatformConfig::class)->path())
         });
         Route::middleware('can:finance.payments.disburse')->group(function () {
             Route::post('payment-requests/{paymentRequest}/disburse', [PaymentRequestController::class, 'disburse'])->whereUuid('paymentRequest')->name('payment-requests.disburse');
+        });
+
+        // Spending Projects hands to Finance: taken in as a payment request
+        // (then reviewed, approved and disbursed above), or refused.
+        Route::middleware(RequireAnyPermission::class.':finance.payments.view,finance.payments.prepare')->group(function () {
+            Route::get('project-requests', [ProjectSpendingController::class, 'index'])->name('project-requests.index');
+        });
+        Route::middleware('can:finance.payments.prepare')->group(function () {
+            Route::post('project-requests/{projectRequest}/prepare', [ProjectSpendingController::class, 'prepare'])->whereUuid('projectRequest')->name('project-requests.prepare');
+        });
+        Route::middleware(RequireAnyPermission::class.':finance.payments.review,finance.payments.approve')->group(function () {
+            Route::post('project-requests/{projectRequest}/refuse', [ProjectSpendingController::class, 'refuse'])->whereUuid('projectRequest')->name('project-requests.refuse');
         });
 
         // Recurring journals: posted on a schedule (finance:recurring), or now.

@@ -12,6 +12,11 @@
     ],
     "additionalProperties": false,
     "properties": {
+        "organization_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The organization, as in the envelope (Projects refuses a mismatch)."
+        },
         "request_id": {
             "type": "string",
             "format": "uuid"
@@ -24,6 +29,27 @@
             "type": "integer",
             "minimum": 1,
             "description": "Finance's count of outcomes for this request, from 1 with no gaps. Projects applies them in order: a gap is answered 503 (retry), an older number 409."
+        },
+        "status": {
+            "type": "string",
+            "enum": [
+                "received",
+                "prepared",
+                "approved",
+                "paid",
+                "reversed",
+                "rejected",
+                "cancelled"
+            ],
+            "description": "Finance's own status for the request after this outcome (authoritative in Finance; Projects keeps its own request status)."
+        },
+        "finance_reference": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "maxLength": 100,
+            "description": "Finance's reference (its payment request number); null until Finance takes the request in."
         },
         "payment_id": {
             "type": [
