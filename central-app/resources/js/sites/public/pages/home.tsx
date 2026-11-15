@@ -26,7 +26,11 @@ import {
 import { Accent, IconBox } from '@/sites/public/components/page-hero';
 import type { Product } from '@/sites/public/components/product';
 import SectionHeading from '@/sites/public/components/section-heading';
-import Seo, { organization, siteName } from '@/sites/public/components/seo';
+import Seo, {
+    organization,
+    siteName,
+    softwareApplication,
+} from '@/sites/public/components/seo';
 import {
     button,
     container,
@@ -166,17 +170,21 @@ export default function MarketingHome({
     return (
         <>
             <Seo
-                title="ERP and business software: bring it all together"
-                description="Tatook brings it all together: ERP for pharmacies, shops, restaurants and schools, with accounting, HR and project management under one account."
+                // Brand first, then what it is, so "Tatook" is read as ERP
+                // and business software rather than a misspelt "tattoo".
+                title="Tatook | ERP & Business Software for Pharmacy, Retail, Finance & HR"
+                description="Tatook is ERP and business software by Miles Global Link: pharmacy, retail, restaurant and school ERPs with accounting, HR and payroll under one account."
                 canonical={canonical}
                 jsonLd={{
                     '@context': 'https://schema.org',
                     '@graph': [
                         organization(origin),
+                        softwareApplication(origin),
                         {
                             '@type': 'WebSite',
                             '@id': `${origin}/#website`,
                             name: siteName,
+                            alternateName: 'Tatook ERP',
                             url: `${origin}/`,
                             publisher: { '@id': `${origin}/#organization` },
                         },

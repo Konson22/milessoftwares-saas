@@ -4,6 +4,7 @@ import axe from 'axe-core';
 import { Children, isValidElement } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
+import { fullTitle } from '@/sites/public/components/seo';
 import MarketingLayout from '@/sites/public/layouts/marketing-layout';
 import About from './about';
 import ComingSoon from './coming-soon';
@@ -479,8 +480,11 @@ describe('search metadata', () => {
             const description = typeof content === 'string' ? content : '';
             const canonical = tags.find((tag) => tag.rel === 'canonical')?.href;
 
-            // Google shows about 60 characters of a title, " - Tatook" included.
-            expect(`${title} - Tatook`.length).toBeLessThanOrEqual(65);
+            // Google shows about 60 characters of a title, " - Tatook" included;
+            // the home page leads with the brand and may run a few over.
+            expect(fullTitle(title).length).toBeLessThanOrEqual(
+                title.startsWith('Tatook |') ? 70 : 65,
+            );
             expect(title.length).toBeGreaterThan(3);
             // And up to about 160 of a description.
             expect(description.length).toBeGreaterThanOrEqual(50);
@@ -504,4 +508,68 @@ describe('search metadata', () => {
             }
         },
     );
+});
+
+describe('brand entity', () => {
+    it('ties Tatook to Miles Global Link and business software on the home page', () => {
+        heads.length = 0;
+        render(pages.find(([name]) => name === 'home')![1]);
+
+        const title = heads.find((head) => head.title)?.title ?? '';
+        expect(fullTitle(title)).toBe(
+            'Tatook | ERP & Business Software for Pharmacy, Retail, Finance & HR',
+        );
+
+        const jsonLd = headTags().find(
+            (tag) => tag.type === 'application/ld+json',
+        );
+        const graph = (
+            JSON.parse(
+                (
+                    jsonLd?.dangerouslySetInnerHTML as
+                        | { __html: string }
+                        | undefined
+                )?.__html ?? '{}',
+            ) as { '@graph': Record<string, unknown>[] }
+        )['@graph'];
+        const org = graph.find((node) => node['@type'] === 'Organization')!;
+        expect(org).toMatchObject({
+            name: 'Tatook',
+            legalName: 'Miles Global Link Co. Ltd',
+            email: 'info@tatook.com',
+            telephone: '+211920079070',
+            address: {
+                streetAddress:
+                    'Juba town, former GPOC building, 1st floor, office No 9',
+                addressLocality: 'Juba',
+                addressCountry: 'SS',
+            },
+            sameAs: ['https://www.facebook.com/profile.php?id=61595274547445'],
+        });
+        expect(
+            graph.some((node) => node['@type'] === 'SoftwareApplication'),
+        ).toBe(true);
+    });
+
+    it('shows the address, phone, email and a verified Facebook link in the footer', () => {
+        const { container } = render(
+            <MarketingLayout>
+                <p>Page</p>
+            </MarketingLayout>,
+        );
+
+        const address = container.querySelector('footer address');
+        expect(address?.textContent).toContain(
+            'Juba town, former GPOC building, 1st floor, office No 9, Juba, South Sudan',
+        );
+        expect(address?.textContent).toContain('+211 920 079 070');
+        expect(address?.textContent).toContain('info@tatook.com');
+        const facebook = address?.querySelector('a[rel~="me"]');
+        expect(facebook?.getAttribute('href')).toBe(
+            'https://www.facebook.com/profile.php?id=61595274547445',
+        );
+        expect(container.textContent).toContain(
+            'Tatook is a product of Miles Global Link Co. Ltd',
+        );
+    });
 });

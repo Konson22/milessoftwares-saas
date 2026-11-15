@@ -7,7 +7,14 @@ import { resolveLayout, resolvePage } from '@/sites';
 const appName = import.meta.env.VITE_APP_NAME || 'Tatook';
 
 void createInertiaApp({
-    title: (title) => (title ? `${title} - ${appName}` : appName),
+    // "Page - Tatook"; a title that already leads with the brand ("Tatook | …",
+    // the home page) is used as it is.
+    title: (title) =>
+        !title
+            ? appName
+            : title.startsWith(`${appName} |`)
+              ? title
+              : `${title} - ${appName}`,
     resolve: resolvePage,
     layout: resolveLayout,
     strictMode: true,
