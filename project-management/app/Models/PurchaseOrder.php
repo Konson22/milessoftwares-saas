@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Access\ProjectBound;
+use App\Access\VisibleThroughProject;
 use App\Enums\ExpenseStatus;
 use App\Support\Quantity;
 use App\Tenancy\BelongsToOrganization;
@@ -32,10 +34,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read Expense $expense
  * @property-read PurchaseRequest $request
  */
-class PurchaseOrder extends Model
+class PurchaseOrder extends Model implements ProjectBound
 {
     use BelongsToOrganization;
     use HasUuids;
+    use VisibleThroughProject;
 
     protected $guarded = ['organization_id'];
 
@@ -104,5 +107,15 @@ class PurchaseOrder extends Model
         $lines = PurchaseRequestLine::query()->where('purchase_request_id', $this->purchase_request_id)->get();
 
         return $lines->every(fn (PurchaseRequestLine $line) => Quantity::compare($received[$line->id] ?? '0', (string) $line->quantity) >= 0);
+    }
+
+    /**
+     * Seen only with the project its PurchaseRequest belongs to (App\Access\VisibleThroughProject).
+     *
+     * @return array{0: string, 1: class-string<Model>}
+     */
+    public function visibleThrough(): array
+    {
+        return ['purchase_request_id', PurchaseRequest::class];
     }
 }

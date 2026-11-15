@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Access\ProjectBound;
+use App\Access\VisibleThroughProject;
 use App\Tenancy\BelongsToOrganization;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -24,10 +26,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonImmutable $created_at
  * @property-read Expense $expense
  */
-class ExpenseDocument extends Model
+class ExpenseDocument extends Model implements ProjectBound
 {
     use BelongsToOrganization;
     use HasUuids;
+    use VisibleThroughProject;
 
     public const UPDATED_AT = null;
 
@@ -47,5 +50,15 @@ class ExpenseDocument extends Model
     public function expense(): BelongsTo
     {
         return $this->belongsTo(Expense::class);
+    }
+
+    /**
+     * Seen only with the project its Expense belongs to (App\Access\VisibleThroughProject).
+     *
+     * @return array{0: string, 1: class-string<Model>}
+     */
+    public function visibleThrough(): array
+    {
+        return ['expense_id', Expense::class];
     }
 }

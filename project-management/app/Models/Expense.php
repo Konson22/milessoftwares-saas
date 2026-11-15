@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Access\ProjectBound;
+use App\Access\VisibleThroughProject;
 use App\Enums\CostCategory;
 use App\Enums\ExpenseStatus;
 use App\Tenancy\BelongsToOrganization;
@@ -44,10 +46,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read Grant|null $grant
  * @property-read Project $project
  */
-class Expense extends Model
+class Expense extends Model implements ProjectBound
 {
     use BelongsToOrganization;
     use HasUuids;
+    use VisibleThroughProject;
 
     protected $guarded = ['organization_id'];
 

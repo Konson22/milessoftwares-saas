@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Projects;
 
+use App\Access\ProjectVisibility;
 use App\Actions\Programmes;
 use App\Actions\WorkStructure;
 use App\Enums\ExpenseStatus;
@@ -166,6 +167,7 @@ class ProjectController extends Controller
                 'dueOn' => $project->due_on?->toDateString(),
                 'budget' => Money::toMajor($project->budget_minor, $project->currency),
                 'hasBudgetLines' => $project->budgetVersions()->exists(),
+                'visibility' => $project->visibility,
             ],
             'people' => Person::options(),
             'programmes' => $this->programmes($project),
@@ -235,6 +237,7 @@ class ProjectController extends Controller
             'due_on' => ['nullable', 'date', 'after_or_equal:start_on'],
             'budget' => ['nullable', 'string', Money::rule($project->currency)],
             'programme_id' => ['nullable', 'uuid', Rule::exists('programmes', 'id')->where('organization_id', $tenant)],
+            'visibility' => ['sometimes', Rule::in(Project::VISIBILITIES)],
         ], ['code.regex' => 'A letter, then up to 9 letters or digits: it starts every task number (WEB-12).']);
 
         // Once tasks are numbered, the code stays.
@@ -252,6 +255,15 @@ class ProjectController extends Controller
             'due_on' => $validated['due_on'] ?? null,
             'status' => $project->status ?? Project::PLANNING,
         ]);
+        // Who sees it (App\Access\ProjectVisibility). Nobody can make a
+        // project team-only and so shut themselves out of it.
+        if (isset($validated['visibility']) && $validated['visibility'] !== $project->visibility) {
+            $visibility = (string) $validated['visibility'];
+            if ($project->exists && ! app(ProjectVisibility::class)->wouldSee($project, $visibility)) {
+                throw ValidationException::withMessages(['visibility' => 'You are not on this project’s team: add yourself first, or ask someone who sees every project.']);
+            }
+            $project->visibility = $visibility;
+        }
         // With a budget version, the budget is its total (App\Actions\Budgets).
         if (! $project->exists || ! $project->budgetVersions()->exists()) {
             $project->budget_minor = blank($validated['budget'] ?? null) ? 0 : Money::toMinor((string) $validated['budget'], $project->currency);

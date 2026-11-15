@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Access\ProjectBound;
+use App\Access\VisibleThroughProject;
 use App\Enums\CostCategory;
 use App\Enums\PurchaseRequestStatus;
 use App\Tenancy\BelongsToOrganization;
@@ -40,10 +42,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read User $requester
  * @property-read User|null $decider
  */
-class PurchaseRequest extends Model
+class PurchaseRequest extends Model implements ProjectBound
 {
     use BelongsToOrganization;
     use HasUuids;
+    use VisibleThroughProject;
 
     protected $guarded = ['organization_id'];
 

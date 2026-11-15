@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Access\ProjectBound;
+use App\Access\VisibleThroughProject;
 use App\Tenancy\BelongsToOrganization;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -24,10 +26,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $created_by
  * @property-read Supplier $supplier
  */
-class PurchaseQuote extends Model
+class PurchaseQuote extends Model implements ProjectBound
 {
     use BelongsToOrganization;
     use HasUuids;
+    use VisibleThroughProject;
 
     protected $guarded = ['organization_id'];
 
@@ -42,5 +45,15 @@ class PurchaseQuote extends Model
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    /**
+     * Seen only with the project its PurchaseRequest belongs to (App\Access\VisibleThroughProject).
+     *
+     * @return array{0: string, 1: class-string<Model>}
+     */
+    public function visibleThrough(): array
+    {
+        return ['purchase_request_id', PurchaseRequest::class];
     }
 }

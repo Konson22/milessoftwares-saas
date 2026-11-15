@@ -6,12 +6,18 @@
         "kind": "standalone",
         "status": "beta"
     },
-    "version": "3.2.0",
+    "version": "3.3.0",
     "permissions": [
         {
             "key": "projects.view",
             "name": "View projects, tasks, timelines, risks and the team",
             "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.all",
+            "name": "See every project, including those open to their team only",
+            "sensitivity": 2,
             "scopes": ["organization"]
         },
         {
@@ -484,6 +490,7 @@
             "delegable": false,
             "scopes": ["organization"],
             "permissions": [
+                "projects.all",
                 "finance.commitments.view",
                 "finance.advances.request",
                 "finance.advances.view",
@@ -533,6 +540,7 @@
             "delegable": true,
             "scopes": ["organization"],
             "permissions": [
+                "projects.all",
                 "finance.commitments.view",
                 "finance.advances.request",
                 "documents.view",
@@ -595,6 +603,7 @@
             "delegable": false,
             "scopes": ["organization"],
             "permissions": [
+                "projects.all",
                 "finance.commitments.view",
                 "documents.view",
                 "documents.manage",
@@ -624,6 +633,7 @@
             "delegable": false,
             "scopes": ["organization"],
             "permissions": [
+                "projects.all",
                 "finance.commitments.view",
                 "finance.advances.request",
                 "finance.advances.view",

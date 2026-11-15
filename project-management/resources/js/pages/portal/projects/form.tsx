@@ -19,6 +19,7 @@ type Project = {
     dueOn: string | null;
     budget: string;
     hasBudgetLines: boolean;
+    visibility: 'organization' | 'team';
 };
 
 /**
@@ -178,13 +179,43 @@ export default function ProjectForm({
                                     />
                                 </Field>
                                 <Field
+                                    id="visibility"
+                                    label="Who can see it"
+                                    error={errors.visibility}
+                                    className="sm:col-span-3"
+                                    hint="Team only: its team, its manager, whoever set it up and people who see every project."
+                                >
+                                    <Select
+                                        id="visibility"
+                                        name="visibility"
+                                        defaultValue={
+                                            project?.visibility ??
+                                            'organization'
+                                        }
+                                        options={[
+                                            {
+                                                value: 'organization',
+                                                label: 'Everyone in the organization who sees projects',
+                                            },
+                                            {
+                                                value: 'team',
+                                                label: 'Team only',
+                                            },
+                                        ]}
+                                    />
+                                </Field>
+                                <Field
                                     id="budget"
-                                    label="Budget"
+                                    label={
+                                        project?.hasBudgetLines
+                                            ? 'Budget'
+                                            : 'Estimated budget'
+                                    }
                                     error={errors.budget}
                                     hint={
                                         project?.hasBudgetLines
-                                            ? 'The sum of the budget lines.'
-                                            : 'Or break it down into lines later.'
+                                            ? 'The total of the latest budget version.'
+                                            : 'An estimate until a budget is broken into lines and approved.'
                                     }
                                 >
                                     <Input

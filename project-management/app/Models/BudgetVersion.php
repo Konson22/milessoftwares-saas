@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Access\ProjectBound;
+use App\Access\VisibleThroughProject;
 use App\Enums\BudgetVersionStatus;
 use App\Tenancy\BelongsToOrganization;
 use Carbon\CarbonImmutable;
@@ -31,10 +33,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read User|null $submitter
  * @property-read User|null $approver
  */
-class BudgetVersion extends Model
+class BudgetVersion extends Model implements ProjectBound
 {
     use BelongsToOrganization;
     use HasUuids;
+    use VisibleThroughProject;
 
     protected $guarded = ['organization_id'];
 

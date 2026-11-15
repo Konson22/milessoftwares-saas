@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Access\ProjectBound;
+use App\Access\VisibleThroughProject;
 use App\Tenancy\BelongsToOrganization;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -21,10 +23,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $received_by
  * @property-read User $receiver
  */
-class GoodsReceipt extends Model
+class GoodsReceipt extends Model implements ProjectBound
 {
     use BelongsToOrganization;
     use HasUuids;
+    use VisibleThroughProject;
 
     protected $guarded = ['organization_id'];
 
@@ -47,5 +50,15 @@ class GoodsReceipt extends Model
     public function receiver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'received_by');
+    }
+
+    /**
+     * Seen only with the project its PurchaseOrder belongs to (App\Access\VisibleThroughProject).
+     *
+     * @return array{0: string, 1: class-string<Model>}
+     */
+    public function visibleThrough(): array
+    {
+        return ['purchase_order_id', PurchaseOrder::class];
     }
 }

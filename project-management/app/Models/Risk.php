@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Access\ProjectBound;
+use App\Access\VisibleThroughProject;
 use App\Tenancy\BelongsToOrganization;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -25,10 +27,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonImmutable|null $review_on
  * @property-read Person|null $owner
  */
-class Risk extends Model
+class Risk extends Model implements ProjectBound
 {
     use BelongsToOrganization;
     use HasUuids;
+    use VisibleThroughProject;
 
     public const OPEN = 'open';
 

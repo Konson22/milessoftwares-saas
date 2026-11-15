@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Access\ProjectBound;
+use App\Access\VisibleThroughProject;
 use App\Models\Concerns\Archivable;
 use App\Tenancy\BelongsToOrganization;
 use Carbon\CarbonImmutable;
@@ -27,11 +29,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read Folder|null $folder
  * @property-read Project|null $project
  */
-class TaskList extends Model
+class TaskList extends Model implements ProjectBound
 {
     use Archivable;
     use BelongsToOrganization;
     use HasUuids;
+    use VisibleThroughProject;
 
     protected $table = 'task_lists';
 

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Access\ProjectBound;
+use App\Access\VisibleThroughProject;
 use App\Tenancy\BelongsToOrganization;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -23,10 +25,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonImmutable $created_at
  * @property-read User $uploader
  */
-class TaskAttachment extends Model
+class TaskAttachment extends Model implements ProjectBound
 {
     use BelongsToOrganization;
     use HasUuids;
+    use VisibleThroughProject;
 
     public const UPDATED_AT = null;
 
@@ -46,5 +49,15 @@ class TaskAttachment extends Model
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
+    }
+
+    /**
+     * Seen only with the project its Task belongs to (App\Access\VisibleThroughProject).
+     *
+     * @return array{0: string, 1: class-string<Model>}
+     */
+    public function visibleThrough(): array
+    {
+        return ['task_id', Task::class];
     }
 }

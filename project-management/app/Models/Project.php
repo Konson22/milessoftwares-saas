@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Access\ProjectVisibilityScope;
 use App\Collaboration\Models\Invitation as ProjectInvitation;
 use App\Collaboration\Models\Participant;
 use App\Tenancy\BelongsToOrganization;
@@ -30,6 +31,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $currency
  * @property int $budget_minor
  * @property int $task_sequence
+ * @property string $visibility organization (anyone with projects.view) or team (App\Access\ProjectVisibility)
  * @property string $created_by
  * @property CarbonImmutable|null $completed_at
  * @property CarbonImmutable $created_at
@@ -56,7 +58,22 @@ class Project extends Model
     /** Still being worked on (or about to be). */
     public const OPEN = [self::PLANNING, self::ACTIVE, self::ON_HOLD];
 
+    /** Open to everyone in the organization who may see projects: the default. */
+    public const VISIBLE_TO_ORGANIZATION = 'organization';
+
+    /** Open to its team, its manager, whoever set it up and holders of projects.all. */
+    public const VISIBLE_TO_TEAM = 'team';
+
+    public const VISIBILITIES = [self::VISIBLE_TO_ORGANIZATION, self::VISIBLE_TO_TEAM];
+
     protected $guarded = ['organization_id'];
+
+    protected $attributes = ['visibility' => self::VISIBLE_TO_ORGANIZATION];
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new ProjectVisibilityScope);
+    }
 
     protected function casts(): array
     {

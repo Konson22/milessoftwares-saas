@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Access\ProjectBound;
+use App\Access\VisibleThroughProject;
 use App\Tenancy\BelongsToOrganization;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -35,10 +37,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read User|null $deliverer
  * @property-read User|null $accepter
  */
-class Deliverable extends Model
+class Deliverable extends Model implements ProjectBound
 {
     use BelongsToOrganization;
     use HasUuids;
+    use VisibleThroughProject;
 
     public const PLANNED = 'planned';
 

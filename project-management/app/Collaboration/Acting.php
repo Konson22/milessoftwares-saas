@@ -3,6 +3,7 @@
 namespace App\Collaboration;
 
 use App\Access\Access;
+use App\Access\ProjectVisibility;
 use App\Collaboration\Models\Participant;
 use App\Models\Project;
 use App\Models\User;
@@ -31,6 +32,8 @@ final readonly class Acting
     public static function forOwner(Project $project, User $user, Access $access): self
     {
         abort_unless($access->organizationId === $project->organization_id, 404);
+        // A team-only project stays with its team (App\Access\ProjectVisibility).
+        abort_unless(app(ProjectVisibility::class)->sees($project), 404);
 
         return new self($project, null, $user, $access);
     }

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Access\ProjectBound;
+use App\Access\VisibleThroughProject;
 use App\Enums\CostCategory;
 use App\Tenancy\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -19,10 +21,11 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $description
  * @property int $amount_minor
  */
-class BudgetLine extends Model
+class BudgetLine extends Model implements ProjectBound
 {
     use BelongsToOrganization;
     use HasUuids;
+    use VisibleThroughProject;
 
     protected $guarded = ['organization_id'];
 

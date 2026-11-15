@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Access\ProjectBound;
+use App\Access\VisibleThroughProject;
 use App\Enums\TaskPriority;
 use App\Tenancy\BelongsToOrganization;
 use Carbon\CarbonImmutable;
@@ -46,10 +48,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read Task|null $parent
  * @property-read ListStatus|null $listStatus
  */
-class Task extends Model
+class Task extends Model implements ProjectBound
 {
     use BelongsToOrganization;
     use HasUuids;
+    use VisibleThroughProject;
 
     public const TODO = 'todo';
 

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Access\ProjectBound;
+use App\Access\VisibleThroughProject;
 use App\Tenancy\BelongsToOrganization;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -33,10 +35,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read User|null $decider
  * @property-read BudgetVersion|null $budgetVersion
  */
-class ChangeRequest extends Model
+class ChangeRequest extends Model implements ProjectBound
 {
     use BelongsToOrganization;
     use HasUuids;
+    use VisibleThroughProject;
 
     public const SUBMITTED = 'submitted';
 

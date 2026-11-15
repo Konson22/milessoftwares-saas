@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Access\ProjectBound;
+use App\Access\VisibleThroughProject;
 use App\Enums\CostCategory;
 use App\Tenancy\BelongsToOrganization;
 use Carbon\CarbonImmutable;
@@ -36,10 +38,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read User $recorder
  * @property-read PettyCashTopUp|null $topUp
  */
-class PettyCashPayment extends Model
+class PettyCashPayment extends Model implements ProjectBound
 {
     use BelongsToOrganization;
     use HasUuids;
+    use VisibleThroughProject;
 
     protected $guarded = ['organization_id'];
 
