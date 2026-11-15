@@ -6,6 +6,7 @@ use App\Actions\OrgUnits;
 use App\Http\Controllers\Controller;
 use App\Models\OrganizationMembership;
 use App\Models\OrgUnit;
+use App\Models\Person;
 use App\Tenancy\CurrentOrganization;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,9 +33,12 @@ class OrgUnitController extends Controller
                 'kind' => $unit->kind,
                 'name' => $unit->name,
                 'code' => $unit->code,
+                'managerId' => $unit->manager_person_id,
+                'manager' => $unit->manager?->name,
                 'archived' => $unit->archived_at !== null,
                 'members' => (int) ($members[$unit->id] ?? 0),
             ])->values(),
+            'people' => Person::options(),
             'kinds' => collect(OrgUnit::KINDS)->map(fn (string $label, string $value) => ['value' => $value, 'label' => $label])->values(),
         ]);
     }
@@ -68,7 +72,7 @@ class OrgUnitController extends Controller
     }
 
     /**
-     * @return array{kind: string, name: string, code: string|null, parent_id: string|null}
+     * @return array{kind: string, name: string, code: string|null, parent_id: string|null, manager_person_id: string|null}
      */
     private function details(Request $request): array
     {
@@ -77,6 +81,7 @@ class OrgUnitController extends Controller
             'name' => ['required', 'string', 'max:120'],
             'code' => ['nullable', 'string', 'max:24'],
             'parent_id' => ['nullable', 'uuid'],
+            'manager_person_id' => ['nullable', 'uuid', Rule::exists('people', 'id')->where('organization_id', app(CurrentOrganization::class)->id())],
         ]);
 
         return [
@@ -84,6 +89,7 @@ class OrgUnitController extends Controller
             'name' => trim($validated['name']),
             'code' => $this->text($validated['code'] ?? null),
             'parent_id' => $validated['parent_id'] ?? null,
+            'manager_person_id' => $validated['manager_person_id'] ?? null,
         ];
     }
 }

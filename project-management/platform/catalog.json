@@ -6,7 +6,7 @@
         "kind": "standalone",
         "status": "beta"
     },
-    "version": "2.0.0",
+    "version": "3.2.0",
     "permissions": [
         {
             "key": "projects.view",
@@ -47,6 +47,48 @@
         {
             "key": "projects.people.manage",
             "name": "Add people and set what their time costs",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.partners.manage",
+            "name": "Invite other organizations to projects and manage their participation; accept invitations and choose who works on shared projects",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.reports.prepare",
+            "name": "Write and submit project reports to another party of a project",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.reports.review",
+            "name": "Review project reports sent to their organization: approve, ask for changes or reject",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.reports.publish",
+            "name": "Publish approved project reports to the project's owner and funders",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.reporting.manage",
+            "name": "Set reporting obligations and who reports to whom on projects",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.requests.raise",
+            "name": "Raise project requests (funding, budget revision, activity or timeline change, information)",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "projects.requests.review",
+            "name": "Decide project requests sent to their organization, or escalate them",
             "sensitivity": 2,
             "scopes": ["organization"]
         },
@@ -212,6 +254,178 @@
             "description": "For people who act for a funder. Someone who holds only this sees nothing else.",
             "sensitivity": 1,
             "scopes": ["organization"]
+        },
+        {
+            "key": "mel.programmes.view",
+            "name": "View the programmes one is given access to",
+            "description": "Programmes, their results frameworks and indicators, for the programmes a manager has opened to this person.",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.programmes.all",
+            "name": "Work on every programme",
+            "description": "Reaches every programme of the organization without being given access to each one. For M&E staff.",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.programmes.manage",
+            "name": "Set up programmes",
+            "description": "Programmes, reporting units, reporting periods, who has access to each programme, and archiving.",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.projects.link",
+            "name": "Link reporting units to Projects",
+            "description": "Connects a reporting unit to a project kept in Tatook Projects. Projects stays the record of the project.",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.frameworks.manage",
+            "name": "Set up results frameworks and indicators",
+            "description": "Results, indicators and their definitions, baselines and targets.",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.data.enter",
+            "name": "Enter and submit results",
+            "description": "Actual values and evidence for the programmes and units one has access to.",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.data.import",
+            "name": "Import results from a spreadsheet",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.data.view",
+            "name": "View drafts and submitted results",
+            "description": "Everything entered, at every stage, for the programmes one has access to.",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.data.review",
+            "name": "Verify or reject submitted results",
+            "description": "Never one's own submission, unless the organization allows it in settings.",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.results.publish",
+            "name": "Publish verified results",
+            "description": "Published results are what donors and reports outside the organization see.",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.results.view_verified",
+            "name": "View verified results and their evidence",
+            "description": "For independent evaluators: verified and published results with all their evidence, no drafts.",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.results.view_published",
+            "name": "View published results",
+            "description": "Published results and the evidence marked as shareable, for the programmes and periods one is given access to.",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.reports.view",
+            "name": "View reports",
+            "description": "At the level of results the person may see (published, verified or all).",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.reports.export",
+            "name": "Download reports",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.settings.manage",
+            "name": "Change M&E settings",
+            "description": "Locations, implementing partners, disaggregation dimensions, review rules and performance thresholds.",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.audit.view",
+            "name": "View the M&E audit trail",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.collect.view",
+            "name": "View survey forms and collected data",
+            "description": "Forms, their versions and the submissions collected with them, for the programmes and forms one reaches. Personal answers stay hidden without the personal data permission.",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.collect.design",
+            "name": "Design survey forms",
+            "description": "Create, edit, duplicate and preview survey forms.",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.collect.publish",
+            "name": "Publish survey forms",
+            "description": "Publish new versions, close old ones and archive forms.",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.collect.assign",
+            "name": "Assign field data collectors",
+            "description": "Choose who collects with which form, and close or revoke their assignments.",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.collect.submit",
+            "name": "Collect data in the field",
+            "description": "Download the forms one is assigned and send submissions from the field app.",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.collect.review",
+            "name": "Review collected data",
+            "description": "Accept or reject submissions, and ask their collector for corrections.",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.collect.correct",
+            "name": "Correct collected data",
+            "description": "Record a correction to a submission, with its reason. The original answers are kept.",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.collect.export",
+            "name": "Export collected data",
+            "description": "Download submissions as CSV or Excel files.",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "mel.collect.personal_data",
+            "name": "See respondents' personal data",
+            "description": "Answers marked personal (names, phone numbers, identity numbers), photos and exact locations, on screen and in exports.",
+            "sensitivity": 3,
+            "scopes": ["organization"]
         }
     ],
     "roles": [
@@ -287,6 +501,13 @@
                 "projects.time.manage",
                 "projects.finance.view",
                 "projects.people.manage",
+                "projects.partners.manage",
+                "projects.reports.prepare",
+                "projects.reports.review",
+                "projects.reports.publish",
+                "projects.reporting.manage",
+                "projects.requests.raise",
+                "projects.requests.review",
                 "projects.expenses.request",
                 "projects.changes.approve",
                 "finance.budgets.approve",
@@ -322,6 +543,13 @@
                 "projects.time.manage",
                 "projects.finance.view",
                 "projects.people.manage",
+                "projects.partners.manage",
+                "projects.reports.prepare",
+                "projects.reports.review",
+                "projects.reports.publish",
+                "projects.reporting.manage",
+                "projects.requests.raise",
+                "projects.requests.review",
                 "projects.expenses.request",
                 "projects.changes.approve",
                 "work.structure.manage",
@@ -343,6 +571,8 @@
                 "documents.view",
                 "projects.view",
                 "projects.tasks.manage",
+                "projects.reports.prepare",
+                "projects.requests.raise",
                 "projects.time.log",
                 "projects.expenses.request",
                 "procurement.request"
@@ -445,6 +675,184 @@
             "delegable": true,
             "scopes": ["organization"],
             "permissions": ["projects.donor.view"]
+        },
+        {
+            "key": "mel_administrator",
+            "name": "M&E administrator",
+            "description": "Everything in M&E, including settings and the audit trail.",
+            "sensitivity": 3,
+            "delegable": false,
+            "scopes": ["organization"],
+            "permissions": [
+                "mel.programmes.view",
+                "mel.programmes.all",
+                "mel.programmes.manage",
+                "mel.projects.link",
+                "mel.frameworks.manage",
+                "mel.data.enter",
+                "mel.data.import",
+                "mel.data.view",
+                "mel.data.review",
+                "mel.results.publish",
+                "mel.results.view_verified",
+                "mel.results.view_published",
+                "mel.reports.view",
+                "mel.reports.export",
+                "mel.settings.manage",
+                "mel.audit.view",
+                "mel.collect.view",
+                "mel.collect.design",
+                "mel.collect.publish",
+                "mel.collect.assign",
+                "mel.collect.submit",
+                "mel.collect.review",
+                "mel.collect.correct",
+                "mel.collect.export",
+                "mel.collect.personal_data"
+            ]
+        },
+        {
+            "key": "mel_manager",
+            "name": "M&E manager",
+            "description": "Sets up programmes, frameworks and indicators, verifies and publishes results.",
+            "sensitivity": 3,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "mel.programmes.view",
+                "mel.programmes.all",
+                "mel.programmes.manage",
+                "mel.projects.link",
+                "mel.frameworks.manage",
+                "mel.data.view",
+                "mel.data.review",
+                "mel.results.publish",
+                "mel.results.view_verified",
+                "mel.results.view_published",
+                "mel.reports.view",
+                "mel.reports.export",
+                "mel.audit.view",
+                "mel.collect.view",
+                "mel.collect.design",
+                "mel.collect.publish",
+                "mel.collect.assign",
+                "mel.collect.submit",
+                "mel.collect.review",
+                "mel.collect.correct",
+                "mel.collect.export",
+                "mel.collect.personal_data"
+            ]
+        },
+        {
+            "key": "mel_officer",
+            "name": "M&E officer",
+            "description": "Enters, imports and reviews results across programmes. Cannot publish.",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "mel.programmes.view",
+                "mel.programmes.all",
+                "mel.data.enter",
+                "mel.data.import",
+                "mel.data.view",
+                "mel.data.review",
+                "mel.results.view_verified",
+                "mel.results.view_published",
+                "mel.reports.view",
+                "mel.reports.export",
+                "mel.collect.view",
+                "mel.collect.design",
+                "mel.collect.assign",
+                "mel.collect.review",
+                "mel.collect.correct",
+                "mel.collect.export",
+                "mel.collect.personal_data"
+            ]
+        },
+        {
+            "key": "mel_field_officer",
+            "name": "Field officer",
+            "description": "Enters and submits results for the programmes and units they are given.",
+            "sensitivity": 1,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "mel.programmes.view",
+                "mel.data.enter",
+                "mel.data.view",
+                "mel.collect.submit"
+            ]
+        },
+        {
+            "key": "mel_enumerator",
+            "name": "Enumerator",
+            "description": "Collects data in the field with the forms they are assigned, from the field app. Sees nothing else.",
+            "sensitivity": 1,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": ["mel.collect.submit"]
+        },
+        {
+            "key": "mel_project_manager",
+            "name": "Project manager",
+            "description": "Follows the results of the programmes they are given, and links them to their projects.",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "mel.programmes.view",
+                "mel.projects.link",
+                "mel.data.enter",
+                "mel.data.view",
+                "mel.results.view_verified",
+                "mel.results.view_published",
+                "mel.reports.view",
+                "mel.reports.export"
+            ]
+        },
+        {
+            "key": "mel_partner",
+            "name": "Implementing partner",
+            "description": "Enters and submits results for their own units of the programmes they are given.",
+            "sensitivity": 1,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "mel.programmes.view",
+                "mel.data.enter",
+                "mel.data.import",
+                "mel.data.view",
+                "mel.collect.submit"
+            ]
+        },
+        {
+            "key": "mel_donor_viewer",
+            "name": "Donor viewer",
+            "description": "Sees published results and shareable evidence for the programmes and periods they are given. Nothing internal.",
+            "sensitivity": 1,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "mel.programmes.view",
+                "mel.results.view_published",
+                "mel.reports.view"
+            ]
+        },
+        {
+            "key": "mel_evaluator",
+            "name": "Independent evaluator",
+            "description": "Reads verified and published results with their evidence for the programmes and periods they are given. Changes nothing.",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "mel.programmes.view",
+                "mel.results.view_verified",
+                "mel.results.view_published",
+                "mel.reports.view",
+                "mel.reports.export"
+            ]
         }
     ],
     "separation_of_duties": [
@@ -468,6 +876,21 @@
             "permissions": ["procurement.request", "procurement.approve"],
             "mode": "warn",
             "description": "Asking to buy and approving the purchase."
+        },
+        {
+            "permissions": ["mel.data.enter", "mel.data.review"],
+            "mode": "warn",
+            "description": "M&E refuses verification by whoever submitted the result (unless settings allow it); one person holding both still removes a check when nobody else does."
+        },
+        {
+            "permissions": ["mel.data.review", "mel.results.publish"],
+            "mode": "warn",
+            "description": "Settings can require that whoever verified a result does not also publish it."
+        },
+        {
+            "permissions": ["mel.collect.submit", "mel.collect.review"],
+            "mode": "warn",
+            "description": "M&E refuses a review by whoever collected the submission (unless settings allow it); one person holding both still removes a check when nobody else does."
         }
     ]
 }

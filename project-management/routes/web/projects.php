@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Projects\ChangeRequestController;
+use App\Http\Controllers\Projects\CollaborationController;
 use App\Http\Controllers\Projects\DeliverableController;
 use App\Http\Controllers\Projects\HomeController;
 use App\Http\Controllers\Projects\ProgrammeController;
@@ -50,6 +51,7 @@ Route::prefix('projects/{project}')->whereUuid('project')->scopeBindings()->name
     Route::middleware('can:projects.view')->group(function () {
         Route::get('/', [ProjectController::class, 'show'])->name('show');
         Route::get('team', [TeamController::class, 'show'])->name('team');
+        Route::get('collaboration', [CollaborationController::class, 'show'])->name('collaboration');
         Route::get('risks', [RiskController::class, 'index'])->name('risks.index');
         Route::get('deliverables', [DeliverableController::class, 'index'])->name('deliverables.index');
         Route::get('changes', [ChangeRequestController::class, 'index'])->name('changes.index');
@@ -60,6 +62,15 @@ Route::prefix('projects/{project}')->whereUuid('project')->scopeBindings()->name
     Route::middleware('can:projects.tasks.manage')->group(function () {
         Route::post('deliverables/{deliverable}/deliver', [DeliverableController::class, 'deliver'])->whereUuid('deliverable')->name('deliverables.deliver');
         Route::post('changes', [ChangeRequestController::class, 'store'])->name('changes.store');
+    });
+
+    // Other organizations taking part (ADR-0014); authority checked again inside.
+    Route::middleware('can:projects.partners.manage')->prefix('collaboration')->name('collaboration.')->group(function () {
+        Route::post('invitations', [CollaborationController::class, 'invite'])->middleware('throttle:30,1')->name('invitations.store');
+        Route::post('invitations/{invitation}/revoke', [CollaborationController::class, 'revoke'])->whereUuid('invitation')->name('invitations.revoke');
+        Route::post('invitations/{invitation}/resend', [CollaborationController::class, 'resend'])->whereUuid('invitation')->middleware('throttle:10,1')->name('invitations.resend');
+        Route::put('participants/{participant}', [CollaborationController::class, 'capabilities'])->whereUuid('participant')->name('participants.update');
+        Route::post('participants/{participant}/status', [CollaborationController::class, 'status'])->whereUuid('participant')->name('participants.status');
     });
 
     Route::middleware('can:projects.changes.approve')->group(function () {
@@ -79,6 +90,7 @@ Route::prefix('projects/{project}')->whereUuid('project')->scopeBindings()->name
         Route::put('/', [ProjectController::class, 'update'])->name('update');
         Route::post('status', [ProjectController::class, 'status'])->name('status');
         Route::post('members', [TeamController::class, 'addMember'])->name('members.store');
+        Route::put('members/{member}', [TeamController::class, 'updateMember'])->whereUuid('member')->name('members.update');
         Route::delete('members/{member}', [TeamController::class, 'removeMember'])->whereUuid('member')->name('members.destroy');
         Route::post('milestones', [TeamController::class, 'addMilestone'])->name('milestones.store');
         Route::post('milestones/{milestone}/toggle', [TeamController::class, 'toggleMilestone'])->whereUuid('milestone')->name('milestones.toggle');

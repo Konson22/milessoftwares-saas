@@ -7,8 +7,8 @@ import { ApprovalBands } from '@/components/approval-bands';
 import type { ApprovalBand } from '@/components/approval-bands';
 import { Field, invalid } from '@/components/field';
 import {
+    accountType as saveAccountType,
     financeLimits as saveFinanceLimits,
-    funding,
     health,
     modules as saveModule,
 } from '@/routes/admin/settings';
@@ -24,6 +24,7 @@ type Settings = {
         description: string;
         enabled: boolean;
     }[];
+    accountType: 'funder' | 'implementer' | null;
     funding: { enabled: boolean; canTurnOff: boolean };
     financeLimits: {
         currency: string;
@@ -92,21 +93,26 @@ function ModulesPanel({ modules }: { modules: Settings['modules'] }) {
 }
 
 /**
- * Whether this organization also funds others: it adds the funding sections to the menu.
+ * Funder or implementer: which menu the organization gets.
  */
-function FundingPanel({
-    enabled,
+function AccountTypePanel({
+    accountType,
     canTurnOff,
 }: {
-    enabled: boolean;
+    accountType: Settings['accountType'];
     canTurnOff: boolean;
 }) {
+    const funder = accountType === 'funder';
+
     return (
         <Panel className="mt-4">
-            <PanelHeader title="Funding other organizations" />
+            <PanelHeader
+                title="Account type"
+                description="Decides the menu everyone here sees. Nothing is deleted when it changes."
+            />
             <PanelBody>
                 <Form
-                    {...funding.form()}
+                    {...saveAccountType.form()}
                     options={{ preserveScroll: true }}
                     className="grid gap-3"
                 >
@@ -114,36 +120,36 @@ function FundingPanel({
                         <>
                             <input
                                 type="hidden"
-                                name="funds"
-                                value={enabled ? '0' : '1'}
+                                name="account_type"
+                                value={funder ? 'implementer' : 'funder'}
                             />
                             <p className="text-sm text-muted-foreground">
-                                {enabled
-                                    ? 'This organization funds others: Funding others and Marketplace in the menu are where it invites the organizations it funds and follows what they share.'
-                                    : 'Turn this on to invite the organizations you fund and follow what they share. Your own work and records do not change.'}
+                                {funder
+                                    ? 'Funder or donor: the menu shows the organizations you fund, their grants and reports, and the marketplace.'
+                                    : 'Implementer: the menu shows your projects, the funding you receive, procurement and finance.'}
                             </p>
-                            {enabled && !canTurnOff && (
+                            {funder && !canTurnOff && (
                                 <p className="text-sm text-muted-foreground">
-                                    To turn it off, first remove the
+                                    To become an implementer, first remove the
                                     organizations you fund.
                                 </p>
                             )}
-                            {errors.funding && (
+                            {(errors.account_type || errors.funding) && (
                                 <p className="text-sm text-destructive">
-                                    {errors.funding}
+                                    {errors.account_type ?? errors.funding}
                                 </p>
                             )}
                             <div>
                                 <Button
                                     type="submit"
-                                    variant={enabled ? 'outline' : 'default'}
+                                    variant="outline"
                                     disabled={
-                                        processing || (enabled && !canTurnOff)
+                                        processing || (funder && !canTurnOff)
                                     }
                                 >
-                                    {enabled
-                                        ? 'Turn off funding'
-                                        : 'Turn on funding'}
+                                    {funder
+                                        ? 'Switch to implementer'
+                                        : 'Switch to funder'}
                                 </Button>
                             </div>
                         </>
@@ -198,7 +204,10 @@ export default function OrganizationSettings({
 
             <ModulesPanel modules={settings.modules} />
 
-            <FundingPanel {...settings.funding} />
+            <AccountTypePanel
+                accountType={settings.accountType}
+                canTurnOff={settings.funding.canTurnOff}
+            />
 
             <HealthThresholds {...settings.health} />
             {settings.financeLimits && (

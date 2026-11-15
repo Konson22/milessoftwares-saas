@@ -17,7 +17,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $person_id
  * @property string|null $role
  * @property int $allocation_percent
+ * @property list<string>|null $responsibilities App\Collaboration\Responsibility keys
+ * @property string|null $org_unit_id the department they stand for on the project
  * @property-read Person $person
+ * @property-read OrgUnit|null $orgUnit
  * @property-read Project $project
  */
 class ProjectMember extends Model
@@ -29,7 +32,15 @@ class ProjectMember extends Model
 
     protected function casts(): array
     {
-        return ['allocation_percent' => 'integer'];
+        return ['allocation_percent' => 'integer', 'responsibilities' => 'array'];
+    }
+
+    /**
+     * @return BelongsTo<OrgUnit, $this>
+     */
+    public function orgUnit(): BelongsTo
+    {
+        return $this->belongsTo(OrgUnit::class);
     }
 
     /**

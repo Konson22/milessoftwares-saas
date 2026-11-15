@@ -16,7 +16,7 @@ use Illuminate\Validation\ValidationException;
 final class OrgUnits
 {
     /**
-     * @param  array{kind: string, name: string, code?: string|null, parent_id?: string|null}  $details
+     * @param  array{kind: string, name: string, code?: string|null, parent_id?: string|null, manager_person_id?: string|null}  $details
      *
      * @throws ValidationException
      */
@@ -36,7 +36,7 @@ final class OrgUnits
     }
 
     /**
-     * @param  array{kind: string, name: string, code?: string|null, parent_id?: string|null}  $details
+     * @param  array{kind: string, name: string, code?: string|null, parent_id?: string|null, manager_person_id?: string|null}  $details
      *
      * @throws ValidationException
      */
@@ -49,7 +49,7 @@ final class OrgUnits
                 self::refuseCycle($unit, $parentId);
             }
 
-            $fields = ['kind', 'name', 'code', 'parent_id'];
+            $fields = ['kind', 'name', 'code', 'parent_id', 'manager_person_id'];
             $before = $unit->only($fields);
             $unit->fill(['parent_id' => $parentId] + $details)->save();
 

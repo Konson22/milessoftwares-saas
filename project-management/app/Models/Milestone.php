@@ -6,6 +6,7 @@ use App\Tenancy\BelongsToOrganization;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -15,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $name
  * @property CarbonImmutable $due_on
  * @property CarbonImmutable|null $completed_at
+ * @property-read Project $project
  */
 class Milestone extends Model
 {
@@ -26,6 +28,14 @@ class Milestone extends Model
     protected function casts(): array
     {
         return ['due_on' => 'date', 'completed_at' => 'datetime'];
+    }
+
+    /**
+     * @return BelongsTo<Project, $this>
+     */
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
     }
 
     /**

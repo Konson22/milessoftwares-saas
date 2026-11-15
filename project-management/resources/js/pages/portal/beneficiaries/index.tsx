@@ -378,7 +378,10 @@ export default function Beneficiaries({
                                                 spellCheck={false}
                                                 placeholder="their-organization"
                                                 className="lowercase"
-                                                {...invalid('slug', errors.slug)}
+                                                {...invalid(
+                                                    'slug',
+                                                    errors.slug,
+                                                )}
                                             />
                                         </Field>
                                     )}

@@ -5,7 +5,10 @@ import {
     CalendarDays,
     ChartGantt,
     Clock,
+    FileText,
     GitPullRequestArrow,
+    Handshake,
+    Inbox,
     Layers,
     LayoutDashboard,
     ListChecks,
@@ -28,6 +31,7 @@ import { formatDate, PROJECT_STATUSES, statusLabel } from '@/lib/status';
 import {
     board,
     budget,
+    collaboration,
     edit,
     show,
     status as setStatus,
@@ -38,6 +42,8 @@ import {
 import { index as changes } from '@/routes/projects/changes';
 import { index as deliverables } from '@/routes/projects/deliverables';
 import { index as expenses } from '@/routes/projects/expenses';
+import { index as partnerReports } from '@/routes/projects/reports';
+import { index as partnerRequests } from '@/routes/projects/requests';
 import { index as risks } from '@/routes/projects/risks';
 import { index as tasks } from '@/routes/projects/tasks';
 import type { ProjectHeader } from '@/types';
@@ -97,6 +103,21 @@ export function ProjectFrame({
             label: 'Team',
             icon: Users,
             href: team({ project: project.id }),
+        },
+        {
+            label: 'Partners',
+            icon: Handshake,
+            href: collaboration({ project: project.id }),
+        },
+        {
+            label: 'Reports',
+            icon: FileText,
+            href: partnerReports({ project: project.id }),
+        },
+        {
+            label: 'Requests',
+            icon: Inbox,
+            href: partnerRequests({ project: project.id }),
         },
         {
             label: 'Time',

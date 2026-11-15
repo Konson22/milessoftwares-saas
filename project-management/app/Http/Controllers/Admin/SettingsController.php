@@ -15,6 +15,7 @@ use App\Support\Money;
 use App\Tenancy\CurrentOrganization;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
@@ -44,6 +45,7 @@ class SettingsController extends Controller
                     'description' => $module['description'],
                     'enabled' => $organization->hasModule($key),
                 ])->values()->all(),
+                'accountType' => $organization->account_type,
                 'funding' => [
                     'enabled' => $organization->isDonor(),
                     'canTurnOff' => ! Partnership::query()->where('donor_organization_id', $organization->id)->exists(),
@@ -94,6 +96,19 @@ class SettingsController extends Controller
         $message = $funds ? 'You can now fund other organizations.' : 'Funding is off.';
 
         return back()->with('success', $message);
+    }
+
+    /**
+     * Funder or implementer: which menu the organization gets.
+     */
+    public function updateAccountType(Request $request): SymfonyResponse
+    {
+        $validated = $request->validate(['account_type' => ['required', Rule::in(Organization::ACCOUNT_TYPES)]]);
+        $organization = app(CurrentOrganization::class)->require();
+
+        Organizations::chooseAccountType($organization, $validated['account_type'], $this->member($request));
+
+        return back()->with('success', $organization->isFunder() ? 'This organization is now a funder.' : 'This organization is now an implementer.');
     }
 
     /**

@@ -23,8 +23,9 @@ class HomeController extends Controller
 {
     public function __invoke(Request $request): Response|RedirectResponse
     {
-        // An organization that only funds others lands on its funding dashboard.
-        if (app(CurrentOrganization::class)->require()->isDonor() && ! Project::query()->exists()) {
+        // A funder, or an organization that only funds others, lands on its funding dashboard.
+        $organization = app(CurrentOrganization::class)->require();
+        if ($organization->isDonor() && ($organization->isFunder() || ! Project::query()->exists())) {
             return to_route('beneficiaries.dashboard');
         }
 

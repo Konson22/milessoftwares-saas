@@ -44,6 +44,10 @@ const STATUSES: Record<string, { label: string; tone: Tone }> = {
     settled: { label: 'Accounted for', tone: 'success' },
     // Change requests (the rest as above).
     withdrawn: { label: 'Withdrawn', tone: 'neutral' },
+    // Partner reports and project requests (the rest as above).
+    under_review: { label: 'Under review', tone: 'info' },
+    changes_requested: { label: 'Changes requested', tone: 'danger' },
+    published: { label: 'Published', tone: 'success' },
     // Health.
     on_track: { label: 'On track', tone: 'success' },
     at_risk: { label: 'At risk', tone: 'warning' },

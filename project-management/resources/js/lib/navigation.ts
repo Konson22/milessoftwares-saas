@@ -6,7 +6,15 @@ import { index as pettyCash } from '@/routes/petty-cash';
 import { index as programmes } from '@/routes/programmes';
 import {
     Banknote,
+    BarChart3,
     CheckSquare,
+    ClipboardList,
+    Gauge,
+    History,
+    ListTree,
+    SquarePen,
+    Target,
+    UserCheck,
     FolderKanban,
     ClipboardCheck,
     Coins,
@@ -52,10 +60,25 @@ import { index as donorPortal } from '@/routes/donor';
 import { index as audit } from '@/routes/admin/audit';
 import { edit as settings } from '@/routes/admin/settings';
 import { index as funders } from '@/routes/funders';
+import { index as sharedProjects } from '@/routes/shared-projects';
 import { index as grants } from '@/routes/grants';
 import { index as people } from '@/routes/people';
 import { index as projects } from '@/routes/projects';
 import { index as spaces } from '@/routes/structure';
+import { home as melHome } from '@/routes/mel';
+import { index as melAudit } from '@/routes/mel/audit';
+import { index as collectAssignments } from '@/routes/mel/collect/assignments';
+import { index as collectForms } from '@/routes/mel/collect/forms';
+import { index as melData } from '@/routes/mel/data';
+import { index as melFrameworks } from '@/routes/mel/frameworks';
+import { index as melIndicators } from '@/routes/mel/indicators';
+import { index as melProgrammes } from '@/routes/mel/programmes';
+import { index as melReports } from '@/routes/mel/reports';
+import { show as melSettings } from '@/routes/mel/settings';
+import { index as melVerification } from '@/routes/mel/verification';
+
+/** Who sees M&E's programmes, frameworks and indicators. */
+const MEL_PLANS = ['mel.programmes.view', 'mel.programmes.all'];
 
 export type NavItem = ShellNavItem & {
     /** Shown to members holding this permission, or any of these (or owners); null for everyone. */
@@ -118,11 +141,91 @@ export function navigation(): NavGroup[] {
                     permission: 'projects.view',
                 },
                 {
+                    // Other organizations' projects this one takes part in (ADR-0014).
+                    title: 'Shared projects',
+                    href: sharedProjects(),
+                    icon: Handshake,
+                    permission: null,
+                },
+                {
                     title: 'Procurement',
                     module: 'procurement',
                     href: procurement(),
                     icon: ShoppingCart,
                     permission: ['procurement.view', 'procurement.request'],
+                },
+            ],
+        },
+        {
+            title: 'Monitoring & evaluation',
+            items: [
+                {
+                    title: 'Results overview',
+                    module: 'mel',
+                    href: melHome(),
+                    icon: Target,
+                    permission: [
+                        ...MEL_PLANS,
+                        'mel.data.view',
+                        'mel.collect.view',
+                        'mel.reports.view',
+                    ],
+                },
+                {
+                    title: 'M&E programmes',
+                    module: 'mel',
+                    href: melProgrammes(),
+                    icon: Layers,
+                    permission: MEL_PLANS,
+                },
+                {
+                    title: 'Results frameworks',
+                    module: 'mel',
+                    href: melFrameworks(),
+                    icon: ListTree,
+                    permission: MEL_PLANS,
+                },
+                {
+                    title: 'Indicators',
+                    module: 'mel',
+                    href: melIndicators(),
+                    icon: Gauge,
+                    permission: MEL_PLANS,
+                },
+                {
+                    title: 'Data entry',
+                    module: 'mel',
+                    href: melData(),
+                    icon: SquarePen,
+                    permission: 'mel.data.view',
+                },
+                {
+                    title: 'Verification',
+                    module: 'mel',
+                    href: melVerification(),
+                    icon: ClipboardCheck,
+                    permission: 'mel.data.review',
+                },
+                {
+                    title: 'Forms & surveys',
+                    module: 'mel',
+                    href: collectForms(),
+                    icon: ClipboardList,
+                    permission: 'mel.collect.view',
+                },
+                {
+                    title: 'Field assignments',
+                    module: 'mel',
+                    href: collectAssignments(),
+                    icon: UserCheck,
+                    permission: 'mel.collect.view',
+                },
+                {
+                    title: 'M&E reports',
+                    module: 'mel',
+                    href: melReports(),
+                    icon: BarChart3,
+                    permission: 'mel.reports.view',
                 },
             ],
         },
@@ -246,19 +349,40 @@ export function navigation(): NavGroup[] {
                     icon: ScrollText,
                     permission: 'organization.audit.view',
                 },
+                {
+                    title: 'M&E settings',
+                    module: 'mel',
+                    href: melSettings(),
+                    icon: Settings,
+                    permission: 'mel.settings.manage',
+                },
+                {
+                    title: 'M&E audit trail',
+                    module: 'mel',
+                    href: melAudit(),
+                    icon: History,
+                    permission: 'mel.audit.view',
+                },
             ],
         },
     ];
 }
 
+export type AccountType = 'funder' | 'implementer' | null;
+
 /**
- * For an organization that funds others: who it funds, and finding more.
- * Added to its menu on the portal.
+ * A funder's menu: its funding dashboard and its own work, who it funds and
+ * finding more, its records and administration. None of an implementer's
+ * project, incoming-funding or finance sections.
  */
-function fundingNavigation(): NavGroup[] {
+function funderNavigation(): NavGroup[] {
+    const sections = navigation();
+    const keep = (title: string) =>
+        sections.filter((group) => group.title === title);
+
     return [
         {
-            title: 'Funding others',
+            title: 'Overview',
             items: [
                 {
                     title: 'Funding dashboard',
@@ -266,6 +390,34 @@ function fundingNavigation(): NavGroup[] {
                     icon: LayoutDashboard,
                     permission: null,
                 },
+                {
+                    title: 'My work',
+                    href: myWork(),
+                    icon: CheckSquare,
+                    permission: null,
+                },
+                {
+                    title: 'Shared projects',
+                    href: sharedProjects(),
+                    icon: Handshake,
+                    permission: null,
+                },
+            ],
+        },
+        ...fundingNavigation(),
+        ...keep('Records'),
+        ...keep('Administration'),
+    ];
+}
+
+/**
+ * For an organization that funds others: who it funds, and finding more.
+ */
+function fundingNavigation(): NavGroup[] {
+    return [
+        {
+            title: 'Funding others',
+            items: [
                 {
                     title: 'Beneficiaries',
                     href: beneficiaries(),
@@ -325,12 +477,13 @@ function fundingNavigation(): NavGroup[] {
 }
 
 /**
- * The sections the member may use, without empty groups.
+ * The sections the member may use, without empty groups: a funder's menu or
+ * an implementer's, by the organization's account type.
  */
 export function visibleNavigation(
     can: (permission: string) => boolean,
     donor: { confined: boolean } | null = null,
-    funds = false,
+    accountType: AccountType = null,
     modules: string[] = [],
 ): NavGroup[] {
     const portal: NavGroup = {
@@ -350,13 +503,9 @@ export function visibleNavigation(
         return [portal];
     }
 
-    // Funding others comes right after the overview.
-    const [overview, ...rest] = navigation();
     const sections = [
         ...(donor ? [portal] : []),
-        overview,
-        ...(funds ? fundingNavigation() : []),
-        ...rest,
+        ...(accountType === 'funder' ? funderNavigation() : navigation()),
     ];
 
     return sections

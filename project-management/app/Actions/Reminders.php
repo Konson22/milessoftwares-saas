@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Access\AccessResolver;
+use App\Collaboration\Reports;
 use App\Enums\GrantStatus;
 use App\Models\Grant;
 use App\Models\GrantDisbursement;
@@ -37,7 +38,7 @@ final class Reminders
     public static function run(): array
     {
         return [
-            'reminders' => self::overdueTasks() + (app(CurrentOrganization::class)->require()->hasModule(Modules::GRANTS) ? self::grantReports() + self::overdueGrantPayments() : 0),
+            'reminders' => self::overdueTasks() + Reports::remind(app(CurrentOrganization::class)->require()->id) + (app(CurrentOrganization::class)->require()->hasModule(Modules::GRANTS) ? self::grantReports() + self::overdueGrantPayments() : 0),
             'digests' => self::digests(),
         ];
     }

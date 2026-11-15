@@ -44,8 +44,16 @@ trait InteractsWithOrganizations
             : $this->platform()->organization($slug, ['display_name' => Str::headline($slug), 'default_currency' => 'USD', 'timezone' => 'UTC']);
         $this->madeOrganizations[$slug] = true;
 
-        return Organization::query()->find($platform['id'])
-            ?? Organizations::mirror(PlatformOrganization::fromArray($platform));
+        $organization = Organization::query()->find($platform['id']);
+        if ($organization === null) {
+            $organization = Organizations::mirror(PlatformOrganization::fromArray($platform));
+            // Past the account type question (tests of it unset this).
+            if ($organization->needsAccountType()) {
+                $organization->forceFill(['account_type' => Organization::IMPLEMENTER])->save();
+            }
+        }
+
+        return $organization;
     }
 
     /**

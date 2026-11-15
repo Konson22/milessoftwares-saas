@@ -47,11 +47,7 @@ final class Organizations
         if ($organization === null) {
             $organization = new Organization;
             $organization->forceFill(['id' => $platform->id, 'currency' => $platform->defaultCurrency ?? 'USD']);
-            // Signed up as a donor: the funding sections are on from the start
-            // (Administration → Settings turns them off or on later).
-            if ($platform->isDonor()) {
-                $organization->forceFill(['capabilities' => [Organization::DONOR]]);
-            }
+            self::adoptPlatformType($organization, $platform);
             $organization->fill($details)->forceFill(['status' => Organization::ACTIVE])->save();
             Audit::record('organization.created', $organization, ['slug' => $organization->slug], $organization->id);
 
@@ -59,12 +55,56 @@ final class Organizations
         }
 
         // The currency stays what it was: every amount here is in it.
+        if ($organization->needsAccountType()) {
+            self::adoptPlatformType($organization, $platform);
+        }
         $organization->fill($details)->forceFill(['status' => $platform->isActive() ? Organization::ACTIVE : Organization::SUSPENDED]);
         if ($organization->isDirty()) {
             $organization->save();
         }
 
         return $organization;
+    }
+
+    /**
+     * The type chosen at sign-up on the platform, when there was one (donor or
+     * organization): nobody is asked again here. Otherwise it stays unset and
+     * someone who manages the organization chooses on their first visit.
+     */
+    private static function adoptPlatformType(Organization $organization, PlatformOrganization $platform): void
+    {
+        if ($platform->isDonor()) {
+            $organization->forceFill([
+                'account_type' => Organization::FUNDER,
+                'capabilities' => array_values(array_unique([...$organization->capabilities ?? [], Organization::DONOR])),
+            ]);
+        } elseif ($platform->organizationType === 'organization') {
+            $organization->forceFill(['account_type' => Organization::IMPLEMENTER]);
+        }
+    }
+
+    /**
+     * What the organization uses Projects as: a funder (the funding sections,
+     * funding on) or an implementer (its own projects, funding off). Changing
+     * to implementer is refused while it funds anyone.
+     *
+     * @throws ValidationException
+     */
+    public static function chooseAccountType(Organization $organization, string $type, User $by): void
+    {
+        if (! in_array($type, Organization::ACCOUNT_TYPES, true)) {
+            throw ValidationException::withMessages(['account_type' => 'Choose funder or implementer.']);
+        }
+        if ($organization->account_type === $type) {
+            return;
+        }
+
+        DB::transaction(function () use ($organization, $type, $by) {
+            $before = $organization->account_type;
+            self::setFunding($organization, $type === Organization::FUNDER, $by);
+            $organization->forceFill(['account_type' => $type])->save();
+            Audit::record('organization.account_type_set', $organization, ['from' => $before, 'to' => $type], $organization->id, $by);
+        });
     }
 
     /**
@@ -161,7 +201,9 @@ final class Organizations
 
         $others = array_values(array_diff($organization->capabilities ?? [], [Organization::DONOR]));
         $capabilities = $funds ? [...$others, Organization::DONOR] : $others;
-        $organization->fill(['capabilities' => $capabilities === [] ? null : $capabilities])->save();
+        $organization->fill(['capabilities' => $capabilities === [] ? null : $capabilities])
+            // The menu follows: funding on makes it a funder, off an implementer.
+            ->forceFill(['account_type' => $funds ? Organization::FUNDER : Organization::IMPLEMENTER])->save();
 
         Audit::record($funds ? 'organization.funding_enabled' : 'organization.funding_disabled', $organization, [], $organization->id, $by);
     }

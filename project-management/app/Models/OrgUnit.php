@@ -18,7 +18,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $kind
  * @property string $name
  * @property string|null $code
+ * @property string|null $manager_person_id optional: a small organization needs none
  * @property CarbonImmutable|null $archived_at
+ * @property-read Person|null $manager
  */
 class OrgUnit extends Model
 {
@@ -37,6 +39,14 @@ class OrgUnit extends Model
     protected function casts(): array
     {
         return ['archived_at' => 'datetime'];
+    }
+
+    /**
+     * @return BelongsTo<Person, $this>
+     */
+    public function manager(): BelongsTo
+    {
+        return $this->belongsTo(Person::class, 'manager_person_id');
     }
 
     /**

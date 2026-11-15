@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Collaboration\Models\Invitation as ProjectInvitation;
+use App\Collaboration\Models\Participant;
 use App\Tenancy\BelongsToOrganization;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -131,6 +133,26 @@ class Project extends Model
     public function members(): HasMany
     {
         return $this->hasMany(ProjectMember::class);
+    }
+
+    /**
+     * Other organizations taking part, now or before (ADR-0014).
+     *
+     * @return HasMany<Participant, $this>
+     */
+    public function participants(): HasMany
+    {
+        return $this->hasMany(Participant::class);
+    }
+
+    /**
+     * Invitations to take part, answered or not.
+     *
+     * @return HasMany<ProjectInvitation, $this>
+     */
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(ProjectInvitation::class);
     }
 
     /**

@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Projects;
 
+use App\Collaboration\Responsibility;
 use App\Http\Controllers\Concerns\ShowsProject;
 use App\Http\Controllers\Controller;
 use App\Models\Milestone;
+use App\Models\OrgUnit;
 use App\Models\Person;
 use App\Models\Project;
 use App\Models\ProjectMember;
@@ -30,7 +32,7 @@ class TeamController extends Controller
 
     public function show(Request $request, Project $project): Response
     {
-        $members = $project->members()->with('person')->get()->sortBy('person.name');
+        $members = $project->members()->with(['person', 'orgUnit:id,name'])->get()->sortBy('person.name');
         $openTasks = Task::query()->where('project_id', $project->id)->where('status', '!=', Task::DONE)
             ->groupBy('assignee_id')->selectRaw('assignee_id, count(*) as open')->pluck('open', 'assignee_id');
         $helping = TaskCollaborator::query()->whereHas('task', fn ($query) => $query->where('project_id', $project->id)->where('status', '!=', Task::DONE))
@@ -49,11 +51,18 @@ class TeamController extends Controller
                 'name' => $member->person->name,
                 'title' => $member->person->title,
                 'role' => $member->role,
+                'responsibilities' => Responsibility::normalize($member->responsibilities),
+                'unitId' => $member->org_unit_id,
+                'unit' => $member->orgUnit?->name,
                 'allocation' => $member->allocation_percent,
                 'totalAllocation' => (int) ($load[$member->person_id] ?? 0),
                 'openTasks' => (int) ($openTasks[$member->person_id] ?? 0) + (int) ($helping[$member->person_id] ?? 0),
                 'minutes' => (int) ($hours[$member->person_id] ?? 0),
             ]),
+            'responsibilityOptions' => Responsibility::options(),
+            // Departments are optional: none set up, none asked for.
+            'units' => OrgUnit::query()->whereNull('archived_at')->orderBy('name')->get(['id', 'name'])
+                ->map(fn (OrgUnit $unit) => ['value' => $unit->id, 'label' => $unit->name])->values(),
             'people' => collect(Person::options())->reject(fn (array $option) => $members->contains('person_id', $option['value']))->values(),
             'milestones' => $project->milestones()
                 ->withCount(['tasks', 'tasks as done_count' => fn ($query) => $query->where('status', Task::DONE)])
@@ -75,6 +84,7 @@ class TeamController extends Controller
             'person_id' => ['required', 'uuid', Rule::exists('people', 'id')->where('organization_id', app(CurrentOrganization::class)->id())],
             'role' => ['nullable', 'string', 'max:64'],
             'allocation_percent' => ['required', 'integer', 'min:1', 'max:100'],
+            ...$this->assignmentRules(),
         ]);
 
         if ($project->members()->where('person_id', $validated['person_id'])->exists()) {
@@ -84,10 +94,47 @@ class TeamController extends Controller
             'person_id' => $validated['person_id'],
             'role' => $this->text($validated['role'] ?? null),
             'allocation_percent' => (int) $validated['allocation_percent'],
+            'responsibilities' => Responsibility::normalize($validated['responsibilities'] ?? []),
+            'org_unit_id' => $validated['org_unit_id'] ?? null,
         ]);
         ActivityLog::record($project, $this->member($request), "Added {$member->person->name} to the team");
 
         return back()->with('success', "{$member->person->name} is on the team.");
+    }
+
+    /**
+     * Their role, time, responsibilities and the department they stand for.
+     */
+    public function updateMember(Request $request, Project $project, ProjectMember $member): RedirectResponse
+    {
+        abort_unless($member->project_id === $project->id, 404);
+        $validated = $request->validate([
+            'role' => ['nullable', 'string', 'max:64'],
+            'allocation_percent' => ['required', 'integer', 'min:1', 'max:100'],
+            ...$this->assignmentRules(),
+        ]);
+
+        $member->forceFill([
+            'role' => $this->text($validated['role'] ?? null),
+            'allocation_percent' => (int) $validated['allocation_percent'],
+            'responsibilities' => Responsibility::normalize($validated['responsibilities'] ?? []),
+            'org_unit_id' => $validated['org_unit_id'] ?? null,
+        ])->save();
+        ActivityLog::record($project, $this->member($request), "Updated {$member->person->name} on the team");
+
+        return back()->with('success', "{$member->person->name} is updated.");
+    }
+
+    /**
+     * @return array<string, list<mixed>>
+     */
+    private function assignmentRules(): array
+    {
+        return [
+            'responsibilities' => ['nullable', 'array'],
+            'responsibilities.*' => ['string', Rule::in(array_keys(Responsibility::LABELS))],
+            'org_unit_id' => ['nullable', 'uuid', Rule::exists('org_units', 'id')->where('organization_id', app(CurrentOrganization::class)->id())->whereNull('archived_at')],
+        ];
     }
 
     public function removeMember(Request $request, Project $project, ProjectMember $member): RedirectResponse

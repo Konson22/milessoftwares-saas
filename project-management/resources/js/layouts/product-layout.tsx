@@ -40,7 +40,7 @@ export default function ProductLayout({ children }: PropsWithChildren) {
     const groups = visibleNavigation(
         can,
         donorPortal,
-        organization?.funds ?? false,
+        organization?.accountType ?? null,
         organization?.modules,
     );
     const active = activeItem(groups, url, home());

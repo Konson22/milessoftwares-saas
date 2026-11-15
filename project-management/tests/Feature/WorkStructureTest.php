@@ -40,16 +40,7 @@ function wsTask(Project $project, array $details = []): Task
     return test()->asTenant('acme', fn () => Task::query()->where('project_id', $project->id)->latest('created_at')->orderByDesc('id')->firstOrFail());
 }
 
-/**
- * @template T
- *
- * @param  callable(): T  $callback
- * @return T
- */
-function inAcme(callable $callback): mixed
-{
-    return test()->asTenant('acme', $callback);
-}
+// inAcme() is in tests/Pest.php.
 
 it('gives every new project a folder and a list, and puts its tasks there', function () {
     $this->actingAsMember('acme', ORGANIZER);

@@ -1,11 +1,14 @@
 <?php
 
+use App\Http\Controllers\Collaboration\InvitationLinkController;
 use App\Http\Controllers\Organizations\PartnershipController;
 use App\Http\Middleware\ConfineFunderContacts;
 use App\Http\Middleware\EnterWorkspace;
 use App\Http\Middleware\RememberPerson;
+use App\Http\Middleware\RequireAccountType;
 use App\Http\Middleware\RequireFunding;
 use App\Http\Middleware\RequireModule;
+use App\Http\Middleware\SetUpMel;
 use App\Support\Modules;
 use Illuminate\Support\Facades\Route;
 use Miles\PlatformClient\PlatformConfig;
@@ -32,19 +35,24 @@ Route::prefix(app(PlatformConfig::class)->path())->middleware('web')->group(func
     Route::middleware('platform.tenant')->group(function () {
         Route::get('invitations/{token}', [PartnershipController::class, 'landing'])->where('token', '[A-Za-z0-9]{48}')->name('partnerships.landing');
         Route::post('invitations/{token}', [PartnershipController::class, 'open'])->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:20,1')->name('partnerships.open');
+        // The same for an invitation to take part in a project (ADR-0014).
+        Route::get('project-invitations/{token}', [InvitationLinkController::class, 'landing'])->where('token', '[A-Za-z0-9]{48}')->name('collaboration.landing');
+        Route::post('project-invitations/{token}', [InvitationLinkController::class, 'open'])->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:20,1')->name('collaboration.open');
     });
 
     // Following the organizations it funds: only for one that funds others.
-    Route::middleware(['platform', EnterWorkspace::class, RequireFunding::class])
+    Route::middleware(['platform', EnterWorkspace::class, RequireAccountType::class, RequireFunding::class])
         ->group(function () {
             require __DIR__.'/web/beneficiaries.php';
             require __DIR__.'/web/marketplace.php';
         });
 
-    Route::middleware(['platform', EnterWorkspace::class, ConfineFunderContacts::class, RememberPerson::class])
+    Route::middleware(['platform', EnterWorkspace::class, ConfineFunderContacts::class, RequireAccountType::class, RememberPerson::class])
         ->group(function () {
+            require __DIR__.'/web/account-type.php';
             require __DIR__.'/web/partnerships.php';
             require __DIR__.'/web/projects.php';
+            require __DIR__.'/web/collaboration.php';
             require __DIR__.'/web/structure.php';
             require __DIR__.'/web/people.php';
             require __DIR__.'/web/publishing.php';
@@ -54,6 +62,7 @@ Route::prefix(app(PlatformConfig::class)->path())->middleware('web')->group(func
             });
             Route::middleware(RequireModule::class.':'.Modules::DOCUMENTS)->group(__DIR__.'/web/documents.php');
             Route::middleware(RequireModule::class.':'.Modules::PROCUREMENT)->group(__DIR__.'/web/procurement.php');
+            Route::middleware([RequireModule::class.':'.Modules::MEL, SetUpMel::class])->group(__DIR__.'/web/mel.php');
             require __DIR__.'/web/approvals.php';
             require __DIR__.'/web/admin.php';
             Route::prefix('advances')->name('advances.')->middleware(RequireModule::class.':'.Modules::ACCOUNTING)

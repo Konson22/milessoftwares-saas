@@ -6,10 +6,14 @@ const appName = import.meta.env.VITE_APP_NAME || 'Projects';
 
 void createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
-    // A donor's invitation opened outside one's own workspace, then the
-    // full shell.
+    // A donor's invitation opened outside one's own workspace, and choosing
+    // the account type (no menu yet), then the full shell.
     layout: (name: string) =>
-        name === 'portal/partnerships/landing' ? PlainLayout : ProductLayout,
+        name === 'portal/partnerships/landing' ||
+        name === 'portal/collaboration/landing' ||
+        name === 'portal/account-type'
+            ? PlainLayout
+            : ProductLayout,
     strictMode: true,
     progress: {
         color: '#0081FE',
