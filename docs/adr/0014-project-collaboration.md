@@ -192,3 +192,19 @@ field, integration API), platform-client and the PM mirror, and it is not part o
 
 **Deploy:** back up the Projects database, migrate, then on central
 `php artisan platform:catalog-reassign projects --dry-run`, then without `--dry-run`.
+
+## 9. Amendment (2026-11-16, stabilization milestone)
+
+- **Only enforced capabilities exist for users.** `Capability::operational()`
+  lists the capabilities the backend checks (view, partners.manage,
+  budget.view, reports.submit, reports.review, reports.publish,
+  requests.create, requests.review, donor_reports.view). Only these are
+  offered, grantable (`grantableBy`) or kept (`normalize`, used on every read
+  and save); relationship presets suggest only these. The others (edit,
+  activities.manage, members.manage, budget.manage, procurement.*,
+  results.view, evidence.submit) stay defined for later. Rows saved before
+  this change may still hold them in the database; they are ignored and
+  dropped on the next save. **When one becomes enforced, review the
+  participations whose stored capabilities include it before switching it
+  on**, or they would gain it silently.
+- **Internal project-scoped access** (§6, deferred) is now ADR-0016.

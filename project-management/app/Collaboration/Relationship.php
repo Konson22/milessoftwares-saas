@@ -58,6 +58,6 @@ final class Relationship
      */
     public static function options(): array
     {
-        return array_map(fn (string $key) => ['value' => $key, 'label' => self::LABELS[$key], 'suggested' => self::SUGGESTED[$key]], self::keys());
+        return array_map(fn (string $key) => ['value' => $key, 'label' => self::LABELS[$key], 'suggested' => array_values(array_intersect(self::SUGGESTED[$key], Capability::operational()))], self::keys());
     }
 }

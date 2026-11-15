@@ -82,7 +82,22 @@ final class Capability
     }
 
     /**
-     * Known keys only, always with view, in catalog order.
+     * The capabilities the backend enforces today. Only these can be granted,
+     * offered in the UI or kept on a participation; the others stay defined
+     * for later but are dropped wherever capabilities are read or saved, so
+     * nobody believes they granted (or withheld) something that has no
+     * effect. When one becomes enforced, review the participations that held
+     * it before it was dropped (ADR-0014, amendment of 2026-11-16).
+     *
+     * @return list<string>
+     */
+    public static function operational(): array
+    {
+        return array_values(array_filter(self::keys(), fn (string $key) => self::ALL[$key]['effective']));
+    }
+
+    /**
+     * Known, enforced keys only, always with view, in catalog order.
      *
      * @param  array<array-key, mixed>  $capabilities
      * @return list<string>
@@ -91,7 +106,7 @@ final class Capability
     {
         $given = array_filter($capabilities, 'is_string');
 
-        return array_values(array_filter(self::keys(), fn (string $key) => $key === self::VIEW || in_array($key, $given, true)));
+        return array_values(array_filter(self::operational(), fn (string $key) => $key === self::VIEW || in_array($key, $given, true)));
     }
 
     /**
@@ -102,7 +117,7 @@ final class Capability
      */
     public static function grantableBy(Access $access): array
     {
-        return array_values(array_filter(self::keys(), function (string $key) use ($access) {
+        return array_values(array_filter(self::operational(), function (string $key) use ($access) {
             if ($access->isOwner) {
                 return true;
             }
@@ -117,13 +132,13 @@ final class Capability
     }
 
     /**
-     * For the UI: every capability with its label and whether it works yet.
+     * For the UI: the enforced capabilities with their labels.
      *
      * @return list<array{value: string, label: string, effective: bool}>
      */
     public static function options(): array
     {
-        return array_map(fn (string $key) => ['value' => $key, 'label' => self::ALL[$key]['label'], 'effective' => self::ALL[$key]['effective']], self::keys());
+        return array_map(fn (string $key) => ['value' => $key, 'label' => self::ALL[$key]['label'], 'effective' => true], self::operational());
     }
 
     /**

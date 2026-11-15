@@ -421,3 +421,19 @@ it('records each step on both sides', function () {
     expect($actions($acme))->toContain('collaboration.invited', 'collaboration.joined', 'collaboration.status_changed')
         ->and($actions($water))->toContain('collaboration.invitation_received', 'collaboration.accepted', 'collaboration.status_changed');
 });
+
+it('offers and keeps only the capabilities the application enforces', function () {
+    $project = collabProject();
+
+    // Not offered on the page, not suggested by a preset...
+    $this->get($this->organizationUrl('acme', "projects/{$project->id}/collaboration"))->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->where('capabilities', fn ($options) => collect($options)->pluck('value')->doesntContain('activities.manage')
+            && collect($options)->pluck('value')->contains('reports.submit'))
+        ->where('grantable', fn ($grantable) => collect($grantable)->doesntContain('activities.manage')));
+
+    // ...and not kept when sent anyway, even by the owner.
+    $this->post($this->organizationUrl('acme', "projects/{$project->id}/collaboration/invitations"), [
+        'organization_id' => $this->organization('water-now')->id, 'relationship' => 'implementer', 'capabilities' => ['view', 'activities.manage', 'procurement.request', 'reports.submit'],
+    ])->assertSessionHasNoErrors();
+    expect(Invitation::query()->sole()->capabilities)->toBe(['view', 'reports.submit']);
+});
