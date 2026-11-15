@@ -30,7 +30,7 @@ final class LinkedProjects
      * Figures for each linked project the member may see, by project id.
      *
      * @param  Collection<int, ProgrammeUnit>  $units
-     * @return array<string, array{id: string, label: string, status: string, progressPercent: int|null, currency: string, approvedBudgetMinor: int|null, paidMinor: int|null}>
+     * @return array<string, array{id: string, label: string, status: string, progressPercent: int|null, currency: string, approvedBudgetMinor: int|null, paidMinor: int|null, paidStatus: string|null}>
      */
     public static function figures(Collection $units, Access $access): array
     {
@@ -56,6 +56,7 @@ final class LinkedProjects
                 'currency' => $project->currency,
                 'approvedBudgetMinor' => $money[$project->id]['approvedBudgetMinor'] ?? null,
                 'paidMinor' => isset($money[$project->id]) ? $money[$project->id]['paidMinor'] : null,
+                'paidStatus' => isset($money[$project->id]) ? $money[$project->id]['provenance']['paidStatus'] : null,
             ];
         }
 

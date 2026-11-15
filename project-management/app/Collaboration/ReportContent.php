@@ -9,7 +9,7 @@ use App\Mel\Models\ProgrammeUnit;
 use App\Mel\Models\VerifiedResult;
 use App\Models\Organization;
 use App\Models\Project;
-use App\Support\ProjectMetrics;
+use App\Support\ProjectFinance;
 use App\Tenancy\CurrentOrganization;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -128,7 +128,7 @@ final class ReportContent
      * submitting party may see them, and the verified M&E results of units
      * linked to the project for periods overlapping the report's.
      *
-     * @return array{capturedAt: string, financial: array{source: string, currency: string, approvedMinor: int, spentMinor: int, varianceMinor: int, categories: list<array{category: string, amountMinor: int}>}|null, mel: list<array<string, mixed>>}
+     * @return array{capturedAt: string, financial: array{source: string, currency: string, approvedMinor: int, spentMinor: int, committedMinor: int, varianceMinor: int, basis: string, provenance: array<string, mixed>, categories: list<array{category: string, amountMinor: int}>}|null, mel: list<array<string, mixed>>}
      */
     public static function snapshot(Report $report, bool $withBudget): array
     {
@@ -146,28 +146,34 @@ final class ReportContent
     }
 
     /**
-     * @return array{source: string, currency: string, approvedMinor: int, spentMinor: int, varianceMinor: int, categories: list<array{category: string, amountMinor: int}>}|null
+     * @return array{source: string, currency: string, approvedMinor: int, spentMinor: int, committedMinor: int, varianceMinor: int, basis: string, provenance: array<string, mixed>, categories: list<array{category: string, amountMinor: int}>}|null
      */
     private static function financial(Project $project): ?array
     {
-        if (Budgets::approved($project) === null) {
+        // ProjectFinance::shareable: never the estimated staff cost.
+        $figures = ProjectFinance::shareable(ProjectFinance::for($project));
+        if ($figures['approvedBudgetMinor'] === null) {
             return null;
         }
 
         $categories = [];
-        $approved = 0;
         foreach (Budgets::approvedByCategory($project) as $category => $amount) {
             $categories[] = ['category' => CostCategory::from($category)->label(), 'amountMinor' => (int) $amount];
-            $approved += (int) $amount;
         }
-        $spent = (int) ProjectMetrics::for($project)['expensesMinor'];
+        $approved = $figures['approvedBudgetMinor'];
 
+        // spentMinor is the paid amount and varianceMinor approved − paid
+        // (cash basis, unspent), the keys frozen snapshots already use; the
+        // basis and provenance say so from now on.
         return [
             'source' => self::RECORDED,
-            'currency' => $project->currency,
+            'currency' => $figures['currency'],
             'approvedMinor' => $approved,
-            'spentMinor' => $spent,
-            'varianceMinor' => $approved - $spent,
+            'spentMinor' => $figures['paidMinor'],
+            'committedMinor' => $figures['committedMinor'],
+            'varianceMinor' => $approved - $figures['paidMinor'],
+            'basis' => 'paid',
+            'provenance' => $figures['provenance'],
             'categories' => $categories,
         ];
     }

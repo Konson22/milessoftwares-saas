@@ -424,7 +424,7 @@ final class DonorProjection
      * What was paid from this grant only, line by line. Not who asked or
      * approved, the supplier, or the receipts.
      *
-     * @return array{paidMinor: int, lines: list<array{paidOn: string|null, category: string, description: string, amountMinor: int}>}
+     * @return array{paidMinor: int, provenance: array<string, mixed>, lines: list<array{paidOn: string|null, category: string, description: string, amountMinor: int}>}
      */
     private static function spending(Grant $grant, Project $project): array
     {
@@ -433,6 +433,8 @@ final class DonorProjection
 
         return [
             'paidMinor' => (int) $paid->sum('amount_minor'),
+            // Recorded in Projects; posted only once Finance took every payment.
+            'provenance' => ProjectFinance::provenanceOf($project->currency, $paid),
             'lines' => array_values($paid->map(fn (Expense $expense) => [
                 'paidOn' => $expense->spent_on?->toDateString(),
                 'category' => $expense->category->label(),

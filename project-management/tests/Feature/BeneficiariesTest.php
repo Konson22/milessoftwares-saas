@@ -11,11 +11,14 @@ use App\Models\Task;
 use App\Models\User;
 use App\Models\UserNotification;
 use App\Notifications\InvitedAsBeneficiary;
+use App\Support\ParticipationInventory;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Notifications\AnonymousNotifiable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 
 /*
@@ -673,4 +676,49 @@ it('offers to record a grant for a connected donor, with its funder chosen', fun
     beneficiaryGrant('water-now');
     $this->get($this->organizationUrl('water-now', 'donor-connections'))->assertInertia(fn (Assert $page) => $page
         ->where('connected.0.grants', 1));
+});
+
+it('inventories donor and partner records for the participation model, changing none', function () {
+    ['admin' => $admin, 'partnership' => $partnership] = connectedBeneficiary();
+    $this->actingAs($admin);
+    $grant = beneficiaryGrant('water-now');
+    shareParts($grant, ['portal_budget' => true]);
+    $new = fundedProject($grant, 'WASH');
+    $joined = fundedProject($grant, 'SANI');
+    // The donor already takes part in SANI, without the budget the grant shares.
+    acceptProjectInvitation(inviteToProject($joined, 'global-fund', 'donor', ['view'], owner: 'water-now'), 'global-fund');
+
+    $water = $this->organization('water-now');
+    $insert = fn (string $table, array $row) => DB::table($table)->insert(['id' => (string) Str::uuid(), 'organization_id' => $water->id, 'created_at' => now(), 'updated_at' => now(), ...$row]);
+    $insert('mel_partners', ['name' => 'Field NGO', 'kind' => 'ngo']);
+    $insert('mel_partners', ['name' => 'field-ngo ', 'kind' => 'ngo']);
+    $insert('mel_partners', ['name' => 'Global Fund', 'kind' => 'ngo']);
+    $offPlatform = (string) Str::uuid();
+    DB::table('funders')->insert(['id' => $offPlatform, 'organization_id' => $water->id, 'name' => 'Local Trust', 'kind' => 'foundation', 'active' => true, 'created_at' => now(), 'updated_at' => now()]);
+    $insert('funder_contacts', ['funder_id' => $offPlatform, 'user_id' => User::factory()->create()->id]);
+
+    $tables = ['partnerships', 'project_participants', 'mel_partners', 'funders', 'funder_contacts', 'grants', 'project_invitations'];
+    $before = collect($tables)->mapWithKeys(fn (string $table) => [$table => DB::table($table)->orderBy('id')->get()->toJson()])->all();
+
+    $inventory = ParticipationInventory::run($water->id);
+    $found = collect($inventory['findings'])->map(fn (array $finding) => "{$finding['kind']} {$finding['subject']}")->all();
+
+    expect($inventory['counts'])->toMatchArray(['partnerships_accepted' => 1, 'participants' => 1, 'mel_partners' => 3, 'funder_contacts' => 1])
+        ->and($found)->toContain('candidate WASH ← Global Fund (GF/1)')
+        ->toContain('already_participant SANI ← Global Fund (GF/1)')
+        ->toContain('visibility_conflict SANI ← Global Fund (GF/1)')
+        ->toContain('duplicate_mel_partner Field NGO / field-ngo ')
+        ->toContain('mel_partner_matches_organization Global Fund')
+        ->toContain('unlinked_funder Local Trust')
+        ->not->toContain('candidate SANI ← Global Fund (GF/1)');
+    expect($partnership->funder_id)->not->toBeNull();
+
+    $this->artisan('projects:participation-inventory --organization=water-now')
+        ->expectsOutputToContain('partnerships_accepted: 1')
+        ->expectsOutputToContain('candidate [water-now] WASH ← Global Fund (GF/1)')
+        ->assertExitCode(0);
+
+    // Read-only: every record as it was.
+    expect(collect($tables)->mapWithKeys(fn (string $table) => [$table => DB::table($table)->orderBy('id')->get()->toJson()])->all())->toBe($before);
+    expect($new->id)->not->toBeEmpty();
 });

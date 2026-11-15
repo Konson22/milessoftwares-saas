@@ -57,7 +57,10 @@ type SharedProject = {
     milestones: { name: string; dueOn: string; reached: boolean }[];
     budget: {
         approvedMinor: number;
+        /** Paid, under its earlier name. */
         spentMinor: number;
+        committedMinor?: number;
+        provenance?: { asOf: string; source: string; paidStatus: string };
         categories: { category: string; amountMinor: number }[];
     } | null;
 };
@@ -260,7 +263,7 @@ export default function SharedProject({
                         <Panel>
                             <PanelHeader
                                 title="Approved budget"
-                                description={`Spent so far: ${formatMoney(project.budget.spentMinor, project.currency)} of ${formatMoney(project.budget.approvedMinor, project.currency)}.`}
+                                description={`Paid so far: ${formatMoney(project.budget.spentMinor, project.currency)} of ${formatMoney(project.budget.approvedMinor, project.currency)}; ${formatMoney(project.budget.committedMinor ?? 0, project.currency)} committed. ${project.budget.provenance?.paidStatus === 'posted' ? 'Payments posted in Finance' : 'Payments as recorded by the owner, not verified by Finance'}, as of ${project.budget.provenance?.asOf ?? 'today'}.`}
                             />
                             <Table>
                                 <TableBody>

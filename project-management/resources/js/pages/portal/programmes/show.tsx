@@ -55,6 +55,8 @@ type Props = {
         | {
               currency: string;
               budgetMinor: number;
+              approvedBudgetMinor: number;
+              notApproved: number;
               actualMinor: number;
               cancelledActualMinor: number;
           }[]
@@ -274,7 +276,7 @@ export default function Programme({
                             {totals?.map((total) => (
                                 <div key={total.currency}>
                                     <dt className="text-muted-foreground">
-                                        Spent / budget ({total.currency})
+                                        Cost to date / budget ({total.currency})
                                     </dt>
                                     <dd className="font-medium tabular-nums">
                                         {formatMoney(
@@ -297,6 +299,16 @@ export default function Programme({
                                             spent on cancelled projects
                                         </dd>
                                     )}
+                                    <dd className="text-xs text-muted-foreground tabular-nums">
+                                        {formatMoney(
+                                            total.approvedBudgetMinor,
+                                            total.currency,
+                                        )}{' '}
+                                        approved
+                                        {total.notApproved > 0 &&
+                                            `; ${total.notApproved} project${total.notApproved === 1 ? '' : 's'} not yet approved`}
+                                        . Cost includes estimated staff time.
+                                    </dd>
                                 </div>
                             ))}
                         </dl>
@@ -322,7 +334,7 @@ export default function Programme({
                                     <TableHead>Due</TableHead>
                                     {totals && (
                                         <TableHead className="text-right">
-                                            Spent / budget
+                                            Cost to date / budget
                                         </TableHead>
                                     )}
                                     {manage && <TableHead />}

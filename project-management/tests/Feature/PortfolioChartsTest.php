@@ -1,9 +1,11 @@
 <?php
 
 use App\Actions\Tasks;
+use App\Enums\BudgetVersionStatus;
 use App\Enums\CostCategory;
 use App\Enums\ExpenseStatus;
 use App\Enums\TaskPriority;
+use App\Models\BudgetVersion;
 use App\Models\Expense;
 use App\Models\Project;
 use App\Models\Task;
@@ -41,6 +43,13 @@ function chartExpense(string $slug, Project $project, int $amount, string $on, E
         'project_id' => $project->id, 'category' => CostCategory::Other, 'description' => 'Spending', 'amount_minor' => $amount,
         'spent_on' => $on, 'status' => $status, 'recorded_by' => User::factory()->create()->id,
     ]));
+}
+
+function chartApprove(string $slug, Project $project, int $amount): void
+{
+    test()->asTenant($slug, fn () => tap(new BudgetVersion)->forceFill([
+        'project_id' => $project->id, 'number' => 1, 'status' => BudgetVersionStatus::Approved, 'total_minor' => $amount, 'created_by' => User::factory()->create()->id,
+    ])->save());
 }
 
 beforeEach(function () {
@@ -88,6 +97,10 @@ it('totals paid expenses per month and ranks budget use, for those who may see m
     $this->actingAsMember('acme', ['projects.view', 'projects.finance.view']);
     $big = chartProject('acme', 'BIG', ['budget_minor' => 100_000]);
     $small = chartProject('acme', 'SML', ['budget_minor' => 1_000]);
+    chartApprove('acme', $big, 100_000);
+    chartApprove('acme', $small, 1_000);
+    // A typed estimate is not an approved budget: not ranked.
+    chartProject('acme', 'EST', ['budget_minor' => 500]);
     chartProject('acme', 'NON');
     chartExpense('acme', $big, 20_000, '2026-11-01');
     chartExpense('acme', $big, 5_000, '2026-10-31');
@@ -105,7 +118,13 @@ it('totals paid expenses per month and ranks budget use, for those who may see m
         ->where('portfolio.budgets.0.code', 'SML')
         ->where('portfolio.budgets.0.percent', 150)
         ->where('portfolio.budgets.1.code', 'BIG')
-        ->where('portfolio.budgets.1.percent', 34));
+        // Used: committed 70.00 + paid 340.00 of 1,000.00.
+        ->where('portfolio.budgets.1.percent', 41)
+        ->where('portfolio.budgets.1.currency', 'USD')
+        ->where('portfolio.money.approvedBudgetMinor', 101_000)
+        ->where('portfolio.money.paidMinor', 35_500)
+        ->where('portfolio.money.committedMinor', 7_000)
+        ->where('portfolio.money.withoutApprovedBudget', 2));
 });
 
 it('shows no money without the finance permission', function () {
@@ -116,7 +135,7 @@ it('shows no money without the finance permission', function () {
     $this->get($this->organizationUrl('acme'))->assertInertia(fn (Assert $page) => $page
         ->where('portfolio.paidPerMonth', null)
         ->where('portfolio.budgets', null)
-        ->where('portfolio.budgetMinor', null));
+        ->where('portfolio.money', null));
 });
 
 it('shows no charts without permission to view projects', function () {
@@ -137,4 +156,27 @@ it('keeps each organization\'s figures to itself', function () {
         ->where('portfolio.paidPerMonth.11.amountMinor', 0)
         ->where('portfolio.taskStatus.3.count', 0)
         ->where('portfolio.budgets', []));
+});
+
+it('never adds another currency into the portfolio\'s money', function () {
+    $this->actingAsMember('acme', ['projects.view', 'projects.finance.view']);
+    $usd = chartProject('acme', 'USD1');
+    $eur = chartProject('acme', 'EUR1', ['currency' => 'EUR']);
+    chartApprove('acme', $usd, 10_000);
+    chartApprove('acme', $eur, 90_000);
+    chartExpense('acme', $usd, 1_000, '2026-11-01');
+    chartExpense('acme', $eur, 50_000, '2026-11-01');
+
+    $this->get($this->organizationUrl('acme'))->assertInertia(fn (Assert $page) => $page
+        ->where('portfolio.money.currency', 'USD')
+        ->where('portfolio.money.approvedBudgetMinor', 10_000)
+        ->where('portfolio.money.paidMinor', 1_000)
+        ->where('portfolio.money.otherCurrencies.0.currency', 'EUR')
+        ->where('portfolio.money.otherCurrencies.0.projects', 1)
+        ->where('portfolio.money.otherCurrencies.0.paidMinor', 50_000)
+        // The monthly chart is in USD: the EUR payment is not in it.
+        ->where('portfolio.paidPerMonth.11.amountMinor', 1_000)
+        // Each project's budget use in its own currency.
+        ->where('portfolio.budgets.0.code', 'EUR1')
+        ->where('portfolio.budgets.0.currency', 'EUR'));
 });

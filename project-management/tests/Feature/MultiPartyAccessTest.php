@@ -1,5 +1,7 @@
 <?php
 
+use App\Collaboration\Models\Invitation;
+use App\Collaboration\Models\Participant;
 use App\Collaboration\Models\ProjectRequest;
 use App\Collaboration\Models\Report;
 use App\Enums\BudgetVersionStatus;
@@ -11,9 +13,7 @@ use App\Models\Project;
 use App\Models\TimeEntry;
 use App\Models\User;
 use Carbon\CarbonImmutable;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 
 /*
@@ -101,27 +101,62 @@ it('keeps partners side by side from each other, and the owner\'s staff from req
     $this->get($this->organizationUrl('acme', "projects/{$project->id}/requests/{$request->id}"))->assertOk();
 });
 
-it('reports money events Finance refused or has not taken, without resending anything', function () {
-    $acme = $this->organization('acme');
-    $row = fn (string $transaction, string $status, string $created) => [
-        'id' => (string) Str::uuid(), 'organization_id' => $acme->id, 'audience' => 'finance', 'event_type' => 'finance.project_expense.paid',
-        'schema_version' => 1, 'source_transaction_id' => $transaction, 'payload' => '{}', 'occurred_at' => $created, 'status' => $status,
-        'attempts' => $status === 'failed' ? 1 : 0, 'last_error' => $status === 'failed' ? 'HTTP 422: currency_mismatch' : null,
-        'created_at' => $created, 'updated_at' => $created,
-    ];
-    DB::table('platform_outbox')->insert([
-        $row('expense:a:paid', 'delivered', '2026-11-14 08:00:00'),
-        $row('expense:b:paid', 'failed', '2026-11-14 08:00:00'),
-        $row('expense:c:paid', 'pending', '2026-11-13 08:00:00'), // stuck for two days
-        $row('expense:d:paid', 'pending', '2026-11-15 08:30:00'), // just sent
-    ]);
+it('opens a request only to the parties it involves, and there only to members who work on requests', function () {
+    $project = collabProject();
+    $lead = acceptProjectInvitation(inviteToProject($project, 'lead-ngo', 'lead_implementer', ['view', 'partners.manage', 'requests.create', 'requests.review']), 'lead-ngo');
+    $donor = acceptProjectInvitation(inviteToProject($project, 'global-fund', 'donor', ['view', 'requests.create', 'requests.review']), 'global-fund');
+    $this->actingAsMember('lead-ngo', COLLAB_MANAGER);
+    $this->post($this->organizationUrl('lead-ngo', "shared-projects/{$lead->id}/invitations"), [
+        'organization_id' => $this->organization('field-ngo')->id, 'relationship' => 'sub_implementer', 'capabilities' => ['view', 'requests.create'],
+    ])->assertSessionHasNoErrors();
+    $sub = acceptProjectInvitation(Invitation::query()->where('invited_organization_id', $this->organization('field-ngo')->id)->sole(), 'field-ngo');
 
-    $this->artisan('projects:finance-sync')
-        ->expectsOutputToContain('acme: delivered 1, failed 1, pending 2')
-        ->expectsOutputToContain('expense:b:paid: failed after 1 attempt(s) — HTTP 422: currency_mismatch')
-        ->expectsOutputToContain('expense:c:paid: pending')
-        ->doesntExpectOutputToContain('expense:d:paid')
-        ->assertExitCode(1);
+    // The sub-partner asks its lead for money.
+    $this->actingAsMember('field-ngo', ['projects.view', 'projects.partners.manage', 'projects.requests.raise']);
+    $this->post($this->organizationUrl('field-ngo', "shared-projects/{$sub->id}/requests"), [
+        'type' => 'funding', 'title' => 'Field tranche', 'justification' => 'Boreholes', 'details' => ['amount_minor' => 900_000, 'currency' => 'USD'],
+    ])->assertSessionHasNoErrors();
+    $request = ProjectRequest::query()->sole();
+    $this->post($this->organizationUrl('field-ngo', "shared-projects/{$sub->id}/requests/{$request->id}/action"), ['action' => 'submit'])->assertSessionHasNoErrors();
+    $at = fn (string $slug, Participant $party) => $this->organizationUrl($slug, "shared-projects/{$party->id}/requests/{$request->id}");
+    $list = fn (string $slug, Participant $party) => $this->organizationUrl($slug, "shared-projects/{$party->id}/requests");
 
-    expect(DB::table('platform_outbox')->where('status', 'pending')->count())->toBe(2);
+    // In the raising organization: raising or reviewing opens it; opening the project alone does not.
+    $this->actingAsMember('field-ngo', ['projects.view', 'projects.partners.manage']);
+    $this->get($at('field-ngo', $sub))->assertNotFound();
+    $this->get($list('field-ngo', $sub))->assertInertia(fn (Assert $page) => $page->has('requests', 0));
+    $this->actingAsMember('field-ngo', ['projects.view', 'projects.partners.manage', 'projects.requests.raise']);
+    $this->get($at('field-ngo', $sub))->assertOk();
+
+    // The lead reviews it: its reviewers see it, its raisers do not (it is not theirs).
+    $this->actingAsMember('lead-ngo', ['projects.view', 'projects.partners.manage', 'projects.requests.raise']);
+    $this->get($at('lead-ngo', $lead))->assertNotFound();
+    $this->get($list('lead-ngo', $lead))->assertInertia(fn (Assert $page) => $page->has('requests', 0));
+    $this->actingAsMember('lead-ngo', ['projects.view', 'projects.partners.manage', 'projects.requests.review']);
+    $this->get($at('lead-ngo', $lead))->assertOk();
+
+    // Not the donor, not the owner: the request was not sent to them.
+    $this->actingAsMember('global-fund', ['projects.view', 'projects.partners.manage', 'projects.requests.raise', 'projects.requests.review']);
+    $this->get($at('global-fund', $donor))->assertNotFound();
+    $this->get($list('global-fund', $donor))->assertInertia(fn (Assert $page) => $page->has('requests', 0));
+    $this->actingAsMember('acme', ['projects.view', 'projects.requests.raise', 'projects.requests.review']);
+    $this->get($this->organizationUrl('acme', "projects/{$project->id}/requests/{$request->id}"))->assertNotFound();
+
+    // The lead passes it up: the owner's reviewers see it now, the lead's reviewers keep sight of it, the donor still not.
+    $this->actingAsMember('lead-ngo', ['projects.view', 'projects.partners.manage', 'projects.requests.review']);
+    $this->post($this->organizationUrl('lead-ngo', "shared-projects/{$lead->id}/requests/{$request->id}/action"), ['action' => 'escalate', 'comment' => 'Beyond our share'])->assertSessionHasNoErrors();
+    $this->get($at('lead-ngo', $lead))->assertOk();
+    $this->get($list('lead-ngo', $lead))->assertInertia(fn (Assert $page) => $page->has('requests', 1));
+    $this->actingAsMember('acme', ['projects.view', 'projects.requests.review']);
+    $this->get($this->organizationUrl('acme', "projects/{$project->id}/requests/{$request->id}"))->assertOk();
+    $this->actingAsMember('acme', ['projects.view', 'projects.requests.raise']);
+    $this->get($this->organizationUrl('acme', "projects/{$project->id}/requests/{$request->id}"))->assertNotFound();
+    $this->actingAsMember('global-fund', ['projects.view', 'projects.partners.manage', 'projects.requests.raise', 'projects.requests.review']);
+    $this->get($at('global-fund', $donor))->assertNotFound();
+
+    // A participation without request capabilities opens none, whatever its members hold.
+    $this->actingAsMember('acme', [], owner: true);
+    $this->put($this->organizationUrl('acme', "projects/{$project->id}/collaboration/participants/{$lead->id}"), ['capabilities' => ['view', 'partners.manage']])->assertSessionHasNoErrors();
+    $this->actingAsMember('lead-ngo', ['projects.view', 'projects.partners.manage', 'projects.requests.raise', 'projects.requests.review']);
+    $this->get($at('lead-ngo', $lead))->assertNotFound();
 });

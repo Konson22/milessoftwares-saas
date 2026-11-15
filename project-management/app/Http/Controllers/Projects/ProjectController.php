@@ -18,6 +18,7 @@ use App\Models\Risk;
 use App\Models\Task;
 use App\Support\ActivityLog;
 use App\Support\Money;
+use App\Support\ProjectFinance;
 use App\Support\ProjectMetrics;
 use App\Tenancy\CurrentOrganization;
 use Illuminate\Http\RedirectResponse;
@@ -53,6 +54,7 @@ class ProjectController extends Controller
             ->get();
         $metrics = ProjectMetrics::forProjects($projects);
         $finance = $this->can($request, 'projects.finance.view');
+        $money = $finance ? ProjectFinance::forProjects($projects) : [];
 
         return Inertia::render('portal/projects/index', [
             'projects' => $projects->map(fn (Project $project) => [
@@ -68,6 +70,7 @@ class ProjectController extends Controller
                 'overdueTasks' => $metrics[$project->id]['overdueTasks'],
                 'budgetMinor' => $finance ? $project->budget_minor : null,
                 'actualMinor' => $finance ? $metrics[$project->id]['actualMinor'] : null,
+                'budgetBasis' => $finance ? $money[$project->id]['budgetBasis'] : null,
                 'currency' => $project->currency,
             ]),
             'filters' => ['search' => $search, 'status' => $status],
@@ -115,6 +118,7 @@ class ProjectController extends Controller
                 'labourMinor' => $finance ? $metrics['labourMinor'] : null,
                 'expensesMinor' => $finance ? $metrics['expensesMinor'] : null,
                 'actualMinor' => $finance ? $metrics['actualMinor'] : null,
+                'budgetBasis' => $finance ? ProjectFinance::for($project)['budgetBasis'] : null,
             ],
             'byStatus' => collect(Task::STATUSES)->mapWithKeys(fn (string $status) => [
                 $status => Task::query()->where('project_id', $project->id)->where('status', $status)->count(),

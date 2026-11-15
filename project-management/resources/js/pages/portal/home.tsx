@@ -25,7 +25,7 @@ import { MyTaskRow } from '@/components/my-task';
 import type { MyTask } from '@/components/my-task';
 import { Progress, Status } from '@/components/status';
 import { useCan } from '@/lib/access';
-import { currencyDecimals } from '@/lib/money';
+import { currencyDecimals, formatMoney } from '@/lib/money';
 import {
     TASK_STATUSES,
     formatDate,
@@ -42,8 +42,15 @@ type Portfolio = {
     atRisk: number;
     offTrack: number;
     overdueTasks: number;
-    budgetMinor: number | null;
-    actualMinor: number | null;
+    /** In the organization currency only; other currencies listed apart. */
+    money: {
+        currency: string;
+        approvedBudgetMinor: number;
+        paidMinor: number;
+        committedMinor: number;
+        withoutApprovedBudget: number;
+        otherCurrencies: { currency: string; projects: number }[];
+    } | null;
     completedPerWeek: { start: string; count: number }[];
     taskStatus: { status: string; count: number }[];
     paidPerMonth: { month: string; amountMinor: number }[] | null;
@@ -52,8 +59,9 @@ type Portfolio = {
               id: string;
               code: string;
               name: string;
-              budgetMinor: number;
-              actualMinor: number;
+              currency: string;
+              approvedBudgetMinor: number;
+              usedMinor: number;
               percent: number;
           }[]
         | null;
@@ -238,16 +246,14 @@ function BudgetUse({
 }: {
     budgets: NonNullable<Portfolio['budgets']>;
 }) {
-    const money = useMoney();
-
     return (
         <Panel>
             <PanelHeader
                 title="Budget used"
-                description="Time and paid expenses, the most used first."
+                description="Of approved budgets: committed, paid and estimated staff time, the most used first."
             />
             {budgets.length === 0 ? (
-                <EmptyState icon={Wallet} title="No project budgets set" />
+                <EmptyState icon={Wallet} title="No approved project budgets" />
             ) : (
                 <ul className="divide-y">
                     {budgets.map((item) => {
@@ -298,8 +304,12 @@ function BudgetUse({
                                     }
                                 />
                                 <p className="mt-1 text-xs text-muted-foreground tabular-nums">
-                                    {money(item.actualMinor)} of{' '}
-                                    {money(item.budgetMinor)}
+                                    {formatMoney(item.usedMinor, item.currency)}{' '}
+                                    of{' '}
+                                    {formatMoney(
+                                        item.approvedBudgetMinor,
+                                        item.currency,
+                                    )}
                                 </p>
                             </li>
                         );
@@ -324,9 +334,15 @@ export default function Home({ portfolio, myTasks, myMinutesThisWeek }: Props) {
         month: 'long',
     });
     const spentPercent =
-        portfolio?.budgetMinor && portfolio.actualMinor !== null
-            ? Math.round((100 * portfolio.actualMinor) / portfolio.budgetMinor)
+        portfolio?.money && portfolio.money.approvedBudgetMinor > 0
+            ? Math.round(
+                  (100 * portfolio.money.paidMinor) /
+                      portfolio.money.approvedBudgetMinor,
+              )
             : null;
+    const elsewhere = (portfolio?.money?.otherCurrencies ?? [])
+        .map((group) => `${group.projects} in ${group.currency}`)
+        .join(', ');
 
     return (
         <>
@@ -382,14 +398,21 @@ export default function Home({ portfolio, myTasks, myMinutesThisWeek }: Props) {
                                 portfolio.overdueTasks > 0 ? 'red' : 'slate'
                             }
                         />
-                        {portfolio.budgetMinor !== null &&
-                        portfolio.actualMinor !== null ? (
+                        {portfolio.money ? (
                             <StatCard
-                                label="Spent of open budgets"
-                                value={money(portfolio.actualMinor)}
+                                label="Paid of approved budgets"
+                                value={money(portfolio.money.paidMinor)}
                                 hint={
                                     <>
-                                        of {money(portfolio.budgetMinor)}
+                                        of{' '}
+                                        {money(
+                                            portfolio.money.approvedBudgetMinor,
+                                        )}
+                                        {portfolio.money.withoutApprovedBudget >
+                                            0 &&
+                                            `; ${portfolio.money.withoutApprovedBudget} without an approved budget`}
+                                        {elsewhere !== '' &&
+                                            `. Not included: ${elsewhere}`}
                                         {spentPercent !== null && (
                                             <div className="mt-1.5">
                                                 <Meter

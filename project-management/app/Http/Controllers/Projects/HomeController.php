@@ -7,7 +7,9 @@ use App\Models\Person;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
+use App\Support\Money;
 use App\Support\PortfolioTrends;
+use App\Support\ProjectFinance;
 use App\Support\ProjectMetrics;
 use App\Tenancy\CurrentOrganization;
 use Illuminate\Http\RedirectResponse;
@@ -36,6 +38,11 @@ class HomeController extends Controller
         $metrics = ProjectMetrics::forProjects($projects);
         $rank = [ProjectMetrics::OFF_TRACK => 0, ProjectMetrics::AT_RISK => 1, ProjectMetrics::ON_TRACK => 2];
         $finance = $this->can($request, 'projects.finance.view');
+        // Money adds up in one currency only: the organization's. Projects in
+        // others are counted, never converted or summed in (ProjectFinance).
+        $money = $finance ? ProjectFinance::forProjects($projects) : [];
+        $home = Money::currency();
+        $totals = collect(ProjectFinance::totalsByCurrency($money))->keyBy('currency');
 
         $myTasks = $me === null ? collect() : Task::query()->assignedTo($me->id)->where('status', '!=', Task::DONE)
             ->where(fn ($query) => $query->whereNull('project_id')->orWhereHas('project', fn ($query) => $query->whereIn('status', Project::OPEN)))
@@ -48,12 +55,18 @@ class HomeController extends Controller
                 'atRisk' => collect($metrics)->where('health', ProjectMetrics::AT_RISK)->count(),
                 'offTrack' => collect($metrics)->where('health', ProjectMetrics::OFF_TRACK)->count(),
                 'overdueTasks' => collect($metrics)->sum('overdueTasks'),
-                'budgetMinor' => $finance ? (int) $projects->sum('budget_minor') : null,
-                'actualMinor' => $finance ? (int) collect($metrics)->sum('actualMinor') : null,
+                'money' => $finance ? [
+                    'currency' => $home,
+                    'approvedBudgetMinor' => $totals->get($home)['approvedBudgetMinor'] ?? 0,
+                    'paidMinor' => $totals->get($home)['paidMinor'] ?? 0,
+                    'committedMinor' => $totals->get($home)['committedMinor'] ?? 0,
+                    'withoutApprovedBudget' => $totals->get($home)['withoutApprovedBudget'] ?? 0,
+                    'otherCurrencies' => $totals->except($home)->values()->all(),
+                ] : null,
                 'completedPerWeek' => PortfolioTrends::completedPerWeek(),
                 'taskStatus' => PortfolioTrends::taskStatus($projects),
-                'paidPerMonth' => $finance ? PortfolioTrends::paidPerMonth() : null,
-                'budgets' => $finance ? PortfolioTrends::budgets($projects, $metrics) : null,
+                'paidPerMonth' => $finance ? PortfolioTrends::paidPerMonth($home) : null,
+                'budgets' => $finance ? PortfolioTrends::budgets($projects, $money) : null,
                 'projects' => $projects
                     ->sortBy(fn (Project $project) => [$rank[$metrics[$project->id]['health']], $project->due_on?->getTimestamp() ?? PHP_INT_MAX])
                     ->values()->take(10)

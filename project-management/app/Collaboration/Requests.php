@@ -351,9 +351,25 @@ final class Requests
                 || (self::isReviewer($request, $acting) && self::ownerMay($acting, 'projects.requests.review'));
         }
 
-        return $acting->is($request->submitter_participant_id)
-            || self::isReviewer($request, $acting)
-            || in_array($acting->partyId(), self::escalatedFrom($request), true);
+        // A participant's member, likewise: their own permission and the
+        // participation's capability, raising or reviewing. Opening the
+        // shared project alone opens no request.
+        $raises = self::participantMay($acting, 'raise');
+        $reviews = self::participantMay($acting, 'review');
+
+        return ($acting->is($request->submitter_participant_id) && ($raises || $reviews))
+            || ($reviews && (self::isReviewer($request, $acting) || in_array($acting->partyId(), self::escalatedFrom($request), true)));
+    }
+
+    /**
+     * A participant's member: "raise" (its own requests: raisers, and
+     * reviewers), "review" (requests sent to it, or that it passed on).
+     */
+    private static function participantMay(Acting $acting, string $side): bool
+    {
+        $reviews = $acting->may('projects.requests.review', Capability::REQUESTS_REVIEW);
+
+        return $side === 'review' ? $reviews : ($reviews || $acting->may('projects.requests.raise', Capability::REQUESTS_CREATE));
     }
 
     /**
@@ -400,11 +416,20 @@ final class Requests
             });
         }
 
-        return $query->where(function (Builder $query) use ($id, $acting) {
-            $id === null ? $query->whereNull('submitter_participant_id') : $query->where('submitter_participant_id', $id);
-            $query->orWhere(fn (Builder $query) => ($id === null ? $query->whereNull('reviewer_participant_id') : $query->where('reviewer_participant_id', $id))->whereNotNull('submitted_at'));
-            if ($acting->participant !== null) {
-                $query->orWhereHas('decisions', fn (Builder $query) => $query->where('action', 'escalated')->where('acting_organization_id', $acting->organizationId()));
+        $raises = self::participantMay($acting, 'raise');
+        $reviews = self::participantMay($acting, 'review');
+        if (! $raises && ! $reviews) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where(function (Builder $query) use ($id, $raises, $reviews) {
+            if ($raises) {
+                $query->where('submitter_participant_id', $id);
+            }
+            if ($reviews) {
+                $query->orWhere(fn (Builder $query) => $query->where('reviewer_participant_id', $id)->whereNotNull('submitted_at'));
+                // Passed on by this participation (canSee checks the same, by participation).
+                $query->orWhereHas('decisions', fn (Builder $query) => $query->where('action', 'escalated')->where('snapshot->from', $id));
             }
         });
     }

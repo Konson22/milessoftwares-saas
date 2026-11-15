@@ -6,7 +6,7 @@ import { StatCard } from '@miles/ui/components/stat-card';
 import { StatusBadge } from '@miles/ui/components/status-badge';
 import { ProjectFrame } from '@/components/project-frame';
 import { Progress } from '@/components/status';
-import { formatMoney } from '@/lib/money';
+import { BUDGET_BASIS, formatMoney } from '@/lib/money';
 import {
     formatDate,
     formatDateTime,
@@ -32,6 +32,7 @@ type Props = {
         labourMinor: number | null;
         expensesMinor: number | null;
         actualMinor: number | null;
+        budgetBasis: 'approved' | 'draft' | 'estimate' | 'none' | null;
     };
     byStatus: Record<string, number>;
     milestones: {
@@ -107,11 +108,11 @@ export default function ProjectOverview({
                 />
                 {metrics.actualMinor !== null ? (
                     <StatCard
-                        label="Spent"
+                        label="Cost to date"
                         value={money(metrics.actualMinor)}
                         hint={
                             metrics.budgetMinor
-                                ? `${used}% of ${money(metrics.budgetMinor)}`
+                                ? `Paid ${money(metrics.expensesMinor ?? 0)} + estimated staff time. ${used}% of the ${BUDGET_BASIS[metrics.budgetBasis ?? 'none']} ${money(metrics.budgetMinor)}`
                                 : 'No budget set'
                         }
                         accent={used !== null && used > 100 ? 'red' : 'violet'}

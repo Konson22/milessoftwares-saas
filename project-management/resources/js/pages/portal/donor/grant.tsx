@@ -58,6 +58,7 @@ type Project = {
     } | null;
     spending: {
         paidMinor: number;
+        provenance?: { paidStatus: string; asOf: string };
         lines: {
             paidOn: string | null;
             category: string;
@@ -338,7 +339,12 @@ function ProjectPanel({ project }: { project: Project }) {
                             Spending on this grant
                         </h3>
                         <p className="text-xs text-muted-foreground">
-                            {money(project.spending.paidMinor)} paid.
+                            {money(project.spending.paidMinor)} paid,{' '}
+                            {project.spending.provenance?.paidStatus ===
+                            'posted'
+                                ? 'posted in Finance'
+                                : 'as recorded by the organization, not verified by Finance'}
+                            .
                         </p>
                         {project.spending.lines.length > 0 && (
                             <Table className="mt-2">

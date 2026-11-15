@@ -7,6 +7,7 @@ use App\Collaboration\Models\Participant;
 use App\Enums\CostCategory;
 use App\Models\Milestone;
 use App\Models\Project;
+use App\Support\ProjectFinance;
 use App\Support\ProjectMetrics;
 use App\Tenancy\CurrentOrganization;
 
@@ -45,30 +46,40 @@ final class ParticipantProjection
                     'dueOn' => $milestone->due_on->toDateString(),
                     'reached' => $milestone->completed_at !== null,
                 ])->all()),
-                'budget' => in_array(Capability::BUDGET_VIEW, $capabilities, true) ? self::budget($project, $metrics['expensesMinor']) : null,
+                'budget' => in_array(Capability::BUDGET_VIEW, $capabilities, true) ? self::budget($project) : null,
             ];
         });
     }
 
     /**
-     * The approved budget by category and what has been spent against the
-     * project, in total. Nothing until a budget is approved.
+     * The approved budget by category, what is committed and what was paid
+     * against the project (ProjectFinance::shareable), with where the
+     * figures come from. Never the estimated staff cost. Nothing until a
+     * budget is approved. spentMinor is the paid amount, kept under its
+     * earlier name.
      *
-     * @return array{approvedMinor: int, spentMinor: int, categories: list<array{category: string, amountMinor: int}>}|null
+     * @return array{approvedMinor: int, spentMinor: int, paidMinor: int, committedMinor: int, currency: string, provenance: array<string, mixed>, categories: list<array{category: string, amountMinor: int}>}|null
      */
-    private static function budget(Project $project, int $spentMinor): ?array
+    private static function budget(Project $project): ?array
     {
-        if (Budgets::approved($project) === null) {
+        $figures = ProjectFinance::shareable(ProjectFinance::for($project));
+        if ($figures['approvedBudgetMinor'] === null) {
             return null;
         }
 
         $categories = [];
-        $approved = 0;
         foreach (Budgets::approvedByCategory($project) as $category => $amount) {
             $categories[] = ['category' => CostCategory::from($category)->label(), 'amountMinor' => (int) $amount];
-            $approved += (int) $amount;
         }
 
-        return ['approvedMinor' => $approved, 'spentMinor' => $spentMinor, 'categories' => $categories];
+        return [
+            'approvedMinor' => $figures['approvedBudgetMinor'],
+            'spentMinor' => $figures['paidMinor'],
+            'paidMinor' => $figures['paidMinor'],
+            'committedMinor' => $figures['committedMinor'],
+            'currency' => $figures['currency'],
+            'provenance' => $figures['provenance'],
+            'categories' => $categories,
+        ];
     }
 }

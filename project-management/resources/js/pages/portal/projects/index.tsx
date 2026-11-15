@@ -15,7 +15,7 @@ import {
 } from '@miles/ui/components/ui/table';
 import { Select } from '@/components/field';
 import { Progress, Status } from '@/components/status';
-import { formatMoney } from '@/lib/money';
+import { BUDGET_BASIS, formatMoney } from '@/lib/money';
 import { formatDate, PROJECT_STATUSES, statusLabel } from '@/lib/status';
 import { create, index, show } from '@/routes/projects';
 
@@ -32,6 +32,7 @@ type Project = {
     overdueTasks: number;
     budgetMinor: number | null;
     actualMinor: number | null;
+    budgetBasis: 'approved' | 'draft' | 'estimate' | 'none' | null;
     currency: string;
 };
 
@@ -106,8 +107,11 @@ export default function Projects({ projects, filters, canCreate }: Props) {
                                 <TableHead className="w-48">Progress</TableHead>
                                 <TableHead>Due</TableHead>
                                 {finance && (
-                                    <TableHead className="text-right">
-                                        Spent / budget
+                                    <TableHead
+                                        className="text-right"
+                                        title="Paid expenses plus estimated staff time, against the approved budget (or the draft or typed figure, marked *, until one is approved)"
+                                    >
+                                        Cost to date / budget
                                     </TableHead>
                                 )}
                             </TableRow>
@@ -180,6 +184,21 @@ export default function Projects({ projects, filters, canCreate }: Props) {
                                                           project.currency,
                                                       )
                                                     : '—'}
+                                                {project.budgetMinor !== null &&
+                                                    project.budgetMinor > 0 &&
+                                                    project.budgetBasis !==
+                                                        'approved' && (
+                                                        <span
+                                                            title={
+                                                                BUDGET_BASIS[
+                                                                    project.budgetBasis ??
+                                                                        'none'
+                                                                ]
+                                                            }
+                                                        >
+                                                            *
+                                                        </span>
+                                                    )}
                                             </span>
                                         </TableCell>
                                     )}

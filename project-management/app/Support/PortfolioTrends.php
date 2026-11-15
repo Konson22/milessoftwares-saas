@@ -59,14 +59,17 @@ final class PortfolioTrends
     }
 
     /**
-     * Paid expenses in each of the last months, oldest first, this month last.
+     * Paid expenses in each of the last months, oldest first, this month
+     * last: projects in the given currency only, never other currencies
+     * summed in.
      *
      * @return list<array{month: string, amountMinor: int}>
      */
-    public static function paidPerMonth(): array
+    public static function paidPerMonth(string $currency): array
     {
         $first = today()->startOfMonth()->subMonths(self::MONTHS - 1);
         $expenses = Expense::query()->paid()->whereBetween('spent_on', [$first->toDateString(), today()->toDateString()])
+            ->whereHas('project', fn ($query) => $query->where('currency', $currency))
             ->get(['spent_on', 'amount_minor']);
         $amounts = [];
         foreach ($expenses as $expense) {
@@ -86,23 +89,32 @@ final class PortfolioTrends
     }
 
     /**
-     * The projects with a budget, the most used first.
+     * The projects with an approved budget, the most used first. Used is
+     * what the budget page counts against it: committed, paid, and the
+     * estimated staff time on the labour line (ProjectFinance). Each in its
+     * project's currency.
      *
      * @param  Collection<int, Project>  $projects
-     * @param  array<string, array{actualMinor: int}>  $metrics
-     * @return list<array{id: string, code: string, name: string, budgetMinor: int, actualMinor: int, percent: int}>
+     * @param  array<string, array{currency: string, approvedBudgetMinor: int|null, availableMinor: int|null}>  $figures
+     * @return list<array{id: string, code: string, name: string, currency: string, approvedBudgetMinor: int, usedMinor: int, percent: int}>
      */
-    public static function budgets(Collection $projects, array $metrics): array
+    public static function budgets(Collection $projects, array $figures): array
     {
-        return array_values($projects->filter(fn (Project $project) => $project->budget_minor > 0)
-            ->map(fn (Project $project) => [
-                'id' => $project->id,
-                'code' => $project->code,
-                'name' => $project->name,
-                'budgetMinor' => (int) $project->budget_minor,
-                'actualMinor' => $metrics[$project->id]['actualMinor'],
-                'percent' => (int) round(100 * $metrics[$project->id]['actualMinor'] / $project->budget_minor),
-            ])
+        return array_values($projects->filter(fn (Project $project) => ($figures[$project->id]['approvedBudgetMinor'] ?? 0) > 0)
+            ->map(function (Project $project) use ($figures) {
+                $approved = (int) $figures[$project->id]['approvedBudgetMinor'];
+                $used = $approved - (int) $figures[$project->id]['availableMinor'];
+
+                return [
+                    'id' => $project->id,
+                    'code' => $project->code,
+                    'name' => $project->name,
+                    'currency' => $figures[$project->id]['currency'],
+                    'approvedBudgetMinor' => $approved,
+                    'usedMinor' => $used,
+                    'percent' => (int) round(100 * $used / $approved),
+                ];
+            })
             ->sortByDesc('percent')->take(self::BUDGETS_SHOWN)->all());
     }
 }

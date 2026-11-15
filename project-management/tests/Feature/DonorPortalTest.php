@@ -18,8 +18,10 @@ use App\Models\UserNotification;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Route as RoutingRoute;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Miles\PlatformClient\Api\PlatformApi;
 
@@ -464,4 +466,33 @@ it('shares the approved budget by category, and never a draft', function () {
     $this->get(portalUrl("donor/grants/{$grant->id}"))->assertInertia(fn (Assert $page) => $page
         ->has('projects.0.budget.categories', 2)
         ->where('projects.0.budget.categories', fn ($lines) => collect($lines)->pluck('amountMinor', 'category')->all() === ['Equipment' => 500000, 'Travel' => 100000]));
+});
+
+it('tells a funder whether the payments on its grant were posted in Finance, judging its grant alone', function () {
+    $grant = portalGrant(portalFunder());
+    $project = portalProject($grant);
+    portalExpense($project, $grant, 'Hand pumps', ExpenseStatus::Paid, $this->staff);
+    portalExpense($project, null, 'Paid from core funds', ExpenseStatus::Paid, $this->staff);
+    portalShare($grant, ['portal_spending' => true]);
+    $contact = portalContact($grant);
+    $url = portalUrl("donor/grants/{$grant->id}");
+
+    // Recorded in Projects only: not verified.
+    $this->get($url)->assertInertia(fn (Assert $page) => $page
+        ->where('projects.0.spending.paidMinor', 50000)
+        ->where('projects.0.spending.provenance.paidStatus', 'recorded')
+        ->where('projects.0.spending.provenance.unpostedPayments', 1)
+        ->where('projects.0.spending.provenance.currency', 'USD'));
+
+    // Finance posted the grant's payment; the core-funded one, still unposted, is none of the funder's business.
+    $mine = $this->asTenant('acme', fn () => $project->expenses()->where('grant_id', $grant->id)->sole());
+    DB::table('platform_outbox')->insert([
+        'id' => (string) Str::uuid(), 'organization_id' => $this->organization('acme')->id, 'audience' => 'finance',
+        'event_type' => 'finance.project_expense.paid', 'schema_version' => 1, 'source_transaction_id' => "expense:{$mine->id}:paid",
+        'payload' => '{}', 'occurred_at' => now(), 'status' => 'delivered', 'attempts' => 1, 'last_error' => null, 'created_at' => now(), 'updated_at' => now(),
+    ]);
+    $this->actingAs($contact);
+    $this->get($url)->assertInertia(fn (Assert $page) => $page
+        ->where('projects.0.spending.provenance.paidStatus', 'posted')
+        ->where('projects.0.spending.provenance.unpostedPayments', 0));
 });

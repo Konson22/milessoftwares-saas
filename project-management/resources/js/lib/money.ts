@@ -56,3 +56,15 @@ export function toMajor(minor: number, currency: string): string {
         currencyDecimals(currency),
     );
 }
+
+/**
+ * What a project's budget figure is (App\Support\ProjectFinance): the
+ * approved version, one still being prepared, or the figure typed on the
+ * project before any budget existed.
+ */
+export const BUDGET_BASIS: Record<string, string> = {
+    approved: 'approved budget',
+    draft: 'draft budget (not approved)',
+    estimate: 'estimated budget (not approved)',
+    none: 'budget',
+};

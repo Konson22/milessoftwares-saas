@@ -7,6 +7,7 @@ use App\Models\Organization;
 use App\Models\PettyCashFund;
 use App\Support\FinanceSync;
 use App\Support\Money;
+use App\Support\ParticipationInventory;
 use App\Tenancy\CurrentOrganization;
 use Carbon\CarbonImmutable;
 use Database\Seeders\AsaasDemoSeeder;
@@ -86,9 +87,12 @@ Artisan::command('petty-cash:move-to-finance {--dry-run : list what would move}'
 })->purpose('Move petty cash boxes into Finance for organizations that have it');
 
 // What Finance did with the money events sent to it (App\Support\FinanceSync).
-// Read-only: it reports refused and stuck events, it never resends or fixes.
-// Exit code 1 when something needs a person, so a scheduler or monitor can alert.
-Artisan::command('projects:finance-sync {--organization= : one workspace, by slug}', function () {
+// Read-only: it reports, it never resends, reverses or fixes. Exceptions
+// (refused, conflicting, undeliverable, or expenses out of step with what
+// Finance was told) are listed apart from delays. --notify tells each
+// organization's payment recorders, counts only. Exit code 1 when an
+// exception or an overdue event needs a person.
+Artisan::command('projects:finance-sync {--organization= : one workspace, by slug} {--notify : tell the organizations\' payment recorders}', function (CurrentOrganization $current) {
     $organizationId = null;
     if ($this->option('organization')) {
         $organizationId = Organization::query()->where('slug', $this->option('organization'))->value('id');
@@ -99,19 +103,73 @@ Artisan::command('projects:finance-sync {--organization= : one workspace, by slu
         }
     }
     $names = Organization::query()->pluck('slug', 'id');
+    $name = fn (string $id) => $names[$id] ?? $id;
 
     foreach (FinanceSync::summary($organizationId) as $id => $counts) {
         ksort($counts);
-        $this->line(($names[$id] ?? $id).': '.collect($counts)->map(fn (int $count, string $status) => "{$status} {$count}")->implode(', '));
+        $this->line($name($id).': '.collect($counts)->map(fn (int $count, string $status) => "{$status} {$count}")->implode(', '));
     }
 
-    $attention = FinanceSync::needingAttention($organizationId);
-    foreach ($attention as $event) {
-        $this->warn(($names[$event->organization_id] ?? $event->organization_id)." {$event->event_type} {$event->source_transaction_id}: {$event->status} after {$event->attempts} attempt(s)".($event->last_error ? " — {$event->last_error}" : ''));
+    $findings = collect(FinanceSync::review($organizationId));
+    $line = fn (array $finding) => $name($finding['organization_id'])." {$finding['kind']} {$finding['reference']}"
+        .($finding['event_type'] ? " ({$finding['event_type']}, {$finding['attempts']} attempt(s))" : '')
+        .($finding['answer'] ? " — {$finding['answer']}" : '');
+    $exceptions = $findings->whereIn('kind', FinanceSync::EXCEPTIONS);
+    $delays = $findings->whereIn('kind', FinanceSync::DELAYS);
+
+    $this->line('Exceptions: '.$exceptions->count());
+    $exceptions->each(fn (array $finding) => $this->error('  '.$line($finding)));
+    $this->line('Delays: '.$delays->count());
+    $delays->each(fn (array $finding) => $this->warn('  '.$line($finding)));
+
+    if ($this->option('notify')) {
+        foreach ($findings->groupBy('organization_id') as $id => $ofOrganization) {
+            $organization = Organization::query()->find($id);
+            if ($organization !== null && $organization->isActive()) {
+                $told = $current->run($organization, fn () => FinanceSync::alert($ofOrganization->values()->all()));
+                $this->line($name((string) $id).": {$told} told");
+            }
+        }
     }
-    if ($attention->isEmpty()) {
+
+    $needsPerson = $exceptions->isNotEmpty() || $delays->contains('kind', 'overdue');
+    if (! $needsPerson) {
         $this->info('Nothing needs attention.');
     }
 
-    return $attention->isEmpty() ? 0 : 1;
-})->purpose('Report money events Finance refused or has not taken (read-only)');
+    return $needsPerson ? 1 : 0;
+})->purpose('Report money events Finance refused or has not taken, and expenses out of step (read-only)');
+Schedule::command('projects:finance-sync --notify')->dailyAt('06:00')->withoutOverlapping();
+
+// ADR-0018 step 1 (App\Support\ParticipationInventory): every way another
+// organization is involved in projects today, and what a move to project
+// participations would meet. Read-only: it changes no partner record.
+Artisan::command('projects:participation-inventory {--organization= : one workspace, by slug} {--json : machine-readable}', function () {
+    $organizationId = null;
+    if ($this->option('organization')) {
+        $organizationId = Organization::query()->where('slug', $this->option('organization'))->value('id');
+        if ($organizationId === null) {
+            $this->error('No such workspace.');
+
+            return 1;
+        }
+    }
+
+    $inventory = ParticipationInventory::run($organizationId);
+    if ($this->option('json')) {
+        $this->line((string) json_encode($inventory, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+        return 0;
+    }
+
+    $this->line('Records');
+    foreach ($inventory['counts'] as $what => $count) {
+        $this->line("  {$what}: {$count}");
+    }
+    $this->line('Findings: '.collect(ParticipationInventory::tally($inventory['findings']))->map(fn (int $count, string $kind) => "{$kind} {$count}")->implode(', '));
+    foreach ($inventory['findings'] as $finding) {
+        $this->line("  {$finding['kind']} [{$finding['organization']}] {$finding['subject']}: {$finding['detail']}");
+    }
+
+    return 0;
+})->purpose('Inventory donor and partner records for the participation model (read-only)');

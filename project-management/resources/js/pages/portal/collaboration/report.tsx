@@ -49,6 +49,9 @@ type Content = {
             approvedMinor: number;
             spentMinor: number;
             varianceMinor: number;
+            /** Snapshots from 2026-11-16 on. */
+            committedMinor?: number;
+            provenance?: { paidStatus: string; asOf: string };
             categories: { category: string; amountMinor: number }[];
         } | null;
         financialHidden?: boolean;
@@ -532,7 +535,9 @@ function ContentView({
                                         </span>
                                     </li>
                                     <li className="flex justify-between">
-                                        <span>Remaining</span>
+                                        <span>
+                                            Not yet paid (approved − paid)
+                                        </span>
                                         <span className="tabular-nums">
                                             {formatMoney(
                                                 system.financial.varianceMinor,
@@ -540,6 +545,27 @@ function ContentView({
                                             )}
                                         </span>
                                     </li>
+                                    {system.financial.committedMinor !==
+                                        undefined && (
+                                        <li className="flex justify-between">
+                                            <span>Of which committed</span>
+                                            <span className="tabular-nums">
+                                                {formatMoney(
+                                                    system.financial
+                                                        .committedMinor,
+                                                    system.financial.currency,
+                                                )}
+                                            </span>
+                                        </li>
+                                    )}
+                                    {system.financial.provenance && (
+                                        <li className="text-xs text-muted-foreground">
+                                            {system.financial.provenance
+                                                .paidStatus === 'posted'
+                                                ? 'Payments posted in Finance.'
+                                                : 'Payments as recorded in Projects, not verified by Finance.'}
+                                        </li>
+                                    )}
                                 </ul>
                             ) : (
                                 <p>

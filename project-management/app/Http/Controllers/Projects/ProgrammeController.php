@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Person;
 use App\Models\Programme;
 use App\Models\Project;
+use App\Support\ProjectFinance;
 use App\Support\ProjectMetrics;
 use App\Tenancy\CurrentOrganization;
 use Illuminate\Http\RedirectResponse;
@@ -60,9 +61,14 @@ class ProgrammeController extends Controller
         // Amounts add up per currency: a programme can span more than one.
         // Money spent stays counted, whatever became of the project; the
         // budget of a cancelled project will not be spent, so it does not.
+        // The planning budget mixes approved, draft and typed figures, so the
+        // approved part and the count not yet approved travel with it.
+        $money = $finance ? ProjectFinance::forProjects($projects) : [];
         $totals = $projects->groupBy('currency')->map(fn ($group, string $currency) => [
             'currency' => $currency,
             'budgetMinor' => (int) $group->reject(fn (Project $project) => $project->status === Project::CANCELLED)->sum('budget_minor'),
+            'approvedBudgetMinor' => (int) $group->reject(fn (Project $project) => $project->status === Project::CANCELLED)->sum(fn (Project $project) => $money[$project->id]['approvedBudgetMinor'] ?? 0),
+            'notApproved' => $group->reject(fn (Project $project) => $project->status === Project::CANCELLED || ($money[$project->id]['approvedBudgetMinor'] ?? null) !== null)->count(),
             'actualMinor' => (int) $group->sum(fn (Project $project) => $metrics[$project->id]['actualMinor']),
             'cancelledActualMinor' => (int) $group->where('status', Project::CANCELLED)->sum(fn (Project $project) => $metrics[$project->id]['actualMinor']),
         ])->values();
@@ -89,6 +95,7 @@ class ProgrammeController extends Controller
                 'overdueTasks' => $metrics[$project->id]['overdueTasks'],
                 'budgetMinor' => $finance ? $project->budget_minor : null,
                 'actualMinor' => $finance ? $metrics[$project->id]['actualMinor'] : null,
+                'budgetBasis' => $finance ? $money[$project->id]['budgetBasis'] : null,
                 'currency' => $project->currency,
             ]),
             'summary' => [
