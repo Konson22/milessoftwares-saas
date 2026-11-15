@@ -23,7 +23,9 @@ use Illuminate\Support\Facades\DB;
  *                        ("estimate"); null with basis "none". Only
  *                        "approved" may be shown outside the organization.
  *   committedMinor       expenses approved and not yet paid.
- *   paidMinor            expenses recorded as paid. Money that left.
+ *   paidMinor            expenses recorded as paid, plus what Finance reports
+ *                        paid for requests handed to it (integrated mode, net
+ *                        of reversals). Money that left.
  *   personnelEstimateMinor
  *                        time logged × hand-typed hourly rates. An estimate
  *                        for internal management: never added to paid, and
@@ -80,6 +82,7 @@ final class ProjectFinance
             ->groupBy('project_id')->selectRaw('project_id, sum(cost_minor) as cost')
             ->pluck('cost', 'project_id');
         $unposted = self::unpostedPayments($ids);
+        $confirmed = self::financeConfirmed($ids);
         $asOf = now()->toDateString();
 
         $figures = [];
@@ -90,8 +93,10 @@ final class ProjectFinance
             $working = $ofProject->first(fn (BudgetVersion $version) => $version->status !== BudgetVersionStatus::Approved);
             $sum = fn (string $status) => (int) $expenses->filter(fn (Expense $row) => $row->project_id === $id && $row->status->value === $status)
                 ->sum(fn (Expense $row) => (int) $row->getAttribute('amount'));
-            $paid = $sum('paid');
-            $committed = $sum('approved');
+            // Integrated with Finance: what Finance reports paid moves from committed to paid.
+            $byFinance = $confirmed[$id] ?? ['paid' => 0, 'fromCommitted' => 0];
+            $paid = $sum('paid') + $byFinance['paid'];
+            $committed = $sum('approved') - $byFinance['fromCommitted'];
             $estimate = (int) ($personnel->get($id) ?? 0);
 
             [$budget, $basis] = match (true) {
@@ -114,7 +119,7 @@ final class ProjectFinance
                 'provenance' => [
                     'currency' => $project->currency,
                     'asOf' => $asOf,
-                    'source' => 'projects',
+                    'source' => $byFinance['paid'] > 0 ? 'projects_and_finance' : 'projects',
                     'paidStatus' => $paid > 0 && ($unposted[$id] ?? 0) === 0 ? self::POSTED : self::RECORDED,
                     'unpostedPayments' => $unposted[$id] ?? 0,
                 ],
@@ -122,6 +127,36 @@ final class ProjectFinance
         }
 
         return $figures;
+    }
+
+    /**
+     * Payments Finance reported for requests Projects handed it (integrated
+     * mode), net of reversals, per project; and how much of that was still
+     * counted as committed (the expense stays approved in Projects).
+     *
+     * @param  array<mixed>  $ids
+     * @return array<string, array{paid: int, fromCommitted: int}>
+     */
+    private static function financeConfirmed(array $ids): array
+    {
+        $rows = DB::table('finance_requests')->join('expenses', 'expenses.id', '=', 'finance_requests.expense_id')
+            ->whereIn('finance_requests.project_id', $ids)
+            ->whereColumn('finance_requests.organization_id', 'expenses.organization_id')
+            ->whereRaw('finance_requests.paid_minor > finance_requests.reversed_minor')
+            ->get(['finance_requests.project_id', 'finance_requests.paid_minor', 'finance_requests.reversed_minor', 'expenses.amount_minor', 'expenses.status']);
+
+        $out = [];
+        foreach ($rows as $row) {
+            $net = (int) $row->paid_minor - (int) $row->reversed_minor;
+            $entry = $out[(string) $row->project_id] ?? ['paid' => 0, 'fromCommitted' => 0];
+            $entry['paid'] += $net;
+            if ($row->status === 'approved') {
+                $entry['fromCommitted'] += min($net, (int) $row->amount_minor);
+            }
+            $out[(string) $row->project_id] = $entry;
+        }
+
+        return $out;
     }
 
     /**

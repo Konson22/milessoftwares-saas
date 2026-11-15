@@ -1,0 +1,82 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milesoftwares.com/contracts/events/finance.spending.cancelled.v1.schema.json",
+    "title": "finance.spending.cancelled, schema_version 1",
+    "description": "Projects asks Finance to cancel a request it has not paid any of. Finance answers projects.finance_request.cancelled, or reports a payment it already made. Contract: docs/finance/finance-projects-contract.md.",
+    "type": "object",
+    "required": [
+        "originating_app",
+        "organization_id",
+        "project_id",
+        "request_id",
+        "correlation_id",
+        "idempotency_key",
+        "version",
+        "contract_version",
+        "currency",
+        "amount_minor",
+        "created_at",
+        "status"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "originating_app": {
+            "const": "projects"
+        },
+        "organization_id": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "project_id": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Projects' id for the request: Finance names it in every outcome."
+        },
+        "correlation_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Stable across every message about the request, both ways."
+        },
+        "idempotency_key": {
+            "type": "string",
+            "pattern": "^finance-request:[0-9a-f-]{36}:r[0-9]+$",
+            "description": "One per request revision: Finance creates at most one payment request per key."
+        },
+        "version": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The request revision."
+        },
+        "contract_version": {
+            "const": 1
+        },
+        "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$",
+            "description": "The project currency. Finance converts at its own rates."
+        },
+        "amount_minor": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Integer, in the currency's minor unit."
+        },
+        "created_at": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "status": {
+            "const": "cancellation_requested"
+        },
+        "reason": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "maxLength": 255
+        }
+    }
+}

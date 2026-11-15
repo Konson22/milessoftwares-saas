@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Finance;
 use App\Actions\Spending;
 use App\Enums\BudgetVersionStatus;
 use App\Enums\ExpenseStatus;
+use App\FinanceIntegration\FinanceMode;
 use App\Http\Controllers\Controller;
 use App\Models\BudgetVersion;
 use App\Models\Expense;
 use App\Models\ExpenseApproval;
+use App\Tenancy\CurrentOrganization;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -71,7 +73,8 @@ class ApprovalController extends Controller
                 'approvedBy' => $expense->approvals->map(fn (ExpenseApproval $approval) => $approval->user->name)->values()->all(),
                 'approvedByMe' => $expense->approvals->contains('user_id', $me->id),
             ]) : null,
-            'payments' => $pay ? $expenses(ExpenseStatus::Approved)->map($row) : null,
+            // Where Finance pays (integrated mode), there is nothing to pay here.
+            'payments' => $pay && ! FinanceMode::of(app(CurrentOrganization::class)->require())->financeOwnsPayment() ? $expenses(ExpenseStatus::Approved)->map($row) : null,
             'today' => today()->toDateString(),
         ]);
     }

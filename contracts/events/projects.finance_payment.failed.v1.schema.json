@@ -1,0 +1,42 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milesoftwares.com/contracts/events/projects.finance_payment.failed.v1.schema.json",
+    "title": "projects.finance_payment.failed, schema_version 1",
+    "description": "A payment attempt failed (bank refusal, transfer returned before settlement). Finance may try again: a later payment.completed follows. Contract: docs/finance/finance-projects-contract.md.",
+    "type": "object",
+    "required": [
+        "request_id",
+        "correlation_id",
+        "sequence"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "request_id": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "correlation_id": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "sequence": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Finance's count of outcomes for this request, from 1 with no gaps. Projects applies them in order: a gap is answered 503 (retry), an older number 409."
+        },
+        "payment_id": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "maxLength": 100
+        },
+        "reason": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "maxLength": 255
+        }
+    }
+}

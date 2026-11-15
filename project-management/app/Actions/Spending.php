@@ -6,11 +6,13 @@ use App\Audit\Audit;
 use App\Enums\CostCategory;
 use App\Enums\ExpenseStatus;
 use App\Enums\GrantStatus;
+use App\FinanceIntegration\FinanceRequests;
 use App\Models\AdvanceRetirementLine;
 use App\Models\ApprovalPolicy;
 use App\Models\Expense;
 use App\Models\ExpenseDocument;
 use App\Models\GrantAllocation;
+use App\Models\Organization;
 use App\Models\PettyCashPayment;
 use App\Models\Project;
 use App\Models\PurchaseOrder;
@@ -81,6 +83,7 @@ final class Spending
     public static function record(Project $project, array $details, CarbonImmutable $paidOn, User $by): Expense
     {
         self::requireSpendable($project, $details);
+        FinanceRequests::refuseLocalPayment(Organization::query()->findOrFail($project->organization_id));
 
         return DB::transaction(function () use ($project, $details, $paidOn, $by) {
             $expense = $project->expenses()->create([
@@ -155,6 +158,8 @@ final class Spending
                 'decision_note' => $note,
             ])->save();
             Audit::record('expense.approved', $expense, $facts, actor: $by);
+            // Integrated with Finance: the commitment goes to Finance, which pays it.
+            app(FinanceRequests::class)->submit($expense, $project, $by);
             ActivityLog::record($project, $by, "Approved {$expense->description}, ".Money::format($expense->amount_minor, $project->currency));
             Alerts::spendingApproved($project, $expense, $by);
 
@@ -195,6 +200,7 @@ final class Spending
             $expense->refresh();
             self::requireStatus($expense, ExpenseStatus::Approved, 'Only approved spending is paid.');
             self::requireOtherThanRequester($expense, $by, 'pays');
+            FinanceRequests::refuseLocalPayment(Organization::query()->findOrFail($expense->organization_id), $expense);
             Procurement::requirePayable($expense);
 
             $expense->forceFill([
@@ -237,6 +243,10 @@ final class Spending
                 if (PurchaseOrder::query()->where('expense_id', $expense->id)->whereHas('receipts')->exists()) {
                     throw ValidationException::withMessages(['reason' => 'Goods have arrived against this order, so the money is still owed.']);
                 }
+            }
+            if ($expense->status === ExpenseStatus::Approved) {
+                // Handed to Finance: Finance is asked to cancel (refused once it paid any).
+                app(FinanceRequests::class)->cancel($expense, $reason, $by);
             }
             $voided = $expense->status === ExpenseStatus::Paid;
             if ($voided && $reason === null) {

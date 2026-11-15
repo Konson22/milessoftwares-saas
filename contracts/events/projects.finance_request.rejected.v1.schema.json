@@ -1,0 +1,35 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milesoftwares.com/contracts/events/projects.finance_request.rejected.v1.schema.json",
+    "title": "projects.finance_request.rejected, schema_version 1",
+    "description": "Finance refused the request. Final: Projects decides whether to release the commitment or resubmit a new revision. Contract: docs/finance/finance-projects-contract.md.",
+    "type": "object",
+    "required": [
+        "request_id",
+        "correlation_id",
+        "sequence"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "request_id": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "correlation_id": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "sequence": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Finance's count of outcomes for this request, from 1 with no gaps. Projects applies them in order: a gap is answered 503 (retry), an older number 409."
+        },
+        "reason": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "maxLength": 255
+        }
+    }
+}

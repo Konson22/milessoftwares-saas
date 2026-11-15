@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Finance;
 use App\Actions\Spending;
 use App\Enums\CostCategory;
 use App\Enums\ExpenseStatus;
+use App\FinanceIntegration\FinanceMode;
 use App\Http\Controllers\Concerns\ShowsProject;
 use App\Http\Controllers\Controller;
 use App\Models\Expense;
@@ -14,6 +15,7 @@ use App\Models\Project;
 use App\Models\User;
 use App\Support\CsvExport;
 use App\Support\Money;
+use App\Tenancy\CurrentOrganization;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -45,7 +47,8 @@ class ExpenseController extends Controller
             ->latest()->get();
 
         $canApprove = $this->can($request, 'finance.expenses.approve');
-        $canPay = $this->can($request, 'finance.payments.record');
+        // Where Finance pays (integrated mode), nobody pays here: Finance's outcomes do.
+        $canPay = $this->can($request, 'finance.payments.record') && ! FinanceMode::of(app(CurrentOrganization::class)->require())->financeOwnsPayment();
         $manage = $this->can($request, 'projects.manage');
 
         return Inertia::render('portal/projects/expenses', [

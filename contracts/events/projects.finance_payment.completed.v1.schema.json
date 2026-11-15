@@ -1,0 +1,57 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milesoftwares.com/contracts/events/projects.finance_payment.completed.v1.schema.json",
+    "title": "projects.finance_payment.completed, schema_version 1",
+    "description": "Money paid under the request, in part or in full. One event per Finance payment id; Projects records each payment once. Contract: docs/finance/finance-projects-contract.md.",
+    "type": "object",
+    "required": [
+        "request_id",
+        "correlation_id",
+        "sequence",
+        "payment_id",
+        "amount_minor",
+        "currency",
+        "paid_on"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "request_id": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "correlation_id": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "sequence": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Finance's count of outcomes for this request, from 1 with no gaps. Projects applies them in order: a gap is answered 503 (retry), an older number 409."
+        },
+        "payment_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Finance's id for the payment."
+        },
+        "amount_minor": {
+            "type": "integer",
+            "minimum": 1
+        },
+        "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+        },
+        "paid_on": {
+            "type": "string",
+            "format": "date"
+        },
+        "journal_reference": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "maxLength": 100
+        }
+    }
+}

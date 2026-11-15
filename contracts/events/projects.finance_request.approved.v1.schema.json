@@ -1,0 +1,37 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://milesoftwares.com/contracts/events/projects.finance_request.approved.v1.schema.json",
+    "title": "projects.finance_request.approved, schema_version 1",
+    "description": "Finance approved payment, possibly of less than asked. Payments never exceed approved_minor. Contract: docs/finance/finance-projects-contract.md.",
+    "type": "object",
+    "required": [
+        "request_id",
+        "correlation_id",
+        "sequence",
+        "approved_minor"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "request_id": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "correlation_id": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "sequence": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Finance's count of outcomes for this request, from 1 with no gaps. Projects applies them in order: a gap is answered 503 (retry), an older number 409."
+        },
+        "approved_minor": {
+            "type": "integer",
+            "minimum": 1
+        },
+        "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+        }
+    }
+}

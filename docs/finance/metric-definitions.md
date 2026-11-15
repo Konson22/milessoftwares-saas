@@ -46,9 +46,11 @@ Every money figure leaving the project's own finance pages carries:
 | period | as-at date or from–to (`provenance.asOf`) |
 | source | `projects`, `finance`, `payroll`, or `reported` (typed from external accounts) |
 | status | `recorded` (Projects record, unverified by Finance), `posted` (Finance journal), `reported` (manual, unverified), `estimate` |
-
-Implemented as `provenance` on shared figures: `{currency, asOf, source: projects, paidStatus, unpostedPayments}`. `paidStatus` is `posted` only when every paid expense's `expense:{id}:paid` event was answered 201/200 by Finance (outbox `delivered`/`duplicate`, the owning organization's own rows); otherwise `recorded`. For a funder it is computed over that grant's payments only.
 | basis | `paid` (cash), `recognized` (accrual, Finance only), `committed`, `planned` |
+
+Implemented as `provenance` on shared figures: `{currency, asOf, source, paidStatus, unpostedPayments}`. `paidStatus` is `posted` only when every paid expense's `expense:{id}:paid` event was answered 201/200 by Finance (outbox `delivered`/`duplicate`, the owning organization's own rows); otherwise `recorded`. For a funder it is computed over that grant's payments only.
+
+`source` is `projects`, or `projects_and_finance` once an organization is integrated with Finance (docs/finance/finance-projects-contract.md) and Finance has reported payments: those count as paid (net of reversals) and leave committed, while the expense itself stays approved in Projects.
 
 Organizations without Finance only ever produce `recorded`, `reported` or
 `estimate` figures; the label "manually reported / unverified" is shown for

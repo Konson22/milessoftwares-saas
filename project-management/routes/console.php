@@ -3,6 +3,11 @@
 use App\Actions\Organizations as OrganizationCopies;
 use App\Actions\PettyCash;
 use App\Actions\Reminders;
+use App\FinanceIntegration\FinanceMode;
+use App\FinanceIntegration\FinanceModes;
+use App\FinanceIntegration\ModeChangeRefused;
+use App\FinanceIntegration\Readiness;
+use App\FinanceIntegration\Reconciliation;
 use App\Models\Organization;
 use App\Models\PettyCashFund;
 use App\Support\FinanceSync;
@@ -173,3 +178,81 @@ Artisan::command('projects:participation-inventory {--organization= : one worksp
 
     return 0;
 })->purpose('Inventory donor and partner records for the participation model (read-only)');
+
+// An organization's Finance mode (Phase 3B): shown with its checks, or
+// switched by a person, with a reason, when no check blocks. Never run by
+// the scheduler: nothing switches a mode on its own.
+Artisan::command('projects:finance-mode {organization : the workspace slug} {mode? : legacy, reconciliation_required, ready, integrated or suspended} {--reason= : why (required to switch)} {--by= : who is switching (defaults to the OS user)}', function (Readiness $readiness, FinanceModes $modes) {
+    $organization = Organization::query()->where('slug', $this->argument('organization'))->first();
+    if ($organization === null) {
+        $this->error('No such workspace.');
+
+        return 1;
+    }
+    $from = FinanceMode::of($organization);
+    $target = $this->argument('mode');
+    $to = is_string($target) ? FinanceMode::tryFrom($target) : null;
+    if ($target !== null && $to === null) {
+        $this->error('Unknown mode. One of: '.implode(', ', array_map(fn (FinanceMode $m) => $m->value, FinanceMode::cases())).'.');
+
+        return 1;
+    }
+
+    $this->line("{$organization->slug}: {$from->label()}");
+    $this->line('Can switch to: '.(implode(', ', array_map(fn (FinanceMode $m) => $m->value, $from->next())) ?: 'nothing'));
+    $checkFor = $to ?? ($from->next()[0] ?? $from);
+    $this->line("Checks for {$checkFor->value}:");
+    foreach ($readiness->check($organization, $checkFor) as $check) {
+        $mark = $check['passed'] ? 'ok  ' : ($check['blocking'] ? 'STOP' : 'note');
+        $this->line("  [{$mark}] {$check['label']}: {$check['count']}".($check['passed'] ? '' : " ({$check['detail']})"));
+    }
+
+    if ($to === null) {
+        return 0;
+    }
+
+    try {
+        $reason = $this->option('reason');
+        $by = $this->option('by');
+        $change = $modes->change($organization, $to, is_string($reason) ? $reason : '', is_string($by) && $by !== '' ? $by : get_current_user());
+    } catch (ModeChangeRefused $e) {
+        $this->error('Not switched: '.$e->getMessage());
+
+        return 1;
+    }
+    $this->info("Switched {$change->from_mode} -> {$change->to_mode}.");
+
+    return 0;
+})->purpose('Show or switch an organization\'s Finance mode, after readiness checks');
+
+// Requests handed to Finance against what Finance reported, and refused
+// outcomes. Read-only: nothing is resent, reversed or corrected.
+Artisan::command('projects:finance-reconcile {--organization= : one workspace, by slug} {--json : machine-readable}', function (Reconciliation $reconciliation) {
+    $organizationId = null;
+    if ($this->option('organization')) {
+        $organizationId = Organization::query()->where('slug', $this->option('organization'))->value('id');
+        if ($organizationId === null) {
+            $this->error('No such workspace.');
+
+            return 1;
+        }
+    }
+
+    $result = $reconciliation->run($organizationId);
+    if ($this->option('json')) {
+        $this->line((string) json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+        return $result['findings'] === [] ? 0 : 1;
+    }
+    if ($result['findings'] === []) {
+        $this->info('Nothing to reconcile.');
+
+        return 0;
+    }
+    $this->line('Findings: '.collect($result['counts'])->map(fn (int $n, string $kind) => "{$kind} {$n}")->implode(', '));
+    foreach ($result['findings'] as $finding) {
+        $this->line("  {$finding['kind']} {$finding['reference']}: {$finding['detail']}");
+    }
+
+    return 1;
+})->purpose('Reconcile requests handed to Finance with Finance\'s outcomes (read-only)');
