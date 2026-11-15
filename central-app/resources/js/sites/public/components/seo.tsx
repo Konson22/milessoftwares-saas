@@ -1,5 +1,10 @@
 import { Head } from '@inertiajs/react';
-import { socialLinks, whatsappNumber } from '@/sites/public/components/social';
+import {
+    businessAddress,
+    socialLinks,
+    supportEmail,
+    whatsappNumber,
+} from '@/sites/public/components/social';
 
 export const siteName = 'Tatook';
 
@@ -23,13 +28,28 @@ export const companyName = 'Miles Global Link Co. Ltd';
  * Link as the company behind it.
  */
 export function organization(origin: string): Record<string, unknown> {
+    const telephone = whatsappNumber.replace(/ /g, '');
+
     return {
         '@type': 'Organization',
         '@id': `${origin}/#organization`,
         name: siteName,
+        // "Tatook" alone reads as a misspelling of "tattoo" to search
+        // engines; the alternate names tie it to business software.
+        alternateName: ['Tatook ERP', 'Tatook Business Software'],
+        legalName: companyName,
         url: `${origin}/`,
-        logo: `${origin}/images/logo-icon.png`,
+        logo: {
+            '@type': 'ImageObject',
+            url: `${origin}/images/logo-icon.png`,
+        },
+        image: `${origin}/images/logo-with-text.png`,
+        description:
+            'Tatook is ERP and business software for pharmacies, shops, restaurants, schools and petrol stations, with accounting, HR and payroll, made by Miles Global Link Co. Ltd.',
         slogan: 'Bring it all together',
+        email: supportEmail,
+        telephone,
+        address: postalAddress(),
         parentOrganization: {
             '@type': 'Organization',
             name: companyName,
@@ -41,10 +61,58 @@ export function organization(origin: string): Record<string, unknown> {
         contactPoint: {
             '@type': 'ContactPoint',
             contactType: 'customer support',
-            telephone: whatsappNumber.replace(/ /g, ''),
+            telephone,
+            email: supportEmail,
+            areaServed: businessAddress.countryCode,
             availableLanguage: 'English',
         },
     };
+}
+
+/** The office as schema.org's PostalAddress. */
+export function postalAddress(): Record<string, unknown> {
+    return {
+        '@type': 'PostalAddress',
+        streetAddress: businessAddress.street,
+        addressLocality: businessAddress.locality,
+        addressCountry: businessAddress.countryCode,
+    };
+}
+
+/**
+ * Tatook as software (the platform as a whole; each product page describes
+ * its own application).
+ */
+export function softwareApplication(origin: string): Record<string, unknown> {
+    return {
+        '@type': 'SoftwareApplication',
+        '@id': `${origin}/#software`,
+        name: siteName,
+        alternateName: 'Tatook ERP',
+        url: `${origin}/`,
+        applicationCategory: 'BusinessApplication',
+        applicationSubCategory: 'Enterprise resource planning (ERP)',
+        operatingSystem: 'Web, Windows, Android',
+        description:
+            'ERP and business software: pharmacy, retail, restaurant, school and petrol station ERPs with finance and accounting, HR, payroll and project management under one account.',
+        featureList: [
+            'Pharmacy ERP',
+            'Retail and wholesale POS',
+            'Restaurant ERP',
+            'School management',
+            'Petrol station management',
+            'Finance and accounting',
+            'HR and payroll',
+            'Project management',
+        ],
+        publisher: { '@id': `${origin}/#organization` },
+        provider: { '@id': `${origin}/#organization` },
+    };
+}
+
+/** The browser and social title: "Page - Tatook", or as given when it leads with the brand. */
+export function fullTitle(title: string): string {
+    return title.startsWith(`${siteName} |`) ? title : `${title} - ${siteName}`;
 }
 
 /**
@@ -61,7 +129,7 @@ export default function Seo({
     noindex = false,
 }: Props) {
     const imageUrl = new URL(image, canonical).href;
-    const fullTitle = `${title} - ${siteName}`;
+    const shownTitle = fullTitle(title);
 
     return (
         <Head title={title}>
@@ -81,7 +149,11 @@ export default function Seo({
                 content={siteName}
             />
             <meta head-key="og:locale" property="og:locale" content="en_US" />
-            <meta head-key="og:title" property="og:title" content={fullTitle} />
+            <meta
+                head-key="og:title"
+                property="og:title"
+                content={shownTitle}
+            />
             <meta
                 head-key="og:description"
                 property="og:description"
@@ -102,7 +174,7 @@ export default function Seo({
             <meta
                 head-key="twitter:title"
                 name="twitter:title"
-                content={fullTitle}
+                content={shownTitle}
             />
             <meta
                 head-key="twitter:description"

@@ -8,9 +8,12 @@ import Analytics from '@/sites/public/components/analytics';
 import MetaPixel from '@/sites/public/components/meta-pixel';
 import { demoUrl } from '@/sites/public/components/offerings';
 import {
+    businessAddressLine,
+    facebookUrl,
     SocialIcon,
     socialLinks,
     supportEmail,
+    whatsappNumber,
 } from '@/sites/public/components/social';
 import { button, container } from '@/sites/public/components/styles';
 import { login, register } from '@/routes';
@@ -386,9 +389,9 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                     <div className="col-span-2 md:col-span-3 lg:col-span-1">
                         <Brand light />
                         <p className="mt-5 max-w-xs leading-relaxed">
-                            Bring it all together: Tatook
-                            products in one workspace, and custom software for
-                            web, desktop and mobile.
+                            Bring it all together: Tatook products in one
+                            workspace, and custom software for web, desktop and
+                            mobile.
                         </p>
                         <Link
                             href="/contact"
@@ -457,6 +460,39 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                         ]}
                     />
                 </div>
+                {/*
+                  The business's name, address, phone and email, word for word
+                  as on the Google Business Profile and in the structured data
+                  (seo.tsx organization()). rel="me" on the Facebook link tells
+                  search engines the page is ours.
+                */}
+                <div className="border-t border-white/15">
+                    <address
+                        className={`${container} flex flex-wrap gap-x-6 gap-y-2 py-5 text-slate-300 not-italic`}
+                    >
+                        <span>{businessAddressLine}</span>
+                        <a
+                            href={`tel:${whatsappNumber.replace(/ /g, '')}`}
+                            className="hover:text-white hover:underline"
+                        >
+                            {whatsappNumber}
+                        </a>
+                        <a
+                            href={`mailto:${supportEmail}`}
+                            className="hover:text-white hover:underline"
+                        >
+                            {supportEmail}
+                        </a>
+                        <a
+                            href={facebookUrl}
+                            rel="me noopener noreferrer"
+                            target="_blank"
+                            className="hover:text-white hover:underline"
+                        >
+                            Facebook
+                        </a>
+                    </address>
+                </div>
                 <div className="border-t border-white/15">
                     <div
                         className={`${container} flex flex-wrap items-center justify-between gap-x-6 gap-y-3 py-6`}
@@ -478,12 +514,6 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                             >
                                 Terms of service
                             </Link>
-                            <a
-                                href={`mailto:${supportEmail}`}
-                                className="hover:text-white hover:underline"
-                            >
-                                {supportEmail}
-                            </a>
                         </div>
                     </div>
                 </div>

@@ -4,6 +4,24 @@ export const whatsappNumber = '+211 920 079 070';
 /** Support's mailbox: contact form messages are emailed here too. */
 export const supportEmail = 'info@tatook.com';
 
+/**
+ * The office, word for word as on the Google Business Profile and in the
+ * footer and structured data (and config/platform.php billing.address).
+ */
+export const businessAddress = {
+    street: 'Juba town, former GPOC building, 1st floor, office No 9',
+    locality: 'Juba',
+    country: 'South Sudan',
+    countryCode: 'SS',
+};
+
+/** The address on one line. */
+export const businessAddressLine = `${businessAddress.street}, ${businessAddress.locality}, ${businessAddress.country}`;
+
+/** The official Facebook page (also verified with rel="me" in the footer). */
+export const facebookUrl =
+    'https://www.facebook.com/profile.php?id=61595274547445';
+
 export const socialLinks = [
     {
         name: 'WhatsApp',
@@ -15,7 +33,7 @@ export const socialLinks = [
     {
         name: 'Facebook',
         label: 'Facebook',
-        href: 'https://www.facebook.com/profile.php?id=61595274547445',
+        href: facebookUrl,
         path: 'M9.1 23.69v-7.98H6.62v-3.67H9.1v-1.58c0-4.09 1.85-5.98 5.86-5.98.76 0 2.07.15 2.61.3v3.32c-.28-.03-.78-.04-1.39-.04-1.97 0-2.73.75-2.73 2.68v1.3h3.92l-.67 3.67h-3.25V24C19.4 23.28 24 18.18 24 12 24 5.37 18.63 0 12 0S0 5.37 0 12c0 5.63 3.87 10.35 9.1 11.69',
     },
 ];
