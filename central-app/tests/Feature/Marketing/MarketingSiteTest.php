@@ -406,6 +406,18 @@ it('shows only unreleased catalog products on the coming-soon page', function ()
             && collect($catalog)->pluck('slug')->contains('logistics')));
 });
 
+it('gives Pharmacy ERP its own page, with its catalog words and plans', function () {
+    $this->get(site('erp/pharmacy'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+        ->component('public/pharmacy')
+        ->where('product.name', 'Pharmacy ERP')
+        ->has('plans')
+        ->where('canonical', site('erp/pharmacy')));
+
+    // The other ERPs keep the shared page.
+    $this->get(site('erp/retail'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+        ->component('public/landing'));
+});
+
 it('gives each catalog product its own page, and 404s anything else', function () {
     $this->get(site('apps/finance'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
         ->component('public/finance')

@@ -34,6 +34,13 @@
                 ]
             },
             "summary": "Medicines, batches and expiry, the counter and prescriptions, with Finance & Accounting when you want the books.",
+            "overview": [
+                "Pharmacy ERP runs the whole pharmacy in one place: the medicines you stock, every batch with its expiry date and cost, the counter where you sell, the prescriptions you dispense and the cash in each till. It is made for retail pharmacies, medical stores and pharmaceutical wholesalers, from a single shop to many branches.",
+                "Stock is tracked by batch from the moment it arrives. Goods are received against purchase orders onto a shelf or into the fridge, each batch with its number, expiry date and cost. The counter always sells the batch that expires first and refuses anything expired. A batch can be put on hold in one step, recalled stock never sells, and near-expiry reports show what to move before it is lost.",
+                "At the counter, cashiers search or scan, apply approved discounts, take cash, mobile money or card, and print an 80 mm receipt. Prescriptions are recorded and verified by a pharmacist before they are dispensed, and can be dispensed in part when stock is short. Every movement of a controlled drug is written to a register that is ready for inspection.",
+                "Each cashier opens a till and counts it at closing, so any over or short is on record. The counter also runs on Windows PCs and on Android and iOS phones and tablets, and keeps selling when the internet drops: sales are sent once the connection is back. For a pharmacy with no internet at all, a standalone edition runs a single branch on one PC.",
+                "Pharmacy ERP works on its own. Add Finance & Accounting and every sale, purchase, return and write-off posts to your ledger automatically, so the books are up to date at the end of each day."
+            ],
             "headline": "Every medicine accounted for, from delivery to dispensing.",
             "subhead": "Batch and expiry tracking, a fast counter, prescriptions and a controlled-drugs register. Add Finance & Accounting and sales, stock and cash post to your books on their own.",
             "audience": "Retail pharmacies, medical stores and pharmaceutical wholesalers, from one branch to many.",
@@ -435,6 +442,13 @@
                 "mobile": []
             },
             "summary": "Double-entry accounting with bank reconciliation, tax, budgets and fixed assets.",
+            "overview": [
+                "Finance & Accounting keeps a business's books in one place: a double-entry ledger, sales and purchases, the bank, tax, budgets and fixed assets, and the financial statements that come from them. It is for businesses that want proper books, for the accountants who serve them, and for every business that runs one of our ERPs.",
+                "Everything is recorded in a chart of accounts and journals that always balance. Mistakes are corrected with reversals rather than edits, so the audit trail stays whole. Invoices and receipts, bills and supplier payments, credits and returns all post to the ledger as they happen.",
+                "Bank statements are imported as CSV and matched against the ledger: accept the suggested matches, save rules for the ones that repeat, and reconcile to the statement balance. Accounts, invoices and payments can be in foreign currencies, with daily rates and a revaluation at month-end.",
+                "At month-end, lock each month in order; at year-end, close the year into retained earnings. Set tax codes, run the tax return for any period, and filing it locks that period and prepares the settlement journal. Track budgets against actual figures, and keep an asset register that depreciates every month.",
+                "Run the trial balance, profit and loss, balance sheet, aged receivables and payables, and cash flow from the same ledger at any time. Finance & Accounting works on its own, and when you add an ERP its sales, purchases, stock and cash post to your books automatically. Opening balances let you carry on from where you are today."
+            ],
             "headline": "Accounting your accountant will trust.",
             "subhead": "A double-entry ledger with periods, bank reconciliation, tax, budgets and fixed assets, fed automatically by our ERPs or used on its own.",
             "audience": "Businesses that want proper books, the accountants who serve them, and every customer of our ERPs.",

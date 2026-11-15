@@ -60,6 +60,8 @@ export type CatalogEntry = {
     name: string;
     icon: string;
     summary: string;
+    /** A fuller description in paragraphs, for the product's own page (optional). */
+    overview?: string[];
     headline: string;
     subhead: string;
     audience: string;

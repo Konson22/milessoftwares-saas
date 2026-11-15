@@ -13,6 +13,7 @@ import Downloads from './downloads';
 import MarketingHome from './home';
 import FinancePage from './finance';
 import LandingPage from './landing';
+import PharmacyPage from './pharmacy';
 import Platform from './platform';
 import Pricing from './pricing';
 import Privacy from './privacy';
@@ -257,6 +258,16 @@ const pages: [string, ReactNode][] = [
         />,
     ],
     [
+        'pharmacy',
+        <PharmacyPage
+            key="pharmacy"
+            product={entry}
+            plans={[productPlan]}
+            trialDays={60}
+            canonical="https://example.test/erp/pharmacy"
+        />,
+    ],
+    [
         'coming-soon landing',
         <LandingPage
             key="landing-soon"
@@ -463,6 +474,7 @@ describe('search metadata', () => {
         'product',
         'finance',
         'landing',
+        'pharmacy',
         'coming-soon landing',
     ];
 

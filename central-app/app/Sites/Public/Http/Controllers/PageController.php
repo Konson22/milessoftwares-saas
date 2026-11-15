@@ -241,7 +241,11 @@ class PageController extends Controller
         };
 
         return Inertia::render(
-            $category === 'application' && $slug === 'finance' ? 'public/finance' : 'public/landing',
+            match (true) {
+                $category === 'application' && $slug === 'finance' => 'public/finance',
+                $category === 'erp' && $slug === 'pharmacy' => 'public/pharmacy',
+                default => 'public/landing',
+            },
             [
                 'product' => $entry,
                 'plans' => $entry['status'] === 'coming_soon' ? [] : $plans,
