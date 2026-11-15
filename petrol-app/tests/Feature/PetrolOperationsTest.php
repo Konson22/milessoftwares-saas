@@ -255,6 +255,105 @@ it('restores stock when a sale is voided', function () {
         ->and(financeEvents())->toContain('finance.invoice.voided');
 });
 
+it('lists the day\'s sales with filters and counts only posted ones in the totals', function () {
+    $yard = forecourt();
+    foreach (['100', '50'] as $litres) {
+        $this->post(at('sales'), [
+            'nozzle_id' => $yard['nozzle'],
+            'litres' => $litres,
+            'attendant_id' => $yard['attendant'],
+            'collected_by' => 'cashier',
+            'payments' => [['method_id' => $yard['cash'], 'amount' => number_format((float) $litres * 10, 2, '.', '')]],
+        ])->assertRedirect();
+    }
+    $voided = $this->asTenant('acme', fn () => FuelSale::query()->where('quantity_milli', 50_000)->sole());
+    $this->post(at("sales/{$voided->id}/void"), ['reason' => 'Wrong nozzle'])->assertSessionHasNoErrors();
+
+    $this->get(at('sales'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('sales/index')
+            ->has('sales.data', 2)
+            ->where('summary.count', 1)
+            ->where('summary.totalMinor', 100000)
+            ->where('summary.litres', '100.000')
+            ->where('summary.voided', 1)
+            ->where('summary.profitMinor', 20000)
+            ->where('summary.payments.0', ['kind' => 'cash', 'totalMinor' => 100000])
+            ->has('summary.hours', 1));
+
+    $this->get(at('sales?status=voided'))
+        ->assertInertia(fn (Assert $page) => $page->has('sales.data', 1)->where('summary.count', 0));
+    $this->get(at('sales?method=credit'))
+        ->assertInertia(fn (Assert $page) => $page->has('sales.data', 0));
+    $this->get(at('sales?q='.strtolower($voided->number)))
+        ->assertInertia(fn (Assert $page) => $page->has('sales.data', 1)->where('sales.data.0.number', $voided->number));
+    $this->get(at('sales?from=2020-01-01&to=2020-01-01'))
+        ->assertInertia(fn (Assert $page) => $page->has('sales.data', 0)->where('summary.totalMinor', 0));
+});
+
+it('shows the open shift live on the shifts page and filters the list', function () {
+    $yard = forecourt();
+    $this->post(at('sales'), [
+        'nozzle_id' => $yard['nozzle'],
+        'litres' => '100',
+        'attendant_id' => $yard['attendant'],
+        'collected_by' => 'cashier',
+        'payments' => [['method_id' => $yard['cash'], 'amount' => '1000.00']],
+    ])->assertRedirect();
+
+    $this->get(at('shifts'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('shifts/index')
+            ->where('current.id', $yard['shift'])
+            ->where('current.salesMinor', 100000)
+            ->where('current.salesCount', 1)
+            ->where('current.pumpsStaffed', 1)
+            ->has('current.crew', 1)
+            ->has('shifts.data', 1)
+            ->where('shifts.data.0.salesMinor', 100000)
+            ->where('counts.waiting', 0)
+            ->has('closings', 0));
+
+    $this->get(at('shifts?status=approved'))
+        ->assertInertia(fn (Assert $page) => $page->has('shifts.data', 0)->where('status', 'approved'));
+});
+
+it('sets each nozzle\'s metered litres against its sales on the readings page', function () {
+    $yard = forecourt();
+    $this->post(at('sales'), [
+        'nozzle_id' => $yard['nozzle'],
+        'litres' => '100',
+        'attendant_id' => $yard['attendant'],
+        'collected_by' => 'cashier',
+        'payments' => [['method_id' => $yard['cash'], 'amount' => '1000.00']],
+    ])->assertRedirect();
+
+    $this->get(at('readings'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('readings/index')
+            ->where('meters.0.soldThisShift', '100.000')
+            ->where('summary.missing', 1)
+            ->where('shifts.data.0.lines.0.closing', null));
+
+    $this->post(at("shifts/{$yard['shift']}/submit"), [
+        'counted_drawer' => '1000.00',
+        'closings' => [['nozzle_id' => $yard['nozzle'], 'reading' => '1110']],
+    ])->assertSessionHasNoErrors();
+
+    $this->get(at('readings'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('summary.metered', '110.000')
+            ->where('summary.sold', '100.000')
+            ->where('summary.varianceMilli', 10_000)
+            ->where('summary.missing', 0)
+            ->where('shifts.data.0.lines.0.varianceMilli', 10_000)
+            ->where('meters.0.reading', '1110.000')
+            ->has('days', 1));
+});
+
 it('keeps dispensed litres honest and stops the submitter approving a shortage', function () {
     $yard = forecourt();
     $seller = manager();
@@ -483,6 +582,30 @@ it('totals authorized stations and hides a station the reporter cannot open', fu
             ->where('canDesignate', false));
 
     $this->get(at('overview?branch='.$this->juba))->assertNotFound();
+});
+
+it('charts two weeks of sales by grade and the day by hour, even for today alone', function () {
+    $yard = forecourt();
+    $this->post(at('sales'), [
+        'nozzle_id' => $yard['nozzle'],
+        'litres' => '100',
+        'attendant_id' => $yard['attendant'],
+        'collected_by' => 'cashier',
+        'payments' => [['method_id' => $yard['cash'], 'amount' => '1000.00']],
+    ])->assertRedirect();
+
+    $this->actingAsMember('acme', petrolPermissions(), owner: true);
+    $props = $this->get(at('overview'))->assertOk()->viewData('page')['props']['overview'];
+
+    $today = end($props['series']);
+    $hours = collect($props['hours']);
+    expect($props['series'])->toHaveCount(14)
+        ->and($today['totalMinor'])->toBe(100000)
+        ->and($today['litres'])->toBe('100.000')
+        ->and(array_sum(array_column($today['grades'], 'totalMinor')))->toBe(100000)
+        ->and($props['hours'])->toHaveCount(24)
+        ->and($hours->sum('totalMinor'))->toBe(100000)
+        ->and($hours->sum('count'))->toBe(1);
 });
 
 it('shows each station on the operations board with its shift, sales, staff and what needs someone', function () {
@@ -2782,6 +2905,48 @@ it('gives a new attendant a username sign-in with the temporary password the man
     ])->assertSessionHasNoErrors();
     expect($attendant->refresh()->user_id)->toBe($request['user_id'])
         ->and($attendant->phone)->toBe('0912000000');
+});
+
+it('gives an attendant added on the staff page a username sign-in at their first station', function () {
+    manager();
+    $this->actingAsMember('acme', petrolPermissions(), owner: true);
+
+    $this->post(at('staff'), [
+        'name' => 'Deng Mabior',
+        'employee_code' => 'd1',
+        'create_sign_in' => 1,
+        'username' => 'Deng.M',
+        'password' => 'pump-start-42',
+        'active' => 1,
+        'stations' => [$this->wau, $this->juba],
+    ])->assertSessionHasNoErrors()->assertSessionHas('attendantSignIn.username', 'deng.m');
+
+    $request = $this->platform()->memberAccounts['deng.m'];
+    expect($request['password'])->toBe('pump-start-42')
+        ->and($request['role'])->toBe('attendant')
+        ->and($request['branch_id'])->toBe($this->wau);
+    $deng = $this->asTenant('acme', fn () => Attendant::query()->where('employee_code', 'D1')->sole());
+    expect($deng->user_id)->toBe($request['user_id']);
+
+    // A short password, or a sign-in plus a linked account, is refused before anything is made.
+    $this->post(at('staff'), [
+        'name' => 'Achol',
+        'employee_code' => 'D2',
+        'create_sign_in' => 1,
+        'username' => 'achol',
+        'password' => 'short',
+        'stations' => [$this->juba],
+    ])->assertSessionHasErrors('password');
+    $this->post(at('staff'), [
+        'name' => 'Achol',
+        'employee_code' => 'D2',
+        'create_sign_in' => 1,
+        'username' => 'achol',
+        'password' => 'pump-start-42',
+        'user_id' => $deng->user_id,
+        'stations' => [$this->juba],
+    ])->assertSessionHasErrors('user_id');
+    expect($this->asTenant('acme', fn () => Attendant::query()->where('employee_code', 'D2')->exists()))->toBeFalse();
 });
 
 it('adds no attendant when the platform refuses the sign-in', function () {
