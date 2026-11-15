@@ -1,5 +1,5 @@
 {
-    "$comment": "Conformance cases for the data collection rules engine (ADR-0012 §4). Both engines run every case: mel-app/app/Collect/Rules.php (tests/Unit/CollectRulesTest.php) and mel-app/resources/js/collect/rules.ts (rules.test.ts), and later the field app's copy. expect.visible and expect.required are in document order. Add a case here, never to one engine only.",
+    "$comment": "Conformance cases for the data collection rules engine (ADR-0012 §4). Both engines run every case: project-management/app/Collect/Rules.php (tests/Unit/Mel/CollectRulesTest.php) and project-management/resources/js/mel/collect/rules.ts (rules.test.ts), and later the field app's copy. expect.visible and expect.required are in document order. Add a case here, never to one engine only.",
     "forms": {
         "wash": {
             "schema_version": 1,

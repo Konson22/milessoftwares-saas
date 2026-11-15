@@ -45,7 +45,7 @@ class LocalPlansSeeder extends Seeder
         'logistics-standard' => ['Logistics Standard', 'Shipments, fleet and deliveries.', null, ['logistics'], 2000],
         'petrol-standard' => ['Petrol Standard', 'The petrol station: pumps and tanks, shifts, fuel sales and deliveries.', null, ['petrol'], 3000],
         'petrol-plus' => ['Petrol Plus', 'The petrol station with Finance & Accounting for the books.', null, ['petrol', 'finance'], 4500],
-        'mel-standard' => ['M&E Standard', 'Programmes, results frameworks, indicators, verified results and donor reports.', 'monitoring_evaluation', ['mel'], 2500],
+        'mel-standard' => ['M&E Standard', 'Programmes, results frameworks, indicators, verified results and donor reports.', 'monitoring_evaluation', ['projects'], 2500],
     ];
 
     public function run(): void

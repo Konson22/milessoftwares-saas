@@ -366,8 +366,8 @@ it('lists every product of the brief on the products page', function () {
         ->where('catalog', function ($catalog) {
             $slugs = fn (string $category) => collect($catalog)->where('category', $category)->pluck('slug')->values()->all();
 
-            return $slugs('erp') === ['pharmacy', 'retail', 'restaurant', 'school', 'logistics', 'ngo']
-                && $slugs('application') === ['finance', 'petrol', 'projects', 'hr', 'payroll', 'procurement', 'inventory', 'crm', 'assets', 'documents'];
+            return $slugs('erp') === ['pharmacy', 'retail', 'restaurant', 'school', 'logistics']
+                && $slugs('application') === ['finance', 'petrol', 'projects', 'monitoring-evaluation', 'hr', 'payroll', 'procurement', 'inventory', 'crm', 'assets'];
         }));
 });
 
@@ -426,7 +426,7 @@ it('lists the new pages in the sitemap', function () {
     $this->get(site('sitemap.xml'))
         ->assertSee(site('products'), false)
         ->assertSee(site('erp/pharmacy'), false)
-        ->assertSee(site('apps/documents'), false)
+        ->assertSee(site('apps/assets'), false)
         ->assertSee(site('platform'), false)
         ->assertSee(site('coming-soon'), false)
         ->assertSee(site('about'), false)

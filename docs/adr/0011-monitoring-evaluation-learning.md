@@ -1,6 +1,8 @@
 # ADR-0011: Tatook M&E (Monitoring, Evaluation & Learning) is its own application
 
-- Status: **Proposed** (2026-11-14). Nothing is built yet. Implementation waits for approval.
+- Status: **Superseded in part by ADR-0013** (2026-11-15): M&E is a module of Tatook Projects
+  (`project-management`), not its own application, and `mel-app` is retired. The domain design here
+  (schemas, calculation rules, workflow) still holds. Paths and codes below are historical.
 - Code: `mel-app`, registry application `mel`, served at `{workspace}/mel`, dev port 9400
 
 ## 1. Findings from the repository

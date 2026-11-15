@@ -415,65 +415,6 @@
             ]
         },
         {
-            "slug": "ngo",
-            "category": "erp",
-            "name": "NGO ERP",
-            "icon": "heart-handshake",
-            "registry": { "type": "erp", "code": "ngo" },
-            "offering": {
-                "platforms": ["web"],
-                "connectivity": ["online"],
-                "licensing": ["subscription"],
-                "desktop": [],
-                "mobile": []
-            },
-            "summary": "Programs, grants and donor reporting.",
-            "headline": "Programs delivered, every grant accounted for.",
-            "subhead": "NGO ERP is being built for NGOs and development organizations, with optional Finance & Accounting for fund accounting.",
-            "audience": "NGOs, charities and development organizations.",
-            "seoTitle": "NGO ERP",
-            "seoDescription": "NGO software on the way: programs, donors and grants, budgets, procurement and donor reporting, with optional Finance & Accounting.",
-            "features": [
-                {
-                    "icon": "folder-kanban",
-                    "title": "Programs and projects",
-                    "body": "Activities, targets and progress by program."
-                },
-                {
-                    "icon": "hand-coins",
-                    "title": "Donors and grants",
-                    "body": "Grant agreements, tranches and conditions."
-                },
-                {
-                    "icon": "activity",
-                    "title": "Budgets and expenses",
-                    "body": "Spending against each grant's budget."
-                },
-                {
-                    "icon": "file-spreadsheet",
-                    "title": "Donor reporting",
-                    "body": "Reports per donor and grant from the same books."
-                }
-            ],
-            "workflow": [
-                { "title": "Fund", "body": "Record grants and their budgets." },
-                {
-                    "title": "Spend",
-                    "body": "Buy and pay against the right grant and project."
-                },
-                {
-                    "title": "Report",
-                    "body": "Give each donor a report that matches the ledger."
-                }
-            ],
-            "faqs": [
-                {
-                    "question": "When will NGO ERP be available?",
-                    "answer": "It is in development. Join the waitlist and we will tell you as soon as it opens."
-                }
-            ]
-        },
-        {
             "slug": "finance",
             "category": "application",
             "name": "Finance & Accounting",
@@ -705,6 +646,46 @@
                 {
                     "question": "Can I use Project Management today?",
                     "answer": "Yes. It is in early access: start a free trial in your Tatook workspace, or ask us for a demo."
+                }
+            ]
+        },
+        {
+            "slug": "monitoring-evaluation",
+            "category": "application",
+            "name": "Monitoring & Evaluation",
+            "icon": "bar-chart",
+            "registry": { "type": "application", "code": "projects" },
+            "offering": {
+                "platforms": ["web"],
+                "connectivity": ["online"],
+                "licensing": ["subscription"],
+                "desktop": [],
+                "mobile": []
+            },
+            "summary": "Results frameworks, indicators and verified results for donors.",
+            "headline": "Report results your donors can trust.",
+            "subhead": "Now in early access for NGOs, agencies and programmes: results frameworks, indicators with baselines and targets, evidence for every result, and donor reports built only from verified results.",
+            "audience": "NGOs, humanitarian agencies, donors and government programmes.",
+            "seoTitle": "Monitoring & Evaluation software",
+            "seoDescription": "Monitoring and evaluation in early access: results frameworks, indicators, results with evidence, review and verification, and donor reports from verified results.",
+            "features": [
+                { "icon": "activity", "title": "Indicators and targets", "body": "Baselines and targets for every indicator, by period." },
+                { "icon": "file-check", "title": "Evidence and verification", "body": "Results come with evidence and are reviewed before they count." },
+                { "icon": "file-text", "title": "Donor reports", "body": "Reports built only from verified results." }
+            ],
+            "workflow": [
+                { "title": "Plan", "body": "Set up the programme, its results framework and indicators." },
+                { "title": "Report", "body": "Sites and partners enter results with evidence." },
+                { "title": "Verify", "body": "Results are reviewed, verified and published to donors." }
+            ],
+            "faqs": [
+                {
+                    "question": "Can I use Monitoring & Evaluation today?",
+                    "answer": "Yes. It is in early access: start a free trial in your Tatook workspace, or ask us for a demo."
+                },
+                {
+                    "question": "Does it work with Project Management?",
+                    "answer": "It is part of it. Monitoring & Evaluation is in Tatook Projects, so programme units link straight to projects, and their progress and budgets are the projects' own."
                 }
             ]
         },
@@ -1090,54 +1071,6 @@
                 {
                     "question": "Can I depreciate assets today?",
                     "answer": "Yes. Finance & Accounting has an asset register with monthly depreciation and disposals. Asset Management will add day-to-day tracking."
-                }
-            ]
-        },
-        {
-            "slug": "documents",
-            "category": "application",
-            "name": "Document Management",
-            "icon": "file-check",
-            "registry": null,
-            "offering": {
-                "platforms": ["web"],
-                "connectivity": ["online"],
-                "licensing": ["subscription"],
-                "desktop": [],
-                "mobile": []
-            },
-            "summary": "Upload, route and approve documents with a full trail.",
-            "headline": "Paperwork that moves.",
-            "subhead": "Document Management is planned for routing documents for approval, with a record of who signed what.",
-            "audience": "Any organization that approves documents: contracts, requests, policies.",
-            "seoTitle": "Document Management software",
-            "seoDescription": "Document management on the way: upload, route and approve documents with a full trail of who signed what.",
-            "features": [
-                {
-                    "icon": "folder-lock",
-                    "title": "Secure storage",
-                    "body": "Documents kept per organization, private by default."
-                },
-                {
-                    "icon": "clipboard-check",
-                    "title": "Approval routes",
-                    "body": "Send a document through the right approvers."
-                },
-                {
-                    "icon": "scroll-text",
-                    "title": "Full trail",
-                    "body": "Who viewed, signed and approved, and when."
-                }
-            ],
-            "workflow": [
-                { "title": "Upload", "body": "Add the document." },
-                { "title": "Route", "body": "Send it to the approvers." },
-                { "title": "Approve", "body": "Sign off, with the trail kept." }
-            ],
-            "faqs": [
-                {
-                    "question": "When will Document Management be available?",
-                    "answer": "It is planned. Join the waitlist and we will tell you first."
                 }
             ]
         }

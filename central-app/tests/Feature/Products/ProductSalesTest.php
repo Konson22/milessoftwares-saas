@@ -23,7 +23,7 @@ beforeEach(function () {
         ['code' => 'finance', 'requirement' => 'required'],
         ['code' => 'hr', 'requirement' => 'optional'],
     ]])['product'];
-    $this->ngo = $catalog->sync(['code' => 'ngo', 'name' => 'NGO ERP', 'status' => 'planned', 'sort_order' => 40, 'applications' => [
+    $this->restaurant = $catalog->sync(['code' => 'restaurant', 'name' => 'Restaurant ERP', 'status' => 'planned', 'sort_order' => 40, 'applications' => [
         ['code' => 'finance', 'requirement' => 'required'],
     ]])['product'];
 
@@ -78,7 +78,7 @@ describe('plans', function () {
 
             return ['application_ids' => [test()->pharmacyApp->id, test()->financeApp->id, $retail->id]];
         }, 'application_ids'],
-        'active plan for a planned product' => [fn () => ['erp_product_id' => test()->ngo->id, 'application_ids' => [test()->financeApp->id]], 'erp_product_id'],
+        'active plan for a planned product' => [fn () => ['erp_product_id' => test()->restaurant->id, 'application_ids' => [test()->financeApp->id]], 'erp_product_id'],
         'unknown product' => [fn () => ['erp_product_id' => '0190a000-0000-7000-8000-000000000000'], 'erp_product_id'],
     ]);
 
@@ -87,7 +87,7 @@ describe('plans', function () {
             ->post($this->adminUrl('/plans'), productPlanForm(['application_ids' => [$this->pharmacyApp->id, $this->financeApp->id, $this->hrApp->id]]))
             ->assertSessionHasNoErrors();
         $this->actingAs($this->billing->user)
-            ->post($this->adminUrl('/plans'), productPlanForm(['code' => 'ngo-std', 'erp_product_id' => $this->ngo->id, 'status' => 'draft', 'application_ids' => [$this->financeApp->id]]))
+            ->post($this->adminUrl('/plans'), productPlanForm(['code' => 'restaurant-std', 'erp_product_id' => $this->restaurant->id, 'status' => 'draft', 'application_ids' => [$this->financeApp->id]]))
             ->assertSessionHasNoErrors();
 
         expect(Plan::query()->count())->toBe(2);
@@ -163,8 +163,8 @@ describe('public site', function () {
                 return $bySlug['pharmacy']['status'] === 'early_access'
                     && $bySlug['pharmacy']['trial'] === 'pharmacy'
                     // Planned in the registry, or not in it at all: coming soon, no trial.
-                    && $bySlug['ngo']['status'] === 'coming_soon'
-                    && $bySlug['ngo']['trial'] === null
+                    && $bySlug['restaurant']['status'] === 'coming_soon'
+                    && $bySlug['restaurant']['trial'] === null
                     && $bySlug['logistics']['status'] === 'coming_soon';
             }));
     });
@@ -212,7 +212,7 @@ describe('public site', function () {
     });
 
     it('offers no plans on a solution that is coming soon', function () {
-        $this->get(apex('erp/ngo'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+        $this->get(apex('erp/restaurant'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
             ->component('public/landing')
             ->where('product.status', 'coming_soon')
             ->where('product.trial', null)
@@ -242,6 +242,6 @@ describe('public site', function () {
     it('lists ERP product pages in the sitemap', function () {
         $this->get(apex('sitemap.xml'))->assertOk()
             ->assertSee(apex('erp/pharmacy'), false)
-            ->assertSee(apex('erp/ngo'), false);
+            ->assertSee(apex('erp/restaurant'), false);
     });
 });

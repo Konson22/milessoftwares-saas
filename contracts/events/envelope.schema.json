@@ -23,7 +23,7 @@
         },
         "event_type": {
             "type": "string",
-            "pattern": "^(finance|hr|payroll|mel)(\\.[a-z][a-z0-9_]*){2}$",
+            "pattern": "^(finance|hr|payroll)(\\.[a-z][a-z0-9_]*){2}$",
             "examples": ["finance.invoice.issued"]
         },
         "schema_version": { "type": "integer", "minimum": 1 },

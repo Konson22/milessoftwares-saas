@@ -1,7 +1,8 @@
 # ADR-0012: Data Collection is a module of Tatook M&E, with its own form engine
 
-- Status: **Proposed** (2026-11-14, revised for the module brief). Nothing is built yet.
-  Implementation waits for approval.
+- Status: **Superseded in part by ADR-0013** (2026-11-15): `App\Collect` lives in
+  `project-management`, web at `{workspace}/projects/mel/collect/*`, and `mel-app` is retired. The
+  form engine, rules and sync design here still hold. Paths and codes below are historical.
 - Code: module `App\Collect` inside **`mel-app`** (registry application `mel`). Web at
   `{workspace}/mel/collect/*`; mobile API at `{workspace}/mel/api/v1/collect/*`. Field app:
   **`mel-mobile-app`** (Expo, Android first).
