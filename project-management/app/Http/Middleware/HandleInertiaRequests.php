@@ -46,6 +46,8 @@ class HandleInertiaRequests extends Middleware
                     'modules' => array_values(array_filter(Modules::keys(), $organization->hasModule(...))),
                     // It funds others: the funding sections show in its menu.
                     'funds' => $organization->isDonor(),
+                    // Funder or implementer (null until chosen): which menu it gets.
+                    'accountType' => $organization->account_type,
                 ];
             },
             // Other workspaces the user has opened Projects in: the switcher

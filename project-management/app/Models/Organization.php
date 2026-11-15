@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $timezone
  * @property string $status
  * @property list<string>|null $capabilities
+ * @property string|null $account_type funder or implementer; null until someone who manages it chooses
  * @property list<string>|null $disabled_modules
  * @property int $health_schedule_slack
  * @property int $health_budget_slack
@@ -42,6 +43,13 @@ class Organization extends Model
 
     /** Funds other organizations: the funding sections show in its menu. */
     public const DONOR = 'donor';
+
+    /** Account types: what the organization uses Projects as (its menu follows). */
+    public const FUNDER = 'funder';
+
+    public const IMPLEMENTER = 'implementer';
+
+    public const ACCOUNT_TYPES = [self::FUNDER, self::IMPLEMENTER];
 
     public const DEFAULT_HEALTH_SLACK = 20;
 
@@ -79,6 +87,22 @@ class Organization extends Model
     public function isDonor(): bool
     {
         return in_array(self::DONOR, $this->capabilities ?? [], true);
+    }
+
+    /**
+     * A funder: its menu is the funding sections (who it funds, the marketplace).
+     */
+    public function isFunder(): bool
+    {
+        return $this->account_type === self::FUNDER;
+    }
+
+    /**
+     * Whether someone still has to say what the organization uses Projects as.
+     */
+    public function needsAccountType(): bool
+    {
+        return ! in_array($this->account_type, self::ACCOUNT_TYPES, true);
     }
 
     public function isActive(): bool

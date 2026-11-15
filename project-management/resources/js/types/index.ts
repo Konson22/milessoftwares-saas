@@ -14,6 +14,8 @@ export type SharedProps = {
         membersUrl: string;
         /** It funds others: the funding sections show in its menu. */
         funds: boolean;
+        /** Funder or implementer (null until chosen): which menu it gets. */
+        accountType: 'funder' | 'implementer' | null;
         /** The parts of the product that are on (App\Support\Modules). */
         modules: string[];
     } | null;
