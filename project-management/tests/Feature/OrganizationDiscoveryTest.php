@@ -101,3 +101,20 @@ it('lets an administrator turn discovery off and on, audited', function () {
     $this->actingAsMember('acme', ['projects.view']);
     $this->put($this->organizationUrl('acme', 'admin/settings/discoverable'), ['discoverable' => '1'])->assertForbidden();
 });
+
+it('shows a donor, searching the marketplace by name, organizations without a profile', function () {
+    $this->organization('water-now')->forceFill(['name' => 'Water Now', 'country_code' => 'SS'])->save();
+    $this->organization('quiet-water')->forceFill(['name' => 'Quiet Water', 'discoverable' => false])->save();
+    $donor = $this->organization('global-fund');
+    $donor->forceFill(['capabilities' => [Organization::DONOR], 'account_type' => Organization::FUNDER])->save();
+    $this->actingAsMember('global-fund', [], owner: true);
+
+    // Without a search: published profiles only, never a list of everyone.
+    $this->get($this->organizationUrl('global-fund', 'marketplace'))->assertOk()
+        ->assertInertia(fn ($page) => $page->has('organizations', 0)->has('others', 0));
+
+    $this->get($this->organizationUrl('global-fund', 'marketplace?q=water'))->assertOk()
+        ->assertInertia(fn ($page) => $page->has('others', 1)
+            ->where('others.0', ['id' => $this->organization('water-now')->id, 'slug' => 'water-now', 'name' => 'Water Now', 'countryCode' => 'SS'])
+            ->where('canInvite', true));
+});

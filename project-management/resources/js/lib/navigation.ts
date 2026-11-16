@@ -1,9 +1,9 @@
-import { index as members } from '@/routes/admin/members';
-import { index as orgUnits } from '@/routes/admin/org-units';
-import { index as advances } from '@/routes/advances';
-import { index as documents } from '@/routes/documents';
-import { index as pettyCash } from '@/routes/petty-cash';
-import { index as programmes } from '@/routes/programmes';
+import { index as members } from "@/routes/admin/members";
+import { index as orgUnits } from "@/routes/admin/org-units";
+import { index as advances } from "@/routes/advances";
+import { index as documents } from "@/routes/documents";
+import { index as pettyCash } from "@/routes/petty-cash";
+import { index as programmes } from "@/routes/programmes";
 import {
     Banknote,
     CheckSquare,
@@ -27,36 +27,36 @@ import {
     Settings,
     UserCog,
     Users,
-} from 'lucide-react';
-import type { ShellNavItem } from '@miles/ui/shell/navigation';
-import { approvals, commitments, home, myWork } from '@/routes';
-import { index as procurement } from '@/routes/procurement';
-import { index as fundingListings } from '@/routes/funding-listings';
+} from "lucide-react";
+import type { ShellNavItem } from "@miles/ui/shell/navigation";
+import { approvals, commitments, home, myWork } from "@/routes";
+import { index as procurement } from "@/routes/procurement";
+import { index as fundingListings } from "@/routes/funding-listings";
 import {
     interests as marketplaceInterests,
     organizations as marketplaceOrganizations,
     projects as marketplaceProjects,
-} from '@/routes/marketplace';
-import { edit as publicProfile } from '@/routes/public-profile';
-import { index as donorConnections } from '@/routes/donor-connections';
-import { index as fundingInterests } from '@/routes/funding-interests';
+} from "@/routes/marketplace";
+import { edit as publicProfile } from "@/routes/public-profile";
+import { index as donorConnections } from "@/routes/donor-connections";
+import { index as fundingInterests } from "@/routes/funding-interests";
 import {
     dashboard as fundingDashboard,
     index as beneficiaries,
     projects as fundedProjects,
     reports as donorReports,
     tasks as fundedTasks,
-} from '@/routes/beneficiaries';
-import { index as donorGrants } from '@/routes/beneficiaries/grants';
-import { index as donorPortal } from '@/routes/donor';
-import { index as audit } from '@/routes/admin/audit';
-import { edit as settings } from '@/routes/admin/settings';
-import { index as funders } from '@/routes/funders';
-import { index as sharedProjects } from '@/routes/shared-projects';
-import { index as grants } from '@/routes/grants';
-import { index as people } from '@/routes/people';
-import { index as projects } from '@/routes/projects';
-import { index as spaces } from '@/routes/structure';
+} from "@/routes/beneficiaries";
+import { index as donorGrants } from "@/routes/beneficiaries/grants";
+import { index as donorPortal } from "@/routes/donor";
+import { index as audit } from "@/routes/admin/audit";
+import { edit as settings } from "@/routes/admin/settings";
+import { index as funders } from "@/routes/funders";
+import { index as sharedProjects } from "@/routes/shared-projects";
+import { index as grants } from "@/routes/grants";
+import { index as people } from "@/routes/people";
+import { index as projects } from "@/routes/projects";
+import { index as spaces } from "@/routes/structure";
 
 export type NavItem = ShellNavItem & {
     /** Shown to members holding this permission, or any of these (or owners); null for everyone. */
@@ -75,16 +75,16 @@ export type NavGroup = { title: string; items: NavItem[] };
 export function navigation(): NavGroup[] {
     return [
         {
-            title: 'Overview',
+            title: "Overview",
             items: [
                 {
-                    title: 'Portfolio',
+                    title: "Portfolio",
                     href: home(),
                     icon: LayoutDashboard,
                     permission: null,
                 },
                 {
-                    title: 'My work',
+                    title: "My work",
                     href: myWork(),
                     icon: CheckSquare,
                     permission: null,
@@ -92,174 +92,174 @@ export function navigation(): NavGroup[] {
             ],
         },
         {
-            title: 'Projects',
+            title: "Projects",
             items: [
                 {
-                    title: 'Projects',
+                    title: "Projects",
                     href: projects(),
                     icon: FolderKanban,
-                    permission: 'projects.view',
+                    permission: "projects.view",
                 },
                 {
-                    title: 'Programmes',
+                    title: "Programmes",
                     href: programmes(),
                     icon: Layers,
-                    permission: 'projects.view',
+                    permission: "projects.view",
                 },
                 {
-                    title: 'Spaces',
+                    title: "Spaces",
                     href: spaces(),
                     icon: Network,
-                    permission: 'projects.view',
+                    permission: "projects.view",
                 },
                 {
-                    title: 'People',
+                    title: "People",
                     href: people(),
                     icon: Users,
-                    permission: 'projects.view',
+                    permission: "projects.view",
                 },
                 {
                     // Other organizations' projects this one takes part in (ADR-0014).
-                    title: 'Shared projects',
+                    title: "Shared projects",
                     href: sharedProjects(),
                     icon: Handshake,
                     permission: null,
                 },
                 {
-                    title: 'Procurement',
-                    module: 'procurement',
+                    title: "Procurement",
+                    module: "procurement",
                     href: procurement(),
                     icon: ShoppingCart,
-                    permission: ['procurement.view', 'procurement.request'],
+                    permission: ["procurement.view", "procurement.request"],
                 },
             ],
         },
         {
-            title: 'Funding',
+            title: "Funding",
             items: [
                 {
-                    title: 'Grants',
-                    module: 'grants',
+                    title: "Grants",
+                    module: "grants",
                     href: grants(),
                     icon: HandCoins,
-                    permission: 'grants.view',
+                    permission: "grants.view",
                 },
                 {
-                    title: 'Funders',
-                    module: 'grants',
+                    title: "Funders",
+                    module: "grants",
                     href: funders(),
                     icon: Landmark,
-                    permission: 'grants.view',
+                    permission: "grants.view",
                 },
                 {
-                    title: 'Public profile',
+                    title: "Public profile",
                     href: publicProfile(),
                     icon: Globe,
-                    permission: 'marketplace.publish',
+                    permission: "marketplace.publish",
                 },
                 {
-                    title: 'Funding listings',
+                    title: "Funding listings",
                     href: fundingListings(),
                     icon: Megaphone,
-                    permission: 'marketplace.publish',
+                    permission: "marketplace.publish",
                 },
                 {
-                    title: 'Expressions of interest',
+                    title: "Expressions of interest",
                     href: fundingInterests(),
                     icon: HandHeart,
-                    permission: 'marketplace.publish',
+                    permission: "marketplace.publish",
                 },
                 {
-                    title: 'Connected donors',
+                    title: "Connected donors",
                     href: donorConnections(),
                     icon: Handshake,
-                    permission: 'organization.manage',
+                    permission: "organization.manage",
                 },
             ],
         },
         {
-            title: 'Finance',
+            title: "Finance",
             items: [
                 {
-                    title: 'Approvals',
+                    title: "Approvals",
                     href: approvals(),
                     icon: ClipboardCheck,
                     permission: [
-                        'finance.budgets.approve',
-                        'finance.expenses.approve',
-                        'finance.payments.record',
+                        "finance.budgets.approve",
+                        "finance.expenses.approve",
+                        "finance.payments.record",
                     ],
                 },
                 {
-                    title: 'Commitments',
+                    title: "Commitments",
                     href: commitments(),
                     icon: Banknote,
-                    permission: 'finance.commitments.view',
+                    permission: "finance.commitments.view",
                 },
                 {
-                    title: 'Staff advances',
-                    module: 'accounting',
+                    title: "Staff advances",
+                    module: "accounting",
                     href: advances(),
                     icon: HandCoins,
                     permission: [
-                        'finance.advances.request',
-                        'finance.advances.view',
+                        "finance.advances.request",
+                        "finance.advances.view",
                     ],
                 },
                 {
-                    title: 'Petty cash',
-                    module: 'accounting',
+                    title: "Petty cash",
+                    module: "accounting",
                     href: pettyCash(),
                     icon: Coins,
-                    permission: 'finance.pettycash.view',
+                    permission: "finance.pettycash.view",
                 },
             ],
         },
         {
-            title: 'Records',
+            title: "Records",
             items: [
                 {
-                    title: 'Documents',
+                    title: "Documents",
                     href: documents(),
                     icon: FileText,
-                    permission: 'documents.view',
-                    module: 'documents',
+                    permission: "documents.view",
+                    module: "documents",
                 },
             ],
         },
         {
-            title: 'Administration',
+            title: "Administration",
             items: [
                 {
-                    title: 'Members',
+                    title: "Members",
                     href: members(),
                     icon: UserCog,
-                    permission: 'organization.manage',
+                    permission: "organization.manage",
                 },
                 {
-                    title: 'Departments and teams',
+                    title: "Departments and teams",
                     href: orgUnits(),
                     icon: Building2,
-                    permission: 'organization.manage',
+                    permission: "organization.manage",
                 },
                 {
-                    title: 'Settings',
+                    title: "Settings",
                     href: settings(),
                     icon: Settings,
-                    permission: 'organization.manage',
+                    permission: "organization.manage",
                 },
                 {
-                    title: 'Audit log',
+                    title: "Audit log",
                     href: audit(),
                     icon: ScrollText,
-                    permission: 'organization.audit.view',
+                    permission: "organization.audit.view",
                 },
             ],
         },
     ];
 }
 
-export type AccountType = 'funder' | 'implementer' | null;
+export type AccountType = "funder" | "implementer" | null;
 
 /**
  * A funder's menu: its funding dashboard and its own work, who it funds and
@@ -273,31 +273,38 @@ function funderNavigation(): NavGroup[] {
 
     return [
         {
-            title: 'Overview',
+            title: "Overview",
             items: [
                 {
-                    title: 'Funding dashboard',
+                    title: "Funding dashboard",
                     href: fundingDashboard(),
                     icon: LayoutDashboard,
                     permission: null,
                 },
                 {
-                    title: 'My work',
+                    title: "My work",
                     href: myWork(),
                     icon: CheckSquare,
                     permission: null,
                 },
                 {
-                    title: 'Shared projects',
+                    title: "Shared projects",
                     href: sharedProjects(),
                     icon: Handshake,
                     permission: null,
                 },
+                // A funder runs projects of its own too, and brings in who implements them.
+                {
+                    title: "Our projects",
+                    href: projects(),
+                    icon: FolderKanban,
+                    permission: "projects.view",
+                },
             ],
         },
         ...fundingNavigation(),
-        ...keep('Records'),
-        ...keep('Administration'),
+        ...keep("Records"),
+        ...keep("Administration"),
     ];
 }
 
@@ -307,60 +314,60 @@ function funderNavigation(): NavGroup[] {
 function fundingNavigation(): NavGroup[] {
     return [
         {
-            title: 'Funding others',
+            title: "Funding others",
             items: [
                 {
-                    title: 'Beneficiaries',
+                    title: "Beneficiaries",
                     href: beneficiaries(),
                     icon: Handshake,
-                    permission: 'grants.view',
+                    permission: "grants.view",
                 },
                 {
-                    title: 'Grants and payments',
+                    title: "Grants and payments",
                     href: donorGrants(),
                     icon: HandCoins,
-                    permission: 'grants.view',
+                    permission: "grants.view",
                 },
                 {
-                    title: 'Their reports',
+                    title: "Their reports",
                     href: donorReports(),
                     icon: FileText,
-                    permission: 'grants.view',
+                    permission: "grants.view",
                 },
                 {
-                    title: 'Funded projects',
+                    title: "Funded projects",
                     href: fundedProjects(),
                     icon: FolderKanban,
-                    permission: 'grants.view',
+                    permission: "grants.view",
                 },
                 {
-                    title: 'Funded tasks',
+                    title: "Funded tasks",
                     href: fundedTasks(),
                     icon: CheckSquare,
-                    permission: 'grants.view',
+                    permission: "grants.view",
                 },
             ],
         },
         {
-            title: 'Marketplace',
+            title: "Marketplace",
             items: [
                 {
-                    title: 'Discover organizations',
+                    title: "Discover organizations",
                     href: marketplaceOrganizations(),
                     icon: Search,
-                    permission: 'grants.view',
+                    permission: "grants.view",
                 },
                 {
-                    title: 'Projects seeking funding',
+                    title: "Projects seeking funding",
                     href: marketplaceProjects(),
                     icon: Megaphone,
-                    permission: 'grants.view',
+                    permission: "grants.view",
                 },
                 {
-                    title: 'Interests',
+                    title: "Interests",
                     href: marketplaceInterests(),
                     icon: HandHeart,
-                    permission: 'grants.view',
+                    permission: "grants.view",
                 },
             ],
         },
@@ -378,11 +385,11 @@ export function visibleNavigation(
     modules: string[] = [],
 ): NavGroup[] {
     const portal: NavGroup = {
-        title: 'Donor portal',
+        title: "Donor portal",
         items: [
             {
-                title: 'Your grants',
-                module: 'grants',
+                title: "Your grants",
+                module: "grants",
                 href: donorPortal(),
                 icon: HandCoins,
                 permission: null,
@@ -396,7 +403,7 @@ export function visibleNavigation(
 
     const sections = [
         ...(donor ? [portal] : []),
-        ...(accountType === 'funder' ? funderNavigation() : navigation()),
+        ...(accountType === "funder" ? funderNavigation() : navigation()),
     ];
 
     return sections

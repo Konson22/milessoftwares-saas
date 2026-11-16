@@ -35,6 +35,9 @@ class MarketplaceController extends Controller
 
         return Inertia::render('portal/marketplace/organizations', [
             'organizations' => MarketplaceView::organizations($filters),
+            // Found by name without a profile: invited from here.
+            'others' => MarketplaceView::others($filters['q'], $this->donor()->id),
+            'canInvite' => $this->can($request, 'organization.manage'),
             'filters' => $filters,
             'sectors' => PublicProfileController::sectorOptions(),
         ]);
