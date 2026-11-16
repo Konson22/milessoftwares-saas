@@ -1,0 +1,49 @@
+@import 'tailwindcss';
+
+@import 'tw-animate-css';
+@import '../../node_modules/@miles/ui/theme.css';
+
+/* Chart colours, all from the logo: status shows by how strong the colour is,
+   and every status also has its label. Status colours mean only status (on track, needs attention, off track). The steps are an ordered ramp for workflow
+   stages, each with the ink that reads on it. */
+:root {
+    --viz-good: #01a8ff;
+    --viz-good-ink: #001652;
+    --viz-warning: #0053bb;
+    --viz-warning-ink: #ffffff;
+    --viz-critical: #001652;
+    --viz-critical-ink: #ffffff;
+    --viz-step-1: #7cc8ff;
+    --viz-step-1-ink: #001652;
+    --viz-step-2: #01a8ff;
+    --viz-step-2-ink: #001652;
+    --viz-step-3: #0053bb;
+    --viz-step-3-ink: #ffffff;
+    --viz-step-4: #001652;
+    --viz-step-4-ink: #ffffff;
+    --viz-grid: #e3edf9;
+    --viz-baseline: #b9cbe3;
+}
+
+.dark {
+    --viz-good: #01a8ff;
+    --viz-good-ink: #001652;
+    --viz-warning: #7cc8ff;
+    --viz-warning-ink: #001652;
+    --viz-critical: #ffffff;
+    --viz-critical-ink: #001652;
+    --viz-step-1: #003688;
+    --viz-step-1-ink: #ffffff;
+    --viz-step-2: #0053bb;
+    --viz-step-2-ink: #ffffff;
+    --viz-step-3: #01a8ff;
+    --viz-step-3-ink: #001652;
+    --viz-step-4: #7cc8ff;
+    --viz-step-4-ink: #001652;
+    --viz-grid: #002366;
+    --viz-baseline: #003688;
+}
+
+@source '../views';
+@source '../../node_modules/@miles/ui';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
