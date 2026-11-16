@@ -80,6 +80,12 @@ final class Collaboration
                 if (Invitation::query()->where('project_id', $project->id)->where('invited_organization_id', $organization->id)->open()->exists()) {
                     throw ValidationException::withMessages(['organization_id' => "{$organization->name} has an invitation waiting already. Resend it instead."]);
                 }
+                // One that expired unanswered gives way to the new one (the database allows
+                // one unanswered invitation per project and organization). Kept, closed, audited.
+                foreach (Invitation::query()->where('project_id', $project->id)->where('invited_organization_id', $organization->id)->unanswered()->get() as $expired) {
+                    $expired->forceFill(['revoked_at' => now()])->save();
+                    Audit::record('collaboration.invitation_superseded', $expired, ['project' => $project->code, 'invitee' => $organization->name, 'expired_at' => $expired->expires_at->toIso8601String()], $project->organization_id, $by);
+                }
             } else {
                 $email = mb_strtolower(trim((string) ($details['email'] ?? '')));
                 if ($email === '' || trim((string) ($details['contact_name'] ?? '')) === '') {
