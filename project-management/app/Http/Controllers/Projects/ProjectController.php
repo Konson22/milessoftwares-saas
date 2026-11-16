@@ -18,9 +18,11 @@ use App\Models\Risk;
 use App\Models\Task;
 use App\Support\ActivityLog;
 use App\Support\Money;
+use App\Support\ProjectCodes;
 use App\Support\ProjectFinance;
 use App\Support\ProjectMetrics;
 use App\Tenancy\CurrentOrganization;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -171,6 +173,8 @@ class ProjectController extends Controller
                 'dueOn' => $project->due_on?->toDateString(),
                 'budget' => Money::toMajor($project->budget_minor, $project->currency),
                 'hasBudgetLines' => $project->budgetVersions()->exists(),
+                // Tasks numbered: the prefix stays.
+                'codeLocked' => $project->task_sequence > 0,
                 'visibility' => $project->visibility,
             ],
             'people' => Person::options(),
@@ -229,8 +233,9 @@ class ProjectController extends Controller
         $tenant = $project->organization_id ?? app(CurrentOrganization::class)->id();
 
         $validated = $request->validate([
+            // Optional: left blank, it is made from the name (ProjectCodes).
             'code' => [
-                'required', 'string', 'regex:/^[A-Z][A-Z0-9]{1,9}$/',
+                'nullable', 'string', 'regex:'.ProjectCodes::PATTERN,
                 Rule::unique('projects', 'code')->where('organization_id', $tenant)->ignore($project->id),
             ],
             'name' => ['required', 'string', 'max:255'],
@@ -242,11 +247,19 @@ class ProjectController extends Controller
             'budget' => ['nullable', 'string', Money::rule($project->currency)],
             'programme_id' => ['nullable', 'uuid', Rule::exists('programmes', 'id')->where('organization_id', $tenant)],
             'visibility' => ['sometimes', Rule::in(Project::VISIBILITIES)],
-        ], ['code.regex' => 'A letter, then up to 9 letters or digits: it starts every task number (WEB-12).']);
+        ], [
+            'code.regex' => 'Use 2 to 10 letters or numbers, starting with a letter and without spaces (for example WEB). Or leave it blank.',
+            'code.unique' => 'Another project already uses this prefix. Choose another, or leave it blank to get one.',
+        ]);
 
-        // Once tasks are numbered, the code stays.
+        $generated = false;
+        if (blank($validated['code'] ?? null)) {
+            $generated = ! $project->exists;
+            $validated['code'] = $project->exists ? $project->code : ProjectCodes::suggest((string) $validated['name'], (string) $tenant);
+        }
+        // Once tasks are numbered (WEB-1, ...), the prefix stays: their numbers are referred to elsewhere.
         if ($project->exists && $validated['code'] !== $project->code && $project->task_sequence > 0) {
-            $validated['code'] = $project->code;
+            throw ValidationException::withMessages(['code' => "Tasks are already numbered {$project->code}-1 and on, so the prefix stays {$project->code}."]);
         }
 
         $project->fill([
@@ -272,7 +285,18 @@ class ProjectController extends Controller
         if (! $project->exists || ! $project->budgetVersions()->exists()) {
             $project->budget_minor = blank($validated['budget'] ?? null) ? 0 : Money::toMinor((string) $validated['budget'], $project->currency);
         }
-        $project->save();
+        // Two set up at once may get the same generated code: the unique index decides, and the next one is taken.
+        for ($attempt = 1; ; $attempt++) {
+            try {
+                DB::transaction(fn () => $project->save());
+                break;
+            } catch (UniqueConstraintViolationException $e) {
+                if (! $generated || $attempt >= 5) {
+                    throw ValidationException::withMessages(['code' => 'Another project already uses this prefix. Choose another, or leave it blank to get one.']);
+                }
+                $project->code = ProjectCodes::suggest($project->name, (string) $tenant, $attempt);
+            }
+        }
 
         // Only when the form says: other saves leave its programme alone.
         if ($request->has('programme_id')) {

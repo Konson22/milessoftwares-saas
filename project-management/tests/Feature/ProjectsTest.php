@@ -7,8 +7,11 @@ use App\Models\Risk;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
+use App\Support\ProjectCodes;
 use App\Support\ProjectMetrics;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -103,11 +106,13 @@ it('sets up a project with its manager on the team and numbers its tasks', funct
 
     expect([$first->number, $second->number])->toBe(['WEB-1', 'WEB-2']);
 
-    // The code is the task numbers' prefix, so it stays once tasks exist.
+    // The code is the task numbers' prefix, so it stays once tasks exist, and the form says why.
     $this->put($this->organizationUrl('acme', "projects/{$project->id}"), [
         'code' => 'SITE', 'name' => 'New website', 'budget' => '10000',
-    ])->assertSessionHasNoErrors();
-    expect($project->fresh()?->code)->toBe('WEB');
+    ])->assertSessionHasErrors(['code' => 'Tasks are already numbered WEB-1 and on, so the prefix stays WEB.']);
+    // Saved without changing it (or with it left blank): fine.
+    $this->put($this->organizationUrl('acme', "projects/{$project->id}"), ['code' => '', 'name' => 'New website 2', 'budget' => '10000'])->assertSessionHasNoErrors();
+    expect($project->fresh()?->code)->toBe('WEB')->and($project->fresh()?->name)->toBe('New website 2');
 });
 
 it('refuses a project code that is taken or badly formed', function () {
@@ -345,4 +350,73 @@ it('keeps each organization\'s projects to itself', function () {
 
     $this->actingAsMember('globex', PM);
     $this->get($this->organizationUrl('globex', "projects/{$project->id}"))->assertNotFound();
+});
+
+it('makes a task prefix from the name when it is left blank', function () {
+    signIn();
+    $url = $this->organizationUrl('acme', 'projects');
+
+    foreach (['Water Supply Project' => 'WSP', 'Website Development' => 'WEB', 'Education Programme' => 'EDU', 'Health Services' => 'HEA'] as $name => $code) {
+        $this->post($url, ['code' => '', 'name' => $name])->assertSessionHasNoErrors();
+        expect($this->asTenant('acme', fn () => Project::query()->where('name', $name)->value('code')))->toBe($code);
+    }
+
+    // Taken already: the next free one.
+    $this->post($url, ['name' => 'Website Redesign'])->assertSessionHasNoErrors();
+    $this->post($url, ['name' => 'Website Hosting'])->assertSessionHasNoErrors();
+    expect($this->asTenant('acme', fn () => Project::query()->where('name', 'like', 'Website %')->orderBy('code')->pluck('code')->all()))
+        ->toBe(['WEB', 'WEB2', 'WEB3']);
+
+    // Odd names still get a valid prefix.
+    $this->post($url, ['name' => '2026 & beyond: a very, very long programme name for the northern region'])->assertSessionHasNoErrors();
+    $this->post($url, ['name' => '!!!'])->assertSessionHasNoErrors();
+    $codes = $this->asTenant('acme', fn () => Project::query()->pluck('code')->all());
+    foreach ($codes as $code) {
+        expect($code)->toMatch(ProjectCodes::PATTERN);
+    }
+
+    // Tasks are numbered with it.
+    $project = $this->asTenant('acme', fn () => Project::query()->where('name', 'Water Supply Project')->firstOrFail());
+    expect(addTask($project, ['title' => 'Survey'])->number)->toBe('WSP-1');
+});
+
+it('explains a prefix that is badly formed, and leaves other organizations alone', function () {
+    signIn();
+    $url = $this->organizationUrl('acme', 'projects');
+
+    $this->post($url, ['code' => 'we b!', 'name' => 'Bad'])
+        ->assertSessionHasErrors(['code' => 'Use 2 to 10 letters or numbers, starting with a letter and without spaces (for example WEB). Or leave it blank.']);
+    $this->post($url, ['code' => 'ABCDEFGHIJK', 'name' => 'Too long'])->assertSessionHasErrors('code');
+    $this->post($url, ['code' => 'web', 'name' => 'Website'])->assertSessionHasNoErrors();
+    $this->post($url, ['code' => 'WEB', 'name' => 'Again'])
+        ->assertSessionHasErrors(['code' => 'Another project already uses this prefix. Choose another, or leave it blank to get one.']);
+
+    // Another organization's WEB does not count.
+    $this->actingAsMember('globex', PM);
+    $this->post($this->organizationUrl('globex', 'projects'), ['name' => 'Website'])->assertSessionHasNoErrors();
+    expect($this->asTenant('globex', fn () => Project::query()->value('code')))->toBe('WEB');
+});
+
+it('takes the next prefix when another project grabbed it at the same moment', function () {
+    signIn();
+    me();
+    $raced = false;
+    // Between choosing WEB and saving it, another request saves WEB (as two set up at once would).
+    Project::creating(function (Project $project) use (&$raced) {
+        if (! $raced && $project->code === 'WEB') {
+            $raced = true;
+            DB::table('projects')->insert([
+                'id' => (string) Str::uuid7(), 'organization_id' => $project->organization_id, 'code' => 'WEB', 'name' => 'Raced',
+                'currency' => 'SSP', 'status' => Project::PLANNING, 'visibility' => 'organization', 'created_by' => $project->created_by,
+                'created_at' => now(), 'updated_at' => now(),
+            ]);
+        }
+    });
+
+    $this->post($this->organizationUrl('acme', 'projects'), ['name' => 'Website'])->assertSessionHasNoErrors();
+
+    // WEB collided on the unique index, so it took the next one. (The simulated rival lived in the
+    // save's own transaction, so it rolled back with the collision; a real one commits apart.)
+    expect($raced)->toBeTrue()
+        ->and($this->asTenant('acme', fn () => Project::query()->where('name', 'Website')->value('code')))->toBe('WEB2');
 });
