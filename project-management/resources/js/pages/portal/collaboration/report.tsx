@@ -35,6 +35,46 @@ type MelResult = {
     numerator: string | null;
     denominator: string | null;
     published: boolean;
+    /** Snapshots from M3 (ADR-0019 §20) on. */
+    indicatorId?: string | null;
+    periodStartsOn?: string | null;
+    periodEndsOn?: string | null;
+    verifiedAt?: string | null;
+    publishedAt?: string | null;
+    evidence?: { name: string; mimeType: string | null; size: number | null }[];
+};
+
+/** Where the M&E results came from and how the read went (M3 on). */
+type MelSource = {
+    application: string;
+    status: string;
+    retrievedAt: string | null;
+    correlationId: string | null;
+    error: string | null;
+    truncated: boolean;
+};
+
+// Every state is said for what it is: none of them is a zero.
+const MEL_STATUS: Record<string, string> = {
+    no_results:
+        'M&E had no published results for this project in the report period.',
+    unlinked: 'No M&E reporting unit is linked to this project.',
+    not_shared:
+        'M&E reporting units are linked to this project, but none is set to report its results here.',
+    no_period:
+        'M&E results are recorded only for reports with a period; this report has none.',
+    not_entitled:
+        'M&E results were not recorded: the organization does not have M&E.',
+    subscription_expired:
+        "M&E results were not recorded: the organization's M&E subscription had expired.",
+    not_set_up:
+        'M&E results were not recorded: M&E has not been set up for the organization.',
+    denied: 'M&E results were not recorded: M&E refused the read.',
+    unavailable:
+        'M&E could not be reached when this report was submitted, so its results were not recorded. This does not mean there were none.',
+    timeout:
+        'M&E did not answer in time when this report was submitted, so its results were not recorded. This does not mean there were none.',
+    error: 'M&E results could not be read when this report was submitted.',
 };
 
 type Content = {
@@ -56,6 +96,7 @@ type Content = {
         } | null;
         financialHidden?: boolean;
         mel: MelResult[];
+        melSource?: MelSource;
     };
 };
 
@@ -579,11 +620,23 @@ function ContentView({
                 </PanelBody>
             </Panel>
 
+            {system &&
+                system.mel.length === 0 &&
+                system.melSource &&
+                MEL_STATUS[system.melSource.status] !== undefined && (
+                    <Panel>
+                        <PanelHeader
+                            title="Verified M&E results"
+                            description={MEL_STATUS[system.melSource.status]}
+                        />
+                    </Panel>
+                )}
+
             {system && system.mel.length > 0 && (
                 <Panel>
                     <PanelHeader
                         title="Verified M&E results"
-                        description="As verified, each on its own; not added up."
+                        description={`Published in M&E, each on its own; not added up.${system.melSource?.retrievedAt ? ` Read from M&E ${formatDateTime(system.melSource.retrievedAt)}.` : ''}${system.melSource?.truncated ? ' Only the first 200 were recorded.' : ''}`}
                     />
                     <PanelBody>
                         <ul className="grid gap-1 text-sm">

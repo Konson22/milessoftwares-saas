@@ -48,6 +48,8 @@
         <env name="PLATFORM_SERVICE_CLIENT_ID" value="test-service-client"/>
         <env name="PLATFORM_SERVICE_CLIENT_SECRET" value="test-service-secret"/>
         <env name="PLATFORM_WEBHOOK_SECRET" value="whsec_test"/>
+        <!-- ADR-0019 §20: tests decide whether M&amp;E is connected. -->
+        <env name="PLATFORM_MEL_INTEGRATION_URL" value=""/>
         <env name="PLATFORM_FINANCE_EVENTS_URL" value=""/>
     </php>
 </phpunit>

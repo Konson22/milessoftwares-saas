@@ -123,23 +123,29 @@ final class ReportContent
     /**
      * What the system records with a submission, read in the owner's
      * workspace: the project's recorded budget figures, only when the
-     * submitting party may see them. M&E is its own application (ADR-0019):
-     * 'mel' stays an empty list until its results are read from there (M3).
-     * Snapshots taken before keep the results they captured.
+     * submitting party may see them, and the published M&E results read
+     * from the M&E application (MelResults, ADR-0019 §20) with where they
+     * came from and how the read went ('melSource'), which only the
+     * owner's members are shown (Reports::seesMelResults). Frozen with the
+     * version: later changes in M&E never alter a submitted snapshot.
+     * Snapshots taken before keep what they captured (no 'melSource').
      *
-     * @return array{capturedAt: string, financial: array{source: string, currency: string, approvedMinor: int, spentMinor: int, committedMinor: int, varianceMinor: int, basis: string, provenance: array<string, mixed>, categories: list<array{category: string, amountMinor: int}>}|null, mel: list<array<string, mixed>>}
+     * @param  array{results: list<array<string, mixed>>, source: array<string, mixed>}|null  $mel  as MelResults read it
+     * @return array{capturedAt: string, financial: array{source: string, currency: string, approvedMinor: int, spentMinor: int, committedMinor: int, varianceMinor: int, basis: string, provenance: array<string, mixed>, categories: list<array{category: string, amountMinor: int}>}|null, mel: list<array<string, mixed>>, melSource: array<string, mixed>}
      */
-    public static function snapshot(Report $report, bool $withBudget): array
+    public static function snapshot(Report $report, bool $withBudget, ?array $mel = null): array
     {
         $owner = Organization::query()->findOrFail($report->organization_id);
+        $mel ??= ['results' => [], 'source' => ['status' => MelResults::OFF, 'retrievedAt' => null, 'correlationId' => null, 'error' => null, 'truncated' => false]];
 
-        return app(CurrentOrganization::class)->run($owner, function () use ($report, $withBudget) {
+        return app(CurrentOrganization::class)->run($owner, function () use ($report, $withBudget, $mel) {
             $project = Project::query()->findOrFail($report->project_id);
 
             return [
                 'capturedAt' => now()->toIso8601String(),
                 'financial' => $withBudget ? self::financial($project) : null,
-                'mel' => [],
+                'mel' => $mel['results'],
+                'melSource' => ['application' => 'mel', ...$mel['source']],
             ];
         });
     }

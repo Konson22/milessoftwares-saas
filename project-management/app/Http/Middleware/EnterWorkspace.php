@@ -3,7 +3,6 @@
 namespace App\Http\Middleware;
 
 use App\Access\Access;
-use App\Access\Catalog;
 use App\Access\CurrentAccess;
 use App\Actions\Beneficiaries;
 use App\Actions\Organizations;
@@ -49,10 +48,7 @@ final class EnterWorkspace
         $organization = Organizations::mirror($this->tenant->require());
         abort_unless($organization->isActive(), 403, 'This organization is suspended.');
 
-        $permissions = $platform->isOwner
-            ? Catalog::permissions()
-            : array_values(array_unique(array_merge(...array_map(fn (array $role) => $role['permissions'], $platform->roles ?: [['permissions' => []]]))));
-        sort($permissions);
+        $permissions = Access::permissionsFrom($platform);
         $roles = $platform->roleKeys();
         sort($roles);
 

@@ -2,6 +2,8 @@
 
 namespace App\Access;
 
+use Miles\PlatformClient\Api\EffectiveAccess;
+
 /**
  * What a member may do in the current organization: from the platform on
  * each request (App\Http\Middleware\EnterWorkspace), or the copy kept on
@@ -22,6 +24,22 @@ final readonly class Access
         public array $permissions,
         public array $roles,
     ) {}
+
+    /**
+     * The permissions the platform gives a member here: every catalog
+     * permission for an owner, otherwise those of their roles. Sorted.
+     *
+     * @return list<string>
+     */
+    public static function permissionsFrom(EffectiveAccess $platform): array
+    {
+        $permissions = $platform->isOwner
+            ? Catalog::permissions()
+            : array_values(array_unique(array_merge(...array_map(fn (array $role) => $role['permissions'], $platform->roles ?: [['permissions' => []]]))));
+        sort($permissions);
+
+        return $permissions;
+    }
 
     public function has(string $permission): bool
     {

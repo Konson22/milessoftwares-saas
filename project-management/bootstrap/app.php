@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function () {
             Route::middleware('api')->group(base_path('routes/events.php'));
+            Route::middleware('api')->group(base_path('routes/integration.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -33,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is(app(PlatformConfig::class)->path().'/platform/*')
                 || $request->is(app(PlatformConfig::class)->path().'/events')
+                || $request->is(app(PlatformConfig::class)->path().'/integration/*')
                 || $request->expectsJson(),
         );
     })->create();

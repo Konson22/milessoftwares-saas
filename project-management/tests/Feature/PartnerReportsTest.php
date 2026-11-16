@@ -234,7 +234,7 @@ it('records the budget with a submission only for a party that may see it', func
         ->and($content['financial']['lines'][0]['source'])->toBe('reported');
 });
 
-it('records no M&E results with a submission now that M&E is its own application (ADR-0019)', function () {
+it('records no M&E results with a submission when Projects does not connect to M&E (ADR-0019; see PartnerReportMelTest)', function () {
     ['project' => $project, 'lead' => $lead] = prChain();
     // An M&E performance report is still a report a partner writes.
     $this->actingAsMember('lead-ngo', PR_PARTNER);
@@ -244,7 +244,8 @@ it('records no M&E results with a submission now that M&E is its own application
     $this->post($this->organizationUrl('lead-ngo', "shared-projects/{$lead->id}/reports/{$report->id}/action"), ['action' => 'submit'])->assertSessionHasNoErrors();
 
     expect($report->refresh()->category)->toBe('mel')
-        ->and($report->currentVersion->content['system']['mel'])->toBe([]);
+        ->and($report->currentVersion->content['system']['mel'])->toBe([])
+        ->and($report->currentVersion->content['system']['melSource']['status'])->toBe('off');
 
     $this->actingAsMember('acme', ['projects.view', 'projects.reports.review']);
     $this->get($this->organizationUrl('acme', "projects/{$project->id}/reports/{$report->id}"))->assertOk()

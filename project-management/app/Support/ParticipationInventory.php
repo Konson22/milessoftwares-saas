@@ -4,6 +4,7 @@ namespace App\Support;
 
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * ADR-0018 step 1: a read-only inventory of every way another organization
@@ -16,6 +17,13 @@ use Illuminate\Support\Facades\DB;
  * and invitations, M&E partner labels, report obligations, and the
  * historical records that point at each (grant reports, partner reports,
  * requests).
+ *
+ * M&E partner labels are the legacy mel_partners table Projects kept when
+ * M&E became its own application (ADR-0019 M2B, kept as history, never
+ * written again). The live M&E partner directory is in the M&E database,
+ * which this report does not read (no application reads another's
+ * database). When the legacy table is no longer there, mel_partners is left
+ * out of the counts rather than shown as 0.
  *
  * Findings, each for a person to resolve, never resolved here:
  *   duplicate_funder / duplicate_mel_partner
@@ -45,6 +53,7 @@ final class ParticipationInventory
         $scoped = fn (string $table, string $column = 'organization_id') => DB::table($table)
             ->when($organizationId, fn ($query, $id) => $query->where($column, $id));
         $now = now();
+        $legacyMel = Schema::hasTable('mel_partners');
 
         $counts = [
             'funders' => $scoped('funders')->count(),
@@ -59,12 +68,14 @@ final class ParticipationInventory
             'participants' => $scoped('project_participants')->count(),
             'participants_active' => $scoped('project_participants')->where('status', 'active')->count(),
             'project_invitations_open' => $scoped('project_invitations')->whereNull('accepted_at')->whereNull('declined_at')->whereNull('revoked_at')->where('expires_at', '>', $now)->count(),
-            'mel_partners' => $scoped('mel_partners')->count(),
             'report_obligations' => $scoped('report_obligations')->count(),
             'grant_reports' => $scoped('grant_reports')->count(),
             'project_reports' => $scoped('project_reports')->count(),
             'project_requests' => $scoped('project_requests')->count(),
         ];
+        if ($legacyMel) {
+            $counts['mel_partners'] = $scoped('mel_partners')->count();
+        }
 
         $findings = [];
         $add = function (string $kind, mixed $organization, string $subject, string $detail) use (&$findings, $slugs) {
@@ -72,7 +83,7 @@ final class ParticipationInventory
         };
 
         // Directory entries: duplicates and names that are organizations on Tatook.
-        foreach (['funders' => 'funder', 'mel_partners' => 'mel_partner'] as $table => $label) {
+        foreach (['funders' => 'funder', ...($legacyMel ? ['mel_partners' => 'mel_partner'] : [])] as $table => $label) {
             $rows = $scoped($table)->get(['id', 'organization_id', 'name']);
             foreach ($rows->groupBy(fn (object $row) => $row->organization_id.'|'.self::normalize((string) $row->name)) as $group) {
                 if ($group->count() > 1) {

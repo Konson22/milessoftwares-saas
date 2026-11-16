@@ -212,7 +212,11 @@ final class Reports
         self::authorizeSubmitter($report, $acting);
         self::ensureOpen($acting->project);
 
-        DB::transaction(function () use ($report, $acting) {
+        // Read from M&E before the transaction: a slow or absent M&E never
+        // holds locks, and never stops the report going in (MelResults).
+        $mel = app(MelResults::class)->forReport($report);
+
+        DB::transaction(function () use ($report, $acting, $mel) {
             $report = self::lock($report);
             self::ensureEditable($report);
             $version = $report->currentVersion;
@@ -228,7 +232,7 @@ final class Reports
             }
 
             $content = $version->content;
-            $content['system'] = ReportContent::snapshot($report, $acting->seesBudget());
+            $content['system'] = ReportContent::snapshot($report, $acting->seesBudget(), $mel);
             $version->forceFill(['content' => $content, 'submitted_by' => $acting->user->id, 'submitted_at' => now()])->save();
 
             $again = $report->submitted_at !== null;
@@ -487,6 +491,19 @@ final class Reports
         }
 
         return $acting->seesBudget();
+    }
+
+    /**
+     * Who sees the M&E results recorded with a report (ADR-0019 §20.6):
+     * only members of the project's owner organization, whose M&E data it
+     * is. Partners, sub-partners and donors see the report without them,
+     * whoever submitted, reviewed or published it. Widening this audience is
+     * a business decision (ADR-0019 §20.6, alternatives B and C), not a
+     * setting.
+     */
+    public static function seesMelResults(Acting $acting): bool
+    {
+        return $acting->isOwner() && $acting->may('projects.view');
     }
 
     public static function isReviewer(Report $report, Acting $acting): bool
