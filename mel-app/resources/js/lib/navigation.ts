@@ -2,6 +2,8 @@ import {
     BarChart3,
     ClipboardCheck,
     ClipboardList,
+    Download,
+    Inbox,
     FolderKanban,
     Gauge,
     History,
@@ -15,7 +17,9 @@ import type { ShellNavItem } from '@miles/ui/shell/navigation';
 import { home } from '@/routes/mel';
 import { index as audit } from '@/routes/mel/audit';
 import { index as collectAssignments } from '@/routes/mel/collect/assignments';
+import { index as collectExports } from '@/routes/mel/collect/exports';
 import { index as collectForms } from '@/routes/mel/collect/forms';
+import { index as collectSubmissions } from '@/routes/mel/collect/submissions';
 import { index as data } from '@/routes/mel/data';
 import { index as frameworks } from '@/routes/mel/frameworks';
 import { index as indicators } from '@/routes/mel/indicators';
@@ -107,6 +111,18 @@ export const navigation: NavGroup[] = [
                 href: collectAssignments(),
                 icon: UserCheck,
                 permission: 'mel.collect.view',
+            },
+            {
+                title: 'Collected data',
+                href: collectSubmissions(),
+                icon: Inbox,
+                permission: 'mel.collect.view',
+            },
+            {
+                title: 'Exports',
+                href: collectExports(),
+                icon: Download,
+                permission: 'mel.collect.export',
             },
         ],
     },

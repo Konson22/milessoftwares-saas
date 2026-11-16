@@ -1,5 +1,6 @@
 <?php
 
+use App\Collect\Models\Form;
 use App\Mel\Models\Indicator;
 use App\Mel\Models\Programme;
 use App\Mel\Models\ProgrammeUnit;
@@ -9,6 +10,7 @@ use App\Mel\Models\Submission;
 use App\Models\User;
 use App\Platform\SetUpWorkspace;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Support\Str;
 use Miles\PlatformClient\Api\Organization;
 use Tests\TestCase;
 
@@ -148,4 +150,85 @@ function enterResult(Programme $programme, ReportingPeriod $period, Indicator $i
     return inAcme(fn () => Submission::query()
         ->where('indicator_id', $indicator->id)->where('reporting_period_id', $period->id)->where('unit_id', $unit->id)
         ->orderByDesc('revision')->firstOrFail(), $slug);
+}
+
+/**
+ * A household survey for data collection tests: consent, a yes/no, a
+ * relevant select_one, a number, a personal name, an optional photo and
+ * an optional place.
+ *
+ * @return array<string, mixed>
+ */
+function surveyDefinition(): array
+{
+    return [
+        'schema_version' => 1,
+        'settings' => ['title' => 'Household survey', 'consent' => ['text' => 'We will ask about your household.']],
+        'items' => [
+            ['type' => 'group', 'name' => 'household', 'label' => 'Household', 'items' => [
+                ['type' => 'yes_no', 'name' => 'safe_water', 'label' => 'Safe drinking water?', 'required' => true],
+                ['type' => 'select_one', 'name' => 'main_source', 'label' => 'Main source', 'choices' => 'sources', 'required' => true,
+                    'relevant' => ['q' => 'safe_water', 'op' => 'eq', 'value' => 'no']],
+                ['type' => 'integer', 'name' => 'members', 'label' => 'People', 'required' => true, 'constraint' => ['min' => 1, 'max' => 50]],
+                ['type' => 'text', 'name' => 'respondent', 'label' => 'Respondent name', 'personal' => true],
+                ['type' => 'photo', 'name' => 'water_point', 'label' => 'Water point'],
+                ['type' => 'geopoint', 'name' => 'location', 'label' => 'Location'],
+            ]],
+        ],
+        'choices' => ['sources' => [['name' => 'river', 'label' => 'River'], ['name' => 'vendor', 'label' => 'Vendor']]],
+    ];
+}
+
+/**
+ * A published form of the programme, built and published through the
+ * pages by whoever is signed in (it needs design and publish).
+ *
+ * @param  array<string, mixed>|null  $definition
+ */
+function publishForm(?string $programmeId = null, ?array $definition = null, string $name = 'Household survey', string $slug = 'acme'): Form
+{
+    test()->post(mel('collect/forms', $slug), ['name' => $name, 'purpose' => 'survey', 'programme_id' => $programmeId])->assertSessionHasNoErrors();
+    $form = inAcme(fn () => Form::query()->where('name', $name)->latest('created_at')->firstOrFail(), $slug);
+    test()->put(mel("collect/forms/{$form->id}/draft", $slug), ['definition' => $definition ?? surveyDefinition()])->assertSessionHasNoErrors();
+    test()->post(mel("collect/forms/{$form->id}/publish", $slug), ['note' => 'First'])->assertSessionHasNoErrors();
+
+    return inAcme(fn () => $form->fresh(['currentVersion']), $slug);
+}
+
+/**
+ * A valid submission payload for surveyDefinition() (no photo).
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function surveyPayload(string $versionId, array $overrides = []): array
+{
+    return [
+        'id' => (string) Str::uuid7(),
+        'form_version_id' => $versionId,
+        'answers' => ['safe_water' => 'no', 'main_source' => 'river', 'members' => 5, 'respondent' => 'Achol Deng'],
+        'consent_given' => true,
+        'started_at' => now()->subMinutes(20)->toIso8601String(),
+        'completed_at' => now()->subMinutes(5)->toIso8601String(),
+        'app_version' => '1.0.0',
+        ...$overrides,
+    ];
+}
+
+function collectApi(string $path, string $slug = 'acme'): string
+{
+    return test()->workspaceUrl($slug, 'api/v1/collect/'.ltrim($path, '/'));
+}
+
+/**
+ * A tiny real PNG image.
+ */
+function pngBytes(int $seed = 0): string
+{
+    $image = imagecreatetruecolor(4, 4);
+    imagefill($image, 0, 0, imagecolorallocate($image, $seed % 256, 120, 200));
+    ob_start();
+    imagepng($image);
+
+    return (string) ob_get_clean();
 }

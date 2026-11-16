@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Mel\AuditController;
 use App\Http\Controllers\Mel\Collect\AssignmentController;
+use App\Http\Controllers\Mel\Collect\CollectedController;
+use App\Http\Controllers\Mel\Collect\ExportController;
 use App\Http\Controllers\Mel\Collect\FormController;
 use App\Http\Controllers\Mel\DataController;
 use App\Http\Controllers\Mel\FrameworkController;
@@ -168,6 +170,29 @@ Route::prefix(app(PlatformConfig::class)->path())
                 Route::post('forms/{form}/archive', [FormController::class, 'archive'])->name('forms.archive');
                 Route::post('forms/{form}/restore', [FormController::class, 'restore'])->name('forms.restore');
                 Route::post('forms/{form}/versions/{version}/close', [FormController::class, 'closeVersion'])->name('forms.versions.close');
+            });
+
+            // Collected submissions and their review (ADR-0019 §21)
+            Route::middleware('can:mel.collect.view')->group(function () {
+                Route::get('submissions', [CollectedController::class, 'index'])->name('submissions.index');
+                Route::get('submissions/{submission}', [CollectedController::class, 'show'])->name('submissions.show');
+                Route::get('submissions/{submission}/photos/{attachment}', [CollectedController::class, 'photo'])->name('submissions.photo');
+                Route::get('forms/{form}/summary', [CollectedController::class, 'summary'])->name('forms.summary');
+            });
+            Route::middleware('can:mel.collect.review')->prefix('submissions/{submission}')->name('submissions.')->group(function () {
+                Route::post('start', [CollectedController::class, 'start'])->name('start');
+                Route::post('accept', [CollectedController::class, 'accept'])->name('accept');
+                Route::post('reject', [CollectedController::class, 'reject'])->name('reject');
+                Route::post('request-correction', [CollectedController::class, 'requestCorrection'])->name('request-correction');
+                Route::post('reopen', [CollectedController::class, 'reopen'])->name('reopen');
+            });
+            Route::post('submissions/{submission}/corrections', [CollectedController::class, 'correct'])->middleware('can:mel.collect.correct')->name('submissions.correct');
+
+            // Exports
+            Route::middleware('can:mel.collect.export')->group(function () {
+                Route::get('exports', [ExportController::class, 'index'])->name('exports.index');
+                Route::post('forms/{form}/exports', [ExportController::class, 'store'])->middleware('throttle:20,1')->name('exports.store');
+                Route::get('exports/{export}/download', [ExportController::class, 'download'])->name('exports.download');
             });
 
             // Field assignments

@@ -15,14 +15,17 @@ import { COLLECTED, FORM_STATUS, PURPOSES } from '@/mel/lib/collect';
 import type { CollectedStatus, FormStatus } from '@/mel/lib/collect';
 import { formatDateTime } from '@/mel/lib/mel';
 import { index as assignmentsPage } from '@/routes/mel/collect/assignments';
+import { index as exportsPage } from '@/routes/mel/collect/exports';
 import {
     archive,
     build,
     duplicate,
     edit,
     restore,
+    summary,
     version as versionPage,
 } from '@/routes/mel/collect/forms';
+import { index as submissionsPage } from '@/routes/mel/collect/submissions';
 import { close as closeVersion } from '@/routes/mel/collect/forms/versions';
 
 type Props = {
@@ -165,6 +168,32 @@ export default function FormPage({
                                     : 'See assignments'}
                             </Link>
                         </p>
+                        {total > 0 && (
+                            <p className="flex flex-wrap gap-x-3">
+                                <Link
+                                    href={submissionsPage({
+                                        query: { form: form.id, view: 'all' },
+                                    })}
+                                    className="underline"
+                                >
+                                    Collected data
+                                </Link>
+                                <Link
+                                    href={summary(form.id)}
+                                    className="underline"
+                                >
+                                    Summary of accepted data
+                                </Link>
+                                {can.export && (
+                                    <Link
+                                        href={exportsPage()}
+                                        className="underline"
+                                    >
+                                        Export
+                                    </Link>
+                                )}
+                            </p>
+                        )}
                         {form.version === null && !archived && (
                             <p className="text-muted-foreground">
                                 Not published yet: phones get the form once it

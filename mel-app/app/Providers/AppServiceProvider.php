@@ -5,7 +5,10 @@ namespace App\Providers;
 use App\Mel\Access;
 use App\Platform\SetUpWorkspace;
 use Carbon\CarbonImmutable;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Miles\PlatformClient\PlatformConfig;
@@ -31,5 +34,8 @@ class AppServiceProvider extends ServiceProvider
         if ($platform->configured()) {
             Vite::useBuildDirectory($platform->path().'/build');
         }
+
+        // The field app: generous for a phone emptying a long queue of photos, per person.
+        RateLimiter::for('collect-api', fn (Request $request) => Limit::perMinute(300)->by('collect|'.($request->user()?->getAuthIdentifier() ?? $request->ip())));
     }
 }

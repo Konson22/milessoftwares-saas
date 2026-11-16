@@ -30,28 +30,36 @@ final class Spreadsheet
      */
     public static function download(string $fileName, array $sheets): StreamedResponse
     {
-        return response()->streamDownload(function () use ($sheets) {
-            $writer = new Writer(new Options);
-            $writer->openToFile('php://output');
-            $bold = (new Style)->setFontBold();
+        return response()->streamDownload(fn () => self::write('php://output', $sheets), $fileName, ['Content-Type' => self::CONTENT_TYPE]);
+    }
 
-            foreach ($sheets as $i => $sheet) {
-                $current = $i === 0 ? $writer->getCurrentSheet() : $writer->addNewSheetAndMakeItCurrent();
-                $current->setName(self::sheetName($sheet['title']));
+    /**
+     * Writes the sheets to a file (or php://output).
+     *
+     * @param  list<array{title: string, columns: list<string>, rows: iterable<list<mixed>>, numeric?: list<int>, notes?: list<string>}>  $sheets
+     */
+    public static function write(string $path, array $sheets): void
+    {
+        $writer = new Writer(new Options);
+        $writer->openToFile($path);
+        $bold = (new Style)->setFontBold();
 
-                foreach ($sheet['notes'] ?? [] as $note) {
-                    $writer->addRow(new Row([new StringCell($note, null)]));
-                }
-                $writer->addRow(new Row(array_map(fn (string $heading) => new StringCell($heading, $bold), $sheet['columns'])));
+        foreach ($sheets as $i => $sheet) {
+            $current = $i === 0 ? $writer->getCurrentSheet() : $writer->addNewSheetAndMakeItCurrent();
+            $current->setName(self::sheetName($sheet['title']));
 
-                $numeric = array_flip($sheet['numeric'] ?? []);
-                foreach ($sheet['rows'] as $row) {
-                    $writer->addRow(new Row(array_map(fn (mixed $value, int $column) => self::cell($value, isset($numeric[$column])), $row, array_keys($row))));
-                }
+            foreach ($sheet['notes'] ?? [] as $note) {
+                $writer->addRow(new Row([new StringCell($note, null)]));
             }
+            $writer->addRow(new Row(array_map(fn (string $heading) => new StringCell($heading, $bold), $sheet['columns'])));
 
-            $writer->close();
-        }, $fileName, ['Content-Type' => self::CONTENT_TYPE]);
+            $numeric = array_flip($sheet['numeric'] ?? []);
+            foreach ($sheet['rows'] as $row) {
+                $writer->addRow(new Row(array_map(fn (mixed $value, int $column) => self::cell($value, isset($numeric[$column])), $row, array_keys($row))));
+            }
+        }
+
+        $writer->close();
     }
 
     /**
