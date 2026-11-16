@@ -399,7 +399,8 @@ Events, such as `projects.project.archived`, come only if a real need appears.
 | Milestone | Content | Ends with |
 |---|---|---|
 | **M1** | `mel-app` backend and web, extracted, at parity; own database; Central SSO and provisioning (local) | §13 acceptance |
-| **M2** | Central: `mel` registered, catalog split (`mel` 1.0.0, `projects` 4.0.0), products, plans, marketing; PM: M&E removed (routes, pages, navigation, module) | PM suite green without M&E; M&E-only, PM-only and both tested locally |
+| **M2A** | Central: `mel` registered (catalog `mel` 2.0.0), products, plans, bundle; local proxy, CI, production templates; real-SSO and four-organization verification | §17, done 2026-11-16 |
+| **M2B** | PM: M&E removed (routes, pages, navigation, module, catalog `projects` 4.0.0); partner reports without `ReportContent::mel()` until M3 | §18 |
 | **M3** | Integration reads (§9) and the product-pair token; `ReportContent` reading M&E over HTTP | Both-apps tests, revoked-subscription and unavailable-Projects tests; security review |
 | **M4** | Collect API v1 (§6.2), collected-submission review, separate from verified results | Idempotency, attachment and recovery tests on PostgreSQL |
 | **M5** | `mel-mobile-app`, Android | The device checks in §6.4, on a real device |
@@ -491,7 +492,7 @@ Events, such as `projects.project.archived`, come only if a real need appears.
 4. **Partner reports.** They keep verified results, read from M&E over the API in M3 (§9).
 5. **Desktop.** The PWA is the MVP desktop (§7).
 
-## 16. As built: M1 (2026-11-16, local, uncommitted)
+## 16. As built: M1 (2026-11-16, committed 5bfb4d4)
 
 **What was built:**
 
@@ -510,7 +511,7 @@ Events, such as `projects.project.archived`, come only if a real need appears.
 - **Provisioning.** `App\Platform\SetUpWorkspace` creates `mel_settings` and the starting
   dimensions. A repeat call refreshes the name, currency and time zone. `SetUpMel` covers first
   use without a provisioning call.
-- **Catalog.** `mel-app/platform/catalog.json` is `mel` 1.0.0, kind `standalone`: 25 permissions,
+- **Catalog.** `mel-app/platform/catalog.json` is `mel` 1.0.0 (2.0.0 since M2A, §17), kind `standalone`: 25 permissions,
   9 roles and 3 separation-of-duties rules, taken from `projects` 3.3.0. None of them mixes with
   a Projects permission.
 - **Routes.** `{workspace}/mel/*`, names `mel.*` (84 routes).
@@ -539,3 +540,202 @@ Events, such as `projects.project.archived`, come only if a real need appears.
 - `projects` catalog 4.0.0.
 - Remove M&E from `project-management`.
 - CI job, nginx, php-fpm and the local proxy (from d0dc055).
+
+## 17. As built: M2A (2026-11-16) — Central registration and independence
+
+**Changed in the repository:**
+
+- **Catalog.** `mel` **2.0.0**, the same content as M1's 1.0.0: 25 permissions, 9 roles and 3
+  separation-of-duties rules. The local Central already held a published `mel` 1.0.0 from the
+  `shared_module` era (d0dc055) with different content. Published versions are immutable
+  (`CatalogConflict`), so the number moved.
+- **Products** (`central-app/database/erp-products.json`):
+  - Monitoring & Evaluation requires `mel` and lists `projects` as optional (it was `projects`
+    required).
+  - NGO ERP lists `mel` as optional.
+- **Plans** (`LocalPlansSeeder`, local only):
+  - `mel-standard` is M&E alone.
+  - `projects-mel-bundle` is "Projects + M&E", composed explicitly of `projects` and `mel`. It has
+    **no price**: a plan without one stays a draft, is not public and shows "price not approved".
+    No price was invented.
+- **Local proxy.** `{workspace}.tatook.localhost/mel/` goes to `127.0.0.1:9400`
+  (`ops/local-dev/apache-dev.conf`).
+- **CI.** A `mel` job in `.github/workflows/tests.yml`: `composer ci:check` on PostgreSQL 17,
+  where the triggers run, then the suite again on SQLite.
+- **Production templates (not deployed).**
+  - `ops/nginx/products/mel.conf` and `ops/php-fpm/mel.conf`.
+  - `docs/runbooks/mel-app.md`, with a pointer from `docs/runbooks/mel.md`. `mel.md` stays the
+    production runbook until M2B.
+
+**Local Central state (not in the repository):**
+
+- **Application.** `mel`, "Tatook M&E", kind `standalone`. The kind was set by hand, because the
+  importer never changes an existing application's kind.
+- **Catalog.** 2.0.0 published, 1.0.0 retired.
+- **Integration.** Endpoint `http://127.0.0.1:9400/mel/platform`; trial enabled.
+- **Products and plans.** Monitoring & Evaluation is `pilot`. `mel-standard` is active at the
+  seeded local price; the bundle is a draft.
+- **Test organizations.** Four, with three users signed in through Central:
+
+  | Organization | Entitlements |
+  |---|---|
+  | `m2a-mel` | `mel` |
+  | `m2a-pm` | `projects` |
+  | `m2a-both` | `projects`, `mel` |
+  | `m2a-none` | none |
+
+  The users are the owner, a `mel_officer`, and a member without an M&E role.
+
+**Verified by real HTTP.** This was a local run through Apache, against the real Central, with the
+OIDC/PKCE flow and the queue worker; platform-client's fake was not used. The scripts are in the
+session scratchpad.
+
+- **SSO.**
+  - Sign-in at `{ws}/mel/` goes through Central's login, authorize and callback.
+  - Switching to a second workspace reuses the Central session without a password.
+  - Logout ends the M&E session. The next visit signs in silently while Central's session lives,
+    as in Projects. A browser without a Central session lands on Central's login.
+- **Entitlements, the four scenarios:**
+
+  | Scenario | `/mel` | `/projects` |
+  |---|---|---|
+  | M&E only | 200 | 404 |
+  | PM only | 404 (home and direct URLs) | 200 |
+  | Both | 200 | 200 |
+  | Neither | 404 | 404 |
+
+  - A workspace is not visible to an application it is not entitled to (platform-client
+    `ResolveTenant`), hence 404 rather than 403.
+  - A programme id from `m2a-both` opened in `m2a-mel` is 404.
+- **RBAC.**
+  - The officer gets 17 `mel.*` permissions and nothing else.
+  - The officer is refused settings (403) and creating a programme (POST, 403).
+  - A member without a role gets 403.
+  - A role granted in Central (`mel_administrator`) reached an **open** session within seconds:
+    17 permissions became 25, and settings went from 403 to 200.
+- **Revocation.**
+  - Revoking `mel` for `m2a-both` makes an open session's next request 403.
+  - A new sign-in is refused at Central with `invalid_client`, because `TenantRedirectUris`
+    removes the workspace's callback. Central shows its raw JSON error.
+  - Projects in the same workspace stays 200.
+  - Re-entitling restores 200 with the programme intact.
+- **M&E-only workflows**, in `m2a-mel` and again in `m2a-both`, all over HTTP:
+  1. A programme, two units and quarterly periods.
+  2. A goal, an outcome and an output, and the framework page.
+  3. An indicator, activated, with a baseline and four targets.
+  4. The officer records and submits a value with a PDF uploaded as evidence.
+  5. The owner downloads the evidence, reviews, verifies and publishes. The submitter could not
+     review their own result: separation of duties works as designed.
+  6. Six reports render for the programme.
+  7. A Collect form is created, its draft saved (as JSON, the way the page sends it), published,
+     and assigned to the officer.
+- **Database independence.**
+  - `mel_app` has 44 tables: the `mel_*` and `collect_*` tables, plus Laravel's, platform-client's
+    and `workspace_members`.
+  - It has 163 foreign keys, all internal. None points to `projects`, `milestones` or
+    `organizations`.
+  - There are no foreign servers, and the only extension is `plpgsql`.
+  - No code in `mel-app` opens another connection or calls Projects or Finance.
+  - All 12 migrations roll back and re-apply on PostgreSQL.
+  - It is its own database (`mel_app` on :5432; Projects is on :5433), backed up and restored
+    on its own.
+- **Regression.**
+  - `project-management`: 497 passed, 7 skipped.
+  - Projects ⇄ Finance E2E: 17 of 17.
+  - Central, in Products, Entitlements, Marketing, SharedModules, Billing, Applications and
+    Identity: 319 of 320. The one failure is `ProductSalesTest`'s public landing assertion. It
+    comes from another session's uncommitted public-site work and is unrelated.
+  - `mel-app`: 85 passed on SQLite and on PostgreSQL. Pint and PHPStan are clean, tsc is clean,
+    Vitest passes (38), the build passes, and `vp check` has 0 errors and 1 warning.
+
+**Found, not fixed in M2A:**
+
+- **Data Collection is partial.**
+  - Built: form definitions and their checker; versions (publish, close, archive, restore,
+    duplicate); assignments; the rules engine (PHP and TS); the builder and renderer modules.
+  - Missing pages: `mel/collect/forms/build` (the designer), `mel/collect/forms/version` and
+    `mel/collect/assignments/index` exist neither in Projects nor in `mel-app`. Those routes
+    answer 500.
+  - Missing behaviour: nothing writes `collect_submissions`. There is no submission API, no review
+    of collected submissions, no attachment upload, no export generation and no offline sync.
+    The tables and models exist with nothing behind them.
+  - No feature tests cover the Collect HTTP surface.
+- **Production Central.** `mel` may already exist there as a `shared_module` from catalog 1.0.0.
+  It must be set to `standalone` once, by staff (see the runbook). While it is a shared module,
+  the marketing catalog finds no application of M&E's own.
+- **Marketing.** The public `monitoring-evaluation` entry in
+  `resources/content/marketing-catalog.json` still has registry code `projects`, so a trial started
+  from that page is a Projects trial. That file holds another session's uncommitted edits, so it
+  was not touched.
+- **Pricing.** `mel-standard`'s local price is a seed value, and the bundle has none. Both need
+  approval before anything is public.
+
+## 18. M2B plan — remove M&E from Project Management (not started)
+
+**What leaves `project-management`:**
+
+- **Routes.** `routes/web/mel.php` (78 of 422 routes) and its include in `routes/web.php`, behind
+  `RequireModule:mel` and `SetUpMel`.
+- **Code.**
+  - `app/Mel` (43 files), `app/Collect` (14) and `app/Http/Controllers/Mel` (15).
+  - `resources/js/pages/mel` (21) and `resources/js/mel` (10).
+  - `tests/Feature/Mel` (3) and `tests/Unit/Mel` (2).
+  - `components/charts.tsx`, if nothing else uses it.
+  - The generated `@/routes/mel` and `@/actions/...Mel`.
+- **Module and navigation.** `Modules::MEL` and its settings toggle, and the M&E block in
+  `resources/js/lib/navigation.ts`.
+- **Permissions.**
+  - `platform/catalog.json` goes from 3.3.0 to **4.0.0**, without the 25 `mel.*` permissions and
+    the 9 `mel_*` roles: 67 permissions become 42, and 21 roles become 12.
+  - On Central, `platform:catalog-reassign projects --dry-run` runs first. Holders of `mel_*`
+    roles in Projects lose them there, so each needs the same role in `mel` before the deploy.
+    That mapping is a staff step to approve.
+- **Tables.** The five migrations `2026_11_15_100000`–`100400` stay in history. A new migration
+  drops `mel_*` and `collect_*` only once the data question below is decided. Until then the
+  tables stay, unused.
+
+**What stays and changes in Projects:**
+
+- **Partner reports.**
+  - `Report` type `mel` ("M&E performance report") and `ReportContent::mel()` read
+    `ProgrammeUnit` and `VerifiedResult` directly.
+  - M2B removes that section, so partner reports have no M&E section and the `mel` type is hidden
+    for new reports. M3 replaces the section with the integration read (§9). Existing reports keep
+    their stored snapshot.
+  - The current read includes verified but **unpublished** results, with a `published` flag. M3
+    must decide whether a partner sees those.
+- **Collaboration.** `Capability::RESULTS_VIEW` and `EVIDENCE_SUBMIT` imply `mel.*` permissions,
+  and `Responsibility` has an "M&E officer". They point at an application Projects no longer
+  serves. M2B hides them (they are already `effective: false`), or M3 maps them to the
+  cross-application grant.
+- **Portal.** `pages/portal/collaboration/report.tsx` renders `system.mel`. It shows nothing once
+  the content is empty.
+
+**Data:**
+
+- There is no production data to move: M&E in Projects has never been deployed (§1.2).
+- If it is deployed before M2B, the existing `mel_*` and `collect_*` rows need an export and an
+  import into `mel`, per organization, with their own approval (§4).
+- Test M&E rows in local `projects` databases are not migrated.
+
+**Sequence:**
+
+1. Back up the Projects database.
+2. In PM, remove the routes, navigation, module, pages and code. Keep the tables. Publish catalog
+   4.0.0.
+3. Take `ReportContent::mel()` out of partner reports. Add tests that an existing `mel` report
+   renders without the section.
+4. Run the PM suite and the Projects ⇄ Finance E2E (17 scenarios).
+5. Rerun the M2A HTTP scenarios: Projects in the PM-only and both workspaces, and M&E in the
+   M&E-only and both workspaces.
+6. On Central, run the catalog reassign dry run, map the roles, then run the reassign.
+7. Deploy, with its own approval: `mel-app` first (per the runbook), then PM without M&E.
+8. Later, add a migration that drops the unused tables.
+
+**Rollback:**
+
+- **Before the deploy.** Revert the M2B commits. They only remove code, and the tables were kept.
+- **After the deploy.** Redeploy the previous PM release. Its catalog 3.3.0 is still published,
+  and a `catalog-reassign` back restores the roles.
+- **`mel-app`.** It is unaffected either way: it has its own database, and nothing in it points
+  at Projects.
