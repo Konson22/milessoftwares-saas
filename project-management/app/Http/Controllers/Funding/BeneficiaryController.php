@@ -20,6 +20,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -85,6 +86,30 @@ class BeneficiaryController extends Controller
         ]);
 
         return back()->with('success', "Invitation sent to {$validated['email']}.");
+    }
+
+    /**
+     * Invites an organization already on Tatook, found by name or address
+     * (collaboration.organizations). Its administrators accept or decline.
+     */
+    public function inviteOrganization(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'organization_id' => ['required', 'uuid'],
+            'label' => ['required', Rule::in(array_keys(Partnership::LABELS))],
+        ]);
+        $organization = Organization::query()->find((string) $validated['organization_id']);
+        if ($organization === null) {
+            throw ValidationException::withMessages(['organization_id' => 'That organization is not on Tatook Projects.']);
+        }
+
+        $partnership = Beneficiaries::inviteOrganization($this->donor(), $organization, $this->member($request), (string) $validated['label']);
+
+        return back()->with('success', match (true) {
+            $partnership->isAccepted() => "You are already connected to {$organization->name}.",
+            $partnership->wasRecentlyCreated => "Invitation sent to {$organization->name}. Its administrators accept or decline it in Tatook.",
+            default => "{$organization->name} has your invitation already: it is waiting for their answer.",
+        });
     }
 
     /**

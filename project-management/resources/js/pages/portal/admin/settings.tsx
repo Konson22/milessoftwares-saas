@@ -1,17 +1,18 @@
-import { Form, Head } from '@inertiajs/react';
-import { PageHeader } from '@miles/ui/components/page-header';
-import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
-import { Button } from '@miles/ui/components/ui/button';
-import { Input } from '@miles/ui/components/ui/input';
-import { ApprovalBands } from '@/components/approval-bands';
-import type { ApprovalBand } from '@/components/approval-bands';
-import { Field, invalid } from '@/components/field';
+import { Form, Head } from "@inertiajs/react";
+import { PageHeader } from "@miles/ui/components/page-header";
+import { Panel, PanelBody, PanelHeader } from "@miles/ui/components/panel";
+import { Button } from "@miles/ui/components/ui/button";
+import { Input } from "@miles/ui/components/ui/input";
+import { ApprovalBands } from "@/components/approval-bands";
+import type { ApprovalBand } from "@/components/approval-bands";
+import { Field, invalid } from "@/components/field";
 import {
     accountType as saveAccountType,
+    discoverable as saveDiscoverable,
     financeLimits as saveFinanceLimits,
     health,
     modules as saveModule,
-} from '@/routes/admin/settings';
+} from "@/routes/admin/settings";
 
 type Settings = {
     name: string;
@@ -24,7 +25,8 @@ type Settings = {
         description: string;
         enabled: boolean;
     }[];
-    accountType: 'funder' | 'implementer' | null;
+    accountType: "funder" | "implementer" | null;
+    discoverable: boolean;
     funding: { enabled: boolean; canTurnOff: boolean };
     financeLimits: {
         currency: string;
@@ -38,7 +40,7 @@ type Settings = {
 /**
  * The parts of the product this organization uses.
  */
-function ModulesPanel({ modules }: { modules: Settings['modules'] }) {
+function ModulesPanel({ modules }: { modules: Settings["modules"] }) {
     return (
         <Panel className="mt-4">
             <PanelHeader
@@ -58,7 +60,7 @@ function ModulesPanel({ modules }: { modules: Settings['modules'] }) {
                                     <input
                                         type="hidden"
                                         name="enabled"
-                                        value={module.enabled ? '0' : '1'}
+                                        value={module.enabled ? "0" : "1"}
                                     />
                                     <span className="min-w-0 flex-1">
                                         <span className="font-medium">
@@ -79,8 +81,8 @@ function ModulesPanel({ modules }: { modules: Settings['modules'] }) {
                                         disabled={processing}
                                     >
                                         {module.enabled
-                                            ? 'Turn off'
-                                            : 'Turn on'}
+                                            ? "Turn off"
+                                            : "Turn on"}
                                     </Button>
                                 </>
                             )}
@@ -99,10 +101,10 @@ function AccountTypePanel({
     accountType,
     canTurnOff,
 }: {
-    accountType: Settings['accountType'];
+    accountType: Settings["accountType"];
     canTurnOff: boolean;
 }) {
-    const funder = accountType === 'funder';
+    const funder = accountType === "funder";
 
     return (
         <Panel className="mt-4">
@@ -121,12 +123,12 @@ function AccountTypePanel({
                             <input
                                 type="hidden"
                                 name="account_type"
-                                value={funder ? 'implementer' : 'funder'}
+                                value={funder ? "implementer" : "funder"}
                             />
                             <p className="text-sm text-muted-foreground">
                                 {funder
-                                    ? 'Funder or donor: the menu shows the organizations you fund, their grants and reports, and the marketplace.'
-                                    : 'Implementer: the menu shows your projects, the funding you receive, procurement and finance.'}
+                                    ? "Funder or donor: the menu shows the organizations you fund, their grants and reports, and the marketplace."
+                                    : "Implementer: the menu shows your projects, the funding you receive, procurement and finance."}
                             </p>
                             {funder && !canTurnOff && (
                                 <p className="text-sm text-muted-foreground">
@@ -148,8 +150,55 @@ function AccountTypePanel({
                                     }
                                 >
                                     {funder
-                                        ? 'Switch to implementer'
-                                        : 'Switch to funder'}
+                                        ? "Switch to implementer"
+                                        : "Switch to funder"}
+                                </Button>
+                            </div>
+                        </>
+                    )}
+                </Form>
+            </PanelBody>
+        </Panel>
+    );
+}
+
+/**
+ * Whether other organizations on Tatook Projects can find this one by name.
+ */
+function DiscoverablePanel({ discoverable }: { discoverable: boolean }) {
+    return (
+        <Panel className="mt-4">
+            <PanelHeader
+                title="Finding you"
+                description="Other organizations on Tatook Projects can search for you by name to invite you to a project or to partner. They see your name, workspace address and country only."
+            />
+            <PanelBody>
+                <Form
+                    {...saveDiscoverable.form()}
+                    options={{ preserveScroll: true }}
+                    className="grid gap-3"
+                >
+                    {({ processing }) => (
+                        <>
+                            <input
+                                type="hidden"
+                                name="discoverable"
+                                value={discoverable ? "0" : "1"}
+                            />
+                            <p className="text-sm text-muted-foreground">
+                                {discoverable
+                                    ? "On: organizations can find you by name."
+                                    : "Off: only those who know your exact workspace address can find you."}
+                            </p>
+                            <div>
+                                <Button
+                                    type="submit"
+                                    variant="outline"
+                                    disabled={processing}
+                                >
+                                    {discoverable
+                                        ? "Stop appearing in search"
+                                        : "Let organizations find us"}
                                 </Button>
                             </div>
                         </>
@@ -209,6 +258,8 @@ export default function OrganizationSettings({
                 canTurnOff={settings.funding.canTurnOff}
             />
 
+            <DiscoverablePanel discoverable={settings.discoverable} />
+
             <HealthThresholds {...settings.health} />
             {settings.financeLimits && (
                 <FinanceLimits {...settings.financeLimits} />
@@ -260,9 +311,9 @@ function FinanceLimits({
                                     id="petty_cash_max_payment"
                                     name="petty_cash_max_payment"
                                     inputMode="decimal"
-                                    defaultValue={pettyCashMax ?? ''}
+                                    defaultValue={pettyCashMax ?? ""}
                                     {...invalid(
-                                        'petty_cash_max_payment',
+                                        "petty_cash_max_payment",
                                         errors.petty_cash_max_payment,
                                     )}
                                 />
@@ -276,9 +327,9 @@ function FinanceLimits({
                                     id="advance_max"
                                     name="advance_max"
                                     inputMode="decimal"
-                                    defaultValue={advanceMax ?? ''}
+                                    defaultValue={advanceMax ?? ""}
                                     {...invalid(
-                                        'advance_max',
+                                        "advance_max",
                                         errors.advance_max,
                                     )}
                                 />
@@ -294,9 +345,9 @@ function FinanceLimits({
                                     type="number"
                                     min={1}
                                     max={365}
-                                    defaultValue={advanceRetireDays ?? ''}
+                                    defaultValue={advanceRetireDays ?? ""}
                                     {...invalid(
-                                        'advance_retire_days',
+                                        "advance_retire_days",
                                         errors.advance_retire_days,
                                     )}
                                 />
@@ -353,7 +404,7 @@ function HealthThresholds({
                                     required
                                     defaultValue={scheduleSlack}
                                     {...invalid(
-                                        'health_schedule_slack',
+                                        "health_schedule_slack",
                                         errors.health_schedule_slack,
                                     )}
                                 />
@@ -373,7 +424,7 @@ function HealthThresholds({
                                     required
                                     defaultValue={budgetSlack}
                                     {...invalid(
-                                        'health_budget_slack',
+                                        "health_budget_slack",
                                         errors.health_budget_slack,
                                     )}
                                 />

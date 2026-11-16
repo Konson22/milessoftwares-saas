@@ -1,10 +1,10 @@
-import { Form, router } from '@inertiajs/react';
-import type { RouteFormDefinition } from '@/wayfinder';
-import { useEffect, useState } from 'react';
-import { StatusBadge } from '@miles/ui/components/status-badge';
-import type { Tone } from '@miles/ui/components/status-badge';
-import { Button } from '@miles/ui/components/ui/button';
-import { Input } from '@miles/ui/components/ui/input';
+import { Form, router } from "@inertiajs/react";
+import type { RouteFormDefinition } from "@/wayfinder";
+import { useEffect, useState } from "react";
+import { StatusBadge } from "@miles/ui/components/status-badge";
+import type { Tone } from "@miles/ui/components/status-badge";
+import { Button } from "@miles/ui/components/ui/button";
+import { Input } from "@miles/ui/components/ui/input";
 import {
     Table,
     TableBody,
@@ -12,11 +12,11 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '@miles/ui/components/ui/table';
-import { Field, Select } from '@/components/field';
-import { formatDate } from '@/lib/status';
-import { organizations } from '@/routes/collaboration';
-import type { Option } from '@/types';
+} from "@miles/ui/components/ui/table";
+import { Field, Select } from "@/components/field";
+import { formatDate } from "@/lib/status";
+import { organizations } from "@/routes/collaboration";
+import type { Option } from "@/types";
 
 /** A capability a participant can be given (App\Collaboration\Capability). */
 export type CapabilityOption = Option & { effective: boolean };
@@ -31,15 +31,14 @@ export type ParticipantRow = {
     relationshipLabel: string;
     parentId: string | null;
     parent: string | null;
-    status: 'active' | 'suspended' | 'completed' | 'revoked';
+    status: "active" | "suspended" | "completed" | "revoked";
     capabilities: string[];
     effective: string[];
     cutOff: boolean;
     joinedAt: string;
     statusChangedAt: string | null;
     representatives:
-        | { id: string; name: string; responsibilities: string[] }[]
-        | null;
+        { id: string; name: string; responsibilities: string[] }[] | null;
 };
 
 export type InvitationRow = {
@@ -54,26 +53,26 @@ export type InvitationRow = {
     relationshipLabel: string;
     capabilities: string[];
     message: string | null;
-    status: 'pending' | 'expired' | 'accepted' | 'declined' | 'revoked';
+    status: "pending" | "expired" | "accepted" | "declined" | "revoked";
     createdAt: string;
     expiresAt: string;
     answeredAt: string | null;
     acceptedBy: string | null;
 };
 
-const PARTICIPATION_TONES: Record<ParticipantRow['status'], Tone> = {
-    active: 'success',
-    suspended: 'warning',
-    completed: 'neutral',
-    revoked: 'danger',
+const PARTICIPATION_TONES: Record<ParticipantRow["status"], Tone> = {
+    active: "success",
+    suspended: "warning",
+    completed: "neutral",
+    revoked: "danger",
 };
 
-const INVITATION_TONES: Record<InvitationRow['status'], Tone> = {
-    pending: 'info',
-    expired: 'warning',
-    accepted: 'success',
-    declined: 'neutral',
-    revoked: 'neutral',
+const INVITATION_TONES: Record<InvitationRow["status"], Tone> = {
+    pending: "info",
+    expired: "warning",
+    accepted: "success",
+    declined: "neutral",
+    revoked: "neutral",
 };
 
 function capitalize(text: string): string {
@@ -84,7 +83,7 @@ export function ParticipationStatus({
     status,
     cutOff = false,
 }: {
-    status: ParticipantRow['status'];
+    status: ParticipantRow["status"];
     cutOff?: boolean;
 }) {
     if (cutOff) {
@@ -101,7 +100,7 @@ export function ParticipationStatus({
 export function InvitationStatus({
     status,
 }: {
-    status: InvitationRow['status'];
+    status: InvitationRow["status"];
 }) {
     return (
         <StatusBadge tone={INVITATION_TONES[status]}>
@@ -133,7 +132,7 @@ export function CapabilityPicker({
             </legend>
             <input type="hidden" name="capabilities[]" value="view" />
             {capabilities.map((capability) => {
-                const isView = capability.value === 'view';
+                const isView = capability.value === "view";
                 const allowed = grantable.includes(capability.value);
 
                 // Held already but not theirs to give: kept as it is.
@@ -154,7 +153,7 @@ export function CapabilityPicker({
                         )}
                         <input
                             type="checkbox"
-                            name={isView ? undefined : 'capabilities[]'}
+                            name={isView ? undefined : "capabilities[]"}
                             value={capability.value}
                             checked={
                                 isView || selected.includes(capability.value)
@@ -171,12 +170,12 @@ export function CapabilityPicker({
                             }
                         />
                         <span
-                            className={allowed ? '' : 'text-muted-foreground'}
+                            className={allowed ? "" : "text-muted-foreground"}
                         >
                             {capability.label}
                             {!capability.effective && (
                                 <span className="text-xs text-muted-foreground">
-                                    {' '}
+                                    {" "}
                                     (later)
                                 </span>
                             )}
@@ -191,35 +190,62 @@ export function CapabilityPicker({
 type Found = { id: string; name: string; slug: string; country: string | null };
 
 /**
- * Finds an organization on Tatook to invite: by name among those with a
- * published profile, or by its exact workspace address.
+ * Finds an organization on Tatook to invite: by name among those that let
+ * themselves be found (or published a profile), or by its exact workspace
+ * address. A failed search says so; it is never shown as nothing found.
  */
-function OrganizationSearch({
+export function OrganizationSearch({
     value,
     onChange,
+    notFound = "No organization on Tatook matches. Check the spelling, try its workspace address, or invite someone there by email.",
 }: {
     value: Found | null;
     onChange: (found: Found | null) => void;
+    notFound?: string;
 }) {
-    const [query, setQuery] = useState('');
+    const [query, setQuery] = useState("");
     const [results, setResults] = useState<Found[]>([]);
+    // What the last search came to: an error is never shown as "nothing found".
+    const [state, setState] = useState<
+        "idle" | "searching" | "done" | "failed"
+    >("idle");
 
     useEffect(() => {
         if (query.trim().length < 2) {
             setResults([]);
+            setState("idle");
 
             return;
         }
 
         const controller = new AbortController();
         const timer = window.setTimeout(() => {
+            setState("searching");
             fetch(organizations.url({ query: { q: query.trim() } }), {
-                headers: { Accept: 'application/json' },
+                headers: { Accept: "application/json" },
                 signal: controller.signal,
             })
-                .then((response) => (response.ok ? response.json() : []))
-                .then((found: Found[]) => setResults(found))
-                .catch(() => undefined);
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error(String(response.status));
+                    }
+
+                    return response.json();
+                })
+                .then((found: Found[]) => {
+                    setResults(found);
+                    setState("done");
+                })
+                .catch((error: unknown) => {
+                    if (
+                        error instanceof DOMException &&
+                        error.name === "AbortError"
+                    ) {
+                        return;
+                    }
+                    setResults([]);
+                    setState("failed");
+                });
         }, 250);
 
         return () => {
@@ -255,6 +281,23 @@ function OrganizationSearch({
                 placeholder="Organization name or workspace address"
                 autoComplete="off"
             />
+            {state === "idle" && (
+                <p className="text-xs text-muted-foreground">
+                    Type at least two letters of its name, or its workspace
+                    address.
+                </p>
+            )}
+            {state === "searching" && (
+                <p className="text-xs text-muted-foreground">Searching…</p>
+            )}
+            {state === "failed" && (
+                <p className="text-sm text-destructive" role="alert">
+                    The search did not work just now. Try again in a moment.
+                </p>
+            )}
+            {state === "done" && results.length === 0 && (
+                <p className="text-sm text-muted-foreground">{notFound}</p>
+            )}
             {results.length > 0 && (
                 <ul className="divide-y border text-sm">
                     {results.map((found) => (
@@ -264,10 +307,10 @@ function OrganizationSearch({
                                 className="w-full px-3 py-1.5 text-left hover:bg-muted"
                                 onClick={() => onChange(found)}
                             >
-                                {found.name}{' '}
+                                {found.name}{" "}
                                 <span className="text-muted-foreground">
                                     {found.slug}
-                                    {found.country ? ` · ${found.country}` : ''}
+                                    {found.country ? ` · ${found.country}` : ""}
                                 </span>
                             </button>
                         </li>
@@ -288,9 +331,9 @@ export function InviteForm({
     capabilities,
     grantable,
     parents,
-    defaultRelationship = 'implementer',
+    defaultRelationship = "implementer",
 }: {
-    form: RouteFormDefinition<'post'>;
+    form: RouteFormDefinition<"post">;
     relationships: RelationshipOption[];
     capabilities: CapabilityOption[];
     grantable: string[];
@@ -300,7 +343,7 @@ export function InviteForm({
     const suggestion = (key: string) =>
         (
             relationships.find((option) => option.value === key)?.suggested ?? [
-                'view',
+                "view",
             ]
         ).filter((capability) => grantable.includes(capability));
     const [byEmail, setByEmail] = useState(false);
@@ -327,7 +370,7 @@ export function InviteForm({
                         <Button
                             type="button"
                             size="sm"
-                            variant={byEmail ? 'ghost' : 'outline'}
+                            variant={byEmail ? "ghost" : "outline"}
                             onClick={() => setByEmail(false)}
                         >
                             On Tatook
@@ -335,7 +378,7 @@ export function InviteForm({
                         <Button
                             type="button"
                             size="sm"
-                            variant={byEmail ? 'outline' : 'ghost'}
+                            variant={byEmail ? "outline" : "ghost"}
                             onClick={() => setByEmail(true)}
                         >
                             Not here yet: by email
@@ -481,8 +524,8 @@ export function InvitationsTable({
             <TableBody>
                 {invitations.map((invitation) => {
                     const open =
-                        invitation.status === 'pending' ||
-                        invitation.status === 'expired';
+                        invitation.status === "pending" ||
+                        invitation.status === "expired";
                     const again = open ? resendUrl?.(invitation) : undefined;
 
                     return (
@@ -493,7 +536,7 @@ export function InvitationsTable({
                                 </span>
                                 <p className="text-xs text-muted-foreground">
                                     {invitation.onTatook
-                                        ? 'On Tatook'
+                                        ? "On Tatook"
                                         : invitation.email}
                                     {invitation.acceptedBy &&
                                         !invitation.onTatook &&
@@ -503,19 +546,19 @@ export function InvitationsTable({
                             <TableCell>
                                 {invitation.relationshipLabel}
                                 <p className="text-xs text-muted-foreground">
-                                    {invitation.capabilities.join(', ')}
+                                    {invitation.capabilities.join(", ")}
                                 </p>
                             </TableCell>
                             <TableCell>
                                 <InvitationStatus status={invitation.status} />
-                                {invitation.status === 'pending' && (
+                                {invitation.status === "pending" && (
                                     <p className="text-xs text-muted-foreground">
                                         until {formatDate(invitation.expiresAt)}
                                     </p>
                                 )}
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground">
-                                {formatDate(invitation.createdAt)} by{' '}
+                                {formatDate(invitation.createdAt)} by{" "}
                                 {invitation.inviter}
                                 {invitation.fromParticipantId &&
                                     ` (${invitation.from})`}
@@ -565,21 +608,21 @@ export function InvitationsTable({
  * are final).
  */
 export function nextStatuses(
-    status: ParticipantRow['status'],
-): { value: ParticipantRow['status']; label: string }[] {
-    if (status === 'active') {
+    status: ParticipantRow["status"],
+): { value: ParticipantRow["status"]; label: string }[] {
+    if (status === "active") {
         return [
-            { value: 'suspended', label: 'Suspend' },
-            { value: 'completed', label: 'Complete' },
-            { value: 'revoked', label: 'Revoke' },
+            { value: "suspended", label: "Suspend" },
+            { value: "completed", label: "Complete" },
+            { value: "revoked", label: "Revoke" },
         ];
     }
 
-    if (status === 'suspended') {
+    if (status === "suspended") {
         return [
-            { value: 'active', label: 'Reactivate' },
-            { value: 'completed', label: 'Complete' },
-            { value: 'revoked', label: 'Revoke' },
+            { value: "active", label: "Reactivate" },
+            { value: "completed", label: "Complete" },
+            { value: "revoked", label: "Revoke" },
         ];
     }
 

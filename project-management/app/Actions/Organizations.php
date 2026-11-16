@@ -209,6 +209,19 @@ final class Organizations
     }
 
     /**
+     * Whether other organizations on Projects can find this one by name to
+     * invite it. Off: only someone who knows its exact workspace address can.
+     */
+    public static function setDiscoverable(Organization $organization, bool $discoverable, User $by): void
+    {
+        if ($organization->discoverable === $discoverable) {
+            return;
+        }
+        $organization->forceFill(['discoverable' => $discoverable])->save();
+        Audit::record($discoverable ? 'organization.discoverable_on' : 'organization.discoverable_off', $organization, [], $organization->id, $by);
+    }
+
+    /**
      * Switches a part of the product on or off, keeping everything in it. Off is
      * refused while something outside depends on it.
      *

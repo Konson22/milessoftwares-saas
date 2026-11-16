@@ -46,6 +46,7 @@ class SettingsController extends Controller
                     'enabled' => $organization->hasModule($key),
                 ])->values()->all(),
                 'accountType' => $organization->account_type,
+                'discoverable' => $organization->discoverable,
                 'funding' => [
                     'enabled' => $organization->isDonor(),
                     'canTurnOff' => ! Partnership::query()->where('donor_organization_id', $organization->id)->exists(),
@@ -96,6 +97,18 @@ class SettingsController extends Controller
         $message = $funds ? 'You can now fund other organizations.' : 'Funding is off.';
 
         return back()->with('success', $message);
+    }
+
+    /**
+     * Whether other organizations on Projects can find this one by name.
+     */
+    public function updateDiscoverable(Request $request): SymfonyResponse
+    {
+        $validated = $request->validate(['discoverable' => ['required', 'boolean']]);
+        $on = filter_var($validated['discoverable'], FILTER_VALIDATE_BOOLEAN);
+        Organizations::setDiscoverable(app(CurrentOrganization::class)->require(), $on, $this->member($request));
+
+        return back()->with('success', $on ? 'Other organizations can find you by name.' : 'Only those who know your workspace address can find you now.');
     }
 
     /**

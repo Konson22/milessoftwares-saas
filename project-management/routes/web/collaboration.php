@@ -19,8 +19,10 @@ use Illuminate\Support\Facades\Route;
 Route::get('shared-projects', [SharedProjectController::class, 'index'])->name('shared-projects.index');
 Route::get('shared-projects/{participant}', [SharedProjectController::class, 'show'])->whereUuid('participant')->name('shared-projects.show');
 
+// Finding an organization to invite: to a project, or (a donor) to partner. The controller checks either permission.
+Route::get('collaboration/organizations', [CollaborationController::class, 'organizations'])->middleware('throttle:60,1')->name('collaboration.organizations');
+
 Route::middleware('can:projects.partners.manage')->group(function () {
-    Route::get('collaboration/organizations', [CollaborationController::class, 'organizations'])->middleware('throttle:60,1')->name('collaboration.organizations');
 
     // An emailed invitation, opened in this workspace through its link.
     Route::get('project-invitations/{token}/open', [InvitationLinkController::class, 'show'])->where('token', '[A-Za-z0-9]{48}')->name('collaboration.show');
