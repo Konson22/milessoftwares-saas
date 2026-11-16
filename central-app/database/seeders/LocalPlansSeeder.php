@@ -29,7 +29,10 @@ class LocalPlansSeeder extends Seeder
     /**
      * code => [name, description, ERP product code or null, application codes, monthly price in cents]
      *
-     * @var array<string, array{0: string, 1: string, 2: string|null, 3: list<string>, 4: int}>
+     * A null price means the price is not approved yet: the plan is kept as
+     * a draft, not public and not on sale, whatever the product status.
+     *
+     * @var array<string, array{0: string, 1: string, 2: string|null, 3: list<string>, 4: int|null}>
      */
     private const PLANS = [
         'pharmacy-standard' => ['Pharmacy Standard', 'The pharmacy: medicines, batches and expiry, purchasing and the counter.', 'pharmacy', ['pharmacy'], 2500],
@@ -45,7 +48,9 @@ class LocalPlansSeeder extends Seeder
         'logistics-standard' => ['Logistics Standard', 'Shipments, fleet and deliveries.', null, ['logistics'], 2000],
         'petrol-standard' => ['Petrol Standard', 'The petrol station: pumps and tanks, shifts, fuel sales and deliveries.', null, ['petrol'], 3000],
         'petrol-plus' => ['Petrol Plus', 'The petrol station with Finance & Accounting for the books.', null, ['petrol', 'finance'], 4500],
-        'mel-standard' => ['M&E Standard', 'Programmes, results frameworks, indicators, verified results and donor reports.', 'monitoring_evaluation', ['projects'], 2500],
+        'mel-standard' => ['M&E Standard', 'Programmes, results frameworks, indicators, verified results, data collection and donor reports.', 'monitoring_evaluation', ['mel'], 2500],
+        // Both applications, each its own entitlement (ADR-0019 §8). Price awaiting approval.
+        'projects-mel-bundle' => ['Projects + M&E', 'Project Management and Monitoring & Evaluation together, linked in one workspace.', 'monitoring_evaluation', ['projects', 'mel'], null],
     ];
 
     public function run(): void
@@ -72,7 +77,7 @@ class LocalPlansSeeder extends Seeder
             $live = $product !== null
                 ? $product->status->isLive()
                 : Application::query()->whereIn('code', $applicationCodes)->whereNotIn('status', ['beta', 'available', 'deprecated'])->doesntExist();
-            $status = $live ? 'active' : 'draft';
+            $status = $live && $price !== null ? 'active' : 'draft';
 
             DB::transaction(function () use ($code, $name, $description, $product, $applicationCodes, $applications, $price, $status): void {
                 $plan = Plan::query()->where('code', $code)->first() ?? new Plan;
@@ -82,17 +87,17 @@ class LocalPlansSeeder extends Seeder
                     'description' => $description,
                     'erp_product_id' => $product?->id,
                     'billing_interval' => 'monthly',
-                    'price_minor' => $price,
+                    'price_minor' => $price ?? 0,
                     'currency' => self::CURRENCY,
                     'trial_days' => self::TRIAL_DAYS,
                     'is_bundle' => count($applicationCodes) > 1,
-                    'is_public' => true,
+                    'is_public' => $price !== null,
                     'status' => $status,
                 ])->save();
                 $plan->applications()->sync(array_map(fn (string $application) => $applications[$application], $applicationCodes));
             });
 
-            $rows[] = [$code, $status, sprintf('%s %.2f / month', self::CURRENCY, $price / 100)];
+            $rows[] = [$code, $status, $price === null ? 'price not approved' : sprintf('%s %.2f / month', self::CURRENCY, $price / 100)];
         }
 
         $this->command->table(['Plan', 'Status', 'Price'], $rows);
