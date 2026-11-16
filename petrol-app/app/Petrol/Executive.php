@@ -79,6 +79,7 @@ class Executive
                 'activeStations' => $stock['activeStations'],
             ],
             'series' => $this->series($branchIds, $from, $to),
+            'hours' => $this->hours($branchIds, $from, $to),
             'byBranch' => $this->byBranch($branchIds, $names, $sales['byBranch'], $stock['byBranch'], $cash['byBranch']),
             'stations' => $this->stations($branchIds, $names, $sales['byBranch'], $stock['tanks'], $cash['byBranch'], $from, $to),
             'byProduct' => $sales['byProduct'],
@@ -358,31 +359,107 @@ class Executive
         if ($start->diffInDays($end) > 62) {
             $start = $end->subDays(62);
         }
+        // A trend needs days to compare: a short range still shows the two weeks before it.
+        if ($start->diffInDays($end) < 13) {
+            $start = $end->subDays(13);
+        }
 
         $totals = [];
+        $grades = [];
         if ($branchIds !== []) {
             [$rangeStart, $rangeEnd] = BusinessDate::range($start->toDateString(), $end->toDateString());
             [$expression, $bindings] = $this->dayExpression();
             $rows = FuelSale::query()
-                ->whereIn('branch_id', $branchIds)
-                ->where('status', FuelSale::POSTED)
-                ->whereBetween('sold_at', [$rangeStart, $rangeEnd])
-                ->selectRaw($expression.' as sold_on, sum(coalesce(reporting_total_minor, total_minor)) as total_minor', $bindings)
-                ->groupBy('sold_on')
+                ->join('fuel_products', 'fuel_products.id', '=', 'fuel_sales.fuel_product_id')
+                ->whereIn('fuel_sales.branch_id', $branchIds)
+                ->where('fuel_sales.status', FuelSale::POSTED)
+                ->whereBetween('fuel_sales.sold_at', [$rangeStart, $rangeEnd])
+                ->selectRaw($expression.' as sold_on, fuel_products.name as product_name, sum(coalesce(fuel_sales.reporting_total_minor, fuel_sales.total_minor)) as total_minor, sum(fuel_sales.quantity_milli) as milli', $bindings)
+                ->groupBy('sold_on', 'fuel_products.name')
                 ->get();
 
             foreach ($rows as $row) {
-                $totals[(string) $row->getAttribute('sold_on')] = (int) $row->total_minor;
+                $date = (string) $row->getAttribute('sold_on');
+                $name = (string) $row->getAttribute('product_name');
+                $totals[$date] ??= ['totalMinor' => 0, 'milli' => 0];
+                $totals[$date]['totalMinor'] += (int) $row->getAttribute('total_minor');
+                $totals[$date]['milli'] += (int) $row->getAttribute('milli');
+                $grades[$date][$name] = (int) $row->getAttribute('total_minor');
             }
         }
+
+        $names = [];
+        foreach ($grades as $byName) {
+            foreach (array_keys($byName) as $name) {
+                $names[$name] = true;
+            }
+        }
+        ksort($names);
 
         $series = [];
         for ($day = $start; $day->lessThanOrEqualTo($end); $day = $day->addDay()) {
             $date = $day->toDateString();
-            $series[] = ['date' => $date, 'totalMinor' => $totals[$date] ?? 0];
+            $series[] = [
+                'date' => $date,
+                'totalMinor' => $totals[$date]['totalMinor'] ?? 0,
+                'litres' => Volume::toLitres($totals[$date]['milli'] ?? 0),
+                // A list, not a map, so a currency switch converts each amount.
+                'grades' => array_map(fn (string $name) => ['name' => $name, 'totalMinor' => $grades[$date][$name] ?? 0], array_keys($names)),
+            ];
         }
 
         return $series;
+    }
+
+    /**
+     * Sales by hour of the local day across the range: when the forecourt is busy.
+     *
+     * @param  list<string>  $branchIds
+     * @return list<array{hour: int, totalMinor: int, count: int}>
+     */
+    private function hours(array $branchIds, string $from, string $to): array
+    {
+        $byHour = [];
+        if ($branchIds !== []) {
+            [$rangeStart, $rangeEnd] = BusinessDate::range($from, $to);
+            [$expression, $bindings] = $this->hourExpression();
+            $rows = FuelSale::query()
+                ->whereIn('branch_id', $branchIds)
+                ->where('status', FuelSale::POSTED)
+                ->whereBetween('sold_at', [$rangeStart, $rangeEnd])
+                ->selectRaw($expression.' as sold_hour, sum(coalesce(reporting_total_minor, total_minor)) as total_minor, count(*) as sales_count', $bindings)
+                ->groupBy('sold_hour')
+                ->get();
+            foreach ($rows as $row) {
+                $byHour[(int) $row->getAttribute('sold_hour')] = [(int) $row->getAttribute('total_minor'), (int) $row->getAttribute('sales_count')];
+            }
+        }
+
+        $hours = [];
+        for ($hour = 0; $hour < 24; $hour++) {
+            $hours[] = ['hour' => $hour, 'totalMinor' => $byHour[$hour][0] ?? 0, 'count' => $byHour[$hour][1] ?? 0];
+        }
+
+        return $hours;
+    }
+
+    /**
+     * The local hour (0-23) of sold_at, with its bindings.
+     *
+     * @return array{literal-string, list<string>}
+     */
+    private function hourExpression(): array
+    {
+        $timezone = BusinessDate::timezone();
+        if (preg_match('#^[A-Za-z0-9_+\-/]{1,64}$#', $timezone) !== 1) {
+            $timezone = 'UTC';
+        }
+
+        if (DB::connection()->getDriverName() === 'pgsql') {
+            return ["to_char((sold_at at time zone 'UTC') at time zone ?, 'HH24')", [$timezone]];
+        }
+
+        return ["strftime('%H', sold_at)", []];
     }
 
     /**

@@ -1,4 +1,4 @@
-import { Form, Head, Link, router, usePoll } from '@inertiajs/react';
+import { Form, Head, Link, router, usePoll } from "@inertiajs/react";
 import {
     AlertTriangle,
     Building2,
@@ -13,20 +13,30 @@ import {
     TrendingUp,
     Users,
     Wallet,
-} from 'lucide-react';
-import { useState, type ReactNode } from 'react';
-import { PageHeader } from '@miles/ui/components/page-header';
-import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
-import { StatCard } from '@miles/ui/components/stat-card';
-import { StatusBadge, type Tone } from '@miles/ui/components/status-badge';
-import { Button } from '@miles/ui/components/ui/button';
-import { Input } from '@miles/ui/components/ui/input';
-import { cn } from '@miles/ui/lib/utils';
-import { formatMoney } from '@/lib/money';
-import { update } from '@/routes/branch';
-import { index, main } from '@/routes/overview';
+} from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { PageHeader } from "@miles/ui/components/page-header";
+import { Panel, PanelBody, PanelHeader } from "@miles/ui/components/panel";
+import { StatCard } from "@miles/ui/components/stat-card";
+import { StatusBadge, type Tone } from "@miles/ui/components/status-badge";
+import { Button } from "@miles/ui/components/ui/button";
+import { Input } from "@miles/ui/components/ui/input";
+import { cn } from "@miles/ui/lib/utils";
+import { formatMoney } from "@/lib/money";
+import { update } from "@/routes/branch";
+import { index, main } from "@/routes/overview";
+import {
+    BusyHours,
+    Empty,
+    gradeColors,
+    SalesTrend,
+    SegmentedBar,
+    Sparkline,
+    type Day,
+    type Hour,
+} from "./charts";
 
-type State = 'critical' | 'attention' | 'ok' | 'closed';
+type State = "critical" | "attention" | "ok" | "closed";
 
 type Station = {
     id: string;
@@ -48,7 +58,7 @@ type Station = {
     pumps: number;
     shortageMinor: number;
     issues: {
-        tone: 'critical' | 'warning' | 'info' | 'neutral';
+        tone: "critical" | "warning" | "info" | "neutral";
         text: string;
     }[];
 };
@@ -74,7 +84,8 @@ type Overview = {
         branchCount: number;
         activeStations: number;
     };
-    series: { date: string; totalMinor: number }[];
+    series: Day[];
+    hours?: Hour[];
     stations: Station[];
     byProduct: {
         name: string;
@@ -164,24 +175,32 @@ type Overview = {
 };
 
 const PAYMENT_LABELS: Record<string, string> = {
-    cash: 'Cash',
-    mobile_money: 'Mobile money',
-    bank_transfer: 'Bank transfer',
-    credit: 'Customer credit',
+    cash: "Cash",
+    mobile_money: "Mobile money",
+    bank_transfer: "Bank transfer",
+    credit: "Customer credit",
+};
+
+/** Payment methods keep one colour each; credit is the slot that reads as "owed". */
+const PAYMENT_COLORS: Record<string, string> = {
+    cash: "var(--viz-1)",
+    mobile_money: "var(--viz-3)",
+    bank_transfer: "var(--viz-axis)",
+    credit: "var(--viz-2)",
 };
 
 const STATES: Record<State, { label: string; tone: Tone; dot: string }> = {
-    critical: { label: 'Act now', tone: 'danger', dot: 'bg-red-500' },
-    attention: { label: 'Attention', tone: 'warning', dot: 'bg-amber-500' },
-    ok: { label: 'Running', tone: 'success', dot: 'bg-emerald-500' },
-    closed: { label: 'Closed', tone: 'neutral', dot: 'bg-slate-400' },
+    critical: { label: "Act now", tone: "danger", dot: "bg-red-500" },
+    attention: { label: "Attention", tone: "warning", dot: "bg-amber-500" },
+    ok: { label: "Running", tone: "success", dot: "bg-emerald-500" },
+    closed: { label: "Closed", tone: "neutral", dot: "bg-slate-400" },
 };
 
-const ISSUE_TONES: Record<Station['issues'][number]['tone'], string> = {
-    critical: 'text-red-700',
-    warning: 'text-amber-700',
-    info: 'text-muted-foreground',
-    neutral: 'text-muted-foreground',
+const ISSUE_TONES: Record<Station["issues"][number]["tone"], string> = {
+    critical: "text-red-700",
+    warning: "text-amber-700",
+    info: "text-muted-foreground",
+    neutral: "text-muted-foreground",
 };
 
 /** Live while the range ends today: the board reloads every minute. */
@@ -198,7 +217,7 @@ export default function Overview({
     currency,
     currencyNote,
     generatedAt,
-    reportingCurrencies = ['SSP', 'USD'],
+    reportingCurrencies = ["SSP", "USD"],
 }: {
     from: string;
     to: string;
@@ -214,19 +233,19 @@ export default function Overview({
 }) {
     const money = (minor: number) => formatMoney(minor, currency);
     const { kpis, stations } = overview;
-    const [shown, setShown] = useState<State | 'all'>('all');
+    const [shown, setShown] = useState<State | "all">("all");
     const today = presets[0]?.to;
     const live = to === today;
     usePoll(POLL_MS, {}, { autoStart: live, keepAlive: false });
 
-    const counts = (['critical', 'attention', 'ok', 'closed'] as State[]).map(
+    const counts = (["critical", "attention", "ok", "closed"] as State[]).map(
         (state) => ({
             state,
             count: stations.filter((station) => station.state === state).length,
         }),
     );
     const board =
-        shown === 'all'
+        shown === "all"
             ? stations
             : stations.filter((station) => station.state === shown);
     const activePreset = presets.find(
@@ -242,13 +261,19 @@ export default function Overview({
         (sum, station) => sum + station.staffedPumps,
         0,
     );
+    const trend = overview.series;
+    const colors = gradeColors([
+        ...trend.flatMap((day) => (day.grades ?? []).map((g) => g.name)),
+        ...overview.byProduct.map((product) => product.name),
+        ...overview.tanks.map((tank) => tank.product),
+    ]);
 
     return (
         <>
             <Head title="Operations dashboard" />
             <PageHeader
                 title="Operations dashboard"
-                description={`Operations across ${kpis.branchCount} station${kpis.branchCount === 1 ? '' : 's'} · ${range} · ${currency}`}
+                description={`Operations across ${kpis.branchCount} station${kpis.branchCount === 1 ? "" : "s"} · ${range} · ${currency}`}
             />
 
             {/* Range, station and currency */}
@@ -259,8 +284,8 @@ export default function Overview({
                             key={preset.label}
                             variant={
                                 activePreset?.label === preset.label
-                                    ? 'default'
-                                    : 'ghost'
+                                    ? "default"
+                                    : "ghost"
                             }
 
                             asChild
@@ -303,7 +328,7 @@ export default function Overview({
                     {branches.length > 1 && (
                         <select
                             name="branch"
-                            defaultValue={branchId ?? 'all'}
+                            defaultValue={branchId ?? "all"}
                             aria-label="Station"
                             className="h-8 border bg-background px-2 text-sm"
                         >
@@ -311,7 +336,7 @@ export default function Overview({
                             {branches.map((branch) => (
                                 <option key={branch.id} value={branch.id}>
                                     {branch.name}
-                                    {branch.main ? ' (main)' : ''}
+                                    {branch.main ? " (main)" : ""}
                                 </option>
                             ))}
                         </select>
@@ -343,156 +368,249 @@ export default function Overview({
                 </Form>
             </div>
 
-            {/* The day's figures across the stations */}
+            {/* The headline figures, with the trend behind the first two */}
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <StatCard
+                <Tile
                     label="Fuel sales"
                     value={money(kpis.salesMinor)}
-                    hint={<SalesChange kpis={kpis} />}
                     icon={Fuel}
-                    accent="blue"
-                />
-                <StatCard
+                    hint={<SalesChange kpis={kpis} />}
+                >
+                    <Sparkline
+                        values={trend.map((day) => day.totalMinor)}
+                        label="Daily sales over the last two weeks"
+                    />
+                </Tile>
+                <Tile
                     label="Litres sold"
                     value={`${kpis.litres} L`}
-                    hint={`${kpis.count} posted sale${kpis.count === 1 ? '' : 's'}`}
                     icon={Droplets}
-                    accent="violet"
-                />
-                <StatCard
+                    hint={`${kpis.count.toLocaleString()} posted sale${kpis.count === 1 ? "" : "s"}`}
+                >
+                    <Sparkline
+                        values={trend.map((day) => Number(day.litres))}
+                        label="Daily litres over the last two weeks"
+                    />
+                </Tile>
+                <Tile
                     label="Gross profit"
                     value={money(kpis.profitMinor)}
-                    hint="Sales minus fuel cost and expenses"
                     icon={Wallet}
-                    accent="emerald"
+                    hint={
+                        kpis.salesMinor > 0
+                            ? `${Math.round((kpis.profitMinor * 100) / kpis.salesMinor)}% of sales, after fuel cost and expenses`
+                            : "Sales minus fuel cost and expenses"
+                    }
                 />
-                <StatCard
+                <Tile
                     label="Fuel on hand"
                     value={`${kpis.stockLitres} L`}
-                    hint={`Worth ${money(kpis.stockValueMinor)} at cost`}
                     icon={Gauge}
-                    accent="emerald"
-                />
+                    hint={`Worth ${money(kpis.stockValueMinor)} at cost`}
+                >
+                    <TankStrip tanks={overview.tanks} colors={colors} />
+                </Tile>
             </div>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <StatCard
+
+            {/* The floor right now */}
+            <div className="mt-3 grid grid-cols-2 border bg-card sm:grid-cols-3 xl:grid-cols-6 [&>*]:border-b [&>*]:border-r">
+                <Pulse
+                    icon={ClipboardList}
                     label="Shifts open"
                     value={`${kpis.openShifts} of ${kpis.activeStations}`}
-                    hint={`${kpis.pendingApprovals} closing${kpis.pendingApprovals === 1 ? '' : 's'} to approve`}
-                    icon={ClipboardList}
-                    accent={
-                        kpis.openShifts < kpis.activeStations
-                            ? 'amber'
-                            : 'slate'
-                    }
+                    note={`${kpis.pendingApprovals} to approve`}
+                    warn={kpis.openShifts < kpis.activeStations}
                 />
-                <StatCard
-                    label="On duty"
-                    value={`${overview.accountability?.activeAttendants ?? 0} attendants`}
-                    hint={`${staffed} of ${pumps} pumps staffed`}
+                <Pulse
                     icon={Users}
-                    accent={staffed < pumps ? 'amber' : 'slate'}
+                    label="On duty"
+                    value={`${overview.accountability?.activeAttendants ?? 0}`}
+                    note={`${staffed} of ${pumps} pumps staffed`}
+                    warn={staffed < pumps}
                 />
-                <StatCard
+                <Pulse
+                    icon={Wallet}
                     label="Cash collected"
                     value={money(kpis.cashMinor)}
-                    hint={`Credit outstanding ${money(kpis.creditMinor)}`}
-                    icon={Wallet}
-                    accent="blue"
                 />
-                <StatCard
+                <Pulse
+                    icon={Building2}
+                    label="Credit outstanding"
+                    value={money(kpis.creditMinor)}
+                />
+                <Pulse
+                    icon={ShieldCheck}
                     label="Approved shortages"
                     value={money(kpis.shortageMinor)}
-                    hint={
+                    note={
                         kpis.overageMinor > 0
-                            ? `Over ${money(kpis.overageMinor)}. Open shifts are excluded.`
-                            : 'From approved closings only'
+                            ? `Over ${money(kpis.overageMinor)}`
+                            : "Approved closings only"
                     }
-                    icon={ShieldCheck}
-                    accent={kpis.shortageMinor > 0 ? 'red' : 'slate'}
+                    bad={kpis.shortageMinor > 0}
+                />
+                <Pulse
+                    icon={AlertTriangle}
+                    label="Needs attention"
+                    value={`${overview.alerts.length}`}
+                    note={
+                        overview.alerts.length === 0
+                            ? "All clear"
+                            : `${overview.alerts.filter((alert) => alert.severity === "critical").length} critical`
+                    }
+                    bad={overview.alerts.some(
+                        (alert) => alert.severity === "critical",
+                    )}
+                    warn={overview.alerts.length > 0}
                 />
             </div>
 
-            {/* Every station at a glance */}
-            <Panel className="mt-4">
-                <PanelHeader
-                    title="Stations"
-                    description={
-                        live
-                            ? `Live: refreshes every minute. Updated ${clock(generatedAt)}.`
-                            : `As of ${clock(generatedAt)}. Shift, staff and tank figures are now; sales are for ${range}.`
-                    }
-                    actions={
-                        <div
-                            className="flex flex-wrap gap-1"
-                            role="group"
-                            aria-label="Show stations"
-                        >
-                            <FilterButton
-                                on={shown === 'all'}
-                                onClick={() => setShown('all')}
-                            >
-                                All {stations.length}
-                            </FilterButton>
-                            {counts
-                                .filter(({ count }) => count > 0)
-                                .map(({ state, count }) => (
-                                    <FilterButton
-                                        key={state}
-                                        on={shown === state}
-                                        onClick={() => setShown(state)}
-                                    >
-                                        <span
-                                            className={cn(
-                                                'size-2 rounded-full',
-                                                STATES[state].dot,
-                                            )}
-                                            aria-hidden
-                                        />
-                                        {STATES[state].label} {count}
-                                    </FilterButton>
-                                ))}
-                        </div>
-                    }
-                />
-                <PanelBody>
-                    {board.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                            No stations are open to you.
-                        </p>
-                    ) : (
-                        <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
-                            {board.map((station) => (
-                                <StationCard
-                                    key={station.id}
-                                    station={station}
-                                    money={money}
-                                    share={
-                                        kpis.salesMinor > 0
-                                            ? Math.round(
-                                                  (station.salesMinor * 100) /
-                                                      kpis.salesMinor,
-                                              )
-                                            : 0
-                                    }
-                                />
-                            ))}
-                        </div>
-                    )}
-                </PanelBody>
-            </Panel>
-
-            <div className="mt-4 grid gap-4 lg:grid-cols-5">
-                <Panel className="lg:col-span-3">
+            {/* Sales: the trend, and what they were made of */}
+            <div className="mt-4 grid gap-4 xl:grid-cols-3">
+                <Panel className="xl:col-span-2">
                     <PanelHeader
                         title="Sales by day"
-                        description={`${from} to ${to}`}
+                        description={
+                            trend.length > 0
+                                ? `By fuel grade · ${trend[0].date} to ${trend[trend.length - 1].date}`
+                                : undefined
+                        }
                     />
                     <PanelBody>
-                        <SalesChart series={overview.series} money={money} />
+                        <SalesTrend
+                            series={trend}
+                            colors={colors}
+                            money={money}
+                            from={from}
+                        />
                     </PanelBody>
                 </Panel>
-                <Panel className="lg:col-span-2">
+                <div className="grid gap-4">
+                    <Panel>
+                        <PanelHeader title="Fuel sold" description={range} />
+                        <PanelBody>
+                            {overview.byProduct.length === 0 ? (
+                                <Empty>No fuel sold in this range.</Empty>
+                            ) : (
+                                <ul className="grid gap-3 text-sm">
+                                    {overview.byProduct.map((product) => (
+                                        <li key={product.name}>
+                                            <div className="mb-1 flex items-baseline justify-between gap-3">
+                                                <span className="flex items-center gap-2 font-medium">
+                                                    <span
+                                                        className="size-2.5 rounded-sm"
+                                                        style={{
+                                                            background:
+                                                                colors[
+                                                                    product.name
+                                                                ],
+                                                        }}
+                                                        aria-hidden
+                                                    />
+                                                    {product.name}
+                                                </span>
+                                                <span className="font-medium tabular-nums">
+                                                    {money(product.totalMinor)}
+                                                </span>
+                                            </div>
+                                            <Meter
+                                                value={product.share}
+                                                color={colors[product.name]}
+                                            />
+                                            <p className="mt-1 text-xs text-muted-foreground tabular-nums">
+                                                {product.litres} L ·{" "}
+                                                {product.share}% of sales
+                                            </p>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </PanelBody>
+                    </Panel>
+                    <Panel>
+                        <PanelHeader
+                            title="How sales were settled"
+                            description="Credit is money still owed, not cash in hand."
+                        />
+                        <PanelBody>
+                            <SegmentedBar
+                                money={money}
+                                parts={overview.payments.map((payment) => ({
+                                    name:
+                                        PAYMENT_LABELS[payment.kind] ??
+                                        payment.kind,
+                                    totalMinor: payment.totalMinor,
+                                    color:
+                                        PAYMENT_COLORS[payment.kind] ??
+                                        "var(--viz-axis)",
+                                }))}
+                            />
+                        </PanelBody>
+                    </Panel>
+                </div>
+            </div>
+
+            {/* When the forecourt is busy, and the tanks it draws from */}
+            <div className="mt-4 grid gap-4 xl:grid-cols-3">
+                <Panel>
+                    <PanelHeader
+                        title="Busiest hours"
+                        description={`Sales by hour of day · ${range}`}
+                    />
+                    <PanelBody>
+                        <BusyHours hours={overview.hours ?? []} money={money} />
+                    </PanelBody>
+                </Panel>
+                <Panel className="xl:col-span-2">
+                    <PanelHeader
+                        title="Tanks"
+                        description={
+                            kpis.varianceMilli !== 0 ||
+                            kpis.unverifiedVarianceMilli !== 0
+                                ? `Dip difference: approved ${(kpis.varianceMilli / 1000).toFixed(3)} L · awaiting approval ${(kpis.unverifiedVarianceMilli / 1000).toFixed(3)} L`
+                                : "Levels now"
+                        }
+                    />
+                    <PanelBody>
+                        {overview.tanks.length === 0 ? (
+                            <Empty>No active tanks in this view.</Empty>
+                        ) : (
+                            <div className="grid gap-4">
+                                {groupTanks(overview.tanks, branches).map(
+                                    (group) => (
+                                        <div key={group.branchId}>
+                                            {branches.length > 1 && (
+                                                <p className="mb-2 text-xs font-semibold text-muted-foreground">
+                                                    {group.name}
+                                                </p>
+                                            )}
+                                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                                {group.tanks.map((tank) => (
+                                                    <TankGauge
+                                                        key={`${tank.branchId}-${tank.code}`}
+                                                        tank={tank}
+                                                        color={
+                                                            colors[
+                                                                tank.product
+                                                            ] ??
+                                                            "var(--viz-axis)"
+                                                        }
+                                                        money={money}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ),
+                                )}
+                            </div>
+                        )}
+                    </PanelBody>
+                </Panel>
+            </div>
+
+            {/* What needs someone, and who is on the pumps */}
+            <div className="mt-4 grid gap-4 xl:grid-cols-3">
+                <Panel className="xl:col-span-2">
                     <PanelHeader
                         title="Needs attention"
                         description="Across the company"
@@ -515,19 +633,19 @@ export default function Overview({
                                     >
                                         <AlertTriangle
                                             className={cn(
-                                                'mt-0.5 size-4 shrink-0',
-                                                alert.severity === 'critical'
-                                                    ? 'text-red-600'
+                                                "mt-0.5 size-4 shrink-0",
+                                                alert.severity === "critical"
+                                                    ? "text-red-600"
                                                     : alert.severity ===
-                                                        'warning'
-                                                      ? 'text-amber-600'
-                                                      : 'text-muted-foreground',
+                                                        "warning"
+                                                      ? "text-amber-600"
+                                                      : "text-muted-foreground",
                                             )}
                                             aria-hidden
                                         />
                                         <span>
                                             <span className="font-medium">
-                                                {alert.branch}.{' '}
+                                                {alert.branch}.{" "}
                                             </span>
                                             {alert.text}
                                         </span>
@@ -536,7 +654,7 @@ export default function Overview({
                             </ul>
                         )}
                         {overview.fuel && overview.accountability && (
-                            <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-1 border-t pt-3 text-xs">
+                            <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-1 border-t pt-3 text-xs sm:grid-cols-4">
                                 <Fact
                                     label="Exceptions open"
                                     value={
@@ -576,225 +694,117 @@ export default function Overview({
                         )}
                     </PanelBody>
                 </Panel>
-            </div>
-
-            <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                <Panel>
-                    <PanelHeader title="Fuel sold" />
-                    <PanelBody>
-                        {overview.byProduct.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">
-                                No fuel sold in this range.
-                            </p>
-                        ) : (
-                            <ul className="grid gap-3 text-sm">
-                                {overview.byProduct.map((product) => (
-                                    <li key={product.name}>
-                                        <div className="mb-1 flex justify-between gap-3">
-                                            <span className="font-medium">
-                                                {product.name}
-                                            </span>
-                                            <span className="tabular-nums">
-                                                {money(product.totalMinor)}
-                                            </span>
-                                        </div>
-                                        <Bar value={product.share} />
-                                        <p className="mt-1 text-xs text-muted-foreground">
-                                            {product.litres} L · {product.share}
-                                            % of sales
-                                        </p>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </PanelBody>
-                </Panel>
                 <Panel>
                     <PanelHeader
-                        title="How sales were settled"
-                        description="Customer credit is money still owed, not cash in the drawer."
+                        title="On duty"
+                        description="Attendants on a pump of an open shift"
                     />
                     <PanelBody>
-                        {overview.payments.length === 0 ? (
+                        {overview.onDuty.length === 0 ? (
                             <p className="text-sm text-muted-foreground">
-                                No payments in this range.
+                                No attendants are assigned on an open shift.
                             </p>
                         ) : (
-                            <ul className="grid gap-3 text-sm">
-                                {overview.payments.map((payment) => {
-                                    const total = overview.payments.reduce(
-                                        (sum, row) => sum + row.totalMinor,
-                                        0,
-                                    );
-                                    const share =
-                                        total > 0
-                                            ? Math.round(
-                                                  (payment.totalMinor * 100) /
-                                                      total,
-                                              )
-                                            : 0;
-
-                                    return (
-                                        <li key={payment.kind}>
-                                            <div className="mb-1 flex justify-between gap-3">
-                                                <span className="font-medium">
-                                                    {PAYMENT_LABELS[
-                                                        payment.kind
-                                                    ] ?? payment.kind}
+                            <ul className="grid gap-2 text-sm">
+                                {[...overview.onDuty]
+                                    .sort(
+                                        (a, b) =>
+                                            a.branch.localeCompare(b.branch) ||
+                                            a.nozzle.localeCompare(b.nozzle),
+                                    )
+                                    .map((row) => (
+                                        <li
+                                            key={`${row.shift}-${row.nozzle}-${row.attendant}`}
+                                            className="flex items-center justify-between gap-3"
+                                        >
+                                            <span className="flex items-center gap-2">
+                                                <span className="grid size-7 place-items-center rounded-full bg-muted text-xs font-semibold">
+                                                    {initials(row.attendant)}
                                                 </span>
-                                                <span className="tabular-nums">
-                                                    {money(payment.totalMinor)}
-                                                </span>
-                                            </div>
-                                            <Bar
-                                                value={share}
-                                                className={
-                                                    payment.kind === 'credit'
-                                                        ? 'bg-amber-500'
-                                                        : undefined
-                                                }
-                                            />
+                                                {row.attendant}
+                                            </span>
+                                            <span className="text-right text-xs text-muted-foreground">
+                                                {row.nozzle}
+                                                {branches.length > 1
+                                                    ? ` · ${row.branch}`
+                                                    : ""}
+                                            </span>
                                         </li>
-                                    );
-                                })}
+                                    ))}
                             </ul>
                         )}
                     </PanelBody>
                 </Panel>
             </div>
 
+            {/* Every station at a glance */}
             <Panel className="mt-4">
                 <PanelHeader
-                    title="Tanks"
+                    title="Stations"
                     description={
-                        kpis.varianceMilli !== 0 ||
-                        kpis.unverifiedVarianceMilli !== 0
-                            ? `Approved dip difference ${(kpis.varianceMilli / 1000).toFixed(3)} L · awaiting approval ${(kpis.unverifiedVarianceMilli / 1000).toFixed(3)} L`
-                            : undefined
+                        live
+                            ? `Live: refreshes every minute. Updated ${clock(generatedAt)}.`
+                            : `As of ${clock(generatedAt)}. Shift, staff and tank figures are now; sales are for ${range}.`
+                    }
+                    actions={
+                        <div
+                            className="flex flex-wrap gap-1"
+                            role="group"
+                            aria-label="Show stations"
+                        >
+                            <FilterButton
+                                on={shown === "all"}
+                                onClick={() => setShown("all")}
+                            >
+                                All {stations.length}
+                            </FilterButton>
+                            {counts
+                                .filter(({ count }) => count > 0)
+                                .map(({ state, count }) => (
+                                    <FilterButton
+                                        key={state}
+                                        on={shown === state}
+                                        onClick={() => setShown(state)}
+                                    >
+                                        <span
+                                            className={cn(
+                                                "size-2 rounded-full",
+                                                STATES[state].dot,
+                                            )}
+                                            aria-hidden
+                                        />
+                                        {STATES[state].label} {count}
+                                    </FilterButton>
+                                ))}
+                        </div>
                     }
                 />
                 <PanelBody>
-                    {overview.tanks.length === 0 ? (
+                    {board.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
-                            No active tanks in this view.
+                            No stations are open to you.
                         </p>
                     ) : (
-                        <div className="grid gap-4">
-                            {groupTanks(overview.tanks, branches).map(
-                                (group) => (
-                                    <div key={group.branchId}>
-                                        <p className="mb-2 text-xs font-semibold text-muted-foreground uppercase">
-                                            {group.name}
-                                        </p>
-                                        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                                            {group.tanks.map((tank) => (
-                                                <div
-                                                    key={`${tank.branchId}-${tank.code}`}
-                                                    className={cn(
-                                                        'border p-3',
-                                                        tank.low &&
-                                                            'border-amber-300 bg-amber-50/50',
-                                                    )}
-                                                >
-                                                    <div className="flex items-baseline justify-between gap-2">
-                                                        <p className="font-medium">
-                                                            {tank.code} ·{' '}
-                                                            {tank.product}
-                                                        </p>
-                                                        <p className="text-sm font-semibold tabular-nums">
-                                                            {tank.fill}%
-                                                        </p>
-                                                    </div>
-                                                    <Bar
-                                                        value={tank.fill}
-                                                        className={
-                                                            tank.low
-                                                                ? 'bg-amber-500'
-                                                                : 'bg-emerald-600'
-                                                        }
-                                                    />
-                                                    <p className="mt-1 text-xs text-muted-foreground">
-                                                        {tank.quantity} L of{' '}
-                                                        {tank.capacity} L ·{' '}
-                                                        {money(tank.valueMinor)}
-                                                    </p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ),
-                            )}
+                        <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+                            {board.map((station) => (
+                                <StationCard
+                                    key={station.id}
+                                    station={station}
+                                    money={money}
+                                    share={
+                                        kpis.salesMinor > 0
+                                            ? Math.round(
+                                                  (station.salesMinor * 100) /
+                                                      kpis.salesMinor,
+                                              )
+                                            : 0
+                                    }
+                                />
+                            ))}
                         </div>
                     )}
                 </PanelBody>
             </Panel>
-
-            <Panel className="mt-4">
-                <PanelHeader
-                    title="On duty"
-                    description="Attendants on a pump of an open shift"
-                />
-                <PanelBody>
-                    {overview.onDuty.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                            No attendants are assigned on an open shift.
-                        </p>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="text-xs text-muted-foreground">
-                                    <tr>
-                                        <th className="py-2 font-medium">
-                                            Station
-                                        </th>
-                                        <th className="py-2 font-medium">
-                                            Shift
-                                        </th>
-                                        <th className="py-2 font-medium">
-                                            Pump
-                                        </th>
-                                        <th className="py-2 font-medium">
-                                            Attendant
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {[...overview.onDuty]
-                                        .sort(
-                                            (a, b) =>
-                                                a.branch.localeCompare(
-                                                    b.branch,
-                                                ) ||
-                                                a.nozzle.localeCompare(
-                                                    b.nozzle,
-                                                ),
-                                        )
-                                        .map((row) => (
-                                            <tr
-                                                key={`${row.shift}-${row.nozzle}-${row.attendant}`}
-                                                className="border-t"
-                                            >
-                                                <td className="py-2">
-                                                    {row.branch}
-                                                </td>
-                                                <td className="py-2">
-                                                    {row.shift}
-                                                </td>
-                                                <td className="py-2">
-                                                    {row.nozzle}
-                                                </td>
-                                                <td className="py-2">
-                                                    {row.attendant}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </PanelBody>
-            </Panel>
-
             <h2 className="mt-6 mb-2 text-sm font-semibold">Back office</h2>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <StatCard
@@ -821,7 +831,7 @@ export default function Overview({
                 <StatCard
                     label="In transit"
                     value={`${overview.operations.fuelInTransit} L`}
-                    hint={`${overview.operations.storeInTransit} store transfer${overview.operations.storeInTransit === 1 ? '' : 's'} on the road`}
+                    hint={`${overview.operations.storeInTransit} store transfer${overview.operations.storeInTransit === 1 ? "" : "s"} on the road`}
                     icon={Building2}
                     accent="slate"
                 />
@@ -841,7 +851,7 @@ export default function Overview({
                 <StatCard
                     label="With cashiers"
                     value={money(overview.operations.cashierHeldMinor)}
-                    hint={`${overview.operations.pendingTransfers} handover${overview.operations.pendingTransfers === 1 ? '' : 's'} waiting`}
+                    hint={`${overview.operations.pendingTransfers} handover${overview.operations.pendingTransfers === 1 ? "" : "s"} waiting`}
                     icon={Wallet}
                     accent="violet"
                 />
@@ -894,7 +904,7 @@ export default function Overview({
                             )}
                             {overview.operations.custodyEquivalent && (
                                 <CustodyRow
-                                    label={`Total in ${overview.operations.custodyEquivalent.currency}${overview.operations.custodyEquivalent.complete ? '' : ' (partial)'}`}
+                                    label={`Total in ${overview.operations.custodyEquivalent.currency}${overview.operations.custodyEquivalent.complete ? "" : " (partial)"}`}
                                     currency={
                                         overview.operations.custodyEquivalent
                                             .currency
@@ -963,9 +973,9 @@ function StationCard({
     return (
         <article
             className={cn(
-                'flex flex-col border bg-card',
-                station.state === 'critical' && 'border-red-300',
-                station.state === 'attention' && 'border-amber-300',
+                "flex flex-col border bg-card",
+                station.state === "critical" && "border-red-300",
+                station.state === "attention" && "border-amber-300",
             )}
             aria-label={station.name}
         >
@@ -974,7 +984,7 @@ function StationCard({
                     <p className="flex items-center gap-2 font-semibold">
                         <span
                             className={cn(
-                                'size-2.5 shrink-0 rounded-full',
+                                "size-2.5 shrink-0 rounded-full",
                                 state.dot,
                             )}
                             aria-hidden
@@ -987,8 +997,8 @@ function StationCard({
                     <p className="text-xs text-muted-foreground">
                         {station.shift
                             ? `Shift ${station.shift.number} open since ${clock(station.shift.openedAt)}`
-                            : 'No shift open'}
-                        {station.code ? ` · ${station.code}` : ''}
+                            : "No shift open"}
+                        {station.code ? ` · ${station.code}` : ""}
                     </p>
                 </div>
                 <StatusBadge tone={state.tone}>{state.label}</StatusBadge>
@@ -1007,7 +1017,7 @@ function StationCard({
                             Tanks {station.tanks}
                             {station.lowTanks > 0
                                 ? ` · ${station.lowTanks} low`
-                                : ''}
+                                : ""}
                         </span>
                         <span className="tabular-nums">
                             {station.stockLitres} L · {station.fill}%
@@ -1017,22 +1027,22 @@ function StationCard({
                         value={station.fill}
                         className={
                             station.lowTanks > 0
-                                ? 'bg-amber-500'
-                                : 'bg-emerald-600'
+                                ? "bg-amber-500"
+                                : "bg-emerald-600"
                         }
                     />
                 </div>
                 <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
                     <span>
                         {station.attendants} attendant
-                        {station.attendants === 1 ? '' : 's'} ·{' '}
+                        {station.attendants === 1 ? "" : "s"} ·{" "}
                         {station.staffedPumps} of {station.pumps} pumps staffed
                     </span>
                     <span>
-                        {station.count} sale{station.count === 1 ? '' : 's'}
+                        {station.count} sale{station.count === 1 ? "" : "s"}
                         {station.lastSaleAt
                             ? ` · last ${clock(station.lastSaleAt)}`
-                            : ''}
+                            : ""}
                     </span>
                 </div>
                 {shown.length === 0 ? (
@@ -1046,7 +1056,7 @@ function StationCard({
                             <li
                                 key={issue.text}
                                 className={cn(
-                                    'flex gap-1.5',
+                                    "flex gap-1.5",
                                     ISSUE_TONES[issue.tone],
                                 )}
                             >
@@ -1074,7 +1084,7 @@ function StationCard({
                             Short {money(station.shortageMinor)}
                         </span>
                     ) : (
-                        'No approved shortage'
+                        "No approved shortage"
                     )}
                 </span>
                 <Form {...update.form()}>
@@ -1088,65 +1098,13 @@ function StationCard({
     );
 }
 
-function SalesChart({
-    series,
-    money,
-}: {
-    series: Overview['series'];
-    money: (minor: number) => string;
-}) {
-    if (series.every((day) => day.totalMinor === 0)) {
-        return (
-            <p className="text-sm text-muted-foreground">
-                No posted sales in this range.
-            </p>
-        );
-    }
-    const peak = Math.max(1, ...series.map((day) => day.totalMinor));
-    const best = series.reduce((top, day) =>
-        day.totalMinor > top.totalMinor ? day : top,
-    );
-
-    return (
-        <>
-            <div
-                className="flex h-44 items-end gap-1 border-b"
-                role="img"
-                aria-label={`Daily sales, best day ${best.date} at ${money(best.totalMinor)}`}
-            >
-                {series.map((day) => (
-                    <div
-                        key={day.date}
-                        className="group relative flex h-full min-w-0 flex-1 flex-col justify-end"
-                    >
-                        <div
-                            className="bg-primary/80 transition-colors group-hover:bg-primary"
-                            style={{
-                                height: `${Math.max(2, Math.round((day.totalMinor / peak) * 100))}%`,
-                            }}
-                            title={`${day.date}: ${money(day.totalMinor)}`}
-                        />
-                    </div>
-                ))}
-            </div>
-            <div className="mt-1 flex justify-between text-xs text-muted-foreground">
-                <span>{series[0]?.date}</span>
-                <span>
-                    Best {best.date} · {money(best.totalMinor)}
-                </span>
-                <span>{series[series.length - 1]?.date}</span>
-            </div>
-        </>
-    );
-}
-
-function SalesChange({ kpis }: { kpis: Overview['kpis'] }) {
+function SalesChange({ kpis }: { kpis: Overview["kpis"] }) {
     if (kpis.salesChange === null) {
         return (
             <>
                 {kpis.previousSalesMinor === 0
-                    ? 'No sales in the previous period'
-                    : 'Compared with the previous period'}
+                    ? "No sales in the previous period"
+                    : "Compared with the previous period"}
             </>
         );
     }
@@ -1156,12 +1114,12 @@ function SalesChange({ kpis }: { kpis: Overview['kpis'] }) {
     return (
         <span
             className={cn(
-                'inline-flex items-center gap-1',
-                up ? 'text-emerald-700' : 'text-red-700',
+                "inline-flex items-center gap-1",
+                up ? "text-emerald-700" : "text-red-700",
             )}
         >
             <Icon className="size-3.5" aria-hidden />
-            {up ? 'Up' : 'Down'} {Math.abs(kpis.salesChange)}% on the previous
+            {up ? "Up" : "Down"} {Math.abs(kpis.salesChange)}% on the previous
             period
         </span>
     );
@@ -1182,10 +1140,10 @@ function FilterButton({
             onClick={onClick}
             aria-pressed={on}
             className={cn(
-                'inline-flex h-7 items-center gap-1.5 border px-2 text-xs font-medium',
+                "inline-flex h-7 items-center gap-1.5 border px-2 text-xs font-medium",
                 on
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'bg-background hover:bg-muted',
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "bg-background hover:bg-muted",
             )}
         >
             {children}
@@ -1210,8 +1168,8 @@ function Fact({ label, value }: { label: string; value: number }) {
             <dt className="text-muted-foreground">{label}</dt>
             <dd
                 className={cn(
-                    'text-right font-medium tabular-nums',
-                    value > 0 && 'text-amber-700',
+                    "text-right font-medium tabular-nums",
+                    value > 0 && "text-amber-700",
                 )}
             >
                 {value}
@@ -1224,7 +1182,7 @@ function Bar({ value, className }: { value: number; className?: string }) {
     return (
         <div className="h-2 overflow-hidden bg-muted">
             <div
-                className={cn('h-full bg-primary', className)}
+                className={cn("h-full bg-primary", className)}
                 style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
             />
         </div>
@@ -1253,14 +1211,14 @@ function CustodyRow({
     const cell = (minor: number) => formatMoney(minor, currency);
 
     return (
-        <tr className={cn('border-t', strong && 'font-semibold')}>
+        <tr className={cn("border-t", strong && "font-semibold")}>
             <td className="py-2 text-left">{label}</td>
             <td className="py-2">{cell(row.attendant)}</td>
             <td className="py-2">{cell(row.cashier)}</td>
             <td className="py-2">{cell(row.safe)}</td>
             <td className="py-2">{cell(row.inTransit)}</td>
             <td className="py-2">{cell(row.confirmed)}</td>
-            <td className={cn('py-2', row.shortage > 0 && 'text-red-700')}>
+            <td className={cn("py-2", row.shortage > 0 && "text-red-700")}>
                 {cell(row.shortage)}
             </td>
             <td className="py-2">{cell(row.overage)}</td>
@@ -1270,19 +1228,19 @@ function CustodyRow({
 
 /** The tanks under their station's name, stations in name order. */
 function groupTanks(
-    tanks: Overview['tanks'],
+    tanks: Overview["tanks"],
     branches: { id: string; name: string }[],
 ) {
     const groups = new Map<
         string,
-        { branchId: string; name: string; tanks: Overview['tanks'] }
+        { branchId: string; name: string; tanks: Overview["tanks"] }
     >();
     for (const tank of tanks) {
         const group = groups.get(tank.branchId) ?? {
             branchId: tank.branchId,
             name:
                 branches.find((branch) => branch.id === tank.branchId)?.name ??
-                'Station',
+                "Station",
             tanks: [],
         };
         group.tanks.push(tank);
@@ -1296,11 +1254,213 @@ function groupTanks(
 function clock(iso: string): string {
     const at = new Date(iso);
     const time = at.toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
+        hour: "2-digit",
+        minute: "2-digit",
     });
 
     return at.toDateString() === new Date().toDateString()
         ? time
-        : `${at.toLocaleDateString([], { day: 'numeric', month: 'short' })} ${time}`;
+        : `${at.toLocaleDateString([], { day: "numeric", month: "short" })} ${time}`;
+}
+
+/** A headline figure; children add its trend or breakdown underneath. */
+function Tile({
+    label,
+    value,
+    icon: Icon,
+    hint,
+    children,
+}: {
+    label: string;
+    value: string;
+    icon: typeof Fuel;
+    hint?: ReactNode;
+    children?: ReactNode;
+}) {
+    return (
+        <div className="flex flex-col border bg-card p-4">
+            <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-medium text-muted-foreground">
+                    {label}
+                </p>
+                <Icon className="size-4 text-muted-foreground" aria-hidden />
+            </div>
+            <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">
+                {value}
+            </p>
+            {hint && (
+                <div className="mt-0.5 text-xs text-muted-foreground">
+                    {hint}
+                </div>
+            )}
+            <div className="mt-auto">{children}</div>
+        </div>
+    );
+}
+
+/** One cell of the live strip; amber or red with an icon, never colour alone. */
+function Pulse({
+    icon: Icon,
+    label,
+    value,
+    note,
+    warn,
+    bad,
+}: {
+    icon: typeof Fuel;
+    label: string;
+    value: string;
+    note?: string;
+    warn?: boolean;
+    bad?: boolean;
+}) {
+    return (
+        <div className="min-w-0 px-3 py-2.5">
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Icon
+                    className={cn(
+                        "size-3.5 shrink-0",
+                        bad
+                            ? "text-red-600"
+                            : warn
+                              ? "text-amber-600"
+                              : "text-muted-foreground",
+                    )}
+                    aria-hidden
+                />
+                <span className="truncate">{label}</span>
+            </p>
+            <p className="mt-0.5 truncate text-base font-semibold tabular-nums">
+                {value}
+            </p>
+            {note && (
+                <p
+                    className={cn(
+                        "truncate text-xs",
+                        bad
+                            ? "text-red-700"
+                            : warn
+                              ? "text-amber-700"
+                              : "text-muted-foreground",
+                    )}
+                >
+                    {note}
+                </p>
+            )}
+        </div>
+    );
+}
+
+/** Fill level per tank under "Fuel on hand": one thin meter each. */
+function TankStrip({
+    tanks,
+    colors,
+}: {
+    tanks: Overview["tanks"];
+    colors: Record<string, string>;
+}) {
+    if (tanks.length === 0) {
+        return null;
+    }
+
+    return (
+        <ul className="mt-3 grid gap-1.5">
+            {tanks.slice(0, 4).map((tank) => (
+                <li
+                    key={`${tank.branchId}-${tank.code}`}
+                    className="grid grid-cols-[3.5rem_1fr_2.5rem] items-center gap-2 text-xs"
+                >
+                    <span className="truncate text-muted-foreground">
+                        {tank.code}
+                    </span>
+                    <Meter
+                        value={tank.fill}
+                        color={colors[tank.product] ?? "var(--viz-axis)"}
+                    />
+                    <span className="text-right tabular-nums">
+                        {tank.fill}%
+                    </span>
+                </li>
+            ))}
+        </ul>
+    );
+}
+
+/** A tank drawn as a vertical gauge, with its figures beside it. */
+function TankGauge({
+    tank,
+    color,
+    money,
+}: {
+    tank: Overview["tanks"][number];
+    color: string;
+    money: (minor: number) => string;
+}) {
+    const fill = Math.min(100, Math.max(0, tank.fill));
+
+    return (
+        <div className="flex gap-3 border p-3">
+            <div
+                className="relative h-24 w-10 shrink-0 overflow-hidden rounded-md border bg-muted"
+                role="img"
+                aria-label={`${tank.code} ${fill}% full`}
+            >
+                <div
+                    className="absolute inset-x-0 bottom-0"
+                    style={{ height: `${fill}%`, background: color }}
+                />
+                {[25, 50, 75].map((mark) => (
+                    <div
+                        key={mark}
+                        className="absolute inset-x-0 border-t border-background/70"
+                        style={{ bottom: `${mark}%` }}
+                        aria-hidden
+                    />
+                ))}
+            </div>
+            <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{tank.product}</p>
+                <p className="text-xs text-muted-foreground">{tank.code}</p>
+                <p className="mt-2 text-xl font-semibold tabular-nums">
+                    {fill}%
+                </p>
+                <p className="text-xs text-muted-foreground tabular-nums">
+                    {tank.quantity} of {tank.capacity} L
+                </p>
+                <p className="text-xs text-muted-foreground tabular-nums">
+                    {money(tank.valueMinor)} at cost
+                </p>
+                {tank.low && (
+                    <p className="mt-1 flex items-center gap-1 text-xs font-medium text-amber-700">
+                        <AlertTriangle className="size-3.5" aria-hidden />
+                        Low, reorder
+                    </p>
+                )}
+            </div>
+        </div>
+    );
+}
+
+/** A thin meter: the fill in the series colour on a muted track. */
+function Meter({ value, color }: { value: number; color: string }) {
+    return (
+        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+            <div
+                className="h-full rounded-full"
+                style={{
+                    width: `${Math.min(100, Math.max(0, value))}%`,
+                    background: color,
+                }}
+            />
+        </div>
+    );
+}
+
+function initials(name: string): string {
+    return name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase())
+        .join("");
 }

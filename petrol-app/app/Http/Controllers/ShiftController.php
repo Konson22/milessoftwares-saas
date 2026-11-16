@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\WorksInBranch;
 use App\Models\AttendantHandover;
 use App\Models\AttendantStation;
 use App\Models\FuelReceipt;
+use App\Models\FuelSale;
 use App\Models\MeterReading;
 use App\Models\Nozzle;
 use App\Models\Shift;
@@ -13,6 +14,8 @@ use App\Models\ShiftAssignment;
 use App\Models\ShiftException;
 use App\Models\ShiftSchedule;
 use App\Models\Tank;
+use App\Models\User;
+use App\Petrol\Cashbook;
 use App\Petrol\Currencies;
 use App\Petrol\Permissions;
 use App\Petrol\Reconciliation;
@@ -21,6 +24,7 @@ use App\Support\Money;
 use App\Support\Volume;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -29,17 +33,99 @@ class ShiftController extends Controller
 {
     use WorksInBranch;
 
-    public function index(): Response
+    /**
+     * The station's shifts: the open one live at the top, what waits for
+     * review, how closings have counted lately, and the full list.
+     */
+    public function index(Request $request, Cashbook $cash): Response
     {
         $branchId = $this->branchId();
+        $status = $request->string('status')->toString();
+        $statuses = match ($status) {
+            'open' => [Shift::OPEN],
+            'waiting' => [Shift::CLOSING_SUBMITTED, Shift::UNDER_REVIEW],
+            'approved' => [Shift::APPROVED],
+            'rejected' => [Shift::REJECTED],
+            default => null,
+        };
+
+        $schedules = ShiftSchedule::query()->where('branch_id', $branchId)->pluck('name', 'id');
+        $people = fn (array $ids) => User::query()->whereIn('id', array_values(array_unique(array_filter($ids))))->pluck('name', 'id');
+        $withSales = fn ($query) => $query
+            ->withSum(['sales as sales_minor' => fn ($sales) => $sales->where('status', FuelSale::POSTED)], DB::raw('coalesce(reporting_total_minor, total_minor)'))
+            ->withSum(['sales as sales_milli' => fn ($sales) => $sales->where('status', FuelSale::POSTED)], 'quantity_milli')
+            ->withCount(['sales as sales_count' => fn ($sales) => $sales->where('status', FuelSale::POSTED)]);
+
+        $page = $withSales(Shift::query()->where('branch_id', $branchId))
+            ->when($statuses !== null, fn ($query) => $query->whereIn('status', $statuses))
+            ->latest('opened_at')
+            ->paginate(25)
+            ->withQueryString();
+        $names = $people($page->getCollection()->flatMap(fn (Shift $shift) => [$shift->opened_by, $shift->submitted_by, $shift->approved_by])->all());
+        $page->through(fn (Shift $shift) => [
+            'id' => $shift->id,
+            'number' => $shift->number,
+            'status' => $shift->status,
+            'businessDate' => $shift->business_date->toDateString(),
+            'schedule' => $shift->schedule_id === null ? null : $schedules->get($shift->schedule_id),
+            'openedAt' => $shift->opened_at->toIso8601String(),
+            'closedAt' => $shift->submitted_at?->toIso8601String(),
+            'openedBy' => $names->get($shift->opened_by),
+            'submittedBy' => $shift->submitted_by === null ? null : $names->get($shift->submitted_by),
+            'approvedBy' => $shift->approved_by === null ? null : $names->get($shift->approved_by),
+            'salesMinor' => (int) $shift->getAttribute('sales_minor'),
+            'litres' => Volume::toLitres((int) $shift->getAttribute('sales_milli')),
+            'salesCount' => (int) $shift->getAttribute('sales_count'),
+            'expectedMinor' => $shift->expected_cash_minor,
+            'countedMinor' => $shift->counted_drawer_minor,
+            'differenceMinor' => $shift->cash_difference_minor,
+        ]);
+
+        $open = $withSales(Shift::query()->where('branch_id', $branchId)->where('status', Shift::OPEN))->first();
+        $current = null;
+        if ($open !== null) {
+            $assignments = ShiftAssignment::query()->with(['attendant', 'nozzle'])
+                ->where('shift_id', $open->id)->whereNull('ended_at')->where('status', ShiftAssignment::ACTIVE)
+                ->get();
+            $current = [
+                'id' => $open->id,
+                'number' => $open->number,
+                'schedule' => $open->schedule_id === null ? null : $schedules->get($open->schedule_id),
+                'openedAt' => $open->opened_at->toIso8601String(),
+                'openedBy' => $people([$open->opened_by])->get($open->opened_by),
+                'floatMinor' => $open->opening_float_minor,
+                'drawerMinor' => $cash->drawer($open->id),
+                'salesMinor' => (int) $open->getAttribute('sales_minor'),
+                'litres' => Volume::toLitres((int) $open->getAttribute('sales_milli')),
+                'salesCount' => (int) $open->getAttribute('sales_count'),
+                'crew' => $assignments->groupBy('attendant_id')->map(fn ($rows) => [
+                    'name' => $rows->first()->attendant->name,
+                    'nozzles' => $rows->map(fn (ShiftAssignment $row) => $row->nozzle->code)->sort()->values(),
+                ])->sortBy('name')->values(),
+                'pumpsStaffed' => $assignments->pluck('nozzle_id')->unique()->count(),
+                'nozzles' => Nozzle::query()->where('branch_id', $branchId)->where('status', Nozzle::ACTIVE)->count(),
+            ];
+        }
+
+        // The last 30 closings: how the counted cash compared with what was expected.
+        $closings = Shift::query()->where('branch_id', $branchId)->where('status', Shift::APPROVED)
+            ->latest('opened_at')->limit(30)->get()->reverse()->values();
 
         return Inertia::render('shifts/index', [
-            'shifts' => Shift::query()->where('branch_id', $branchId)->latest('opened_at')->limit(40)->get()->map(fn (Shift $shift) => [
+            'shifts' => $page,
+            'status' => $statuses === null ? '' : $status,
+            'current' => $current,
+            'counts' => [
+                'waiting' => Shift::query()->where('branch_id', $branchId)->whereIn('status', [Shift::CLOSING_SUBMITTED, Shift::UNDER_REVIEW])->count(),
+                'rejected' => Shift::query()->where('branch_id', $branchId)->where('status', Shift::REJECTED)->count(),
+            ],
+            'closings' => $closings->map(fn (Shift $shift) => [
                 'id' => $shift->id,
                 'number' => $shift->number,
-                'status' => $shift->status,
                 'businessDate' => $shift->business_date->toDateString(),
-                'openedAt' => $shift->opened_at->toIso8601String(),
+                'schedule' => $shift->schedule_id === null ? null : $schedules->get($shift->schedule_id),
+                'differenceMinor' => (int) $shift->cash_difference_minor,
+                'expectedMinor' => (int) $shift->expected_cash_minor,
             ]),
             'schedules' => ShiftSchedule::query()->where('branch_id', $branchId)->where('active', true)->orderBy('name')->get(['id', 'name', 'starts_at', 'ends_at']),
             'canOpen' => $this->canHere(Permissions::SHIFTS_OPEN),
