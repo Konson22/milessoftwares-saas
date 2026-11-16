@@ -400,7 +400,7 @@ Events, such as `projects.project.archived`, come only if a real need appears.
 |---|---|---|
 | **M1** | `mel-app` backend and web, extracted, at parity; own database; Central SSO and provisioning (local) | §13 acceptance |
 | **M2A** | Central: `mel` registered (catalog `mel` 2.0.0), products, plans, bundle; local proxy, CI, production templates; real-SSO and four-organization verification | §17, done 2026-11-16 |
-| **M2B** | PM: M&E removed (routes, pages, navigation, module, catalog `projects` 4.0.0); partner reports without `ReportContent::mel()` until M3 | §18 |
+| **M2B** | PM: M&E removed (routes, pages, navigation, module, catalog `projects` 4.0.0); partner reports without `ReportContent::mel()` until M3 | §18 plan, §19 built 2026-11-16 (not deployed) |
 | **M3** | Integration reads (§9) and the product-pair token; `ReportContent` reading M&E over HTTP | Both-apps tests, revoked-subscription and unavailable-Projects tests; security review |
 | **M4** | Collect API v1 (§6.2), collected-submission review, separate from verified results | Idempotency, attachment and recovery tests on PostgreSQL |
 | **M5** | `mel-mobile-app`, Android | The device checks in §6.4, on a real device |
@@ -670,7 +670,7 @@ session scratchpad.
 - **Pricing.** `mel-standard`'s local price is a seed value, and the bundle has none. Both need
   approval before anything is public.
 
-## 18. M2B plan — remove M&E from Project Management (not started)
+## 18. M2B plan — remove M&E from Project Management (built: §19)
 
 **What leaves `project-management`:**
 
@@ -739,3 +739,100 @@ session scratchpad.
   and a `catalog-reassign` back restores the roles.
 - **`mel-app`.** It is unaffected either way: it has its own database, and nothing in it points
   at Projects.
+
+## 19. As built: M2B (2026-11-16, local, not deployed) — M&E removed from Project Management
+
+**Removed from `project-management`:**
+
+- **Routes.** `routes/web/mel.php` and its group in `routes/web.php`, with `RequireModule:mel` and
+  `SetUpMel`.
+- **Code.**
+  - `app/Mel`, `app/Collect`, `app/Http/Controllers/Mel` and `app/Http/Middleware/SetUpMel.php`.
+  - `resources/js/pages/mel` and `resources/js/mel`.
+  - `tests/Feature/Mel` and `tests/Unit/Mel`. `tests/Unit` keeps a `.gitkeep`, because Pest and
+    phpunit expect the directory.
+  - 110 files in all.
+- **Module.** `Modules::MEL` and its Settings → Modules toggle. An organization that stored `mel`
+  in `disabled_modules` is unaffected: unknown keys are ignored.
+- **Navigation.** The "Monitoring & evaluation" group and the two M&E administration items, with
+  their route and icon imports.
+- **Catalog.** `projects` **4.0.0** (version line and deletions only):
+  - 67 permissions become 42, 21 roles become 12, and 6 separation-of-duties rules become 3;
+  - no non-M&E role held a `mel.*` permission.
+- **Test helpers.** `mel()`, `setUpProgramme()`, `addIndicator()` and `enterResult()` are gone from
+  `tests/Pest.php`.
+- **Tests.**
+  - `ProjectAccessTest` loses its three linked-project tests. Linked-project figures come back with
+    the integration (M3) and must be re-specified there.
+  - `PartnerReportsTest` gains "records no M&E results with a submission now that M&E is its own
+    application".
+
+**Changed, not removed (differences from §18):**
+
+- **Partner reports.**
+  - `ReportContent::snapshot()` keeps the key `mel` as an empty list, so the shape stored in frozen
+    versions is unchanged. The portal still renders M&E results captured in older snapshots.
+  - The direct read of `ProgrammeUnit` / `VerifiedResult` is gone.
+  - The report category "M&E performance report" (`mel`) is **kept**: it is a report a partner
+    writes, not data read from M&E. §18 had planned to hide it.
+- **Collaboration labels.**
+  - `Capability::RESULTS_VIEW` and `EVIDENCE_SUBMIT` are kept. They were already
+    `effective: false`, so they are never offered or enforced. M3 maps them to the
+    cross-application grant.
+  - `Responsibility` "M&E officer" is kept: it is a person's job in a partnership.
+- **Tables.** The five migrations stay, and the `mel_*` and `collect_*` tables stay, unused.
+  `ParticipationInventory` still counts `mel_partners` (the participation-model inventory), so the
+  later drop migration must update it.
+- **Shared components.** `components/charts.tsx` is kept: the portal home and beneficiary pages use
+  it.
+
+**Runbooks:**
+
+- `deploy.md`: M&E is `mel-app`; deploy it before this Projects release.
+- `mel.md`: now operations of the standalone application. It records that linked projects are off
+  until M3, and that "cannot open M&E" means entitlement (404) or role (403).
+- `mel-app.md`: updated for after M2B.
+
+**Verified locally:**
+
+- **Backup.** Projects database dump before the change:
+  `D:/srv/backups/projects-before-m2b-20261116-1555.dump`, 125 tables of data.
+- **PM suite.** 420 passed, 7 skipped. It was 497 with M&E: the M&E tests, the three
+  linked-project tests and the new report test account for the difference.
+- **PM static checks.**
+  - PHPStan clean, Pint clean, tsc clean, build passes.
+  - Vitest has no test files left (PM's only frontend tests were Collect's) and exits 0.
+  - `vp check` reports formatting in 34 files, none touched here: `docs/marketing/*`, plus
+    `docs/phase-1-audit.md` and `vite.config.ts`, which are another session's uncommitted edits.
+    It will fail PM's CI `npm run check` until those are formatted.
+- **Real HTTP** (Apache, real Central, PM and mel-app), 15/15:
+  - Projects opens in `m2a-pm` and `m2a-both`.
+  - Its dashboard modules are documents, grants, procurement and accounting; Settings → Modules
+    has no M&E toggle.
+  - `/projects/mel`, `/projects/mel/programmes`, `/projects/mel/collect/forms` and
+    `/projects/mel/reports` are 404 in both workspaces.
+  - M&E in `m2a-both` still opens its programmes.
+- **M2A scenarios rerun.**
+  - Isolation, SSO and RBAC: 20/20.
+  - M&E-only workflow: 22/24. The two failures are the missing Collect pages (§17).
+- **Projects ⇄ Finance E2E: not rerun after M2B.** The run was stopped by the host for low memory. M2B
+  changes no Finance-integration code (the financial part of `ReportContent` is untouched); the
+  last run, at e955f49 before M2B, was 17/17. Rerun `php ops/e2e/finance-projects/run.php` before
+  any deploy.
+- **Local Central.** `projects` 4.0.0 imported.
+  - `platform:catalog-reassign projects --dry-run`: 2 assignments to move, 0 left. No local
+    organization held a `mel_*` role under Projects.
+  - The reassign was then applied, locally only.
+
+**Production, when approved (not done):**
+
+1. Back up the Projects database.
+2. Register and deploy `mel-app` (`docs/runbooks/mel-app.md`), including the one-time kind change
+   to `standalone`.
+3. Deploy Projects with catalog 4.0.0.
+4. On Central, run `platform:catalog-reassign projects --dry-run`.
+   - If anyone holds a `mel_*` role under Projects there, they need the same role in `mel` first,
+     then `platform:catalog-retire-role` for the Projects role.
+   - Then run the reassign.
+5. Rollback: redeploy the previous Projects release. Catalog 3.3.0 is still published; reassign
+   back to it.
