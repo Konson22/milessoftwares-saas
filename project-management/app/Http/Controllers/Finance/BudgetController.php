@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Finance;
 
 use App\Actions\Budgets;
+use App\Actions\Spending;
 use App\Enums\CostCategory;
 use App\Enums\ExpenseStatus;
 use App\Http\Controllers\Concerns\ShowsProject;
@@ -76,9 +77,12 @@ class BudgetController extends Controller
             ->filter(fn (Expense $row) => $row->category->value === $category && $row->status === $status)
             ->sum(fn (Expense $row) => (int) $row->getAttribute('amount'));
 
-        $categories = collect(CostCategory::cases())->map(function (CostCategory $category) use ($planned, $sum, $metrics) {
+        // What Finance settled short is no longer committed (Spending::settledShort).
+        $short = Spending::settledShort(Expense::query()->where('project_id', $project->id));
+        $categories = collect(CostCategory::cases())->map(function (CostCategory $category) use ($planned, $sum, $metrics, $short) {
             $budget = (int) ($planned[$category->value] ?? 0);
-            $committed = $sum($category->value, ExpenseStatus::Approved);
+            $committed = $sum($category->value, ExpenseStatus::Approved)
+                - (int) $short->filter(fn (Expense $expense) => $expense->category === $category)->sum('released_minor');
             $spent = $category === CostCategory::Labour ? $metrics['labourMinor'] : $sum($category->value, ExpenseStatus::Paid);
 
             return [
@@ -132,7 +136,7 @@ class BudgetController extends Controller
                     'description' => $line->description,
                     'amountMinor' => $line->amount_minor,
                     'use' => $version->status->value === 'approved'
-                        ? ['committedMinor' => $lineUse($line, ExpenseStatus::Approved), 'paidMinor' => $lineUse($line, ExpenseStatus::Paid)]
+                        ? ['committedMinor' => $lineUse($line, ExpenseStatus::Approved) - (int) $short->where('budget_line_key', $line->line_key)->sum('released_minor'), 'paidMinor' => $lineUse($line, ExpenseStatus::Paid)]
                         : null,
                 ]),
             ]),

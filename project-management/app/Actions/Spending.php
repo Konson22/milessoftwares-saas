@@ -7,10 +7,12 @@ use App\Enums\CostCategory;
 use App\Enums\ExpenseStatus;
 use App\Enums\GrantStatus;
 use App\FinanceIntegration\FinanceRequests;
+use App\FinanceIntegration\RequestStatus;
 use App\Models\AdvanceRetirementLine;
 use App\Models\ApprovalPolicy;
 use App\Models\Expense;
 use App\Models\ExpenseDocument;
+use App\Models\FinanceRequest;
 use App\Models\GrantAllocation;
 use App\Models\Organization;
 use App\Models\PettyCashPayment;
@@ -20,6 +22,8 @@ use App\Models\User;
 use App\Support\ActivityLog;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -251,7 +255,8 @@ final class Spending
                 if ($reason === null) {
                     throw ValidationException::withMessages(['reason' => 'Say why this commitment is released.']);
                 }
-                if (PurchaseOrder::query()->where('expense_id', $expense->id)->whereHas('receipts')->exists()) {
+                // Only accepted goods are owed: a delivery rejected in full leaves nothing (ADR-0020).
+                if (PurchaseOrder::query()->where('expense_id', $expense->id)->whereHas('receipts.lines', fn ($query) => $query->where('quantity', '>', 0))->exists()) {
                     throw ValidationException::withMessages(['reason' => 'Goods have arrived against this order, so the money is still owed.']);
                 }
             }
@@ -331,12 +336,54 @@ final class Spending
         }
 
         $budget = Budgets::approvedByCategory($project)[$category->value] ?? 0;
-        $used = (int) Expense::query()->where('project_id', $project->id)
-            ->where('category', $category)
-            ->whereIn('status', [ExpenseStatus::Approved, ExpenseStatus::Paid])
-            ->sum('amount_minor');
+        $charged = Expense::query()->where('project_id', $project->id)->where('category', $category);
+        $used = (int) (clone $charged)->whereIn('status', [ExpenseStatus::Approved, ExpenseStatus::Paid])->sum('amount_minor')
+            - (int) self::settledShort($charged)->sum('released_minor');
 
         return $budget - $used;
+    }
+
+    /**
+     * Approved spending Finance settled for less (Phase 4.1). Once Finance has
+     * decided a request (approved, paying, paid), it never pays more than it
+     * approved, and the request is not sent again unless Finance refuses it
+     * or reverses a payment; it cannot be cancelled here once anything is
+     * paid. What Finance did not approve is then no longer committed: each
+     * returned expense carries it as released_minor. This only reads: the
+     * expense is not changed (Finance's outcomes never touch it), and it
+     * matches what ProjectFinance reports.
+     *
+     * Requests still with Finance (submitted, accepted), refused, reversed or
+     * cancelled release nothing here: the spending can be sent again or is
+     * cancelled in Projects, and until then it stays committed, so a budget
+     * line is never promised twice.
+     *
+     * @param  Builder<Expense>  $expenses  any filter on expenses (project, category, grant, ...)
+     * @return Collection<int, Expense>
+     */
+    public static function settledShort(Builder $expenses): Collection
+    {
+        $approved = (clone $expenses)->where('status', ExpenseStatus::Approved)
+            ->whereIn('id', FinanceRequest::query()->select('expense_id'))
+            ->get(['id', 'project_id', 'category', 'budget_line_key', 'grant_id', 'amount_minor']);
+        if ($approved->isEmpty()) {
+            return $approved;
+        }
+        $requests = FinanceRequest::query()->whereIn('expense_id', $approved->modelKeys())->orderBy('revision')->get()->groupBy('expense_id');
+        $decided = [RequestStatus::Approved, RequestStatus::PartiallyPaid, RequestStatus::Paid, RequestStatus::Failed];
+
+        return $approved->filter(function (Expense $expense) use ($requests, $decided) {
+            $revisions = $requests->get($expense->id);
+            $latest = $revisions?->last();
+            if (! $latest instanceof FinanceRequest || ! in_array($latest->status, $decided, true)) {
+                return false;
+            }
+            $held = (int) $revisions->sum(fn (FinanceRequest $request) => $request->netPaidMinor()) + $latest->outstandingAuthorizedMinor();
+            $released = $expense->amount_minor - min($expense->amount_minor, max(0, $held));
+            $expense->setAttribute('released_minor', $released);
+
+            return $released > 0;
+        })->values();
     }
 
     /**
@@ -345,9 +392,10 @@ final class Spending
      */
     public static function chargedToGrant(string $projectId, string $grantId): int
     {
-        return (int) Expense::query()->where('project_id', $projectId)->where('grant_id', $grantId)
-            ->whereIn('status', [ExpenseStatus::Approved, ExpenseStatus::Paid])
-            ->sum('amount_minor');
+        $charged = Expense::query()->where('project_id', $projectId)->where('grant_id', $grantId);
+
+        return (int) (clone $charged)->whereIn('status', [ExpenseStatus::Approved, ExpenseStatus::Paid])->sum('amount_minor')
+            - (int) self::settledShort($charged)->sum('released_minor');
     }
 
     /**

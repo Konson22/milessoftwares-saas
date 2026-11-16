@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Funding;
 
 use App\Actions\Grants;
+use App\Actions\Spending;
 use App\Enums\ExpenseStatus;
 use App\Enums\GrantReportStatus;
 use App\Enums\GrantStatus;
@@ -158,6 +159,8 @@ class GrantController extends Controller
         $charged = fn (string $projectId, ExpenseStatus $status) => (int) $spending
             ->filter(fn (Expense $row) => $row->project_id === $projectId && $row->status === $status)
             ->sum(fn (Expense $row) => (int) $row->getAttribute('amount'));
+        // What Finance settled short is no longer committed (Spending::settledShort).
+        $short = Spending::settledShort(Expense::query()->where('grant_id', $grant->id));
 
         return Inertia::render('portal/funding/grants/show', [
             'grant' => [
@@ -194,7 +197,7 @@ class GrantController extends Controller
                 'projectCurrency' => $allocation->project->currency,
                 'projectAmountMinor' => $allocation->project_amount_minor,
                 'note' => $allocation->note,
-                'committedMinor' => $charged($allocation->project_id, ExpenseStatus::Approved),
+                'committedMinor' => $charged($allocation->project_id, ExpenseStatus::Approved) - (int) $short->where('project_id', $allocation->project_id)->sum('released_minor'),
                 'spentMinor' => $charged($allocation->project_id, ExpenseStatus::Paid),
             ]),
             'disbursements' => $disbursements->map(fn (GrantDisbursement $disbursement) => [

@@ -83,8 +83,27 @@ return new class extends Migration
         }
     }
 
+    /**
+     * Only while nothing was recorded with it (Phase 4.1): dropping the
+     * columns would lose supplier invoices, receipt evidence, rejected
+     * quantities, closures and the lines spending is charged to. Once any
+     * exists, recover forward (a corrective migration), never by rollback.
+     */
     public function down(): void
     {
+        $used = [
+            'supplier invoices' => DB::table('supplier_invoices')->exists(),
+            'receipt evidence' => DB::table('goods_receipts')->whereNotNull('path')->exists(),
+            'rejected quantities' => DB::table('goods_receipt_lines')->where('rejected_quantity', '>', 0)->exists(),
+            'closed orders' => DB::table('purchase_orders')->whereNotNull('closed_at')->exists(),
+            'spending charged to budget lines' => DB::table('expenses')->whereNotNull('budget_line_key')->exists()
+                || DB::table('purchase_requests')->whereNotNull('budget_line_key')->exists(),
+        ];
+        $kept = array_keys(array_filter($used));
+        if ($kept !== []) {
+            throw new RuntimeException('Refusing to roll back: it would lose '.implode(', ', $kept).'. Recover forward with a corrective migration.');
+        }
+
         if (DB::getDriverName() === 'pgsql') {
             DB::statement('ALTER TABLE goods_receipt_lines DROP CONSTRAINT IF EXISTS goods_receipt_lines_quantities');
             DB::statement('ALTER TABLE purchase_orders DROP CONSTRAINT IF EXISTS purchase_orders_closed_facts');

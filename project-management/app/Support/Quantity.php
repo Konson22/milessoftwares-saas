@@ -26,6 +26,24 @@ final class Quantity
     }
 
     /**
+     * Whether a/b equals c/d, compared crosswise: exact, with no division.
+     */
+    public static function sameRatio(string $a, string $b, string $c, string $d): bool
+    {
+        return bccomp(bcmul(self::number($a), self::number($d), 4), bcmul(self::number($c), self::number($b), 4), 4) === 0;
+    }
+
+    /**
+     * part/whole of an amount in minor units, half up.
+     */
+    public static function shareOf(int $amountMinor, string $part, string $whole): int
+    {
+        $value = bcdiv(bcmul((string) $amountMinor, self::number($part), 4), self::number($whole), 4);
+
+        return (int) bcadd($value, '0.5', 0);
+    }
+
+    /**
      * What this many cost at a price in minor units, half up.
      */
     public static function price(string $quantity, int $unitMinor): int

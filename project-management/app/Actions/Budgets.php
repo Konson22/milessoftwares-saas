@@ -197,7 +197,11 @@ final class Budgets
             $used = Expense::query()->where('project_id', $project->id)
                 ->whereIn('status', [ExpenseStatus::Approved, ExpenseStatus::Paid])
                 ->groupBy('category')->selectRaw('category, sum(amount_minor) as amount')
-                ->pluck('amount', 'category');
+                ->pluck('amount', 'category')->map(fn (mixed $amount) => (int) $amount);
+            // Less what Finance settled short (Spending::settledShort).
+            foreach (Spending::settledShort(Expense::query()->where('project_id', $project->id)) as $short) {
+                $used[$short->category->value] = ($used[$short->category->value] ?? 0) - (int) $short->getAttribute('released_minor');
+            }
             foreach ($used as $category => $amount) {
                 $label = CostCategory::from((string) $category)->label();
                 if ((int) $amount > (int) ($planned[$category] ?? 0)) {
@@ -280,16 +284,23 @@ final class Budgets
 
     /**
      * Committed and spent on each line charged by key (approved or paid
-     * spending). Older spending without a key counts by category only.
+     * spending), less what Finance settled short (Spending::settledShort).
+     * Older spending without a key counts by category only.
      *
      * @return array<string, int>
      */
     public static function usedByLine(Project $project): array
     {
-        return Expense::query()->where('project_id', $project->id)->whereNotNull('budget_line_key')
-            ->whereIn('status', [ExpenseStatus::Approved, ExpenseStatus::Paid])
+        $charged = Expense::query()->where('project_id', $project->id)->whereNotNull('budget_line_key');
+        $used = (clone $charged)->whereIn('status', [ExpenseStatus::Approved, ExpenseStatus::Paid])
             ->groupBy('budget_line_key')->selectRaw('budget_line_key, sum(amount_minor) as amount')
             ->pluck('amount', 'budget_line_key')->map(fn (mixed $amount) => (int) $amount)->all();
+        // Less what Finance settled short (Spending::settledShort).
+        foreach (Spending::settledShort($charged) as $short) {
+            $used[(string) $short->budget_line_key] -= (int) $short->getAttribute('released_minor');
+        }
+
+        return $used;
     }
 
     /**

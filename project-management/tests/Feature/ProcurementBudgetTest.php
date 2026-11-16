@@ -16,8 +16,11 @@ use App\Models\PurchaseRequestLine;
 use App\Models\SupplierInvoice;
 use App\Support\ProjectFinance;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Illuminate\Validation\ValidationException;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -463,7 +466,7 @@ it('keeps another organization out of orders, invoices and receipts', function (
 it('refuses to close an order nothing arrived on, and never edits the ordered amount', function () {
     $order = pbOrder('1000');
     $this->asTenant('acme', function () use ($order) {
-        expect(fn () => Procurement::closeOrder($order, 'Short', $this->buyer))->toThrow(ValidationException::class, 'Nothing has arrived');
+        expect(fn () => Procurement::closeOrder($order, 'Short', $this->buyer))->toThrow(ValidationException::class, 'Nothing has been accepted');
     });
     expect($this->asTenant('acme', fn () => $order->fresh()->amount_minor))->toBe(100000);
 });
@@ -528,3 +531,260 @@ it('shows each approved line with what is committed and paid on it, and Finance 
         ->where('commitments.0.amountMinor', 50000)
         ->where('commitments.0.invoicedMinor', 0));
 });
+
+// ---- Phase 4.1: financial correctness ------------------------------------------
+
+/**
+ * An order for two lines (10 pumps, 20 pipes), $amount in all, its spending approved.
+ */
+function pbTwoLineOrder(string $amount = '1000'): PurchaseOrder
+{
+    test()->actingAs(test()->requester);
+    test()->post(pbUrl(), [
+        'project_id' => test()->project->id, 'title' => 'Pumps and pipes', 'justification' => 'Boreholes.', 'category' => 'materials',
+        'budget_line_id' => pbLine('Pumps')->id,
+        'lines' => [
+            ['description' => 'Pump', 'quantity' => '10', 'unit' => 'each', 'unit_price' => '50'],
+            ['description' => 'Pipe', 'quantity' => '20', 'unit' => 'm', 'unit_price' => '25'],
+        ],
+    ])->assertSessionHasNoErrors();
+    $purchase = test()->asTenant('acme', fn () => PurchaseRequest::query()->where('title', 'Pumps and pipes')->latest()->orderByDesc('number')->firstOrFail());
+    test()->post(pbUrl("{$purchase->id}/submit"))->assertSessionHasNoErrors();
+    test()->actingAs(test()->approver);
+    test()->post(pbUrl("{$purchase->id}/approve"))->assertSessionHasNoErrors();
+    test()->actingAs(test()->buyer);
+    test()->post(pbUrl("{$purchase->id}/quotes"), ['supplier_name' => 'Juba Supply', 'amount' => $amount])->assertSessionHasNoErrors();
+    $quote = test()->asTenant('acme', fn () => PurchaseQuote::query()->where('purchase_request_id', $purchase->id)->firstOrFail());
+    test()->post(pbUrl("{$purchase->id}/quotes/{$quote->id}/choose"), ['reason' => 'Sole supplier.'])->assertSessionHasNoErrors();
+    test()->post(pbUrl("{$purchase->id}/orders"))->assertSessionHasNoErrors();
+    $order = test()->asTenant('acme', fn () => PurchaseOrder::query()->where('purchase_request_id', $purchase->id)->with('expense')->firstOrFail());
+    test()->actingAs(test()->finance);
+    test()->post(test()->organizationUrl('acme', "projects/{$order->expense->project_id}/expenses/{$order->expense_id}/approve"))->assertSessionHasNoErrors();
+
+    return test()->asTenant('acme', fn () => $order->fresh(['expense']));
+}
+
+/**
+ * @return array{0: string, 1: string} the pump line's id, the pipe line's id
+ */
+function pbTwoLines(PurchaseOrder $order): array
+{
+    $lines = test()->asTenant('acme', fn () => PurchaseRequestLine::query()->where('purchase_request_id', $order->purchase_request_id)->get()->keyBy('description'));
+
+    return [$lines['Pump']->id, $lines['Pipe']->id];
+}
+
+it('consumes the budget once: committed on approval, moved to paid on payment, never both', function () {
+    // Pumps line: 3,000. Order: 1,000.
+    $pumps = pbLine('Pumps')->line_key;
+    $order = pbOrder('1000');
+    $figures = fn () => $this->asTenant('acme', fn () => ProjectFinance::for($this->project));
+    $lineLeft = fn () => $this->asTenant('acme', fn () => Budgets::lineAvailable($this->project, $pumps));
+
+    expect($figures()['committedMinor'])->toBe(100000)
+        ->and($figures()['paidMinor'])->toBe(0)
+        ->and($figures()['availableMinor'])->toBe(500000)
+        ->and($lineLeft())->toBe(200000);
+
+    $this->actingAs($this->buyer);
+    $this->post(pbPath($order, 'receipts'), ['received_on' => '2026-11-04', 'quantities' => [pbRequestLine($order)->id => '10']])->assertSessionHasNoErrors();
+    $this->post(pbPath($order, 'invoice'), ['number' => 'INV-1', 'amount' => '1000', 'invoice_on' => '2026-11-04'])->assertSessionHasNoErrors();
+    // Invoiced: still committed, not paid, and the budget no lower.
+    expect($figures()['committedMinor'])->toBe(100000)->and($figures()['invoicedMinor'])->toBe(100000)->and($lineLeft())->toBe(200000);
+
+    pbPay($order)->assertSessionHasNoErrors();
+    expect($figures()['committedMinor'])->toBe(0)
+        ->and($figures()['invoicedMinor'])->toBe(0)
+        ->and($figures()['paidMinor'])->toBe(100000)
+        ->and($figures()['availableMinor'])->toBe(500000)
+        ->and($lineLeft())->toBe(200000);
+});
+
+it('keeps a part-delivered, part-invoiced order committed in full and unpaid until it is complete or closed', function () {
+    config(['finance_integration.enabled' => true]);
+    $this->organization('acme')->forceFill(['finance_mode' => 'integrated'])->save();
+    $order = pbOrder('1000');
+    $this->actingAs($this->buyer);
+    $this->post(pbPath($order, 'receipts'), ['received_on' => '2026-11-04', 'quantities' => [pbRequestLine($order)->id => '4']])->assertSessionHasNoErrors();
+    $this->post(pbPath($order, 'invoice'), ['number' => 'INV-4', 'amount' => '400', 'invoice_on' => '2026-11-04'])->assertSessionHasNoErrors();
+
+    expect($this->financeEvents('acme', 'finance.spending.submitted'))->toBe([])
+        ->and(pbExpense($order)->amount_minor)->toBe(100000)
+        ->and($this->asTenant('acme', fn () => ProjectFinance::for($this->project)['committedMinor']))->toBe(100000);
+});
+
+it('closes short only down to the order price of what was accepted, never on an invoice alone', function () {
+    $order = pbOrder('1000');
+    $line = pbRequestLine($order)->id;
+    $this->actingAs($this->buyer);
+    $this->post(pbPath($order, 'receipts'), ['received_on' => '2026-11-04', 'quantities' => [$line => '4']])->assertSessionHasNoErrors();
+    // Billed 700 for 4 of 10 pumps (worth 400 at the order's price): closing would pay for goods that never came.
+    $this->post(pbPath($order, 'invoice'), ['number' => 'INV-7', 'amount' => '700', 'invoice_on' => '2026-11-04'])->assertSessionHasNoErrors();
+    $this->post(pbPath($order, 'close'), ['reason' => 'No more coming.'])->assertSessionHasErrors('close');
+    expect(pbExpense($order)->amount_minor)->toBe(100000);
+
+    $wrong = $this->asTenant('acme', fn () => SupplierInvoice::query()->firstOrFail());
+    $this->post(pbPath($order, "invoices/{$wrong->id}/void"), ['reason' => 'Billed for undelivered pumps.'])->assertSessionHasNoErrors();
+    $this->post(pbPath($order, 'invoice'), ['number' => 'INV-7B', 'amount' => '400', 'invoice_on' => '2026-11-04'])->assertSessionHasNoErrors();
+    $this->post(pbPath($order, 'close'), ['reason' => 'No more coming.'])->assertSessionHasNoErrors();
+
+    $audit = $this->asTenant('acme', fn () => AuditEvent::query()->where('action', 'purchase.order_closed')->firstOrFail()->properties);
+    expect(pbExpense($order)->amount_minor)->toBe(40000)
+        ->and($audit['accepted_value_minor'])->toBe(40000)
+        ->and($audit['below_accepted_minor'])->toBe(0)
+        ->and($audit['released_minor'])->toBe(60000);
+});
+
+it('records it when the supplier bills less than the order price of what arrived', function () {
+    $order = pbOrder('1000');
+    $this->actingAs($this->buyer);
+    $this->post(pbPath($order, 'receipts'), ['received_on' => '2026-11-04', 'quantities' => [pbRequestLine($order)->id => '10']])->assertSessionHasNoErrors();
+    $this->post(pbPath($order, 'invoice'), ['number' => 'INV-D', 'amount' => '950', 'invoice_on' => '2026-11-04'])->assertSessionHasNoErrors();
+    pbPay($order)->assertSessionHasErrors('expense');
+
+    $this->actingAs($this->buyer);
+    $this->post(pbPath($order, 'close'), ['reason' => 'Supplier gave a 5 percent discount.'])->assertSessionHasNoErrors();
+    $audit = $this->asTenant('acme', fn () => AuditEvent::query()->where('action', 'purchase.order_closed')->firstOrFail()->properties);
+    expect($audit['accepted_value_minor'])->toBe(100000)
+        ->and($audit['below_accepted_minor'])->toBe(5000)
+        ->and($audit['reason'])->toBe('Supplier gave a 5 percent discount.');
+    pbPay($order)->assertSessionHasNoErrors();
+    expect(pbExpense($order)->amount_minor)->toBe(95000);
+});
+
+it('values a part delivery of several lines only when every line arrived in the same share', function () {
+    $order = pbTwoLineOrder('1000');
+    [$pump, $pipe] = pbTwoLines($order);
+    $this->actingAs($this->buyer);
+    // All the pumps, half the pipes: the order has one price, so this cannot be valued.
+    $this->post(pbPath($order, 'receipts'), ['received_on' => '2026-11-04', 'quantities' => [$pump => '10', $pipe => '10']])->assertSessionHasNoErrors();
+    $this->post(pbPath($order, 'invoice'), ['number' => 'INV-P', 'amount' => '500', 'invoice_on' => '2026-11-04'])->assertSessionHasNoErrors();
+    expect($this->asTenant('acme', fn () => $order->fresh()->acceptedValueMinor()))->toBeNull();
+    $this->post(pbPath($order, 'close'), ['reason' => 'Short.'])->assertSessionHasErrors('close');
+    expect(pbExpense($order)->amount_minor)->toBe(100000);
+
+    // The rest of the pipes: everything arrived, worth the whole order.
+    $this->post(pbPath($order, 'receipts'), ['received_on' => '2026-11-04', 'quantities' => [$pipe => '10']])->assertSessionHasNoErrors();
+    expect($this->asTenant('acme', fn () => $order->fresh()->acceptedValueMinor()))->toBe(100000);
+});
+
+it('values every line arriving in the same share as that share of the order', function () {
+    $order = pbTwoLineOrder('999.99');
+    [$pump, $pipe] = pbTwoLines($order);
+    $this->actingAs($this->buyer);
+    $this->post(pbPath($order, 'receipts'), ['received_on' => '2026-11-04', 'quantities' => [$pump => '5', $pipe => '10']])->assertSessionHasNoErrors();
+
+    // 99,999 × 1/2 = 49,999.5, half up.
+    expect($this->asTenant('acme', fn () => $order->fresh()->acceptedValueMinor()))->toBe(50000);
+});
+
+it('owes nothing for goods rejected in full, so the commitment can be released', function () {
+    $order = pbOrder('1000');
+    $line = pbRequestLine($order)->id;
+    $this->actingAs($this->buyer);
+    $this->post(pbPath($order, 'receipts'), ['received_on' => '2026-11-04', 'quantities' => [$line => '0'], 'rejected' => [$line => '10']])->assertSessionHasNoErrors();
+    $this->post(pbPath($order, 'invoice'), ['number' => 'INV-R', 'amount' => '1000', 'invoice_on' => '2026-11-04'])->assertSessionHasNoErrors();
+    $this->post(pbPath($order, 'close'), ['reason' => 'All broken.'])->assertSessionHasErrors('close');
+
+    // Rejection does not lower what the order owes for the goods still due.
+    expect(pbExpense($order)->amount_minor)->toBe(100000);
+    $this->actingAs($this->finance);
+    $this->post($this->organizationUrl('acme', "projects/{$this->project->id}/expenses/{$order->expense_id}/cancel"), ['reason' => 'Supplier failed to deliver.'])->assertSessionHasNoErrors();
+    expect(pbExpense($order)->status)->toBe(ExpenseStatus::Cancelled);
+});
+
+it('takes replacements for rejected goods, never more than ordered', function () {
+    $order = pbOrder('1000');
+    $line = pbRequestLine($order)->id;
+    $this->actingAs($this->buyer);
+    $receive = fn (array $data) => $this->post(pbPath($order, 'receipts'), ['received_on' => '2026-11-04', ...$data]);
+
+    $receive(['quantities' => [$line => '6'], 'rejected' => [$line => '4']])->assertSessionHasNoErrors();
+    $receive(['quantities' => [$line => '5']])->assertSessionHasErrors('receipt');   // only 4 still due
+    $receive(['quantities' => [$line => '4']])->assertSessionHasNoErrors();          // the replacements
+    $receive(['quantities' => [$line => '1']])->assertSessionHasErrors('receipt');   // nothing more due
+
+    $order = $this->asTenant('acme', fn () => $order->fresh(['expense']));
+    expect($order->isFullyReceived())->toBeTrue()
+        ->and($order->receivedByLine()[$line])->toBe('10.00')
+        ->and($order->acceptedValueMinor())->toBe(100000)
+        ->and($order->expense->amount_minor)->toBe(100000)
+        ->and($this->asTenant('acme', fn () => AuditEvent::query()->where('action', 'purchase.goods_received')->count()))->toBe(2);
+});
+
+it('sends one request for two invoices that together come to the commitment', function () {
+    config(['finance_integration.enabled' => true]);
+    $this->organization('acme')->forceFill(['finance_mode' => 'integrated'])->save();
+    $order = pbOrder('1000');
+    $this->actingAs($this->buyer);
+    $this->post(pbPath($order, 'receipts'), ['received_on' => '2026-11-04', 'quantities' => [pbRequestLine($order)->id => '10']])->assertSessionHasNoErrors();
+    $this->post(pbPath($order, 'invoice'), ['number' => 'A-400', 'amount' => '400', 'invoice_on' => '2026-11-04'])->assertSessionHasNoErrors();
+    expect($this->financeEvents('acme', 'finance.spending.submitted'))->toBe([]);
+    $this->post(pbPath($order, 'invoice'), ['number' => 'B-600', 'amount' => '600', 'invoice_on' => '2026-11-04'])->assertSessionHasNoErrors();
+
+    $events = $this->financeEvents('acme', 'finance.spending.submitted');
+    expect($events)->toHaveCount(1)
+        ->and($events[0]['payload']['amount_minor'])->toBe(100000)
+        ->and($this->asTenant('acme', fn () => FinanceRequest::query()->count()))->toBe(1)
+        ->and($this->asTenant('acme', fn () => ProjectFinance::for($this->project)['committedMinor']))->toBe(100000);
+});
+
+it('will not approve a budget revision that drops a line with commitments on it', function () {
+    pbOrder('1000');
+    $this->asTenant('acme', function () {
+        $draft = Budgets::revise($this->project, $this->buyer);
+        $draft->lines()->where('description', 'Pumps')->firstOrFail()->delete();
+        $draft->lines()->create(['project_id' => $this->project->id, 'category' => 'materials', 'description' => 'Pumps (new line)', 'amount_minor' => 300000]);
+        Budgets::submit($this->project, $draft, null, $this->buyer);
+
+        expect(fn () => Budgets::approve($this->project, $draft->fresh(), $this->finance))->toThrow(ValidationException::class, 'committed or spent on this line');
+    });
+});
+
+it('refuses to roll back the procurement migration once invoices are on record', function () {
+    $order = pbOrder('1000');
+    $this->actingAs($this->buyer);
+    $this->post(pbPath($order, 'invoice'), ['number' => 'INV-1', 'amount' => '100', 'invoice_on' => '2026-11-04'])->assertSessionHasNoErrors();
+    $migration = require database_path('migrations/2026_11_18_000100_procurement_lines_receipts_invoices.php');
+
+    expect(fn () => $migration->down())->toThrow(RuntimeException::class, 'supplier invoices');
+    expect($this->asTenant('acme', fn () => SupplierInvoice::query()->count()))->toBe(1);
+});
+
+it('has the database refuse a second live invoice with the same supplier and number, and invalid invoices, receipts and closures', function () {
+    $order = pbOrder('1000');
+    $this->actingAs($this->buyer);
+    $this->post(pbPath($order, 'invoice'), ['number' => 'INV-1', 'amount' => '100', 'invoice_on' => '2026-11-04'])->assertSessionHasNoErrors();
+    $invoice = $this->asTenant('acme', fn () => SupplierInvoice::query()->firstOrFail());
+    $row = fn (array $over = []) => [
+        'id' => (string) Str::uuid(), 'organization_id' => $invoice->organization_id, 'purchase_order_id' => $invoice->purchase_order_id,
+        'supplier_id' => $invoice->supplier_id, 'number' => 'inv 1', 'number_key' => $invoice->number_key, 'amount_minor' => 100,
+        'currency' => 'USD', 'invoice_on' => '2026-11-04', 'status' => 'recorded', 'recorded_by' => $this->buyer->id,
+        'created_at' => now(), 'updated_at' => now(), ...$over,
+    ];
+    $refused = function (Closure $write) {
+        try {
+            DB::transaction($write);
+        } catch (QueryException) {
+            return true;
+        }
+
+        return false;
+    };
+
+    // Past the application's own check (two people at once): the index still holds.
+    expect($refused(fn () => DB::table('supplier_invoices')->insert($row())))->toBeTrue()
+        // A voided one does not hold the number, but must say who, when and why.
+        ->and($refused(fn () => DB::table('supplier_invoices')->insert($row(['status' => 'voided']))))->toBeTrue()
+        ->and($refused(fn () => DB::table('supplier_invoices')->insert($row(['status' => 'voided', 'voided_at' => now(), 'voided_by' => $this->buyer->id, 'void_reason' => 'Typo']))))->toBeFalse()
+        ->and($refused(fn () => DB::table('supplier_invoices')->insert($row(['number_key' => 'other', 'amount_minor' => 0]))))->toBeTrue()
+        ->and($refused(fn () => DB::table('supplier_invoices')->insert($row(['number_key' => 'other2', 'status' => 'paid']))))->toBeTrue()
+        ->and($refused(fn () => DB::table('purchase_orders')->where('id', $order->id)->update(['closed_at' => now()])))->toBeTrue();
+
+    $receipt = $this->asTenant('acme', fn () => $order->receipts()->create(['received_on' => '2026-11-04', 'received_by' => $this->buyer->id]));
+    $line = pbRequestLine($order)->id;
+    $receiptLine = fn (int $accepted, int $rejected) => fn () => DB::table('goods_receipt_lines')->insert(['id' => (string) Str::uuid(), 'organization_id' => $invoice->organization_id, 'goods_receipt_id' => $receipt->id, 'purchase_request_line_id' => $line, 'quantity' => $accepted, 'rejected_quantity' => $rejected, 'created_at' => now(), 'updated_at' => now()]);
+    expect($refused($receiptLine(0, 0)))->toBeTrue()
+        ->and($refused($receiptLine(-1, 2)))->toBeTrue()
+        ->and($refused($receiptLine(1, 0)))->toBeFalse();
+})->skip(fn () => DB::getDriverName() !== 'pgsql', 'PostgreSQL enforces this');

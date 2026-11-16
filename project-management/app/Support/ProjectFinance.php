@@ -29,12 +29,14 @@ use Illuminate\Support\Facades\DB;
  *                        with Finance: the latest request's open
  *                        commitment instead (awaiting Finance +
  *                        outstanding authorized, FinanceRequest).
- *   invoicedMinor        the part of committedMinor suppliers have invoiced
- *                        and that awaits payment: live supplier invoices on
+ *   invoicedMinor        supplier invoices recorded in Projects against
  *                        orders still committed (an order invoiced before
  *                        invoices were kept counts whole), less what Finance
- *                        paid on them (ADR-0020). Owner-side only: it is not
- *                        in shareable().
+ *                        paid on them, never more than committedMinor
+ *                        (ADR-0020). Procurement evidence only: NOT a payable
+ *                        Finance has recognized (Finance books the liability
+ *                        from its own request) and not a request awaiting
+ *                        Finance. Owner-side only: it is not in shareable().
  *   paidMinor            expenses recorded as paid, plus what Finance reports
  *                        paid for requests handed to it (integrated mode, net
  *                        of reversals). Money that left.
