@@ -153,6 +153,33 @@ class PurchaseOrder extends Model implements ProjectBound
         return $received;
     }
 
+    /**
+     * What the accepted goods are worth at the order's price, when Projects
+     * can tell exactly (Phase 4.1). An order is priced as one total (the
+     * chosen quote); the request's line prices are estimates, not the
+     * supplier's. So a delivery is valued only when it took the same share
+     * of every line: that share of the order's total. 0 when nothing was
+     * accepted; null when lines arrived in different shares (unknown).
+     */
+    public function acceptedValueMinor(): ?int
+    {
+        $received = $this->receivedByLine();
+        $lines = PurchaseRequestLine::query()->where('purchase_request_id', $this->purchase_request_id)->get();
+        if ($lines->isEmpty()) {
+            return 0;
+        }
+        $first = $lines->first();
+        $firstAccepted = $received[$first->id] ?? '0';
+        foreach ($lines as $line) {
+            // accepted / ordered equal on every line, exactly.
+            if (! Quantity::sameRatio($received[$line->id] ?? '0', (string) $line->quantity, $firstAccepted, (string) $first->quantity)) {
+                return null;
+            }
+        }
+
+        return Quantity::shareOf($this->amount_minor, $firstAccepted, (string) $first->quantity);
+    }
+
     public function isFullyReceived(): bool
     {
         $received = $this->receivedByLine();

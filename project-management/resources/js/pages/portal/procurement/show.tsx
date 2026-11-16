@@ -690,8 +690,11 @@ export default function ProcurementShow({
                                 </dd>
                             </div>
                             <div>
-                                <dt className="text-muted-foreground">
-                                    Invoiced
+                                <dt
+                                    className="text-muted-foreground"
+                                    title="Supplier invoices recorded here as evidence. Finance recognizes what is owed and pays it."
+                                >
+                                    Supplier invoices
                                 </dt>
                                 <dd className="tabular-nums">
                                     {order.legacyInvoice

@@ -495,9 +495,14 @@ final class Procurement
      * supplier billed less. Its commitment (the order's spending) becomes
      * what the supplier invoiced, and the rest goes back to the budget line.
      * The order keeps what was ordered; who closed it, when and why are kept.
-     * Needs something received and invoiced, and nothing yet sent to Finance
-     * or paid. With nothing received, the order's spending is cancelled
-     * instead (Spending::cancel).
+     * Needs, and nothing yet sent to Finance or paid (Phase 4.1):
+     * - goods accepted (rejected goods are not owed), valued at the order's
+     *   price: only when every line arrived in the same share, as the order
+     *   has one total price (PurchaseOrder::acceptedValueMinor);
+     * - invoices recorded, never more than that value. Less is the supplier
+     *   billing less: closed on record, with the reason.
+     * With nothing accepted, the order's spending is cancelled instead
+     * (Spending::cancel).
      *
      * @throws ValidationException
      */
@@ -512,8 +517,15 @@ final class Procurement
                 throw ValidationException::withMessages(['close' => "{$order->number} is closed already."]);
             }
             self::requireInvoiceable($order, 'close');
-            if (! $order->receipts()->exists()) {
-                throw ValidationException::withMessages(['close' => 'Nothing has arrived: cancel the order\'s spending instead.']);
+            // The commitment may only come down to what the accepted goods are
+            // worth at the order's price, never below what was invoiced for
+            // them (Phase 4.1): an invoice alone does not prove what arrived.
+            $accepted = $order->acceptedValueMinor();
+            if ($accepted === 0) {
+                throw ValidationException::withMessages(['close' => 'Nothing has been accepted against it (rejected goods are not owed): cancel the order\'s spending instead.']);
+            }
+            if ($accepted === null) {
+                throw ValidationException::withMessages(['close' => 'The lines arrived in different shares, and the order has one price for everything (the chosen quote), so Projects cannot tell what the goods that arrived are worth. Receive the rest, or have it all delivered in the same share, before closing.']);
             }
             if ($order->hasLegacyInvoice()) {
                 throw ValidationException::withMessages(['close' => 'This order\'s invoice was recorded as a reference only: record the supplier\'s invoice with its amount first.']);
@@ -521,6 +533,9 @@ final class Procurement
             $invoiced = $order->invoicedMinor();
             if ($invoiced === 0) {
                 throw ValidationException::withMessages(['close' => 'Record the supplier\'s invoice for what arrived first.']);
+            }
+            if ($invoiced > $accepted) {
+                throw ValidationException::withMessages(['close' => 'The invoices ('.Money::format($invoiced, $project->currency).') are more than the order price of the goods accepted ('.Money::format($accepted, $project->currency).'). Void the wrong invoice, or receive the rest.']);
             }
 
             $from = $expense->amount_minor;
@@ -533,6 +548,9 @@ final class Procurement
                 'commitment_from_minor' => $from,
                 'commitment_to_minor' => $invoiced,
                 'released_minor' => $from - $invoiced,
+                'accepted_value_minor' => $accepted,
+                // The supplier billed less than the order price of what arrived: given up on record, with the reason.
+                'below_accepted_minor' => $accepted - $invoiced,
                 'budget_line_key' => $expense->budget_line_key,
             ], actor: $by);
             Audit::record('expense.commitment_adjusted', $expense, ['from_minor' => $from, 'to_minor' => $invoiced, 'order' => $order->number, 'reason' => $reason], actor: $by);

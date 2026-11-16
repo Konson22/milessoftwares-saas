@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Budgets;
 use App\Actions\Spending;
 use App\Actions\StaffAdvances;
 use App\Enums\BudgetVersionStatus;
@@ -12,6 +13,7 @@ use App\FinanceIntegration\ModeChangeRefused;
 use App\FinanceIntegration\Readiness;
 use App\FinanceIntegration\Reconciliation;
 use App\FinanceIntegration\RequestStatus;
+use App\Models\BudgetLine;
 use App\Models\BudgetVersion;
 use App\Models\Expense;
 use App\Models\FinanceModeChange;
@@ -669,4 +671,52 @@ it('reconciles revisions: a refused revision sent again is no finding, an unreso
 
     expect($kinds())->toMatchArray(['reversed' => 1, 'unresolved_reversal' => 1, 'decision_delayed' => 1])
         ->and($approver)->not->toBeNull();
+});
+
+it('frees for new approvals what Finance approved short, and holds refused spending until it is resent or cancelled (Phase 4.1)', function () {
+    fiMode('acme', FinanceMode::Integrated);
+    // Materials: 10,000.00 approved; 1,200.00 approved spending handed to Finance.
+    [$project, $expense] = fiApproved();
+    $request = fiRequest();
+    $left = fn () => test()->asTenant('acme', fn () => Spending::categoryAvailable($project, CostCategory::Materials));
+    $reported = fn () => test()->asTenant('acme', fn () => ProjectFinance::for($project));
+    expect($left())->toBe(880_000);
+
+    // Finance approves 800.00 and pays it: it never pays the other 400.00, which can be neither sent again nor cancelled.
+    fiOutcome($request, 'finance_request.accepted', 1, ['finance_reference' => 'PR-1'])->assertCreated();
+    fiOutcome($request, 'finance_request.approved', 2, ['approved_minor' => 80_000, 'currency' => 'USD'])->assertCreated();
+    expect($left())->toBe(920_000)->and($reported()['availableMinor'])->toBe(920_000);
+    fiOutcome($request, 'finance_payment.completed', 3, ['payment_id' => 'P-1', 'amount_minor' => 80_000, 'currency' => 'USD', 'paid_on' => '2026-11-17'])->assertCreated();
+
+    expect($request->refresh()->status)->toBe(RequestStatus::Paid)
+        // The approvals gate and the reports agree: 800.00 used, not 1,200.00.
+        ->and($left())->toBe(920_000)
+        ->and($reported()['availableMinor'])->toBe(920_000)
+        // Projects' record is not rewritten: Finance's outcome is read, not copied.
+        ->and($expense->refresh()->amount_minor)->toBe(120_000)
+        ->and($expense->status)->toBe(ExpenseStatus::Approved);
+    test()->asTenant('acme', fn () => expect(fn () => Spending::cancel($expense->refresh(), 'Tidy up', User::factory()->create()))->toThrow(ValidationException::class));
+
+    // Refused: it can be sent again, so it stays committed for approvals until resent or cancelled.
+    [$seed, $other] = fiApproved('acme', 'SEED');
+    fiOutcome(fiRequest('acme', $other), 'finance_request.rejected', 1, ['reason' => 'No supporting quote'])->assertCreated();
+    expect(test()->asTenant('acme', fn () => Spending::categoryAvailable($seed, CostCategory::Materials)))->toBe(880_000);
+});
+
+it('keeps the budget page, budget lines and grants in step with what Finance settled (Phase 4.1)', function () {
+    fiMode('acme', FinanceMode::Integrated);
+    [$project, $expense, $approver] = fiApproved();
+    $line = test()->asTenant('acme', fn () => BudgetLine::query()->where('project_id', $project->id)->firstOrFail());
+    test()->asTenant('acme', fn () => Expense::query()->whereKey($expense->id)->update(['budget_line_key' => $line->line_key]));
+    $request = fiRequest();
+    fiOutcome($request, 'finance_request.accepted', 1, ['finance_reference' => 'PR-2'])->assertCreated();
+    fiOutcome($request, 'finance_request.approved', 2, ['approved_minor' => 100_000, 'currency' => 'USD'])->assertCreated();
+
+    expect(test()->asTenant('acme', fn () => Budgets::usedByLine($project)))->toBe([$line->line_key => 100_000])
+        ->and(test()->asTenant('acme', fn () => Budgets::lineAvailable($project, $line->line_key)))->toBe(900_000);
+
+    $viewer = test()->member('acme', ['projects.view', 'projects.finance.view']);
+    test()->actingAs($viewer)->get(test()->organizationUrl('acme', "projects/{$project->id}/budget"))->assertOk()
+        ->assertInertia(fn ($page) => $page->where('byCategory.0.committedMinor', 100_000)
+            ->where('versions.0.lines.0.use.committedMinor', 100_000));
 });

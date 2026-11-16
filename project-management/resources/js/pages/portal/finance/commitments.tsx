@@ -215,8 +215,11 @@ export default function CommitmentsPage({
                                     <TableHead>For</TableHead>
                                     <TableHead>Project</TableHead>
                                     <TableHead>Approved</TableHead>
-                                    <TableHead className="text-right">
-                                        Invoiced
+                                    <TableHead
+                                        className="text-right"
+                                        title="Supplier invoices recorded in Projects against the order: evidence, not a payable recognized in the books."
+                                    >
+                                        Supplier invoices
                                     </TableHead>
                                     <TableHead className="text-right">
                                         Amount
