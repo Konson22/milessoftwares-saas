@@ -6,20 +6,32 @@ import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
 import { Field, invalid, Select } from '@/components/field';
+import { formatMoney } from '@/lib/money';
 import { index, store } from '@/routes/procurement';
 import type { Option } from '@/types';
 
 type Props = {
-    projects: (Option & { currency: string; grants: Option[] })[];
+    projects: (Option & {
+        currency: string;
+        grants: Option[];
+        budgetLines: (Option & {
+            category: string;
+            leftMinor: number | null;
+        })[];
+    })[];
     categories: Option[];
 };
 
 /** Ask to buy something: what, how much, and why. Saved as a draft. */
 export default function ProcurementCreate({ projects, categories }: Props) {
     const [projectId, setProjectId] = useState('');
+    const [category, setCategory] = useState('');
     // Each row keeps its key, so removing one doesn't shift what was typed.
     const [rows, setRows] = useState([0]);
     const project = projects.find((option) => option.value === projectId);
+    const lines = (project?.budgetLines ?? []).filter(
+        (line) => line.category === category,
+    );
 
     return (
         <>
@@ -96,6 +108,41 @@ export default function ProcurementCreate({ projects, categories }: Props) {
                                         required
                                         placeholder="Choose a category"
                                         options={categories}
+                                        value={category}
+                                        onChange={(event) =>
+                                            setCategory(event.target.value)
+                                        }
+                                    />
+                                </Field>
+                                <Field
+                                    id="budget_line_id"
+                                    label="Budget line"
+                                    hint={
+                                        project &&
+                                        category &&
+                                        lines.length === 0
+                                            ? 'The approved budget has no line in this category: it cannot be submitted.'
+                                            : 'The line of the approved budget this is charged to.'
+                                    }
+                                    error={errors.budget_line_id}
+                                >
+                                    <Select
+                                        key={`${projectId}-${category}`}
+                                        id="budget_line_id"
+                                        name="budget_line_id"
+                                        placeholder={
+                                            lines.length === 1
+                                                ? undefined
+                                                : 'Choose a line'
+                                        }
+                                        options={lines.map((line) => ({
+                                            value: line.value,
+                                            label:
+                                                line.leftMinor === null ||
+                                                !project
+                                                    ? line.label
+                                                    : `${line.label} (${formatMoney(line.leftMinor, project.currency)} left)`,
+                                        }))}
                                     />
                                 </Field>
                                 <Field

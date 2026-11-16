@@ -51,6 +51,8 @@ type Version = {
         category: string;
         description: string | null;
         amountMinor: number;
+        /** On the approved version only: spending charged to this line. */
+        use: { committedMinor: number; paidMinor: number } | null;
     }[];
 };
 
@@ -636,6 +638,20 @@ function Lines({
                                 · {line.description}
                             </span>
                         )}
+                        {line.use &&
+                            (line.use.committedMinor > 0 ||
+                                line.use.paidMinor > 0) && (
+                                <span className="block text-xs text-muted-foreground">
+                                    {money(line.use.committedMinor)} committed ·{' '}
+                                    {money(line.use.paidMinor)} paid ·{' '}
+                                    {money(
+                                        line.amountMinor -
+                                            line.use.committedMinor -
+                                            line.use.paidMinor,
+                                    )}{' '}
+                                    left on the line
+                                </span>
+                            )}
                     </span>
                     <span className="tabular-nums">
                         {money(line.amountMinor)}

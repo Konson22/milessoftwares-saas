@@ -43,6 +43,7 @@ type Props = {
         order: string | null;
         grant: string | null;
         amountMinor: number;
+        invoicedMinor: number | null;
         currency: string;
         approvedOn: string;
         approvedBy: string | null;
@@ -215,6 +216,9 @@ export default function CommitmentsPage({
                                     <TableHead>Project</TableHead>
                                     <TableHead>Approved</TableHead>
                                     <TableHead className="text-right">
+                                        Invoiced
+                                    </TableHead>
+                                    <TableHead className="text-right">
                                         Amount
                                     </TableHead>
                                 </TableRow>
@@ -252,6 +256,14 @@ export default function CommitmentsPage({
                                             <p className="text-xs">
                                                 {item.ageDays} days ago
                                             </p>
+                                        </TableCell>
+                                        <TableCell className="text-right text-muted-foreground tabular-nums">
+                                            {item.invoicedMinor === null
+                                                ? '—'
+                                                : formatMoney(
+                                                      item.invoicedMinor,
+                                                      item.currency,
+                                                  )}
                                         </TableCell>
                                         <TableCell className="text-right tabular-nums">
                                             {formatMoney(
