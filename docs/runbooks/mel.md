@@ -22,10 +22,62 @@ DELETE FROM mel_verified_results;                     -- "never deleted"
 
 ## Projects and M&E
 
-While M&E ran inside Projects, a reporting unit could be linked to a project and its figures read
-live. In the standalone application the link is off (`LinkedProjects::enabled()` is false) until
-the integration (ADR-0019 §9, M3): no project figures in M&E, and no M&E results in partner
-reports. Partner reports submitted before keep the results they captured.
+The two applications are linked by live reads only (ADR-0019 §20). Neither writes the other's
+database, and nothing is copied or synchronised.
+
+**Turning it on.**
+
+- M&E reads Projects when `PLATFORM_PROJECTS_INTEGRATION_URL` is set in `mel-app`'s `.env`
+  (`https://{internal}/projects/integration/v1`). Projects reads M&E when
+  `PLATFORM_MEL_INTEGRATION_URL` is set in `project-management`'s `.env`
+  (`https://{internal}/mel/integration/v1`). Either can be on alone.
+- Both service clients need the Central scope `integration.read`, which every service client may
+  request.
+- Central issues a read token only while the organization is active and entitled to **both**
+  apps. When the acting member is named, they must be an active member.
+
+**In M&E.**
+
+- A manager with `mel.projects.link` links a reporting unit to a project. The project is checked
+  in Projects as that member: it exists, and they may see it there.
+- Results can point to a milestone of a linked project, checked the same way.
+- Project figures and milestones are read live as the member viewing the page. Money is shown only
+  to members who hold `projects.finance.view` in Projects.
+
+**In Projects.**
+
+- Linking shares nothing. A manager also ticks **"Report published results to the project owner"**
+  on the unit before any of its results leave M&E. The box is off by default, is audited, and is
+  cleared when the unit is unlinked or moved.
+- When a partner report with a period is submitted, Projects reads the **verified, published,
+  standing** results of the shared units (non-draft indicators), for periods overlapping the report
+  period. It records them in the report's snapshot with `melSource` (status, retrieval time,
+  correlation id).
+- The read is made by Projects for the project's owner organization. The submitting partner gets
+  no M&E access.
+- **Only the project owner's members see the recorded results.** Implementers, leads,
+  sub-partners and donors see the report without them, also after publication (ADR-0019 §20.6).
+  Showing them to partners or donors is a pending business decision, not a setting.
+- Snapshots are frozen with the report version; later changes in M&E only affect later reports.
+
+**When something fails, it says what happened; it never shows a zero.**
+
+| What the page or report shows | Cause | What to do |
+| --- | --- | --- |
+| "Your organization does not have both Projects and M&E" / `not_entitled` | an entitlement is missing | entitle both, or nothing to do |
+| `subscription_expired` | the M&E (or Projects) entitlement ran out | renew |
+| "You do not have access to Projects" / `denied` | the member has no Projects role, or is not an active member | give a Projects role |
+| "Projects cannot be reached" / `unavailable`, `timeout` | the other app is down or slow (3 s limit, one retry on 502/503/504) | check the other app; links are kept |
+| "Linked to a project you cannot see…" | team-only project, or no longer in Projects | none: the link and results are kept |
+| `unlinked` / `not_shared` / `no_results` | the answer itself: no unit linked; linked but not set to report; nothing published for the period | link a unit, tick the sharing box, or publish |
+| `no_period` | the report has no period, so M&E was not asked | give reports a period |
+| `not_set_up` | the organization never opened M&E | open M&E once |
+
+**Tracing a read.** Both sides log `Integration read` / `Integration request` with the same
+`correlation_id` (also in the `X-Correlation-Id` response header and in the report's
+`melSource`).
+
+Partner reports submitted before M3 keep what they captured; they have no `melSource`.
 
 ## Roles
 
@@ -36,7 +88,7 @@ reports. Partner reports submitted before keep the results they captured.
 | M&E officer | Enter, import and review results across programmes; cannot publish |
 | Field officer | Enter and submit results for the programmes and units they are given |
 | Enumerator | Collect data with the forms they are assigned |
-| Project manager | Follow the programmes they are given (linking units to projects returns with M3) |
+| Project manager | Follow the programmes they are given; link units to projects they may see in Projects |
 | Implementing partner | Enter and submit results for their own units |
 | Donor viewer | Published results and evidence marked shareable, for the programmes and periods given |
 | Independent evaluator | Verified and published results with evidence, for the programmes and periods given; changes nothing |

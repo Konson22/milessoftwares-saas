@@ -31,6 +31,15 @@ maps `mel` to `mel-app` by default). What is specific to it:
    sign-in client with tenant redirect path `/mel/auth/callback`, service client, webhook secret.
    Copy the values into the product's `.env`. Trials are per application: switch the trial on for
    `mel` only when approved.
+5. **Projects ⇄ M&E integration (ADR-0019 §20), optional.**
+   - Central must run the release with the `integration.read` scope and
+     `POST /api/v1/integration-tokens`.
+   - `mel-app` `.env`: `PLATFORM_PROJECTS_INTEGRATION_URL=https://{internal}/projects/integration/v1`.
+   - `project-management` `.env`: `PLATFORM_MEL_INTEGRATION_URL=https://{internal}/mel/integration/v1`.
+     It is not in PM's `.env.example` yet; add it there when that file is next committed.
+   - Leave either empty to keep that direction off.
+   - Both URLs are server to server. They need not be public, but `/…/integration/v1` must reach
+     the app without the workspace host check.
 
 ## Server, before the first deploy
 

@@ -836,3 +836,315 @@ session scratchpad.
    - Then run the reassign.
 5. Rollback: redeploy the previous Projects release. Catalog 3.3.0 is still published; reassign
    back to it.
+
+## 20. As built: M3 (2026-11-16, local, not deployed) — Projects and M&E integration
+
+M3 connects the two applications without either one reading the other's database. Each keeps its
+own data. They read each other over HTTP, with short-lived tokens signed by Central. Both sides are
+optional: a deployment that leaves the integration URLs empty behaves as before.
+
+### 20.1 Architecture
+
+```
+mel-app ──GET──▶ project-management  /projects/integration/v1/…   (projects, milestones)
+project-management ──GET──▶ mel-app   /mel/integration/v1/…        (verified results)
+      ▲                      ▲
+      └── token from Central POST /api/v1/integration-tokens (scope integration.read)
+```
+
+- **Reads only.** `IntegrationClient` sends GET requests and nothing else. Neither app writes to the
+  other.
+- **Configuration.**
+  - `PLATFORM_PROJECTS_INTEGRATION_URL` is set in mel-app; `PLATFORM_MEL_INTEGRATION_URL` is set in
+    project-management.
+  - When the URL is empty, the integration is off ("not configured").
+  - Both `phpunit.xml` files pin these to empty. A developer's `.env` can therefore never send a
+    test to a running server.
+
+### 20.2 Token authorization (Central)
+
+- **Pairs.** `EventTokenIssuer::issueIntegration` allows only `projects⇄mel` (`PRODUCT_PAIRS`).
+- **Token.** RS256, valid for 300 s.
+- **Claims.**
+  - `iss`: Central.
+  - `aud`: the receiving app.
+  - `src`: the requesting app.
+  - `org`: the organization.
+  - `scope`: `integration.read`.
+  - `act` (optional): the member on whose behalf the read is made.
+- **Refusals.**
+
+  | Refusal               | HTTP | Meaning                                           |
+  | --------------------- | ---- | ------------------------------------------------- |
+  | `unknown_partner`     | 422  | Not an allowed pair                               |
+  | `organization_inactive` | 422 | The organization is not active                  |
+  | `not_entitled`        | 404  | The organization lacks one of the two apps        |
+  | `entitlement_expired` | 422  | A subscription ran out                            |
+  | `not_member`          | 403  | `act` is not a member of the organization         |
+
+- **Expiry.** `entitlement_expired` is told apart from `not_entitled` by a lapsed, unrevoked
+  whole-application entitlement.
+- **Client.** `IntegrationClient` maps `entitlement_expired` to `NotEntitled` with that error code.
+  PM records it as `subscription_expired`.
+
+### 20.3 Client and API contracts
+
+**`IntegrationClient` (platform-client).**
+
+- Timeout of 3 s (2 s to connect).
+- One retry, only on 502, 503 or 504 or a dropped connection. A timeout is never retried.
+- Sends `X-Correlation-Id` and logs the source, organization, acting user, path, status and
+  duration.
+- Results are typed (`IntegrationStatus`): Ok, NotConfigured, NotEntitled, Denied, NotFound,
+  Unavailable, Timeout, Invalid.
+
+**Receiving middleware.** `platform.integration:{source}` (`RequireIntegrationToken`):
+
+- verifies the signature, issuer, audience, expiry and scope;
+- requires the expected source;
+- answers 401 `invalid_token` or 403 `source_not_allowed`.
+
+**Projects API** (`/projects/integration/v1`, source `mel`). Behind `EnterIntegration`:
+
+- Requires `act` (403 `acting_user_required`).
+- The organization comes from the token only; request parameters are ignored. Errors: 404
+  `not_provisioned`, 403 `organization_inactive`.
+- The member's effective access comes from Central. Without `projects.view` the answer is 403
+  `forbidden`.
+- The read then runs as that member: organization scope, team-only visibility
+  (`ProjectVisibilityScope`), and money figures only with `projects.finance.view`.
+- Endpoints:
+  - `GET projects`: lists the projects the member can see (code, name, status), up to 500.
+  - `GET projects?ids[]=…[&with=milestones]`: 1–100 uuids, with figures. Projects the member cannot
+    see are listed under `missing`.
+  - `GET projects/{id}`: 404 `unknown_project` when the member cannot see it.
+  - `GET milestones?ids[]=…` or `?project_ids[]=…`: only milestones of projects the member can see.
+
+**M&E API** (`/mel/integration/v1`, source `projects`).
+
+- `EnterIntegration` checks the organization with Central and enters it. 404 `not_provisioned`
+  when M&E was never set up there.
+- `GET projects/{id}/verified-results?from=Y-m-d&to=Y-m-d`:
+  - the period is required (422 otherwise);
+  - returns `linked`, `units`, `shared`, `truncated` (more than 200 rows) and `data`.
+
+### 20.4 Result eligibility (decided in M&E, `ProjectsIntegrationController`)
+
+A result is sent only if all of these hold:
+
+1. **Organization.** It belongs to the organization the token names.
+2. **Project.** Its reporting unit is linked to this project.
+3. **Sharing.** That unit is marked **"Report published results to the project owner"**
+   (`mel_programme_units.shares_with_project_reports`):
+   - It is off by default, including for every link that already exists.
+   - An M&E manager turns it on per unit (`mel.projects.link`), and each change is audited
+     (`unit.project_reporting_on|off`).
+   - Unlinking a unit, or moving it to another project, turns it off.
+4. **Period.** Its reporting period overlaps the report's period, with both ends included.
+5. **Status.** It is verified and published, and still standing: a superseded value is never sent,
+   so there is one value per indicator, unit and period.
+6. **Indicator.** The indicator is active or retired, never a draft.
+
+**Fields sent:**
+
+- indicator id, version id and code;
+- unit;
+- period and its dates;
+- measure and unit label;
+- value, numerator and denominator;
+- verification and publication times;
+- for evidence marked "share with donors": the file name, type and size only.
+
+**Never sent:**
+
+- files or paths;
+- narratives;
+- disaggregation cells;
+- people's names;
+- Data Collection submissions.
+
+Values are never added up, so measurements that cannot be combined are not combined.
+
+### 20.5 Snapshots (project-management)
+
+- **Before the transaction.** `Reports::submit` reads M&E (`MelResults::forReport`) **before** the
+  submission transaction, so a slow M&E never holds a database lock.
+- **Frozen with the version.** The answer is frozen into the submitted version:
+  - `content.system.mel` holds the results with their source ids and times;
+  - `content.system.melSource` holds `{application, status, retrievedAt, correlationId, error,
+    truncated}`. The status is kept apart from the values.
+- **Statuses:**
+  - `captured`;
+  - `no_results` (the units are shared, nothing is published for the period);
+  - `not_shared` (the units are linked, none is set to report);
+  - `unlinked`;
+  - `no_period` (M&E is not asked);
+  - `off`;
+  - `not_entitled`;
+  - `subscription_expired`;
+  - `not_set_up`;
+  - `denied`;
+  - `unavailable`;
+  - `timeout`;
+  - `error`.
+
+  "No results" is recorded only when M&E said so.
+- **Immutability.**
+  - A submitted version is never rewritten. A second submit is refused ("cannot be changed"), and
+    no version is added.
+  - Resubmitting after changes are requested makes a **new** version with a fresh read.
+  - A later correction or unsharing in M&E changes only future reads.
+- **Never blocks.** The submission never fails because of M&E.
+
+### 20.6 Disclosure policy (the security review's decision)
+
+**Problem.** As first built, the results went into the report content and were visible to every
+party that could see the report: the submitting partner, a lead reviewing a sub-partner, and
+donors once the report was published.
+
+**Least privilege now.**
+
+1. **What leaves M&E.** M&E sends only what §20.4 allows. The decision to share is made per unit by
+   M&E, not by Projects.
+2. **Who makes the read.** It is the owner organization's service read, with no acting member. A
+   partner submitting a report gains no access to M&E, and Projects never reads M&E as a partner.
+3. **Who sees the results.** The results are recorded with the version but shown **only to members
+   of the project's owner organization** who have `projects.view` (`Reports::seesMelResults`).
+   - `ReportController::content` removes `system.mel` and `system.melSource` on the server for
+     everyone else: implementers, leads, sub-partners and donors.
+   - This holds at every status, including after publication.
+   - The page then shows nothing about M&E to them.
+
+**Alternatives needing a business decision. Not built, and external access was not expanded:**
+
+- **B. Share with the reporting chain.** The submitter, its reviewer and the project owner see the
+  results. Leads would see results about their sub-partners' units.
+- **C. Share with donors on publication.** Published reports carry the results to donor
+  participants holding `donor_reports.view`. This needs a per-unit "donor-visible" decision in M&E,
+  separate from §20.4's sharing.
+
+Either one needs a decision from the business. It would be one change to `Reports::seesMelResults`,
+plus tests.
+
+### 20.7 Linking (mel-app)
+
+- **Checked live.** A unit links to a project, and a result to a milestone, only after Projects
+  confirms it **as the acting member**. Errors are refused with a reason in plain words:
+  - the project does not exist or the member cannot see it;
+  - the organization does not have both apps;
+  - Projects is down.
+- **One unit per project.** A project can be linked to only one unit per programme.
+- **Idempotent.** Saving an unchanged link records nothing.
+- **Shown live.** Linked projects and milestones are read live as the viewing member, never copied
+  into M&E.
+  - When Projects cannot answer, the page says why and keeps the stored ids.
+  - A milestone that Projects no longer shows stays as "Milestone kept from before (not shown by
+    Projects now)", with no live data. The reference is kept without granting access.
+- **Archived, completed or cancelled projects.** They still answer through the API with their
+  status. An archived M&E unit keeps its published results.
+
+### 20.8 Legacy
+
+`mel_partners` and the other legacy M&E tables stay in project-management (M2B, §19). Nothing
+active reads them:
+
+- `ParticipationInventory` (`projects:participation-inventory`, an operator report) counts
+  `mel_partners` only when the table exists. It is labelled "legacy, not the live M&E database".
+- The capability labels `RESULTS_VIEW` and `EVIDENCE_SUBMIT` remain `effective: false`.
+
+**Retiring the tables** needs, in order:
+
+1. confirm on production that no rows are needed, or export them to M&E's own tables;
+2. drop the inventory line;
+3. add a migration that drops them, in a later release.
+
+This is not done in M3.
+
+### 20.9 Verification (2026-11-16, local only)
+
+**Automated suites:**
+
+- project-management: 451 passed, 7 skipped. This includes:
+  - `PartnerReportMelTest` (18): disclosure in both the donor → implementer chain and the
+    donor → lead → sub-partner chain, duplicate submission, no period;
+  - `MelIntegrationApiTest` (13);
+  - `PartnerReportsTest`.
+- mel-app: 103 passed on SQLite and 103 passed on PostgreSQL. This includes
+  `VerifiedResultsApiTest` (9) and `ProjectLinkTest` (9).
+- Central `tests/Feature/SharedModules`: 29 passed, including `IntegrationTokenTest` (5).
+- platform-client: 146 passed, including `IntegrationTest` (11).
+
+**Static checks and builds:**
+
+- PHPStan is clean in project-management and mel-app.
+- platform-client has 3 PHPStan errors, all in files that predate M3.
+- Pint passes, and `tsc` is clean in both apps.
+- Production builds succeed in both apps.
+- `vp check` reports formatting problems only in other sessions' files (`docs/marketing/*`,
+  `project-management/vite.config.ts`) and one lint warning in `mel-app/…/collect/rules.ts`. None
+  are M3 files.
+
+**Real HTTP.** These checks ran between separately running servers with Central-issued tokens:
+Central on :8101, PM on :9300, M&E on :9400. They were run as scripts, **not in a browser**.
+
+1. **Project lookup.** The member's project figures come back.
+2. **Milestone lookup.** Milestones come back by id.
+3. **Link.** The link is saved and the figures and milestones appear on the M&E page.
+4. **Invalid project id.** Refused with "That project is not in Projects, or you cannot see it
+   there."
+5. **Team-only project.**
+   - An officer gets 404 `unknown_project`, and the milestone list comes back empty.
+   - The owner gets 200.
+   - A member without `projects.view` gets 403 `forbidden`.
+   - A token without a member gets 403.
+6. **Another tenant's project.** 404, and the project is listed under `missing` in a list call.
+7. **Verified results.**
+   - Q1 returns one result (value 1200, evidence name only).
+   - Q3 returns nothing.
+   - A request with no period gets 422.
+8. **Disclosure.**
+   - A linked but unshared unit returns `shared: 0` with no data.
+   - The partner's report page carries `mel: []` and no `melSource`; the owner's page shows the
+     result.
+9. **Submission.**
+   - Version 1 is frozen with `captured`, result id `01a1e446-5416…`, the publication time and the
+     correlation id.
+   - A second submit is refused.
+   - Turning sharing off afterwards makes live reads `not_shared`, and the frozen value stays 1200.
+10. **M&E stopped.** The submission succeeds and is frozen `unavailable` / `unreachable`.
+11. **Expired subscription.** PM records `subscription_expired`, and Central refuses M&E's token with
+    `entitlement_expired`. The entitlement was then restored exactly.
+12. **Missing subscription.** An organization without M&E is recorded as `not_entitled`.
+13. **Bad tokens.**
+    - A garbage token or a tampered `org` claim gets 401 `invalid_token` from both apps.
+    - A real token used 345 s after issue (300 s lifetime + 30 s allowed clock skew) gets 401
+      `invalid_token`. At 320 s it was still accepted, as the skew allowance intends.
+14. **Retry and timeout** (against a counting stub on :9400).
+    - A 503 is retried exactly once (2 hits), then recorded `unavailable` / `http_503`.
+    - A 6 s response gets 1 hit and is recorded `timeout`.
+    - One real submission also timed out: the local M&E server took about 4 s with little free
+      memory. It was frozen `timeout` with no results.
+
+**Finance E2E:** `php ops/e2e/finance-projects/run.php`, run with the M3 servers stopped: 17 of
+17 passed. Finance was not changed.
+
+**Not verified:**
+
+- browser rendering of the new panels and the sharing checkbox;
+- staging and production;
+- a real lead / sub-partner chain over HTTP (covered only in feature tests);
+- PM's integration timeout under production PHP-FPM.
+
+### 20.10 Security risks and deviations
+
+- **Service read without a member.** The PM → M&E read for reports has no `act`. It is limited by
+  M&E's eligibility rules (§20.4) and Projects' audience rule (§20.6). Anyone who can submit a
+  report can trigger a read for the owner organization, but they never see its answer.
+- **Short timeout.** The 3 s timeout was exceeded locally under memory pressure. Production should
+  watch the `Integration request` duration logs, and the timeout should be revisited if `timeout`
+  snapshots appear.
+- **Deviations from the M3 brief.**
+  - Results are owner-only for now. The brief's partner and donor audiences wait for the decision
+    in §20.6.
+  - M&E sends nothing until a manager turns sharing on.
+  - A report period is now required for M&E results.
