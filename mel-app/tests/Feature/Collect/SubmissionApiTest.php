@@ -6,6 +6,7 @@ use App\Collect\Models\ReviewDecision;
 use App\Collect\Models\Submission;
 use App\Collect\Models\SubmissionRevision;
 use App\Mel\Models\AuditEvent;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -310,4 +311,24 @@ it('audits what arrives', function () {
 it('refuses an id that is not a uuid', function () {
     $this->postJson(collectApi('submissions'), surveyPayload($this->version->id, ['id' => 'abc']))->assertStatus(422);
     $this->getJson(collectApi('submissions/'.Str::random(8)))->assertNotFound();
+});
+
+it('tells the app who and where it is signed in', function () {
+    $this->getJson($this->workspaceUrl('acme', 'api/v1/me'))->assertOk()
+        ->assertJsonPath('user.id', $this->enumerator->id)
+        ->assertJsonPath('organization.slug', 'acme')
+        ->assertJsonPath('canCollect', true);
+});
+
+it('takes a photo sent as multipart, as the phone sends it', function () {
+    $bytes = pngBytes(11);
+    $payload = photoPayload($this->version->id, $bytes);
+    $this->postJson(collectApi('submissions'), $payload)->assertCreated();
+
+    $this->post(collectApi("submissions/{$payload['id']}/attachments/water_point"), [
+        '_method' => 'PUT',
+        'file' => UploadedFile::fake()->createWithContent('water_point.jpg', $bytes),
+    ], ['Accept' => 'application/json'])->assertOk()->assertJsonPath('status', 'submitted');
+
+    expect(Storage::disk('local')->get(inAcme(fn () => Attachment::query()->sole()->path)))->toBe($bytes);
 });

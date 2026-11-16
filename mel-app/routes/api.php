@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\CollectController;
+use App\Http\Controllers\Api\MeController;
 use App\Http\Middleware\RememberMember;
 use App\Http\Middleware\SetUpMel;
 use Illuminate\Support\Facades\Route;
@@ -26,6 +27,8 @@ Route::prefix(app(PlatformConfig::class)->path().'/api/v1')
     ->middleware(['platform.api', SetUpMel::class, RememberMember::class, 'throttle:collect-api'])
     ->name('api.')
     ->group(function () {
+        Route::get('me', MeController::class)->name('me');
+
         Route::prefix('collect')->name('collect.')->middleware('can:mel.collect.submit')->group(function () {
             Route::get('assignments', [CollectController::class, 'assignments'])->name('assignments');
             Route::get('form-versions/{version}', [CollectController::class, 'version'])->whereUuid('version')->name('versions.show');
