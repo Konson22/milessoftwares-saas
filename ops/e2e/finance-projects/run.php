@@ -342,6 +342,9 @@ try {
             'requested 100,000, approved and paid 80,000, the unapproved 20,000 not committed', $state);
         $figures = drive('projects', ['figures', 'acme', 'PART']);
         check($figures['paidMinor'] === 80_000 && $figures['committedMinor'] === 0, 'project figures 80,000 paid, 0 committed', $figures);
+        // What approvals see: the unapproved 20,000 is free again (Phase 4.1), the same as the figures.
+        $left = drive('projects', ['available', 'acme', 'PART']);
+        check($left === 10_000_000 - 80_000 && $figures['availableMinor'] === $left, 'approvals and figures both 9,920,000 left', ['available' => $left, 'figures' => $figures['availableMinor']]);
 
         return ['requested' => 100_000, 'approved' => 80_000, 'paid' => 80_000];
     });
@@ -432,6 +435,30 @@ try {
         check($f('row', $down['request_id'])['status'] === 'received', 'Finance has it, once');
 
         return ['first_error' => $sent['last_error']];
+    });
+
+    scenario('19 purchase order: one request once goods and invoices match, paid once, no change after', function () use ($f, $p) {
+        // 10 pumps for 50,000.00: received in full, invoiced as 20,000.00 + 30,000.00.
+        $order = drive('projects', ['order', 'acme', 'PROC', '5000000']);
+        check($order['requests_after_first_invoice'] === 0, 'nothing sent to Finance while the invoices fall short', $order);
+        check($order['status'] === 'submitted' && $order['revisions'] === 1 && $order['requested'] === 5_000_000, 'one request, for the whole commitment', $order);
+        $row = $f('row', $order['request_id']);
+        check($row['status'] === 'received' && $row['amount_minor'] === 5_000_000, 'Finance holds one request of 50,000.00', $row);
+
+        $late = drive('projects', ['order-invoice', 'acme', $order['expense_id']]);
+        check(! $late['ok'], 'no further invoice once Finance has it', $late);
+
+        $f('prepare', $order['request_id'], '5000000');
+        $f('approve', $order['request_id']);
+        $paid = $f('disburse', $order['request_id']);
+        check($paid['ok'], 'disbursed in Finance', $paid);
+        $state = $p($order['expense_id']);
+        check($state['status'] === 'paid' && $state['net_paid'] === 5_000_000 && $state['revisions'] === 1, 'paid once, in full, one revision', $state);
+        $figures = drive('projects', ['figures', 'acme', 'PROC']);
+        check($figures['paidMinor'] === 5_000_000 && $figures['committedMinor'] === 0 && $figures['invoicedMinor'] === 0, 'figures: paid 50,000.00, nothing committed or invoiced', $figures);
+        check(drive('projects', ['available', 'acme', 'PROC']) === 5_000_000, 'the budget used once: 50,000.00 of 100,000.00 left');
+
+        return ['order' => $order['order'], 'paid' => $state['net_paid']];
     });
 
     scenario('10b reconciliation after the run', function () {

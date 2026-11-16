@@ -17,12 +17,18 @@
  *   php projects.php rejections                         refused outcomes, by reason
  *   php projects.php reconcile <slug>
  *   php projects.php figures <slug> <code>              ProjectFinance figures of a project
+ *   php projects.php available <slug> <code>            what approvals see left of the materials budget
+ *   php projects.php order <slug> <code> <amount_minor> a purchase order (ADR-0020): request, approval, quote,
+ *                                                       order, spending approved, all goods received, and two
+ *                                                       supplier invoices (40% and 60%) coming to its commitment
+ *   php projects.php order-invoice <slug> <expense_id>  one more invoice on that order (refused once with Finance)
  */
 
 require __DIR__.'/lib.php';
 
 $laravel = e2e_boot('projects');
 
+use App\Actions\Procurement;
 use App\Actions\Spending;
 use App\Enums\BudgetVersionStatus;
 use App\Enums\CostCategory;
@@ -36,9 +42,11 @@ use App\Models\FinanceRequest;
 use App\Models\FinanceRequestTransition;
 use App\Models\Organization;
 use App\Models\Project;
+use App\Models\PurchaseOrder;
 use App\Models\User;
 use App\Support\ProjectFinance;
 use App\Tenancy\CurrentOrganization;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -77,6 +85,50 @@ function describeRequest(Expense $expense): array
         'history' => FinanceRequestTransition::query()->where('finance_request_id', $request->id)->orderBy('created_at')->orderByRaw('coalesce(finance_sequence, 0)')
             ->get()->map(fn ($t) => "{$t->from_status}>{$t->to_status}".(isset($t->facts['reason']) ? " ({$t->facts['reason']})" : ''))->all(),
     ];
+}
+
+/** A project with an approved 100,000.00 materials budget (one line), made once per code. */
+function e2eProject(string $code, string $currency): Project
+{
+    $manager = member('manager');
+
+    return Project::query()->where('code', $code)->first() ?? tap(new Project, function (Project $project) use ($code, $currency, $manager) {
+        $project->forceFill([
+            'code' => $code, 'name' => "E2E {$code}", 'status' => 'active', 'currency' => $currency,
+            'start_on' => '2026-11-01', 'due_on' => '2027-10-31', 'budget_minor' => 10_000_000,
+            'created_by' => $manager->id, 'visibility' => 'organization',
+        ])->save();
+        $version = tap(new BudgetVersion)->forceFill(['project_id' => $project->id, 'number' => 1, 'status' => BudgetVersionStatus::Approved, 'total_minor' => 10_000_000, 'created_by' => $manager->id]);
+        $version->save();
+        $version->lines()->create(['project_id' => $project->id, 'category' => CostCategory::Materials, 'amount_minor' => 10_000_000]);
+    });
+}
+
+/**
+ * The whole purchase, as people do it in Projects' pages (ADR-0020).
+ *
+ * @return array<string, mixed>
+ */
+function e2eOrder(string $code, int $amount, string $currency): array
+{
+    $project = e2eProject($code, $currency);
+    $purchase = Procurement::request($project, ['title' => "Hand pumps {$code}", 'justification' => 'Boreholes.', 'category' => CostCategory::Materials, 'needed_by' => null, 'grant_id' => null],
+        [['description' => 'Hand pump', 'quantity' => '10', 'unit' => 'each', 'unit_price_minor' => intdiv($amount, 10)]], member('requester'));
+    Procurement::submit($purchase, member('requester'));
+    Procurement::approve($purchase->refresh(), null, member('approver'));
+    $quote = Procurement::addQuote($purchase->refresh(), ['supplier_id' => Procurement::supplierNamed('Pumps Ltd')->id, 'amount_minor' => $amount, 'reference' => 'Q-1', 'valid_until' => null], null, member('buyer'));
+    Procurement::choose($purchase->refresh(), $quote, 'Only supplier with stock.', member('buyer'));
+    $order = Procurement::raiseOrder($purchase->refresh(), 'Delivery to the site', member('buyer'));
+    Spending::approve($order->expense, null, member('approver'));
+    $line = $purchase->lines()->firstOrFail();
+    Procurement::receive($order->refresh(), [$line->id => '10'], CarbonImmutable::today(), null, member('storekeeper'));
+    $first = intdiv($amount * 4, 10);
+    $invoice = fn (string $number, int $minor) => Procurement::recordInvoice($order->refresh(), ['number' => $number, 'amount_minor' => $minor, 'currency' => $currency, 'invoice_on' => CarbonImmutable::today(), 'due_on' => null], null, member('buyer'));
+    $invoice("{$code}-A", $first);
+    $afterFirst = FinanceRequest::query()->where('expense_id', $order->expense_id)->count();
+    $invoice("{$code}-B", $amount - $first);
+
+    return ['expense_id' => $order->expense_id, 'order' => $order->number, 'requests_after_first_invoice' => $afterFirst, ...describeRequest($order->expense)];
 }
 
 function attempt(callable $work): array
@@ -119,17 +171,7 @@ $result = app(CurrentOrganization::class)->run($organization, function () use ($
     return match ($action) {
         'expense' => (function () use ($argv, $organization) {
             [$code, $amount, $currency] = [$argv[3], (int) $argv[4], $argv[5] ?? $organization->currency];
-            $manager = member('manager');
-            $project = Project::query()->where('code', $code)->first() ?? tap(new Project, function (Project $project) use ($code, $currency, $manager) {
-                $project->forceFill([
-                    'code' => $code, 'name' => "E2E {$code}", 'status' => 'active', 'currency' => $currency,
-                    'start_on' => '2026-11-01', 'due_on' => '2027-10-31', 'budget_minor' => 10_000_000,
-                    'created_by' => $manager->id, 'visibility' => 'organization',
-                ])->save();
-                $version = tap(new BudgetVersion)->forceFill(['project_id' => $project->id, 'number' => 1, 'status' => BudgetVersionStatus::Approved, 'total_minor' => 10_000_000, 'created_by' => $manager->id]);
-                $version->save();
-                $version->lines()->create(['project_id' => $project->id, 'category' => CostCategory::Materials, 'amount_minor' => 10_000_000]);
-            });
+            $project = e2eProject($code, $currency);
             $spending = Spending::request($project, ['category' => CostCategory::Materials, 'description' => "Hand pumps {$code}", 'supplier' => 'Pumps Ltd', 'amount_minor' => $amount, 'grant_id' => null], member('requester'));
             Spending::approve($spending, null, member('approver'));
 
@@ -147,6 +189,10 @@ $result = app(CurrentOrganization::class)->run($organization, function () use ($
             ->map(fn ($row) => [...(array) $row, 'payload' => json_decode($row->payload, true)])->all(),
         'reconcile' => app(Reconciliation::class)->run($organization->id)['counts'],
         'figures' => ProjectFinance::for(Project::query()->where('code', $argv[3])->firstOrFail()),
+        'available' => Spending::categoryAvailable(Project::query()->where('code', $argv[3])->firstOrFail(), CostCategory::Materials),
+        'order' => e2eOrder($argv[3], (int) $argv[4], $argv[5] ?? $organization->currency),
+        'order-invoice' => attempt(fn () => Procurement::recordInvoice(PurchaseOrder::query()->where('expense_id', $argv[3])->firstOrFail(),
+            ['number' => 'LATE-1', 'amount_minor' => 1, 'currency' => Project::query()->findOrFail($expense()->project_id)->currency, 'invoice_on' => CarbonImmutable::today(), 'due_on' => null], null, member('buyer'))->id),
         default => throw new InvalidArgumentException("Unknown action {$action}"),
     };
 });
