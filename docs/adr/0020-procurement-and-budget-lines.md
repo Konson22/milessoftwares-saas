@@ -1,6 +1,7 @@
 # ADR-0020: Procurement against budget lines, receipts, supplier invoices and commitment release
 
-Status: **Accepted as built (2026-11-16), local, not deployed.** Phase 4 of
+Status: **Accepted; deployed to production 2026-11-16 (release 20261116210434).** Phase 4.1
+corrections (section 5) are local, not deployed. Phase 4 of
 Tatook Project Management. Builds on ADR-0017 (financial ownership, still
 Proposed) without moving any ownership it leaves open.
 
@@ -172,4 +173,94 @@ when an order is approved.
 - It adds columns and a table, PostgreSQL CHECKs and the partial unique index, and backfills
   `budget_lines.line_key = id`.
 - **No row is deleted. No financial amount is changed.**
-- Rollback drops what it added.
+- Rollback drops what it added, and only while nothing was recorded with it (section 5.6).
+
+## 5. Phase 4.1: financial correctness (2026-11-16)
+
+A review of the code as deployed. Three defects found and fixed. Each was reproduced by a test that
+fails on the Phase 4 code and passes now.
+
+### 5.1 Defects
+
+| # | Severity | Defect | Reproduced by |
+|---|---|---|---|
+| D1 | High | Closing short set the commitment to the invoiced total, whatever had arrived. 4 of 10 pumps received with a 700.00 invoice on a 1,000.00 order closed at 700.00: 300.00 payable for goods that never came. | `closes short only down to the order price of what was accepted` |
+| D2 | High | Closing short needed only *a* receipt. A delivery rejected in full let the order close on its invoice: 1,000.00 payable for nothing accepted. The same rule blocked `Spending::cancel`, so the commitment could not be released either. | `owes nothing for goods rejected in full` |
+| D3 | High (integrated mode only, flag off in production) | When Finance approved or paid less than asked, the rest could never be paid, sent again or cancelled, yet every approval gate (category, budget line, grant, budget revision) still counted it. The reports (`ProjectFinance`) already released it, so the gates and the reports disagreed: 8,800.00 left for approvals, 9,200.00 reported. | `frees for new approvals what Finance approved short`; E2E scenario 11 |
+
+### 5.2 Rules now
+
+- **Value of what arrived.** An order has one price: the chosen quote's total. The request's line
+  prices are the requester's estimates, not the supplier's. So Projects values accepted goods only
+  when every line arrived in the same share: that share of the order's total, half up
+  (`PurchaseOrder::acceptedValueMinor`). Lines arriving in different shares cannot be valued, and
+  closing is refused with the reason. Per-line order prices are the way to lift that (next phase).
+- **Closing short** needs accepted goods worth more than zero, and invoices no more than that value.
+  An invoice above it is voided or the rest received.
+  - Invoices *below* the value are the supplier billing less, for example a discount. The order
+    closes, and the audit records `accepted_value_minor` and `below_accepted_minor` with the
+    required reason.
+  - Still refused, as before: once with Finance, once paid, or once closed.
+- **Cancelling an order's spending** is refused once any goods were *accepted*. Rejected goods are
+  not owed.
+- **Settled short** (`Spending::settledShort`): approved spending whose latest Finance request is
+  approved, part-paid, paid or failed counts as Finance's net paid plus outstanding authorized. This
+  is the same as `ProjectFinance`.
+  - Used by `categoryAvailable`, `chargedToGrant`, `Budgets::usedByLine`, the budget-revision guard,
+    the budget page and the grant page.
+  - Read-side only: the expense is not changed (Finance's outcomes never touch it).
+  - Requests submitted or accepted, refused, reversed or cancelled release nothing in the gates.
+    They can be sent again or cancelled in Projects, so the line is not promised twice.
+
+### 5.3 What is verified and left as it is
+
+- One commitment per order (`purchase_orders.expense_id`, unique). Approval commits, payment moves
+  it to paid, and the budget is consumed once. Tested with a worked example: line 3,000.00, order
+  1,000.00, 2,000.00 left before and after payment.
+- Requisitions reserve nothing. The order's spending approval re-checks the line and the category on
+  the locked project row, so two approved requisitions cannot both be ordered past the line.
+- Part delivery stays committed in full and is not payable until received in full or closed. Partial
+  supplier payment is **Phase 2**:
+  - the contract sends one amount per request;
+  - Finance may pay less than asked (scenario 11), but procurement has no milestones or retention.
+- Multiple invoices make one request for their total, sent once (unit test, and E2E scenario 19 over
+  real HTTP).
+- No invoice is recorded or voided, and no order is closed, once a Finance request exists (unit and
+  E2E).
+- Finance outcomes: strict sequence, stale refused, gaps wait, duplicate transactions answered as
+  duplicates, duplicate payment ids refused, amounts capped at what was asked and approved,
+  correlation id kept across revisions (`FinanceIntegrationTest`, E2E 02, 06, 07–08, 10, 11, 13, 18).
+- Budget revisions keep every line key and cannot drop or undercut a line with commitments (tested).
+  Spending without a line key counts at category level, as before.
+
+### 5.4 What "invoiced" means
+
+`invoicedMinor` and the "Supplier invoices" columns are supplier invoices **recorded in Projects** as
+procurement evidence:
+- they are not a payable Finance has recognized;
+- they are not a request awaiting Finance (that is the Finance status on the order).
+
+The labels say so. Partner and donor figures (`shareable()`) do not carry it. `committedMinor` keeps
+its established meaning: outstanding (approved, not yet paid). Paid is separate.
+
+### 5.5 Limitations kept (documented, not built)
+
+- After Finance **refuses** a procurement request, the order's invoices stay locked. The existing
+  resubmission sends any amount up to what is left, without re-matching invoices. A wrong invoice is
+  fixed in Finance's review or by cancelling the spending.
+- The reports release refused spending at once (3C design). The approval gates hold it until it is
+  resent or cancelled. The gates are the safer side, and changing the reports would change donor
+  snapshots.
+- A receipt entered twice by mistake (a double submit within what is still due) is two deliveries:
+  nothing can tell it from a real second delivery. Over-receipt is refused under a row lock.
+
+### 5.6 Migration and recovery
+
+- The migration ran in production on 2026-11-16. It sorts after `2026_11_17_*` (Finance requests),
+  which it needs. It must not be renamed: a renamed file would run again and fail on existing
+  columns.
+- `down()` now refuses when anything was recorded with it: invoices, evidence, rejections, closures,
+  or spending charged to lines.
+- Recovery is **forward only**: a corrective migration, and a restore from the pre-release backup
+  only for a release with no new procurement records. Production had 0 budget lines, orders and
+  invoices at deploy time.
