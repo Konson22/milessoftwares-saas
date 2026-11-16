@@ -889,6 +889,8 @@ type ProgrammeData = {
         indicators: number;
     }[];
     rows: PerformanceRow[];
+    /** Why linked projects are not shown (Projects did not answer), or null. */
+    projectsMessage: string | null;
     projects: {
         unit: string;
         project: string | null;
@@ -949,6 +951,15 @@ function ProgrammeReport({ data }: { data: ProgrammeData }) {
                             </li>
                         ))}
                     </ul>
+                </Panel>
+            )}
+
+            {data.projectsMessage !== null && (
+                <Panel>
+                    <PanelHeader
+                        title="Linked projects"
+                        description={data.projectsMessage}
+                    />
                 </Panel>
             )}
 

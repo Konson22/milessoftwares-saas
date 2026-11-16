@@ -77,8 +77,12 @@ class ProgrammeController extends Controller
         $access = $this->access();
         $unitIds = $access->unitIds($programme);
         $manages = $access->can('mel.programmes.manage');
-        // Live from Projects: progress and spending as Projects works them out.
-        $projects = LinkedProjects::figures($programme->units, $access);
+        // Live from Projects, as this member sees it there: progress, spending
+        // (with projects.finance.view) and milestones. Not stored here.
+        $link = LinkedProjects::read($programme->units, $access, withMilestones: true);
+        $projects = $link['projects'];
+        $linking = $manages && LinkedProjects::enabled() && $access->can('mel.projects.link') && ! $programme->isArchived();
+        $picker = $linking ? LinkedProjects::options($access) : null;
 
         return Inertia::render('mel/programmes/show', [
             'programme' => [
@@ -103,12 +107,11 @@ class ProgrammeController extends Controller
                     'locationId' => $unit->location_id,
                     'location' => $unit->location?->name,
                     'archived' => $unit->archived_at !== null,
-                    // Read through the link to Projects (LinkedProjects), with the project's
-                    // milestones once the link is on.
-                    'project' => $unit->linked_project_id === null || ! isset($projects[$unit->linked_project_id]) ? null : [
-                        ...$projects[$unit->linked_project_id],
-                        'milestones' => [],
-                    ],
+                    // Read through the link to Projects (LinkedProjects); null when
+                    // Projects did not answer for it (see projectLink).
+                    'linkedProjectId' => $unit->linked_project_id,
+                    'sharesWithProjectReports' => $unit->shares_with_project_reports,
+                    'project' => $unit->linked_project_id === null ? null : ($projects[$unit->linked_project_id] ?? null),
                 ])->values(),
             'periods' => $programme->periods()->get()
                 ->filter(fn (ReportingPeriod $period) => $access->reachesPeriod($programme, $period->starts_on, $period->ends_on))
@@ -137,12 +140,17 @@ class ProgrammeController extends Controller
                 'locations' => $this->locationOptions(),
                 'members' => Members::options(),
                 'unitKinds' => self::options(ProgrammeUnit::KINDS),
-                // Projects' records are read through the link (M3), off for now.
-                'projects' => [],
+                'projects' => $picker['options'] ?? [],
             ] : null,
             'can' => [
                 'manage' => $manages && ! $programme->isArchived(),
-                'linkProjects' => LinkedProjects::enabled() && $access->can('mel.projects.link') && ! $programme->isArchived(),
+                'linkProjects' => $linking,
+            ],
+            // How the read of Projects went: ok, off, not_entitled, denied,
+            // unavailable, timeout. Never shown as "no project".
+            'projectLink' => [
+                'status' => $picker !== null && $picker['status'] !== 'ok' && $link['status'] === 'ok' ? $picker['status'] : $link['status'],
+                'message' => $link['message'] ?? ($picker['message'] ?? null),
             ],
         ]);
     }

@@ -51,6 +51,9 @@ type Unit = {
     locationId: string | null;
     location: string | null;
     archived: boolean;
+    linkedProjectId: string | null;
+    /** Its published results go to the linked project's partner reports. */
+    sharesWithProjectReports: boolean;
     project: {
         id: string;
         label: string;
@@ -116,6 +119,8 @@ type Props = {
         projects: Option[];
     } | null;
     can: { manage: boolean; linkProjects: boolean };
+    /** How the read of Projects went; message says why projects are not shown. */
+    projectLink: { status: string; message: string | null };
 };
 
 function money(minor: number | null, currency: string | null): string {
@@ -136,6 +141,7 @@ export default function ProgrammeShow({
     grants,
     options,
     can,
+    projectLink,
 }: Props) {
     const allowed = useCan();
     const status = PROGRAMME_STATUS[programme.status];
@@ -255,6 +261,7 @@ export default function ProgrammeShow({
                     units={units}
                     options={options}
                     can={can}
+                    projectLink={projectLink}
                 />
 
                 <PeriodsPanel
@@ -435,11 +442,13 @@ function UnitsPanel({
     units,
     options,
     can,
+    projectLink,
 }: {
     programmeId: string;
     units: Unit[];
     options: Props['options'];
     can: Props['can'];
+    projectLink: Props['projectLink'];
 }) {
     const [editing, setEditing] = useState<string | null>(null);
     const [adding, setAdding] = useState(false);
@@ -464,6 +473,11 @@ function UnitsPanel({
                     )
                 }
             />
+            {can.linkProjects && projectLink.message !== null && (
+                <p className="border-b px-3 py-2 text-sm text-muted-foreground">
+                    {projectLink.message}
+                </p>
+            )}
             {units.length === 0 && !adding && (
                 <p className="p-3 text-sm text-muted-foreground">
                     No units yet. Results are entered for a unit, so add at
@@ -542,6 +556,14 @@ function UnitsPanel({
                             {unit.project && (
                                 <ProjectSummary project={unit.project} />
                             )}
+                            {unit.linkedProjectId !== null &&
+                                unit.project === null &&
+                                projectLink.status !== 'off' && (
+                                    <p className="mt-2 border-l-2 pl-3 text-xs text-muted-foreground">
+                                        {projectLink.message ??
+                                            'Linked to a project you cannot see in Projects, or one no longer there. The link and its results are kept.'}
+                                    </p>
+                                )}
 
                             {can.linkProjects &&
                                 options !== null &&
@@ -562,13 +584,28 @@ function UnitsPanel({
                                             name="linked_project_id"
                                             aria-label={`Project linked to ${unit.code}`}
                                             defaultValue={
-                                                unit.project?.id ?? ''
+                                                unit.linkedProjectId ?? ''
                                             }
                                             className={`${selectClass} h-8 w-auto max-w-xs`}
                                         >
                                             <option value="">
                                                 No linked project
                                             </option>
+                                            {unit.linkedProjectId !== null &&
+                                                !options.projects.some(
+                                                    (project) =>
+                                                        project.value ===
+                                                        unit.linkedProjectId,
+                                                ) && (
+                                                    <option
+                                                        value={
+                                                            unit.linkedProjectId
+                                                        }
+                                                    >
+                                                        Linked project (not
+                                                        shown to you)
+                                                    </option>
+                                                )}
                                             {options.projects.map((project) => (
                                                 <option
                                                     key={project.value}
@@ -578,12 +615,24 @@ function UnitsPanel({
                                                 </option>
                                             ))}
                                         </select>
+                                        <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                                            <input
+                                                type="checkbox"
+                                                name="shares_with_project_reports"
+                                                value="1"
+                                                defaultChecked={
+                                                    unit.sharesWithProjectReports
+                                                }
+                                            />
+                                            Report published results to the
+                                            project owner
+                                        </label>
                                         <Button
                                             type="submit"
                                             size="sm"
                                             variant="outline"
                                         >
-                                            Link
+                                            Save
                                         </Button>
                                     </Form>
                                 )}

@@ -376,8 +376,10 @@ function ResultRow({
                     <Detail
                         label="Project milestone"
                         value={
-                            result.milestone &&
-                            `${result.milestone.project} · ${result.milestone.name}${result.milestone.reachedOn ? `, reached ${formatDate(result.milestone.reachedOn)}` : result.milestone.dueOn ? `, due ${formatDate(result.milestone.dueOn)}` : ''}`
+                            result.milestone
+                                ? `${result.milestone.project} · ${result.milestone.name}${result.milestone.reachedOn ? `, reached ${formatDate(result.milestone.reachedOn)}` : result.milestone.dueOn ? `, due ${formatDate(result.milestone.dueOn)}` : ''}`
+                                : result.linkedMilestoneId &&
+                                  'A milestone in Projects, not shown now (Projects did not list it for you). The reference is kept.'
                         }
                     />
                     <div className="sm:col-span-2">

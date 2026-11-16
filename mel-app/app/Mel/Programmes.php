@@ -104,14 +104,29 @@ class Programmes
 
     /**
      * Connects a unit to a project from Tatook Projects (or disconnects it
-     * with null). The project stays Projects' record; one project is linked
-     * to at most one unit of a programme.
+     * with null). The project stays Projects' record (the caller has checked
+     * it there); one project is linked to at most one unit of a programme.
+     * Linking again to the same project changes nothing.
      */
-    public function linkProject(ProgrammeUnit $unit, ?string $projectId, User $user): void
+    public function linkProject(ProgrammeUnit $unit, ?string $projectId, User $user, bool $shares = false): void
     {
         $this->assertNotArchived($unit->programme);
+        $projectId = $projectId === null ? null : strtolower($projectId);
+        // Sharing with the project's partner reports only means something
+        // while linked; a new project starts unshared unless said otherwise.
+        $shares = $projectId !== null && $shares;
+        if ($unit->linked_project_id === $projectId) {
+            if ((bool) $unit->shares_with_project_reports !== $shares) {
+                DB::transaction(function () use ($unit, $shares, $user) {
+                    $unit->update(['shares_with_project_reports' => $shares]);
+                    $this->audit->record($shares ? 'unit.project_reporting_on' : 'unit.project_reporting_off', $unit, $user, ['project' => $unit->linked_project_id]);
+                });
+            }
 
-        DB::transaction(function () use ($unit, $projectId, $user) {
+            return;
+        }
+
+        DB::transaction(function () use ($unit, $projectId, $user, $shares) {
             if ($projectId !== null && ProgrammeUnit::query()
                 ->where('programme_id', $unit->programme_id)
                 ->where('linked_project_id', $projectId)
@@ -120,8 +135,8 @@ class Programmes
                 throw ValidationException::withMessages(['linked_project_id' => 'That project is already linked to another unit of this programme.']);
             }
 
-            $unit->update(['linked_project_id' => $projectId]);
-            $this->audit->record($projectId === null ? 'unit.project_unlinked' : 'unit.project_linked', $unit, $user, ['project' => $projectId]);
+            $unit->update(['linked_project_id' => $projectId, 'shares_with_project_reports' => $shares]);
+            $this->audit->record($projectId === null ? 'unit.project_unlinked' : 'unit.project_linked', $unit, $user, ['project' => $projectId, 'project_reporting' => $shares]);
         });
     }
 

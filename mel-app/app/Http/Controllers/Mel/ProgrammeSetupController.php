@@ -13,6 +13,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * A programme's reporting units, periods and access grants
@@ -56,10 +57,24 @@ class ProgrammeSetupController extends Controller
         $programme = $this->programme($programme);
         $unit = $programme->units()->findOrFail($unit);
         abort_unless(LinkedProjects::enabled(), 404);
-        $data = $request->validate(['linked_project_id' => ['nullable', 'uuid']]);
+        $data = $request->validate([
+            'linked_project_id' => ['nullable', 'uuid'],
+            'shares_with_project_reports' => ['sometimes', 'boolean'],
+        ]);
         $projectId = $data['linked_project_id'] ?? null;
+        $shares = (bool) ($data['shares_with_project_reports'] ?? false);
 
-        $this->programmes->linkProject($unit, $projectId, $this->user());
+        // A new link is checked in Projects first, as this member: the
+        // organization has both apps and the member may see the project.
+        // Unlinking needs nothing from Projects.
+        if ($projectId !== null && strtolower($projectId) !== $unit->linked_project_id) {
+            $found = LinkedProjects::project($this->access(), $projectId);
+            if ($found === null || ! $found->ok()) {
+                throw ValidationException::withMessages(['linked_project_id' => LinkedProjects::explain($found) ?? 'Projects is not connected.']);
+            }
+        }
+
+        $this->programmes->linkProject($unit, $projectId, $this->user(), $shares);
 
         return back()->with('success', $projectId === null ? 'Project unlinked.' : 'Project linked.');
     }

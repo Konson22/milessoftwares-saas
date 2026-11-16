@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $partner_id
  * @property string|null $location_id
  * @property string|null $linked_project_id
+ * @property bool $shares_with_project_reports whether its published results go to the linked project's partner reports (ADR-0019 §20.4)
  * @property CarbonImmutable|null $archived_at
  * @property-read Programme $programme
  * @property-read Partner|null $partner
@@ -38,7 +39,7 @@ class ProgrammeUnit extends Model
 
     protected function casts(): array
     {
-        return ['archived_at' => 'immutable_datetime'];
+        return ['archived_at' => 'immutable_datetime', 'shares_with_project_reports' => 'boolean'];
     }
 
     public function label(): string

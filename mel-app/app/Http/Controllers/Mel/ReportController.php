@@ -262,11 +262,15 @@ class ReportController extends Controller
         })->filter(fn (array $row) => $row['indicators'] > 0)->values();
 
         $units = $this->reporting->units($programme);
-        $projects = LinkedProjects::figures($units, $this->access());
+        // Live from Projects as this member sees it; when Projects did not
+        // answer, the report says so instead of showing no linked projects.
+        $link = LinkedProjects::read($units, $this->access());
+        $projects = $link['projects'];
 
         return [
             'byPeriod' => $byPeriod,
             'rows' => $rows,
+            'projectsMessage' => $link['message'],
             'projects' => $units->filter(fn (ProgrammeUnit $unit) => isset($projects[(string) $unit->linked_project_id]))->map(fn (ProgrammeUnit $unit) => [
                 'unit' => $unit->code,
                 'project' => $projects[(string) $unit->linked_project_id]['label'],
