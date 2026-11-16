@@ -234,6 +234,23 @@ it('records the budget with a submission only for a party that may see it', func
         ->and($content['financial']['lines'][0]['source'])->toBe('reported');
 });
 
+it('records no M&E results with a submission now that M&E is its own application (ADR-0019)', function () {
+    ['project' => $project, 'lead' => $lead] = prChain();
+    // An M&E performance report is still a report a partner writes.
+    $this->actingAsMember('lead-ngo', PR_PARTNER);
+    $this->post($this->organizationUrl('lead-ngo', "shared-projects/{$lead->id}/reports"), ['title' => 'Q3 results', 'category' => 'mel', 'reviewer' => 'owner', 'period_start' => '2026-07-01', 'period_end' => '2026-09-30'])->assertSessionHasNoErrors();
+    $report = Report::query()->where('title', 'Q3 results')->sole();
+    $this->put($this->organizationUrl('lead-ngo', "shared-projects/{$lead->id}/reports/{$report->id}"), prContent())->assertSessionHasNoErrors();
+    $this->post($this->organizationUrl('lead-ngo', "shared-projects/{$lead->id}/reports/{$report->id}/action"), ['action' => 'submit'])->assertSessionHasNoErrors();
+
+    expect($report->refresh()->category)->toBe('mel')
+        ->and($report->currentVersion->content['system']['mel'])->toBe([]);
+
+    $this->actingAsMember('acme', ['projects.view', 'projects.reports.review']);
+    $this->get($this->organizationUrl('acme', "projects/{$project->id}/reports/{$report->id}"))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->component('portal/collaboration/report')->where('version.content.system.mel', []));
+});
+
 it('generates the periods of an obligation once, and tracks what is late', function () {
     ['project' => $project, 'lead' => $lead, 'sub' => $sub] = prChain();
 

@@ -19,9 +19,6 @@ final class Modules
 
     public const DOCUMENTS = 'documents';
 
-    /** Monitoring, evaluation and learning, with data collection (ADR-0013). */
-    public const MEL = 'mel';
-
     public const ALL = [
         self::DOCUMENTS => [
             'name' => 'Documents',
@@ -34,10 +31,6 @@ final class Modules
         self::PROCUREMENT => [
             'name' => 'Procurement',
             'description' => 'Purchase requests, quotes, orders and goods received.',
-        ],
-        self::MEL => [
-            'name' => 'Monitoring & evaluation',
-            'description' => 'Results frameworks, indicators, verified results and reports, and data collection with forms and field teams.',
         ],
         self::ACCOUNTING => [
             'name' => 'Petty cash and advances',

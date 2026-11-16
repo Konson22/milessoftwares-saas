@@ -87,8 +87,9 @@ Same steps, plus the systemd drop-ins in `ops/systemd/miles-product-{queue,sched
 (the shared units assume `<code>-app`), then `systemctl daemon-reload`. It sends its spending, grants,
 petty cash and advances to Finance (`PLATFORM_FINANCE_EVENTS_URL`).
 
-M&E and Data Collection are part of Projects (ADR-0013); what is specific to them (evidence storage,
-the database protections to check) is in `docs/runbooks/mel.md`.
+M&E, with Data Collection, is its own application, code `mel` in `mel-app` (ADR-0019). Its first deploy
+is in `docs/runbooks/mel-app.md` and its operations in `docs/runbooks/mel.md`. Projects no longer
+serves M&E (catalog `projects` 4.0.0): deploy `mel-app` first, then Projects.
 
 Each release then installs and builds every product, migrates its database as `miles_owner` and runs
 `ops/postgres/product-grants.sql`, caches its configuration, imports its `platform/*.json` catalogs

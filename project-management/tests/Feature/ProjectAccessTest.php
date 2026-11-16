@@ -1,14 +1,9 @@
 <?php
 
-use App\Enums\BudgetVersionStatus;
-use App\Enums\CostCategory;
-use App\Enums\ExpenseStatus;
-use App\Models\BudgetVersion;
 use App\Models\Person;
 use App\Models\Project;
 use App\Models\ProjectMember;
 use App\Models\Task;
-use App\Models\TimeEntry;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Notification;
@@ -124,83 +119,4 @@ it('keeps external participants on a team-only project through their participati
 
     $this->actingAsMember('lead-ngo', COLLAB_MANAGER);
     $this->get($this->organizationUrl('lead-ngo', "shared-projects/{$participant->id}"))->assertOk();
-});
-
-/*
-| M&E: linked project figures.
-*/
-
-/**
- * A programme with its Juba unit linked to a project whose typed estimate is
- * 50,000; set up by the owner. Returns what the tests need.
- *
- * @return array{programme: string, project: Project}
- */
-function paLinkedProgramme(): array
-{
-    $project = collabProject(); // estimate 50000, no budget version
-    $programme = setUpProgramme();
-    test()->put(mel("programmes/{$programme['programme']->id}/units/{$programme['units']['JUB']->id}/project"), ['linked_project_id' => $project->id])->assertSessionHasNoErrors();
-
-    return ['programme' => $programme['programme']->id, 'project' => $project];
-}
-
-/**
- * The linked project as the programme page shows it to whoever is signed in.
- *
- * @return array<string, mixed>|null
- */
-function paLinked(string $programme): ?array
-{
-    $page = test()->get(mel("programmes/{$programme}"))->assertOk()->viewData('page');
-
-    return collect($page['props']['units'])->firstWhere('code', 'JUB')['project'] ?? null;
-}
-
-it('shows M&E roles no Projects records, and project money only to those who may see it', function () {
-    ['programme' => $programme, 'project' => $project] = paLinkedProgramme();
-
-    // Paid 500.00; 9.99 of logged staff time (estimated personnel cost, not spending).
-    $this->asTenant('acme', function () use ($project) {
-        $project->expenses()->create(['category' => CostCategory::Materials, 'description' => 'Pipes', 'amount_minor' => 50000, 'status' => ExpenseStatus::Paid, 'direct' => true, 'spent_on' => '2026-11-02', 'recorded_by' => User::query()->firstOrFail()->id]);
-        $person = Person::query()->create(['name' => 'Engineer', 'hourly_cost_minor' => 999]);
-        TimeEntry::query()->create(['project_id' => $project->id, 'person_id' => $person->id, 'worked_on' => '2026-11-03', 'minutes' => 60, 'cost_minor' => 999, 'created_by' => User::query()->firstOrFail()->id]);
-    });
-
-    // Donor viewers, partners and officers of M&E: nothing of the project.
-    foreach (['mel_donor_viewer', 'mel_partner', 'mel_officer', 'mel_evaluator'] as $role) {
-        $this->actingAsMember('acme', [...rolePermissions($role), 'mel.programmes.all']);
-        expect(paLinked($programme))->toBeNull();
-    }
-
-    // An M&E officer who also sees projects: status and progress, no money.
-    $this->actingAsMember('acme', [...rolePermissions('mel_officer'), 'projects.view']);
-    expect(paLinked($programme))->toMatchArray(['label' => 'WASH · Clean water', 'approvedBudgetMinor' => null, 'paidMinor' => null]);
-
-    // With projects.finance.view: what was paid (not the staff time), and no
-    // "approved budget" while only an estimate was typed.
-    $this->actingAsMember('acme', [...rolePermissions('mel_officer'), 'projects.view', 'projects.finance.view']);
-    expect(paLinked($programme))->toMatchArray(['approvedBudgetMinor' => null, 'paidMinor' => 50000]);
-
-    // Once a budget version is approved, its total.
-    $this->asTenant('acme', fn () => (new BudgetVersion)->forceFill(['project_id' => $project->id, 'number' => 1, 'status' => BudgetVersionStatus::Approved, 'total_minor' => 4000000, 'created_by' => User::query()->firstOrFail()->id])->save());
-    expect(paLinked($programme))->toMatchArray(['approvedBudgetMinor' => 4000000, 'paidMinor' => 50000]);
-
-    // The same rules on the programme report.
-    $report = fn () => $this->get(mel("reports/programme?programme={$programme}"))->assertOk()->viewData('page')['props']['data']['projects'];
-    expect($report()[0])->toMatchArray(['approvedBudgetMinor' => 4000000, 'paidMinor' => 50000]);
-    $this->actingAsMember('acme', [...rolePermissions('mel_donor_viewer'), 'mel.programmes.all']);
-    expect($report())->toBe([]);
-
-    // Someone outside M&E does not open the programme at all.
-    $this->actingAsMember('acme', ['projects.view', 'projects.finance.view']);
-    $this->get(mel("programmes/{$programme}"))->assertForbidden();
-});
-
-it('does not show a team-only project in M&E to those outside its team', function () {
-    ['programme' => $programme, 'project' => $project] = paLinkedProgramme();
-    $this->put($this->organizationUrl('acme', "projects/{$project->id}"), ['code' => 'WASH', 'name' => 'Clean water', 'visibility' => 'team'])->assertSessionHasNoErrors();
-
-    $this->actingAsMember('acme', [...rolePermissions('mel_officer'), 'projects.view', 'projects.finance.view']);
-    expect(paLinked($programme))->toBeNull();
 });

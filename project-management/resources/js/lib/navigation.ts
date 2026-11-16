@@ -6,15 +6,7 @@ import { index as pettyCash } from '@/routes/petty-cash';
 import { index as programmes } from '@/routes/programmes';
 import {
     Banknote,
-    BarChart3,
     CheckSquare,
-    ClipboardList,
-    Gauge,
-    History,
-    ListTree,
-    SquarePen,
-    Target,
-    UserCheck,
     FolderKanban,
     ClipboardCheck,
     Coins,
@@ -65,20 +57,6 @@ import { index as grants } from '@/routes/grants';
 import { index as people } from '@/routes/people';
 import { index as projects } from '@/routes/projects';
 import { index as spaces } from '@/routes/structure';
-import { home as melHome } from '@/routes/mel';
-import { index as melAudit } from '@/routes/mel/audit';
-import { index as collectAssignments } from '@/routes/mel/collect/assignments';
-import { index as collectForms } from '@/routes/mel/collect/forms';
-import { index as melData } from '@/routes/mel/data';
-import { index as melFrameworks } from '@/routes/mel/frameworks';
-import { index as melIndicators } from '@/routes/mel/indicators';
-import { index as melProgrammes } from '@/routes/mel/programmes';
-import { index as melReports } from '@/routes/mel/reports';
-import { show as melSettings } from '@/routes/mel/settings';
-import { index as melVerification } from '@/routes/mel/verification';
-
-/** Who sees M&E's programmes, frameworks and indicators. */
-const MEL_PLANS = ['mel.programmes.view', 'mel.programmes.all'];
 
 export type NavItem = ShellNavItem & {
     /** Shown to members holding this permission, or any of these (or owners); null for everyone. */
@@ -153,79 +131,6 @@ export function navigation(): NavGroup[] {
                     href: procurement(),
                     icon: ShoppingCart,
                     permission: ['procurement.view', 'procurement.request'],
-                },
-            ],
-        },
-        {
-            title: 'Monitoring & evaluation',
-            items: [
-                {
-                    title: 'Results overview',
-                    module: 'mel',
-                    href: melHome(),
-                    icon: Target,
-                    permission: [
-                        ...MEL_PLANS,
-                        'mel.data.view',
-                        'mel.collect.view',
-                        'mel.reports.view',
-                    ],
-                },
-                {
-                    title: 'M&E programmes',
-                    module: 'mel',
-                    href: melProgrammes(),
-                    icon: Layers,
-                    permission: MEL_PLANS,
-                },
-                {
-                    title: 'Results frameworks',
-                    module: 'mel',
-                    href: melFrameworks(),
-                    icon: ListTree,
-                    permission: MEL_PLANS,
-                },
-                {
-                    title: 'Indicators',
-                    module: 'mel',
-                    href: melIndicators(),
-                    icon: Gauge,
-                    permission: MEL_PLANS,
-                },
-                {
-                    title: 'Data entry',
-                    module: 'mel',
-                    href: melData(),
-                    icon: SquarePen,
-                    permission: 'mel.data.view',
-                },
-                {
-                    title: 'Verification',
-                    module: 'mel',
-                    href: melVerification(),
-                    icon: ClipboardCheck,
-                    permission: 'mel.data.review',
-                },
-                {
-                    title: 'Forms & surveys',
-                    module: 'mel',
-                    href: collectForms(),
-                    icon: ClipboardList,
-                    permission: 'mel.collect.view',
-                },
-                {
-                    title: 'Field assignments',
-                    module: 'mel',
-                    href: collectAssignments(),
-                    icon: UserCheck,
-                    permission: 'mel.collect.view',
-                },
-                {
-                    title: 'M&E reports',
-                    module: 'mel',
-                    href: melReports(),
-                    icon: BarChart3,
-                    permission: 'mel.reports.view',
                 },
             ],
         },
@@ -348,20 +253,6 @@ export function navigation(): NavGroup[] {
                     href: audit(),
                     icon: ScrollText,
                     permission: 'organization.audit.view',
-                },
-                {
-                    title: 'M&E settings',
-                    module: 'mel',
-                    href: melSettings(),
-                    icon: Settings,
-                    permission: 'mel.settings.manage',
-                },
-                {
-                    title: 'M&E audit trail',
-                    module: 'mel',
-                    href: melAudit(),
-                    icon: History,
-                    permission: 'mel.audit.view',
                 },
             ],
         },

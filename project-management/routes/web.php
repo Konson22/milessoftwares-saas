@@ -8,7 +8,6 @@ use App\Http\Middleware\RememberPerson;
 use App\Http\Middleware\RequireAccountType;
 use App\Http\Middleware\RequireFunding;
 use App\Http\Middleware\RequireModule;
-use App\Http\Middleware\SetUpMel;
 use App\Support\Modules;
 use Illuminate\Support\Facades\Route;
 use Miles\PlatformClient\PlatformConfig;
@@ -62,7 +61,6 @@ Route::prefix(app(PlatformConfig::class)->path())->middleware('web')->group(func
             });
             Route::middleware(RequireModule::class.':'.Modules::DOCUMENTS)->group(__DIR__.'/web/documents.php');
             Route::middleware(RequireModule::class.':'.Modules::PROCUREMENT)->group(__DIR__.'/web/procurement.php');
-            Route::middleware([RequireModule::class.':'.Modules::MEL, SetUpMel::class])->group(__DIR__.'/web/mel.php');
             require __DIR__.'/web/approvals.php';
             require __DIR__.'/web/admin.php';
             Route::prefix('advances')->name('advances.')->middleware(RequireModule::class.':'.Modules::ACCOUNTING)

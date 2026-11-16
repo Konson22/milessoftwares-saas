@@ -5,8 +5,6 @@ namespace App\Collaboration;
 use App\Actions\Budgets;
 use App\Collaboration\Models\Report;
 use App\Enums\CostCategory;
-use App\Mel\Models\ProgrammeUnit;
-use App\Mel\Models\VerifiedResult;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Support\ProjectFinance;
@@ -125,8 +123,9 @@ final class ReportContent
     /**
      * What the system records with a submission, read in the owner's
      * workspace: the project's recorded budget figures, only when the
-     * submitting party may see them, and the verified M&E results of units
-     * linked to the project for periods overlapping the report's.
+     * submitting party may see them. M&E is its own application (ADR-0019):
+     * 'mel' stays an empty list until its results are read from there (M3).
+     * Snapshots taken before keep the results they captured.
      *
      * @return array{capturedAt: string, financial: array{source: string, currency: string, approvedMinor: int, spentMinor: int, committedMinor: int, varianceMinor: int, basis: string, provenance: array<string, mixed>, categories: list<array{category: string, amountMinor: int}>}|null, mel: list<array<string, mixed>>}
      */
@@ -140,7 +139,7 @@ final class ReportContent
             return [
                 'capturedAt' => now()->toIso8601String(),
                 'financial' => $withBudget ? self::financial($project) : null,
-                'mel' => self::mel($project, $report),
+                'mel' => [],
             ];
         });
     }
@@ -176,40 +175,6 @@ final class ReportContent
             'provenance' => $figures['provenance'],
             'categories' => $categories,
         ];
-    }
-
-    /**
-     * Verified results, as verified, each with its indicator and unit; never
-     * added up here.
-     *
-     * @return list<array<string, mixed>>
-     */
-    private static function mel(Project $project, Report $report): array
-    {
-        $units = ProgrammeUnit::query()->where('linked_project_id', $project->id)->pluck('id');
-        if ($units->isEmpty()) {
-            return [];
-        }
-
-        $query = VerifiedResult::query()->with(['indicator', 'version', 'period', 'unit'])
-            ->whereIn('unit_id', $units)->whereNull('superseded_at');
-        if ($report->period_start !== null && $report->period_end !== null) {
-            $start = $report->period_start->toDateString();
-            $end = $report->period_end->toDateString();
-            $query->whereHas('period', fn ($period) => $period->whereDate('starts_on', '<=', $end)->whereDate('ends_on', '>=', $start));
-        }
-
-        return array_values($query->limit(200)->get()->map(fn (VerifiedResult $result) => [
-            'indicator' => $result->indicator->code.' · '.$result->version->name,
-            'unit' => $result->unit->name,
-            'period' => $result->period->label,
-            'measure' => $result->version->measure,
-            'unitLabel' => $result->version->unit_label,
-            'value' => $result->value,
-            'numerator' => $result->numerator,
-            'denominator' => $result->denominator,
-            'published' => $result->published_at !== null,
-        ])->all());
     }
 
     private static function text(mixed $value): ?string

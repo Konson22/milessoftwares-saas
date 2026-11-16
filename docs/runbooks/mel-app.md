@@ -1,9 +1,10 @@
 # Tatook M&E (`mel-app`): first deploy — NOT DEPLOYED YET
 
 Tatook M&E as its own application (ADR-0019): code `mel`, folder `mel-app`, at
-`{workspace}/mel`, with its own database, php-fpm pool, queue and catalog. Until the M2B switch-over,
-production M&E is still the module inside Projects (`docs/runbooks/mel.md`). **Do not run these
-steps before M2B is approved**: nothing here moves or copies existing M&E data.
+`{workspace}/mel`, with its own database, php-fpm pool, queue and catalog. Since M2B, Projects no
+longer serves M&E (catalog `projects` 4.0.0), so `mel-app` is deployed **before** that Projects
+release. **The deploy needs the owner's approval**; nothing here moves or copies existing M&E data
+(production never had any, ADR-0019 §1.2). Operations after go-live: `docs/runbooks/mel.md`.
 
 It deploys like any product (`docs/runbooks/deploy.md`, Products; `deploy.sh`'s `product_dir`
 maps `mel` to `mel-app` by default). What is specific to it:
