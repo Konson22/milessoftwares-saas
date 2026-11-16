@@ -33,7 +33,8 @@ use Illuminate\Validation\ValidationException;
  * - Whoever requested it neither approves, rejects nor pays it. Larger
  *   amounts may need more approvers (ApprovalPolicy), each someone else.
  * - Approval needs an approved budget with enough left in the category
- *   (approved budget, less committed and spent) and, when a grant is
+ *   (approved budget, less committed and spent) and on the budget line
+ *   when one is charged (ADR-0020), and, when a grant is
  *   charged, enough left of that grant's allocation to the project, on an
  *   active grant. Checks run in a transaction on the locked project.
  * - record() is the one-step path kept from before approvals: spending
@@ -48,7 +49,7 @@ final class Spending
     public const DISK = 'local';
 
     /**
-     * @param  array{category: CostCategory, description: string, supplier: ?string, amount_minor: int, grant_id: ?string}  $details
+     * @param  array{category: CostCategory, description: string, supplier: ?string, amount_minor: int, grant_id: ?string, budget_line_key?: ?string}  $details
      *
      * @throws ValidationException
      */
@@ -125,6 +126,16 @@ final class Spending
             }
             if ($expense->amount_minor > $left) {
                 throw ValidationException::withMessages(['expense' => "{$expense->category->label()}: only ".Money::format(max(0, $left), $project->currency).' of the approved budget is left.']);
+            }
+            if ($expense->budget_line_key !== null) {
+                // Charged to one line (ADR-0020): that line must still be approved and have enough left.
+                $lineLeft = Budgets::lineAvailable($project, $expense->budget_line_key);
+                if ($lineLeft === null) {
+                    throw ValidationException::withMessages(['expense' => 'The budget line charged is not in the approved budget any more.']);
+                }
+                if ($expense->amount_minor > $lineLeft) {
+                    throw ValidationException::withMessages(['expense' => 'Only '.Money::format(max(0, $lineLeft), $project->currency).' is left on the budget line charged.']);
+                }
             }
             if ($expense->grant_id !== null) {
                 $allocation = self::allocation($project, $expense->grant_id);

@@ -8,6 +8,7 @@ use App\Models\BudgetVersion;
 use App\Models\Expense;
 use App\Models\FinanceRequest;
 use App\Models\Project;
+use App\Models\PurchaseOrder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -28,6 +29,12 @@ use Illuminate\Support\Facades\DB;
  *                        with Finance: the latest request's open
  *                        commitment instead (awaiting Finance +
  *                        outstanding authorized, FinanceRequest).
+ *   invoicedMinor        the part of committedMinor suppliers have invoiced
+ *                        and that awaits payment: live supplier invoices on
+ *                        orders still committed (an order invoiced before
+ *                        invoices were kept counts whole), less what Finance
+ *                        paid on them (ADR-0020). Owner-side only: it is not
+ *                        in shareable().
  *   paidMinor            expenses recorded as paid, plus what Finance reports
  *                        paid for requests handed to it (integrated mode, net
  *                        of reversals). Money that left.
@@ -48,7 +55,7 @@ use Illuminate\Support\Facades\DB;
  * No access checks here: callers check projects.finance.view, a
  * participant's budget.view or a grant's portal switches first.
  *
- * @phpstan-type Figures array{currency: string, approvedBudgetMinor: int|null, budgetMinor: int|null, budgetBasis: string, committedMinor: int, paidMinor: int, personnelEstimateMinor: int, availableMinor: int|null, provenance: Provenance}
+ * @phpstan-type Figures array{currency: string, approvedBudgetMinor: int|null, budgetMinor: int|null, budgetBasis: string, committedMinor: int, invoicedMinor: int, paidMinor: int, personnelEstimateMinor: int, availableMinor: int|null, provenance: Provenance}
  * @phpstan-type Provenance array{currency: string, asOf: string, source: string, paidStatus: string, unpostedPayments: int}
  */
 final class ProjectFinance
@@ -88,6 +95,7 @@ final class ProjectFinance
             ->pluck('cost', 'project_id');
         $unposted = self::unpostedPayments($ids);
         $confirmed = self::financeConfirmed($ids);
+        $invoiced = self::invoicedAwaitingPayment($ids);
         $asOf = now()->toDateString();
 
         $figures = [];
@@ -118,6 +126,7 @@ final class ProjectFinance
                 'budgetMinor' => $budget,
                 'budgetBasis' => $basis,
                 'committedMinor' => $committed,
+                'invoicedMinor' => min(max(0, $committed), $invoiced[$id] ?? 0),
                 'paidMinor' => $paid,
                 'personnelEstimateMinor' => $estimate,
                 'availableMinor' => $approvedMinor === null ? null : $approvedMinor - $committed - $paid - $estimate,
@@ -168,6 +177,41 @@ final class ProjectFinance
                 $entry['fromCommitted'] += max(0, $expense->amount_minor - $latest->openCommitmentMinor());
             }
             $out[$latest->project_id] = $entry;
+        }
+
+        return $out;
+    }
+
+    /**
+     * Supplier invoices awaiting payment on orders whose spending is still
+     * committed, per project (ADR-0020). Each order counts at most its
+     * commitment, less what Finance has paid of it.
+     *
+     * @param  array<mixed>  $ids
+     * @return array<string, int>
+     */
+    private static function invoicedAwaitingPayment(array $ids): array
+    {
+        $orders = PurchaseOrder::query()
+            ->whereHas('expense', fn ($query) => $query->committed()->whereIn('project_id', $ids))
+            ->with('expense:id,project_id,amount_minor,status')
+            ->withCount('invoices')
+            ->withSum(['invoices as live_invoiced' => fn ($query) => $query->live()], 'amount_minor')
+            ->get(['id', 'expense_id', 'invoice_reference']);
+        if ($orders->isEmpty()) {
+            return [];
+        }
+        $paid = FinanceRequest::query()->whereIn('expense_id', $orders->pluck('expense_id'))->get(['expense_id', 'paid_minor', 'reversed_minor'])
+            ->groupBy('expense_id')->map(fn (Collection $requests) => (int) $requests->sum(fn (FinanceRequest $request) => $request->netPaidMinor()));
+
+        $out = [];
+        foreach ($orders as $order) {
+            $commitment = $order->expense->amount_minor - (int) ($paid[$order->expense_id] ?? 0);
+            $billed = (int) $order->getAttribute('invoices_count') === 0 && $order->invoice_reference !== null
+                ? $order->expense->amount_minor
+                : (int) $order->getAttribute('live_invoiced');
+            $projectId = (string) $order->expense->project_id;
+            $out[$projectId] = ($out[$projectId] ?? 0) + max(0, min($billed, $commitment));
         }
 
         return $out;

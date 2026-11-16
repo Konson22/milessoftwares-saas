@@ -67,11 +67,13 @@ final class FinanceRequests
 
     /**
      * Spending raised by a purchase order goes to Finance only once the
-     * order is payable: everything received and the supplier's invoice
-     * recorded (Procurement::requirePayable, the rule legacy payment keeps).
+     * order is payable: everything received (or the order closed with what
+     * arrived) and the supplier's invoices coming to the commitment
+     * (PurchaseOrder::isPayable, the rule legacy payment keeps, ADR-0020).
      * Approving the order commits the money in Projects; it does not ask
-     * Finance to pay. Called when goods arrive and when the invoice is
-     * recorded; does nothing until both are done, or once a request exists.
+     * Finance to pay. Called when goods arrive, when an invoice is recorded
+     * and when the order is closed; does nothing until it is payable, or
+     * once a request exists.
      */
     public function submitIfPayable(PurchaseOrder $order, User $by): ?FinanceRequest
     {
@@ -88,7 +90,7 @@ final class FinanceRequests
     {
         $order = PurchaseOrder::query()->where('expense_id', $expense->id)->first();
 
-        return $order !== null && (! $order->isFullyReceived() || $order->invoice_reference === null);
+        return $order !== null && ! $order->isPayable();
     }
 
     /**
