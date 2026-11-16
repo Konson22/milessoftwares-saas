@@ -87,7 +87,7 @@ final class ParticipationInventory
             $rows = $scoped($table)->get(['id', 'organization_id', 'name']);
             foreach ($rows->groupBy(fn (object $row) => $row->organization_id.'|'.self::normalize((string) $row->name)) as $group) {
                 if ($group->count() > 1) {
-                    $add("duplicate_{$label}", $group->first()->organization_id, $group->pluck('name')->implode(' / '), $group->count().' entries');
+                    $add("duplicate_{$label}", $group->first()->organization_id, $group->pluck('name')->sort(SORT_STRING)->implode(' / '), $group->count().' entries');
                 }
             }
             foreach ($rows as $row) {
