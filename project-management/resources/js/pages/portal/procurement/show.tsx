@@ -18,10 +18,16 @@ import { formatMoney } from '@/lib/money';
 import { formatDate, formatDateTime, statusTone } from '@/lib/status';
 import { approve, cancel, index, reject, submit } from '@/routes/procurement';
 import {
+    close as closeOrder,
     invoice as recordInvoice,
     receive,
     store as raiseOrder,
 } from '@/routes/procurement/orders';
+import {
+    document as invoiceDocument,
+    voidMethod as voidInvoice,
+} from '@/routes/procurement/orders/invoices';
+import { evidence as receiptEvidence } from '@/routes/procurement/orders/receipts';
 import {
     choose,
     destroy as removeQuote,
@@ -38,6 +44,7 @@ type Line = {
     unitPriceMinor: number;
     amountMinor: number;
     received: string;
+    rejected: string;
     left: string;
 };
 
@@ -52,11 +59,31 @@ type Quote = {
     selected: boolean;
 };
 
+type Invoice = {
+    id: string;
+    number: string;
+    amountMinor: number;
+    currency: string;
+    on: string;
+    dueOn: string | null;
+    document: string | null;
+    by: string;
+    voided: { reason: string | null; on: string | null } | null;
+};
+
 type Order = {
     id: string;
     number: string;
     supplier: string;
     amountMinor: number;
+    commitmentMinor: number;
+    invoicedMinor: number;
+    finance: { status: string; label: string } | null;
+    legacyInvoice: boolean;
+    payable: boolean;
+    closed: { on: string; reason: string | null } | null;
+    invoices: Invoice[];
+    can: { invoice: boolean; close: boolean };
     terms: string | null;
     spending: string;
     spendingLabel: string;
@@ -70,6 +97,8 @@ type Order = {
         by: string;
         note: string | null;
         lines: number;
+        rejected: boolean;
+        evidence: string | null;
     }[];
 };
 
@@ -96,7 +125,14 @@ type Props = {
     };
     lines: Line[];
     quotes: Quote[];
-    budget: { leftMinor: number | null } | null;
+    budget: { leftMinor: number | null; lineLeftMinor: number | null } | null;
+    budgetLine: { label: string; approved: boolean } | null;
+    budgetLines: {
+        value: string;
+        label: string;
+        category: string;
+        leftMinor: number | null;
+    }[];
     minQuotes: number;
     orders: Order[];
     suppliers: Option[];
@@ -120,6 +156,8 @@ export default function ProcurementShow({
     lines,
     quotes,
     budget,
+    budgetLine,
+    budgetLines,
     minQuotes,
     orders,
     suppliers,
@@ -135,6 +173,8 @@ export default function ProcurementShow({
         errors.order ??
         errors.receipt ??
         errors.invoice ??
+        errors.close ??
+        errors.budget_line_id ??
         errors.expense;
     const liveOrder = orders.find((order) => order.live);
     const lowest = Math.min(...quotes.map((quote) => quote.amountMinor));
@@ -216,18 +256,36 @@ export default function ProcurementShow({
                         </TableBody>
                     </Table>
 
+                    <p className="text-sm">
+                        Budget line:{' '}
+                        {budgetLine ? (
+                            <span className="font-medium">
+                                {budgetLine.label}
+                                {!budgetLine.approved &&
+                                    ' (no longer in the approved budget)'}
+                            </span>
+                        ) : (
+                            <span className="text-muted-foreground">
+                                not chosen yet
+                            </span>
+                        )}
+                    </p>
+
                     {budget && (
                         <p
                             className={
                                 budget.leftMinor === null ||
-                                budget.leftMinor < request.estimateMinor
+                                budget.leftMinor < request.estimateMinor ||
+                                (budget.lineLeftMinor !== null &&
+                                    budget.lineLeftMinor <
+                                        request.estimateMinor)
                                     ? 'text-sm text-destructive'
                                     : 'text-sm text-muted-foreground'
                             }
                         >
                             {budget.leftMinor === null
-                                ? 'The project has no approved budget yet: finance will not be able to approve this.'
-                                : `${money(budget.leftMinor)} left in ${request.category}. Finance checks this again when approving the order.`}
+                                ? 'The project has no approved budget yet: this cannot be submitted.'
+                                : `${budget.lineLeftMinor === null ? '' : `${money(budget.lineLeftMinor)} left on the line, `}${money(budget.leftMinor)} left in ${request.category}. The approver checks this, and finance again when approving the order.`}
                         </p>
                     )}
 
@@ -242,13 +300,48 @@ export default function ProcurementShow({
                     )}
 
                     {(can.submit || can.cancel) && (
-                        <span className="flex gap-2">
+                        <span className="flex flex-wrap items-end gap-2">
+                            {can.submit &&
+                                !budgetLine &&
+                                budgetLines.length > 0 && (
+                                    <Field
+                                        id="budget_line_id"
+                                        label="Charge it to"
+                                        error={errors.budget_line_id}
+                                    >
+                                        <Select
+                                            id="budget_line_id"
+                                            name="budget_line_id"
+                                            placeholder="Choose a budget line"
+                                            options={budgetLines.map(
+                                                (line) => ({
+                                                    value: line.value,
+                                                    label:
+                                                        line.leftMinor === null
+                                                            ? line.label
+                                                            : `${line.label} (${money(line.leftMinor)} left)`,
+                                                }),
+                                            )}
+                                        />
+                                    </Field>
+                                )}
                             {can.submit && (
                                 <Button
                                     size="sm"
-                                    onClick={() =>
-                                        router.post(submit.url(key), {}, keep)
-                                    }
+                                    onClick={() => {
+                                        const chosen = (
+                                            document.getElementById(
+                                                'budget_line_id',
+                                            ) as HTMLSelectElement | null
+                                        )?.value;
+                                        router.post(
+                                            submit.url(key),
+                                            chosen
+                                                ? { budget_line_id: chosen }
+                                                : {},
+                                            keep,
+                                        );
+                                    }}
                                 >
                                     Submit for approval
                                 </Button>
@@ -560,33 +653,72 @@ export default function ProcurementShow({
                 <Panel key={order.id} className="mt-6">
                     <PanelHeader
                         title={`${order.number} to ${order.supplier}`}
-                        description={`${money(order.amountMinor)}${order.invoiceReference ? `, invoice ${order.invoiceReference}${order.invoiceOn ? ` of ${formatDate(order.invoiceOn)}` : ''}` : ''}`}
+                        description={
+                            order.closed
+                                ? `Closed ${formatDate(order.closed.on)}${order.closed.reason ? `: ${order.closed.reason}` : ''}`
+                                : undefined
+                        }
                     />
                     <PanelBody className="space-y-4 text-sm">
-                        <p className="flex items-center gap-2">
+                        <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    Ordered
+                                </dt>
+                                <dd className="tabular-nums">
+                                    {money(order.amountMinor)}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    Committed
+                                </dt>
+                                <dd className="tabular-nums">
+                                    {money(order.commitmentMinor)}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    Received
+                                </dt>
+                                <dd>
+                                    {order.fullyReceived
+                                        ? 'Everything'
+                                        : order.receipts.length > 0
+                                          ? 'In part'
+                                          : 'Nothing yet'}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    Invoiced
+                                </dt>
+                                <dd className="tabular-nums">
+                                    {order.legacyInvoice
+                                        ? `Reference ${order.invoiceReference}`
+                                        : money(order.invoicedMinor)}
+                                </dd>
+                            </div>
+                        </dl>
+
+                        <p className="flex flex-wrap items-center gap-2">
                             Spending:
                             <StatusBadge tone={statusTone(order.spending)}>
                                 {order.spendingLabel}
                             </StatusBadge>
-                            {order.spending === 'requested' && (
-                                <span className="text-muted-foreground">
-                                    Finance approves it under Approvals, against
-                                    the budget and the grant.
-                                </span>
+                            {order.finance && (
+                                <>
+                                    Finance:
+                                    <StatusBadge
+                                        tone={statusTone(order.finance.status)}
+                                    >
+                                        {order.finance.label}
+                                    </StatusBadge>
+                                </>
                             )}
-                            {order.spending === 'approved' &&
-                                order.fullyReceived &&
-                                order.invoiceReference && (
-                                    <span className="text-muted-foreground">
-                                        Ready for finance to pay.
-                                    </span>
-                                )}
-                            {!order.live && (
-                                <span className="text-muted-foreground">
-                                    This order no longer stands. Choose a quote
-                                    and raise another if it's still needed.
-                                </span>
-                            )}
+                            <span className="text-muted-foreground">
+                                {nextStep(order)}
+                            </span>
                         </p>
                         {order.terms && (
                             <p className="whitespace-pre-wrap">{order.terms}</p>
@@ -598,7 +730,24 @@ export default function ProcurementShow({
                                     <li key={receipt.id}>
                                         Received {formatDate(receipt.on)} by{' '}
                                         {receipt.by}
+                                        {receipt.rejected &&
+                                            ', with goods rejected'}
                                         {receipt.note && `: ${receipt.note}`}
+                                        {receipt.evidence && (
+                                            <>
+                                                {' '}
+                                                <a
+                                                    className="underline"
+                                                    href={receiptEvidence.url({
+                                                        ...key,
+                                                        order: order.id,
+                                                        receipt: receipt.id,
+                                                    })}
+                                                >
+                                                    {receipt.evidence}
+                                                </a>
+                                            </>
+                                        )}
                                     </li>
                                 ))}
                             </ul>
@@ -613,7 +762,10 @@ export default function ProcurementShow({
                                             Ordered
                                         </TableHead>
                                         <TableHead className="text-right">
-                                            Received
+                                            Accepted
+                                        </TableHead>
+                                        <TableHead className="text-right">
+                                            Rejected
                                         </TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -628,6 +780,9 @@ export default function ProcurementShow({
                                             </TableCell>
                                             <TableCell className="text-right tabular-nums">
                                                 {line.received}
+                                            </TableCell>
+                                            <TableCell className="text-right tabular-nums">
+                                                {line.rejected}
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -656,18 +811,43 @@ export default function ProcurementShow({
                                                 (line) => Number(line.left) > 0,
                                             )
                                             .map((line) => (
-                                                <Field
+                                                <div
                                                     key={line.id}
-                                                    id={`receive-${line.id}`}
-                                                    label={`${line.description} (${line.left} left)`}
+                                                    className="grid grid-cols-2 gap-2 sm:col-span-2"
                                                 >
-                                                    <Input
+                                                    <Field
                                                         id={`receive-${line.id}`}
-                                                        name={`quantities[${line.id}]`}
-                                                        inputMode="decimal"
-                                                    />
-                                                </Field>
+                                                        label={`${line.description}: accepted (${line.left} left)`}
+                                                    >
+                                                        <Input
+                                                            id={`receive-${line.id}`}
+                                                            name={`quantities[${line.id}]`}
+                                                            inputMode="decimal"
+                                                        />
+                                                    </Field>
+                                                    <Field
+                                                        id={`reject-${line.id}`}
+                                                        label="Rejected"
+                                                    >
+                                                        <Input
+                                                            id={`reject-${line.id}`}
+                                                            name={`rejected[${line.id}]`}
+                                                            inputMode="decimal"
+                                                        />
+                                                    </Field>
+                                                </div>
                                             ))}
+                                        <Field
+                                            id="evidence"
+                                            label="Delivery note or photo"
+                                            error={errors.evidence}
+                                        >
+                                            <Input
+                                                id="evidence"
+                                                name="evidence"
+                                                type="file"
+                                            />
+                                        </Field>
                                         <Field
                                             id="received_on"
                                             label="Received on"
@@ -704,36 +884,166 @@ export default function ProcurementShow({
                                 </Form>
                             )}
 
-                        {can.receive &&
-                            order.id === liveOrder?.id &&
-                            !order.invoiceReference && (
-                                <Form
-                                    {...recordInvoice.form({
-                                        ...key,
-                                        order: order.id,
-                                    })}
-                                    options={keep}
-                                    className="flex flex-wrap items-end gap-2 border-t pt-4"
-                                >
+                        {order.invoices.length > 0 && (
+                            <div className="space-y-2 border-t pt-4">
+                                <h3 className="font-medium">
+                                    Supplier invoices
+                                </h3>
+                                <ul className="space-y-2">
+                                    {order.invoices.map((invoice) => (
+                                        <li
+                                            key={invoice.id}
+                                            className={
+                                                invoice.voided
+                                                    ? 'text-muted-foreground'
+                                                    : undefined
+                                            }
+                                        >
+                                            <span className="flex flex-wrap items-center gap-2">
+                                                <span
+                                                    className={
+                                                        invoice.voided
+                                                            ? 'line-through'
+                                                            : 'font-medium'
+                                                    }
+                                                >
+                                                    {invoice.number}
+                                                </span>
+                                                <span className="tabular-nums">
+                                                    {formatMoney(
+                                                        invoice.amountMinor,
+                                                        invoice.currency,
+                                                    )}
+                                                </span>
+                                                <span>
+                                                    of {formatDate(invoice.on)}
+                                                    {invoice.dueOn &&
+                                                        `, due ${formatDate(invoice.dueOn)}`}
+                                                    , recorded by {invoice.by}
+                                                </span>
+                                                {invoice.document && (
+                                                    <a
+                                                        className="underline"
+                                                        href={invoiceDocument.url(
+                                                            {
+                                                                ...key,
+                                                                order: order.id,
+                                                                invoice:
+                                                                    invoice.id,
+                                                            },
+                                                        )}
+                                                    >
+                                                        {invoice.document}
+                                                    </a>
+                                                )}
+                                                {invoice.voided && (
+                                                    <StatusBadge tone="neutral">
+                                                        Voided
+                                                    </StatusBadge>
+                                                )}
+                                            </span>
+                                            {invoice.voided?.reason && (
+                                                <p className="text-xs">
+                                                    Voided
+                                                    {invoice.voided.on &&
+                                                        ` ${formatDate(invoice.voided.on)}`}
+                                                    : {invoice.voided.reason}
+                                                </p>
+                                            )}
+                                            {!invoice.voided &&
+                                                order.can.invoice && (
+                                                    <Form
+                                                        {...voidInvoice.form({
+                                                            ...key,
+                                                            order: order.id,
+                                                            invoice: invoice.id,
+                                                        })}
+                                                        options={keep}
+                                                        className="mt-1 flex flex-wrap items-end gap-2"
+                                                    >
+                                                        <Field
+                                                            id={`void-${invoice.id}`}
+                                                            label="Why void it"
+                                                            error={
+                                                                errors.reason
+                                                            }
+                                                            className="min-w-64 flex-1"
+                                                        >
+                                                            <Input
+                                                                id={`void-${invoice.id}`}
+                                                                name="reason"
+                                                                required
+                                                                maxLength={2000}
+                                                            />
+                                                        </Field>
+                                                        <Button
+                                                            type="submit"
+                                                            size="sm"
+                                                            variant="outline"
+                                                        >
+                                                            Void invoice
+                                                        </Button>
+                                                    </Form>
+                                                )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
+                        {order.can.invoice && (
+                            <Form
+                                {...recordInvoice.form({
+                                    ...key,
+                                    order: order.id,
+                                })}
+                                options={keep}
+                                resetOnSuccess
+                                className="space-y-3 border-t pt-4"
+                            >
+                                <h3 className="font-medium">
+                                    Record a supplier invoice
+                                </h3>
+                                <div className="grid gap-3 sm:grid-cols-2">
                                     <Field
-                                        id="invoice_reference"
-                                        label="Supplier's invoice number"
-                                        error={errors.invoice_reference}
+                                        id={`number-${order.id}`}
+                                        label="Invoice number"
+                                        error={errors.number}
                                     >
                                         <Input
-                                            id="invoice_reference"
-                                            name="invoice_reference"
+                                            id={`number-${order.id}`}
+                                            name="number"
                                             maxLength={100}
                                             required
                                         />
                                     </Field>
                                     <Field
-                                        id="invoice_on"
+                                        id={`invoice-amount-${order.id}`}
+                                        label={`Amount (${request.currency}), ${money(order.commitmentMinor - order.invoicedMinor)} not invoiced yet`}
+                                        error={errors.amount}
+                                    >
+                                        <Input
+                                            id={`invoice-amount-${order.id}`}
+                                            name="amount"
+                                            inputMode="decimal"
+                                            placeholder={(
+                                                (order.commitmentMinor -
+                                                    order.invoicedMinor) /
+                                                100
+                                            ).toFixed(2)}
+                                            {...invalid(
+                                                `invoice-amount-${order.id}`,
+                                                errors.amount,
+                                            )}
+                                        />
+                                    </Field>
+                                    <Field
+                                        id={`invoice-on-${order.id}`}
                                         label="Invoice date"
                                         error={errors.invoice_on}
                                     >
                                         <Input
-                                            id="invoice_on"
+                                            id={`invoice-on-${order.id}`}
                                             name="invoice_on"
                                             type="date"
                                             max={today}
@@ -741,18 +1051,110 @@ export default function ProcurementShow({
                                             required
                                         />
                                     </Field>
-                                    <Button
-                                        type="submit"
-                                        size="sm"
-                                        variant="outline"
+                                    <Field
+                                        id={`due-on-${order.id}`}
+                                        label="Due"
+                                        error={errors.due_on}
                                     >
-                                        Record invoice
-                                    </Button>
-                                </Form>
-                            )}
+                                        <Input
+                                            id={`due-on-${order.id}`}
+                                            name="due_on"
+                                            type="date"
+                                        />
+                                    </Field>
+                                    <Field
+                                        id={`invoice-document-${order.id}`}
+                                        label="Invoice document"
+                                        error={errors.document}
+                                    >
+                                        <Input
+                                            id={`invoice-document-${order.id}`}
+                                            name="document"
+                                            type="file"
+                                        />
+                                    </Field>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    In {request.currency}, the project's
+                                    currency. Leave the amount empty for the
+                                    whole of what is not invoiced yet.
+                                </p>
+                                <Button
+                                    type="submit"
+                                    size="sm"
+                                    variant="outline"
+                                >
+                                    Record invoice
+                                </Button>
+                            </Form>
+                        )}
+
+                        {order.can.close && (
+                            <Form
+                                {...closeOrder.form({
+                                    ...key,
+                                    order: order.id,
+                                })}
+                                options={keep}
+                                className="space-y-2 border-t pt-4"
+                            >
+                                <h3 className="font-medium">
+                                    Close the order short
+                                </h3>
+                                <p className="text-muted-foreground">
+                                    Nothing more will arrive. The commitment
+                                    comes down to what is invoiced (
+                                    {money(order.invoicedMinor)}), and the rest
+                                    goes back to the budget line.
+                                </p>
+                                <Field
+                                    id={`close-${order.id}`}
+                                    label="Why"
+                                    error={errors.reason}
+                                >
+                                    <Input
+                                        id={`close-${order.id}`}
+                                        name="reason"
+                                        required
+                                        maxLength={2000}
+                                    />
+                                </Field>
+                                <Button
+                                    type="submit"
+                                    size="sm"
+                                    variant="outline"
+                                >
+                                    Close order
+                                </Button>
+                            </Form>
+                        )}
                     </PanelBody>
                 </Panel>
             ))}
         </>
     );
+}
+
+/** What has to happen next for this order to be paid, in plain words. */
+function nextStep(order: Order): string {
+    if (!order.live) {
+        return "This order no longer stands. Choose a quote and raise another if it's still needed.";
+    }
+    if (order.spending === 'paid') {
+        return 'Paid.';
+    }
+    if (order.spending === 'requested') {
+        return 'Finance approves it under Approvals, against the budget line and the grant.';
+    }
+    if (order.finance) {
+        return 'With Finance to pay.';
+    }
+    if (order.payable) {
+        return 'Ready for finance to pay.';
+    }
+    if (!order.fullyReceived && order.closed === null) {
+        return 'Waiting for the goods.';
+    }
+
+    return 'Waiting for the supplier invoices to come to the commitment.';
 }
