@@ -167,6 +167,32 @@ final class PlatformApi
     }
 
     /**
+     * Short-lived token for reading a paired product's integration API (ADR-0019 §9:
+     * Projects and M&E), bound to one organization and, when given, one acting
+     * member. Never cached: the platform checks entitlement and membership on
+     * every issue.
+     *
+     * @throws NotVisible when the organization is not entitled to both products
+     * @throws PlatformRefused not_member (the acting user is not an active member), unknown_partner, organization_inactive
+     * @throws PlatformUnavailable
+     */
+    public function integrationToken(string $organizationId, string $audience, ?string $actingUser = null): string
+    {
+        $data = $this->send('post', '/api/v1/integration-tokens', 'integration.read', array_filter([
+            'organization_id' => $organizationId,
+            'audience' => $audience,
+            'acting_user' => $actingUser,
+        ]));
+
+        $token = $data['token'] ?? null;
+        if (! is_string($token) || $token === '') {
+            throw new PlatformUnavailable('Integration token response without a token.');
+        }
+
+        return $token;
+    }
+
+    /**
      * @param  'ok'|'degraded'|'down'  $status
      * @param  array<string, 'ok'|'degraded'|'down'>  $components
      *
@@ -341,6 +367,11 @@ final class PlatformApi
 
             /** @var array<string, list<string>> $errors */
             throw new PlatformRefused($message, $errors);
+        }
+
+        // An integration token refused for a reason (not a member, not a pair, organization inactive).
+        if ($path === '/api/v1/integration-tokens' && in_array($response->status(), [403, 422], true)) {
+            throw new PlatformRefused(is_array($data) && is_string($data['error'] ?? null) ? $data['error'] : 'refused');
         }
 
         if ($response->status() === 204) {

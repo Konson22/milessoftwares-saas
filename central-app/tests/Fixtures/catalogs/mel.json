@@ -1,0 +1,28 @@
+{
+    "application": {
+        "code": "mel",
+        "name": "M&E",
+        "category": "products",
+        "kind": "standalone",
+        "status": "available"
+    },
+    "version": "1.0.0",
+    "permissions": [
+        {
+            "key": "mel.programmes.view",
+            "name": "View programmes",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        }
+    ],
+    "roles": [
+        {
+            "key": "mel_viewer",
+            "name": "Viewer",
+            "sensitivity": 1,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": ["mel.programmes.view"]
+        }
+    ]
+}

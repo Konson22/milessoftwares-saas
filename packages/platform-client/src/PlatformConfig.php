@@ -100,6 +100,17 @@ final class PlatformConfig
         return $this->current === null ? "platform.{$name}" : "platform.{$this->current}.{$name}";
     }
 
+    /**
+     * Base URL of a paired product's integration API (platform-client.integrations),
+     * without a trailing slash; null when this deployment does not read it.
+     */
+    public function integrationUrl(string $application): ?string
+    {
+        $url = $this->config->get("platform-client.integrations.{$application}");
+
+        return is_string($url) && trim($url) !== '' ? rtrim(trim($url), '/') : null;
+    }
+
     public function rootDomain(): string
     {
         return strtolower(rtrim($this->required('root_domain', 'PLATFORM_ROOT_DOMAIN'), '.'));

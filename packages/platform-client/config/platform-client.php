@@ -60,6 +60,14 @@ return [
         'projects' => env('PLATFORM_PROJECTS_EVENTS_URL'),
     ],
 
+    // Integration APIs of the paired products this product reads (ADR-0019 §9:
+    // Projects and M&E), by application code: the base URL, server to server,
+    // e.g. http://127.0.0.1:9400/mel/integration/v1. Unset: the link is off.
+    'integrations' => [
+        'projects' => env('PLATFORM_PROJECTS_INTEGRATION_URL'),
+        'mel' => env('PLATFORM_MEL_INTEGRATION_URL'),
+    ],
+
     // Signs webhooks and provisioning calls (whsec_...).
     'webhook_secret' => env('PLATFORM_WEBHOOK_SECRET'),
 

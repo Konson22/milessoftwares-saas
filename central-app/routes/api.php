@@ -46,6 +46,10 @@ Route::prefix('api/v1')->middleware('throttle:600,1')->name('api.')->group(funct
     Route::post('event-tokens', [SharedModulesController::class, 'eventToken'])
         ->middleware('api.client:events.issue')
         ->name('event-tokens.store');
+    // Products reading each other's integration API (ADR-0019 §9: Projects and M&E).
+    Route::post('integration-tokens', [SharedModulesController::class, 'integrationToken'])
+        ->middleware('api.client:integration.read')
+        ->name('integration-tokens.store');
     Route::post('health', [SharedModulesController::class, 'health'])
         ->middleware('api.client:health.write')
         ->name('health.store');

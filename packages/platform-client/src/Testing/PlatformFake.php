@@ -65,6 +65,12 @@ final class PlatformFake
     /** @var list<string> modules the organization is not entitled to: event tokens answer 404 */
     public array $notEntitledTo = [];
 
+    /** @var list<array{organization_id: string, audience: string, acting_user: string|null, application: string}> */
+    public array $integrationTokens = [];
+
+    /** @var string|null the reason the next integration tokens are refused with (not_member, unknown_partner, organization_inactive) */
+    public ?string $refuseIntegration = null;
+
     /** @var array{private: string, public: string}|null */
     private static ?array $keys = null;
 
@@ -118,6 +124,19 @@ final class PlatformFake
 
                     return Http::response(['status' => $status], $status);
                 }
+            }
+
+            if ($path === '/api/v1/integration-tokens') {
+                // Like the platform: not entitled to the paired product is a 404, a refusal names its reason.
+                if (in_array((string) $request['audience'], $this->notEntitledTo, true)) {
+                    return Http::response(['error' => 'not_entitled'], 404);
+                }
+                if ($this->refuseIntegration !== null) {
+                    return Http::response(['error' => $this->refuseIntegration], $this->refuseIntegration === 'not_member' ? 403 : 422);
+                }
+                $this->integrationTokens[] = ['organization_id' => (string) $request['organization_id'], 'audience' => (string) $request['audience'], 'acting_user' => isset($request['acting_user']) ? (string) $request['acting_user'] : null, 'application' => $this->caller($request)];
+
+                return Http::response(['token' => 'fake-integration-token', 'expires_in' => 300]);
             }
 
             if ($path === '/api/v1/event-tokens') {
@@ -314,6 +333,35 @@ final class PlatformFake
             ->withClaim('scopes', ['openid', 'profile', 'email'])
             ->getToken($config->signer(), $config->signingKey())
             ->toString();
+    }
+
+    /**
+     * A read token as the platform signs it for a paired product's integration
+     * API (POST /api/v1/integration-tokens), with the test signing key the
+     * fake JWKS publishes: for tests of the receiving side.
+     *
+     * @param  array{scope?: string, issuer?: string, expires?: string}  $overrides
+     */
+    public function integrationToken(string $organizationId, string $source, string $audience, ?string $actingUser = null, array $overrides = []): string
+    {
+        $config = self::jwt();
+        $now = new DateTimeImmutable;
+        $issuer = $overrides['issuer'] ?? app(PlatformConfig::class)->issuer();
+        $builder = $config->builder()
+            ->issuedBy($issuer !== '' ? $issuer : throw new \InvalidArgumentException('No issuer.'))
+            ->permittedFor($audience !== '' ? $audience : throw new \InvalidArgumentException('No audience.'))
+            ->relatedTo($source !== '' ? $source : throw new \InvalidArgumentException('No source.'))
+            ->identifiedBy(bin2hex(random_bytes(16)))
+            ->issuedAt($now->modify('-5 seconds'))
+            ->canOnlyBeUsedAfter($now->modify('-5 seconds'))
+            ->expiresAt($now->modify($overrides['expires'] ?? '+5 minutes'))
+            ->withClaim('org', $organizationId)
+            ->withClaim('scope', $overrides['scope'] ?? 'integration.read');
+        if ($actingUser !== null) {
+            $builder = $builder->withClaim('act', $actingUser);
+        }
+
+        return $builder->getToken($config->signer(), $config->signingKey())->toString();
     }
 
     /**

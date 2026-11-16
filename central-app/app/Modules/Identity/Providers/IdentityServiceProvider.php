@@ -71,6 +71,7 @@ class IdentityServiceProvider extends ServiceProvider
             'access.read' => 'Read effective access for the calling application',
             'provisioning.write' => 'Report provisioning progress',
             'events.issue' => 'Obtain organization-bound tokens for sending events to shared modules',
+            'integration.read' => 'Obtain organization-bound tokens for reading a paired product\'s integration API',
             'health.write' => 'Report service health',
             'organizations.sponsor' => 'Create a workspace for another organization, for its owner to claim',
             'members.write' => 'Add a member with a username and a temporary password, for the calling application',

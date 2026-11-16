@@ -10,6 +10,7 @@ use Illuminate\Support\ServiceProvider;
 use Miles\PlatformClient\Access\CurrentAccess;
 use Miles\PlatformClient\Events\DeliverDueEvents;
 use Miles\PlatformClient\Events\RequeueFailedEvent;
+use Miles\PlatformClient\Http\Middleware\RequireIntegrationToken;
 use Miles\PlatformClient\Http\Middleware\RequirePlatformAccess;
 use Miles\PlatformClient\Http\Middleware\RequirePlatformToken;
 use Miles\PlatformClient\Http\Middleware\ResolveTenant;
@@ -50,6 +51,9 @@ final class PlatformClientServiceProvider extends ServiceProvider
         // The same for the API the mobile app calls: a bearer token, no session.
         $router->aliasMiddleware('platform.token', RequirePlatformToken::class);
         $router->middlewareGroup('platform.api', ['platform.tenant', 'platform.token']);
+
+        // A paired product reading this one's integration API (ADR-0019 §9).
+        $router->aliasMiddleware('platform.integration', RequireIntegrationToken::class);
 
         // Tenant-owned models in the URL can only be bound once the tenant is
         // known (and the member checked): run both before SubstituteBindings.

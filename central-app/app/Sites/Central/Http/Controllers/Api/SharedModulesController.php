@@ -38,6 +38,37 @@ class SharedModulesController extends Controller
         }
     }
 
+    /**
+     * A read token for another product's integration API (ADR-0019 §9).
+     * acting_user, when given, must be an active member of the organization.
+     */
+    public function integrationToken(Request $request, EventTokenIssuer $issuer): JsonResponse
+    {
+        $source = $this->application($request);
+
+        $validated = $request->validate([
+            'organization_id' => ['required', 'uuid'],
+            'audience' => ['required', 'string', 'regex:/^[a-z][a-z0-9_]*$/'],
+            'acting_user' => ['nullable', 'uuid'],
+        ]);
+
+        $organization = Organization::query()->find($request->string('organization_id')->toString());
+        abort_if($organization === null, 404);
+
+        try {
+            return response()->json($issuer->issueIntegration($source, $organization, $validated['audience'], isset($validated['acting_user']) ? strtolower($validated['acting_user']) : null));
+        } catch (EventTokenRefused $e) {
+            // Unknown organization and not-entitled look the same from outside.
+            $status = match ($e->reason) {
+                'not_entitled' => 404,
+                'not_member' => 403,
+                default => 422,
+            };
+
+            return response()->json(['error' => $e->reason, 'error_description' => $e->getMessage()], $status);
+        }
+    }
+
     public function health(Request $request): JsonResponse
     {
         $application = $this->application($request);

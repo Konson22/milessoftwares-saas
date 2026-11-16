@@ -33,12 +33,15 @@ final class EventTokenVerifier
      * @param  string  $issuer  the platform auth host URL
      * @param  string  $publicKeyPem  the platform signing key (from its JWKS)
      * @param  string  $module  this module's application code: finance or hr
+     * @param  string  $scope  events.write (events), or integration.read for a
+     *                         product's integration API (ADR-0019 §9)
      */
     public function __construct(
         string $issuer,
         private readonly string $publicKeyPem,
         string $module,
         private readonly ?ClockInterface $clock = null,
+        private readonly string $scope = 'events.write',
     ) {
         if ($issuer === '' || $module === '') {
             throw new \InvalidArgumentException('The issuer and module are required.');
@@ -93,7 +96,7 @@ final class EventTokenVerifier
 
         $claims = $parsed->claims();
 
-        if ($claims->get('scope') !== 'events.write' || ! is_string($claims->get('org')) || ! is_string($claims->get('sub'))) {
+        if ($claims->get('scope') !== $this->scope || ! is_string($claims->get('org')) || ! is_string($claims->get('sub'))) {
             throw new InvalidEventToken('not an event token');
         }
 
@@ -104,6 +107,8 @@ final class EventTokenVerifier
             strtolower((string) $claims->get('org')),
             (string) $claims->get('jti', ''),
             $expiresAt instanceof DateTimeImmutable ? $expiresAt : new DateTimeImmutable,
+            $this->scope,
+            is_string($claims->get('act')) && $claims->get('act') !== '' ? strtolower((string) $claims->get('act')) : null,
         );
     }
 }
