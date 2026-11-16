@@ -65,6 +65,9 @@ function projectsOn(): void
 
             return Http::response(['data' => array_map($project, $known), 'missing' => array_values(array_diff($query['ids'], $known))]);
         }
+        if (preg_match('#^projects/([^/]+)/participants$#', $path, $m) === 1) {
+            return isset($pm['projects'][$m[1]]) ? Http::response(['data' => $pm['participants'][$m[1]] ?? []]) : Http::response(['error' => 'unknown_project'], 404);
+        }
         if (str_starts_with($path, 'projects/')) {
             $id = substr($path, 9);
 
@@ -243,3 +246,74 @@ function resultForm(Result $result, array $changes): array
         ...$changes,
     ];
 }
+
+/*
+| Who a unit's results are released to in its project's reports (ADR-0019
+| §24): an M&E manager's decision, per unit, checked in Projects, audited,
+| withdrawn with the link or with reporting.
+*/
+
+describe('releasing results to project parties', function () {
+    beforeEach(function () {
+        projectsOn();
+        $this->partner = '0198a3b2-0000-7000-8000-0000000000d1';
+        $this->pm['participants'] = [WASH => [
+            ['organizationId' => $this->partner, 'name' => 'Lead NGO', 'relationship' => 'lead_implementer', 'relationshipLabel' => 'Lead implementer'],
+        ]];
+        $this->url = mel('programmes/'.$this->programme->id.'/units/'.$this->units['JUB']->id.'/project');
+        $this->put($this->url, ['linked_project_id' => WASH, 'shares_with_project_reports' => '1'])->assertSessionHasNoErrors();
+    });
+
+    $unit = fn () => inAcme(fn () => ProgrammeUnit::query()->findOrFail(test()->units['JUB']->id));
+    $audience = fn (array $data) => test()->put(mel('programmes/'.test()->programme->id.'/units/'.test()->units['JUB']->id.'/project-audience'), $data);
+
+    it('starts at the project owner only, and names a partner active on the project', function () use ($unit, $audience) {
+        expect($unit()->project_report_audience)->toBe('owner');
+
+        $audience(['audience' => 'partner', 'partner_organization_id' => $this->partner])->assertSessionHasNoErrors();
+        expect($unit()->only(['project_report_audience', 'project_report_partner_organization_id', 'project_report_partner_name']))->toBe([
+            'project_report_audience' => 'partner', 'project_report_partner_organization_id' => $this->partner, 'project_report_partner_name' => 'Lead NGO (Lead implementer)',
+        ]);
+
+        $audience(['audience' => 'donors', 'partner_organization_id' => $this->partner])->assertSessionHasNoErrors();
+        $audience(['audience' => 'donors', 'partner_organization_id' => $this->partner])->assertSessionHasNoErrors();
+        $events = inAcme(fn () => AuditEvent::query()->where('action', 'unit.project_audience_changed')->orderBy('created_at')->get());
+        expect($events)->toHaveCount(2)
+            ->and($events[1]->details['from'])->toBe(['audience' => 'partner', 'partner' => $this->partner])
+            ->and($events[1]->details['to']['audience'])->toBe('donors')
+            ->and($events[1]->user_id)->toBe($this->manager->id);
+
+        $audience(['audience' => 'owner'])->assertSessionHasNoErrors();
+        expect($unit()->project_report_partner_organization_id)->toBeNull();
+    });
+
+    it('refuses a partner not active on the project, a missing partner, and when Projects cannot check', function () use ($unit, $audience) {
+        $audience(['audience' => 'partner', 'partner_organization_id' => '0198a3b2-0000-7000-8000-0000000000d9'])->assertSessionHasErrors('partner_organization_id');
+        $audience(['audience' => 'partner'])->assertSessionHasErrors('partner_organization_id');
+        $audience(['audience' => 'everyone'])->assertSessionHasErrors('audience');
+        $this->pm['down'] = true;
+        $audience(['audience' => 'partner', 'partner_organization_id' => $this->partner])->assertSessionHasErrors('partner_organization_id');
+
+        expect($unit()->project_report_audience)->toBe('owner');
+    });
+
+    it('withdraws the release when reporting to the project stops or the link changes', function () use ($unit, $audience) {
+        $audience(['audience' => 'donors', 'partner_organization_id' => $this->partner])->assertSessionHasNoErrors();
+        $this->put($this->url, ['linked_project_id' => WASH])->assertSessionHasNoErrors();
+        expect($unit()->project_report_audience)->toBe('owner')->and($unit()->project_report_partner_organization_id)->toBeNull();
+
+        $this->put($this->url, ['linked_project_id' => WASH, 'shares_with_project_reports' => '1'])->assertSessionHasNoErrors();
+        $audience(['audience' => 'partner', 'partner_organization_id' => $this->partner])->assertSessionHasNoErrors();
+        $this->put($this->url, ['linked_project_id' => ROADS, 'shares_with_project_reports' => '1'])->assertSessionHasNoErrors();
+        expect($unit()->project_report_audience)->toBe('owner');
+
+        // Not while the unit does not report to its project.
+        $this->put($this->url, ['linked_project_id' => ROADS])->assertSessionHasNoErrors();
+        $audience(['audience' => 'owner'])->assertSessionHasErrors('audience');
+    });
+
+    it('is decided by those who link projects only', function () use ($audience) {
+        actingAsRole('mel_officer');
+        $audience(['audience' => 'partner', 'partner_organization_id' => $this->partner])->assertForbidden();
+    });
+});

@@ -494,16 +494,56 @@ final class Reports
     }
 
     /**
-     * Who sees the M&E results recorded with a report (ADR-0019 §20.6):
-     * only members of the project's owner organization, whose M&E data it
-     * is. Partners, sub-partners and donors see the report without them,
-     * whoever submitted, reviewed or published it. Widening this audience is
-     * a business decision (ADR-0019 §20.6, alternatives B and C), not a
-     * setting.
+     * The M&E results recorded with a report that this member may read
+     * (ADR-0019 §24). Default deny, decided per result from what M&E
+     * released with it and froze in the snapshot:
+     *
+     *   - The project's owner organization (projects.view): all of them,
+     *     whose M&E data it is.
+     *   - Audience "partner" or "donors": the partner organization M&E named
+     *     for the result's unit, when it is the party that submitted this
+     *     report (its own scope), and the party reviewing that report (the
+     *     lead, within the reporting relationship), through members who
+     *     prepare or review reports. A partner named for another unit, or a
+     *     report between other parties, shows nothing.
+     *   - Audience "donors": also donors (donor_reports.view) on the
+     *     published report only.
+     *   - Results recorded before M&E sent an audience: owner only.
+     *
+     * The audience is the one M&E gave when the version was submitted: a
+     * later change in M&E applies to the next submission and never rewrites
+     * a recorded one. Losing access to the report (a participation ended,
+     * capabilities withdrawn) loses its results with it.
+     *
+     * @param  list<array<string, mixed>>  $results
+     * @return list<array<string, mixed>>
      */
-    public static function seesMelResults(Acting $acting): bool
+    public static function visibleMelResults(Report $report, Acting $acting, array $results): array
     {
-        return $acting->isOwner() && $acting->may('projects.view');
+        if ($acting->isOwner()) {
+            return $acting->may('projects.view') ? $results : [];
+        }
+
+        $party = (self::isSubmitter($report, $acting) && $acting->may('projects.reports.prepare', Capability::REPORTS_SUBMIT))
+            || (self::isReviewer($report, $acting) && $acting->may('projects.reports.review', Capability::REPORTS_REVIEW));
+        $donor = $report->status === Report::PUBLISHED && $acting->participant !== null
+            && ParticipantAccess::allows($acting->participant, Capability::DONOR_REPORTS_VIEW);
+        if (! $party && ! $donor) {
+            return [];
+        }
+        $submitterOrganization = $report->submitter_participant_id === null
+            ? null
+            : Participant::query()->whereKey($report->submitter_participant_id)->value('participant_organization_id');
+
+        return array_values(array_filter($results, function (array $result) use ($party, $donor, $submitterOrganization): bool {
+            $audience = $result['audience'] ?? 'owner';
+            $partner = $result['partnerOrganizationId'] ?? null;
+            if ($party && in_array($audience, ['partner', 'donors'], true) && is_string($partner) && $partner === $submitterOrganization) {
+                return true;
+            }
+
+            return $donor && $audience === 'donors';
+        }));
     }
 
     public static function isReviewer(Report $report, Acting $acting): bool

@@ -123,3 +123,18 @@ it('refuses malformed id lists', function (string $query) {
     'empty' => ['milestones'],
     'too many' => ['projects?'.implode('&', array_fill(0, 101, 'ids[]=0198a3b2-0000-7000-8000-000000000001'))],
 ]);
+
+it('lists the organizations active on a project, for M&E to name a reporting partner', function () {
+    acceptProjectInvitation(inviteToProject($this->project, 'lead-ngo', 'lead_implementer', ['view']), 'lead-ngo');
+    $gone = acceptProjectInvitation(inviteToProject($this->project, 'field-ngo', 'implementer', ['view']), 'field-ngo');
+    $this->actingAsMember('acme', [], owner: true);
+    $this->post($this->organizationUrl('acme', "projects/{$this->project->id}/collaboration/participants/{$gone->id}/status"), ['status' => 'revoked'])->assertSessionHasNoErrors();
+
+    melRead("projects/{$this->project->id}/participants")->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.organizationId', $this->organization('lead-ngo')->id)
+        ->assertJsonPath('data.0.relationship', 'lead_implementer');
+
+    // A project the member may not see is unknown.
+    melRead("projects/{$this->hidden->id}/participants")->assertNotFound();
+});

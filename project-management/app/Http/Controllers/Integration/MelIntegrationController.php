@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Integration;
 
 use App\Access\CurrentAccess;
+use App\Collaboration\Models\Participant;
 use App\Http\Controllers\Controller;
 use App\Models\Milestone;
 use App\Models\Project;
@@ -27,6 +28,10 @@ use Illuminate\Support\Str;
  *   GET milestones?ids[]=…         milestones by id, or of projects:
  *   GET milestones?project_ids[]=… {id, projectId, projectCode, name,
  *                                  label, dueOn, reachedOn}
+ *   GET projects/{id}/participants the organizations active on the project,
+ *                                  for M&E to name the partner its results
+ *                                  go to (ADR-0019 §24): {organizationId,
+ *                                  name, relationship, relationshipLabel}
  *
  * Figures: status and delivery progress; the approved budget and what has
  * been paid only for members holding projects.finance.view. A project that
@@ -77,6 +82,27 @@ final class MelIntegrationController extends Controller
         }
 
         return response()->json(['data' => $this->figures($found->newCollection([$found]), true)[0]]);
+    }
+
+    public function participants(string $project): JsonResponse
+    {
+        $found = Str::isUuid($project) ? Project::query()->find($project) : null;
+        if ($found === null) {
+            return response()->json(['error' => 'unknown_project'], 404);
+        }
+
+        $participants = Participant::query()->with('organization:id,name')
+            ->where('project_id', $found->id)
+            ->where('status', Participant::ACTIVE)
+            ->orderBy('joined_at')
+            ->get();
+
+        return response()->json(['data' => $participants->map(fn (Participant $participant) => [
+            'organizationId' => $participant->participant_organization_id,
+            'name' => $participant->organization->name,
+            'relationship' => $participant->relationship,
+            'relationshipLabel' => $participant->relationshipLabel(),
+        ])->values()]);
     }
 
     public function milestones(Request $request): JsonResponse

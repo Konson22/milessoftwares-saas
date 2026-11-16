@@ -92,6 +92,30 @@ final class LinkedProjects
     }
 
     /**
+     * The organizations active on a project, as Projects answers for this
+     * member (ADR-0019 §24), to name the partner a unit's results go to:
+     * organization id => name, or null when Projects did not answer.
+     *
+     * @return array<string, string>|null
+     */
+    public static function participants(Access $access, string $projectId): ?array
+    {
+        $result = self::get($access, 'projects/'.rawurlencode($projectId).'/participants');
+        if ($result === null || ! $result->ok()) {
+            return null;
+        }
+        $out = [];
+        foreach (is_array($result->data['data'] ?? null) ? $result->data['data'] : [] as $row) {
+            if (is_array($row) && is_string($row['organizationId'] ?? null) && is_string($row['name'] ?? null)) {
+                $label = is_string($row['relationshipLabel'] ?? null) ? " ({$row['relationshipLabel']})" : '';
+                $out[strtolower($row['organizationId'])] = $row['name'].$label;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
      * One project, to check a link before it is made.
      */
     public static function project(Access $access, string $projectId): ?IntegrationResult

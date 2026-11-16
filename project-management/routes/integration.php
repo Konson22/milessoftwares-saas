@@ -27,5 +27,6 @@ Route::prefix(app(PlatformConfig::class)->path().'/integration/v1')
     ->group(function () {
         Route::get('projects', [MelIntegrationController::class, 'projects'])->name('projects');
         Route::get('projects/{project}', [MelIntegrationController::class, 'project'])->name('project');
+        Route::get('projects/{project}/participants', [MelIntegrationController::class, 'participants'])->name('participants');
         Route::get('milestones', [MelIntegrationController::class, 'milestones'])->name('milestones');
     });

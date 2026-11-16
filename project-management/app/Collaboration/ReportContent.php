@@ -126,7 +126,8 @@ final class ReportContent
      * submitting party may see them, and the published M&E results read
      * from the M&E application (MelResults, ADR-0019 §20) with where they
      * came from and how the read went ('melSource'), which only the
-     * owner's members are shown (Reports::seesMelResults). Frozen with the
+     * owner's members are shown; the results themselves are filtered per
+     * audience (Reports::visibleMelResults). Frozen with the
      * version: later changes in M&E never alter a submitted snapshot.
      * Snapshots taken before keep what they captured (no 'melSource').
      *

@@ -4,7 +4,9 @@ use App\Mel\Models\Indicator;
 use App\Mel\Models\ProgrammeUnit;
 use App\Mel\Models\ReportingPeriod;
 use App\Mel\Models\Submission;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 
@@ -167,3 +169,22 @@ it('sends nothing for an indicator that is still a draft', function () {
 
     projectsRead('projects/'.PROJECT_ID.'/verified-results')->assertOk()->assertJsonPath('shared', 1)->assertJsonPath('data', []);
 });
+
+it('says who each result is released to in the project reports, the owner only by default', function () {
+    resultAt('published', $this->periods['2026 Q1'], $this->units['JUB'], '10');
+
+    projectsRead('projects/'.PROJECT_ID.'/verified-results')->assertOk()
+        ->assertJsonPath('data.0.audience', 'owner')->assertJsonPath('data.0.partnerOrganizationId', null);
+
+    $partner = '0198a3b2-0000-7000-8000-0000000000d1';
+    inAcme(fn () => ProgrammeUnit::query()->whereKey($this->units['JUB']->id)->update(['project_report_audience' => 'donors', 'project_report_partner_organization_id' => $partner]));
+
+    projectsRead('projects/'.PROJECT_ID.'/verified-results')->assertOk()
+        ->assertJsonPath('data.0.audience', 'donors')->assertJsonPath('data.0.partnerOrganizationId', $partner);
+});
+
+it('refuses an unknown audience, or a partner audience without a partner, in the database', function () {
+    $unit = $this->units['JUB']->id;
+    expect(fn () => inAcme(fn () => ProgrammeUnit::query()->whereKey($unit)->update(['project_report_audience' => 'everyone'])))->toThrow(QueryException::class);
+    expect(fn () => inAcme(fn () => ProgrammeUnit::query()->whereKey($unit)->update(['project_report_audience' => 'partner'])))->toThrow(QueryException::class);
+})->skip(fn () => DB::getDriverName() !== 'pgsql', 'PostgreSQL constraints');

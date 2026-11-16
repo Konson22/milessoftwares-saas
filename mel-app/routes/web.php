@@ -67,6 +67,8 @@ Route::prefix(app(PlatformConfig::class)->path())
         });
         Route::put('programmes/{programme}/units/{unit}/project', [ProgrammeSetupController::class, 'linkProject'])
             ->middleware('can:mel.projects.link')->name('units.project');
+        Route::put('programmes/{programme}/units/{unit}/project-audience', [ProgrammeSetupController::class, 'projectAudience'])
+            ->middleware('can:mel.projects.link')->name('units.project-audience');
 
         // Results frameworks
         Route::middleware('can:mel.programmes.view')->group(function () {

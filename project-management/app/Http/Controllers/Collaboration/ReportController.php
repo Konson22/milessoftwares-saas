@@ -367,11 +367,15 @@ class ReportController extends Controller
             $content['system']['financial'] = null;
             $content['system']['financialHidden'] = true;
         }
-        // M&E results are the owner's data: removed here, on the server, for
-        // everyone else (Reports::seesMelResults), with how the read went.
-        if (isset($content['system']) && is_array($content['system']) && ! Reports::seesMelResults($acting)) {
-            $content['system']['mel'] = [];
-            unset($content['system']['melSource']);
+        // M&E results: filtered here, on the server, per result and its
+        // audience (Reports::visibleMelResults). How the read went (the
+        // source) stays with the owner.
+        if (isset($content['system']) && is_array($content['system'])) {
+            $mel = is_array($content['system']['mel'] ?? null) ? array_values(array_filter($content['system']['mel'], is_array(...))) : [];
+            $content['system']['mel'] = Reports::visibleMelResults($report, $acting, $mel);
+            if (! $acting->isOwner()) {
+                unset($content['system']['melSource']);
+            }
         }
 
         return $content;

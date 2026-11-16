@@ -30,6 +30,10 @@ use Illuminate\Support\Str;
  *     counted twice; nothing is added up here.
  *   - Only units linked to this project, in the organization the platform
  *     signed for. Periods overlapping [from, to] when given.
+ *   - Each result says who M&E releases it to in the project's reports
+ *     (audience: owner, partner, donors; and the partner organization),
+ *     as set per unit by an M&E manager. Projects shows it accordingly
+ *     (ADR-0019 §24); the default is the project owner only.
  *   - Evidence: name, type and size of files marked for sharing with donors;
  *     never the file, its path or anything from Data Collection, and no
  *     narrative, disaggregation cells or names of people.
@@ -57,7 +61,8 @@ final class ProjectsIntegrationController
         $from = (string) $request->query('from');
         $to = (string) $request->query('to');
 
-        $linked = ProgrammeUnit::query()->where('linked_project_id', strtolower($project))->get(['id', 'shares_with_project_reports']);
+        $linked = ProgrammeUnit::query()->where('linked_project_id', strtolower($project))->get(['id', 'shares_with_project_reports', 'project_report_audience', 'project_report_partner_organization_id']);
+        $audiences = $linked->keyBy('id');
         $units = $linked->where('shares_with_project_reports', true)->pluck('id');
         if ($linked->isEmpty() || $units->isEmpty()) {
             return response()->json(['linked' => $linked->isNotEmpty(), 'units' => $linked->count(), 'shared' => 0, 'truncated' => false, 'data' => []]);
@@ -109,6 +114,9 @@ final class ProjectsIntegrationController
                 'denominator' => $result->denominator,
                 'verifiedAt' => $result->verified_at->toIso8601String(),
                 'publishedAt' => $result->published_at?->toIso8601String(),
+                // Who M&E releases it to in the project's reports (ADR-0019 §24).
+                'audience' => $audiences[$result->unit_id]->project_report_audience ?? 'owner',
+                'partnerOrganizationId' => $audiences[$result->unit_id]->project_report_partner_organization_id ?? null,
                 'evidence' => ($evidence[$result->submission_id] ?? collect())->map(fn (EvidenceFile $file) => [
                     'name' => $file->original_name,
                     'mimeType' => $file->mime_type,

@@ -79,6 +79,38 @@ class ProgrammeSetupController extends Controller
         return back()->with('success', $projectId === null ? 'Project unlinked.' : 'Project linked.');
     }
 
+    /**
+     * Who the unit's results are released to in its project's reports
+     * (ADR-0019 §24). The partner is checked in Projects, as this member:
+     * it must be active on the linked project now.
+     */
+    public function projectAudience(Request $request, string $programme, string $unit): RedirectResponse
+    {
+        $programme = $this->programme($programme);
+        $unit = $programme->units()->findOrFail($unit);
+        abort_unless(LinkedProjects::enabled(), 404);
+        $data = $request->validate([
+            'audience' => ['required', Rule::in(Programmes::AUDIENCES)],
+            'partner_organization_id' => ['nullable', 'uuid', Rule::requiredIf($request->input('audience') === 'partner')],
+        ]);
+        $partnerId = $data['audience'] === 'owner' ? null : ($data['partner_organization_id'] ?? null);
+        $partnerName = null;
+        if ($partnerId !== null && $unit->linked_project_id !== null) {
+            $participants = LinkedProjects::participants($this->access(), $unit->linked_project_id);
+            if ($participants === null) {
+                throw ValidationException::withMessages(['partner_organization_id' => 'Projects cannot be reached to check the partner. Try again shortly.']);
+            }
+            $partnerName = $participants[strtolower($partnerId)] ?? null;
+            if ($partnerName === null) {
+                throw ValidationException::withMessages(['partner_organization_id' => 'That organization is not active on the linked project.']);
+            }
+        }
+
+        $this->programmes->setProjectAudience($unit, $data['audience'], $partnerId, $partnerName, $this->user());
+
+        return back()->with('success', 'Who sees the results in project reports was saved.');
+    }
+
     public function generatePeriods(Request $request, string $programme): RedirectResponse
     {
         $programme = $this->programme($programme);

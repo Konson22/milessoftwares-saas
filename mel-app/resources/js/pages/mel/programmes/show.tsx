@@ -37,6 +37,7 @@ import { show as report } from '@/routes/mel/reports';
 import {
     archive as archiveUnit,
     project as linkProject,
+    projectAudience,
     store as addUnit,
     update as updateUnit,
 } from '@/routes/mel/units';
@@ -54,6 +55,12 @@ type Unit = {
     linkedProjectId: string | null;
     /** Its published results go to the linked project's partner reports. */
     sharesWithProjectReports: boolean;
+    /** Who its results are released to in the project's reports (ADR-0019 §24). */
+    projectReportAudience: 'owner' | 'partner' | 'donors';
+    projectReportPartnerId: string | null;
+    projectReportPartner: string | null;
+    /** Organizations active on the linked project (null: Projects did not answer). */
+    projectParticipants: Option[] | null;
     project: {
         id: string;
         label: string;
@@ -637,6 +644,15 @@ function UnitsPanel({
                                     </Form>
                                 )}
 
+                            {unit.linkedProjectId !== null &&
+                                unit.sharesWithProjectReports && (
+                                    <ReportAudience
+                                        programmeId={programmeId}
+                                        unit={unit}
+                                        editable={can.linkProjects}
+                                    />
+                                )}
+
                             {editing === unit.id && options !== null && (
                                 <UnitForm
                                     programmeId={programmeId}
@@ -990,5 +1006,123 @@ function PeriodsPanel({
                 </div>
             )}
         </Panel>
+    );
+}
+
+const AUDIENCE_LABEL: Record<Unit['projectReportAudience'], string> = {
+    owner: 'The project owner only',
+    partner: 'The project owner and a partner',
+    donors: 'The project owner, a partner and donors (published reports)',
+};
+
+/**
+ * Who a unit's published results are released to in its project's partner
+ * reports (ADR-0019 §24). Separate from verifying and publishing results
+ * here, and from publishing a report in Projects. Applies to reports
+ * submitted from now on.
+ */
+function ReportAudience({
+    programmeId,
+    unit,
+    editable,
+}: {
+    programmeId: string;
+    unit: Unit;
+    editable: boolean;
+}) {
+    const [audience, setAudience] = useState(unit.projectReportAudience);
+    const partner =
+        unit.projectReportPartner ??
+        (unit.projectReportPartnerId ? 'A partner organization' : null);
+
+    if (!editable) {
+        return (
+            <p className="mt-2 text-xs text-muted-foreground">
+                In project reports: {AUDIENCE_LABEL[unit.projectReportAudience]}
+                {unit.projectReportAudience !== 'owner' && partner
+                    ? ` · ${partner}`
+                    : ''}
+            </p>
+        );
+    }
+
+    return (
+        <Form
+            {...projectAudience.form({ programme: programmeId, unit: unit.id })}
+            options={{ preserveScroll: true }}
+            className="mt-2 space-y-2 border-l-2 pl-3"
+        >
+            {({ errors }) => (
+                <>
+                    <p className="text-xs text-muted-foreground">
+                        Who sees this unit&apos;s published results in the
+                        project&apos;s reports. A partner sees them on reports
+                        it submits, and so does the party reviewing them; donors
+                        only once a report is published. Reports already
+                        submitted keep what they recorded.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <select
+                            name="audience"
+                            aria-label={`Who sees ${unit.code} results in project reports`}
+                            value={audience}
+                            onChange={(event) =>
+                                setAudience(
+                                    event.target
+                                        .value as Unit['projectReportAudience'],
+                                )
+                            }
+                            className={`${selectClass} h-8 w-auto max-w-xs`}
+                        >
+                            {Object.entries(AUDIENCE_LABEL).map(
+                                ([value, label]) => (
+                                    <option key={value} value={value}>
+                                        {label}
+                                    </option>
+                                ),
+                            )}
+                        </select>
+                        {audience !== 'owner' &&
+                            (unit.projectParticipants === null ? (
+                                <span className="text-xs text-muted-foreground">
+                                    Projects cannot be reached to list the
+                                    partners.
+                                </span>
+                            ) : (
+                                <select
+                                    name="partner_organization_id"
+                                    aria-label="Partner organization"
+                                    defaultValue={
+                                        unit.projectReportPartnerId ?? ''
+                                    }
+                                    className={`${selectClass} h-8 w-auto max-w-xs`}
+                                >
+                                    <option value="">
+                                        {audience === 'partner'
+                                            ? 'Choose the partner'
+                                            : 'No partner (donors only)'}
+                                    </option>
+                                    {unit.projectParticipants.map((option) => (
+                                        <option
+                                            key={option.value}
+                                            value={option.value}
+                                        >
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            ))}
+                        <Button type="submit" size="sm" variant="outline">
+                            Save
+                        </Button>
+                    </div>
+                    {(errors.audience ?? errors.partner_organization_id) && (
+                        <p className="text-xs text-destructive">
+                            {errors.audience ?? errors.partner_organization_id}
+                        </p>
+                    )}
+                </>
+            )}
+        </Form>
     );
 }

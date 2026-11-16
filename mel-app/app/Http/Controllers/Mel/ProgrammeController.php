@@ -83,6 +83,15 @@ class ProgrammeController extends Controller
         $projects = $link['projects'];
         $linking = $manages && LinkedProjects::enabled() && $access->can('mel.projects.link') && ! $programme->isArchived();
         $picker = $linking ? LinkedProjects::options($access) : null;
+        // The organizations on each project a unit reports to, to name the
+        // partner its results are released to (ADR-0019 §24).
+        $participants = [];
+        if ($linking) {
+            foreach ($programme->units->filter(fn (ProgrammeUnit $unit) => $unit->linked_project_id !== null && $unit->shares_with_project_reports)->pluck('linked_project_id')->unique()->take(20) as $projectId) {
+                $found = LinkedProjects::participants($access, $projectId);
+                $participants[$projectId] = $found === null ? null : array_map(fn (string $id, string $name) => ['value' => $id, 'label' => $name], array_keys($found), array_values($found));
+            }
+        }
 
         return Inertia::render('mel/programmes/show', [
             'programme' => [
@@ -111,6 +120,10 @@ class ProgrammeController extends Controller
                     // Projects did not answer for it (see projectLink).
                     'linkedProjectId' => $unit->linked_project_id,
                     'sharesWithProjectReports' => $unit->shares_with_project_reports,
+                    'projectReportAudience' => $unit->project_report_audience,
+                    'projectReportPartnerId' => $unit->project_report_partner_organization_id,
+                    'projectReportPartner' => $unit->project_report_partner_name,
+                    'projectParticipants' => $unit->linked_project_id === null ? null : ($participants[$unit->linked_project_id] ?? null),
                     'project' => $unit->linked_project_id === null ? null : ($projects[$unit->linked_project_id] ?? null),
                 ])->values(),
             'periods' => $programme->periods()->get()

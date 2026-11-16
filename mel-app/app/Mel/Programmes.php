@@ -17,6 +17,11 @@ use Illuminate\Validation\ValidationException;
  */
 class Programmes
 {
+    /** Who a unit's results are released to in project reports (ADR-0019 §24). */
+    public const AUDIENCES = ['owner', 'partner', 'donors'];
+
+    private const OWNER_ONLY = ['project_report_audience' => 'owner', 'project_report_partner_organization_id' => null, 'project_report_partner_name' => null];
+
     public function __construct(private readonly AuditTrail $audit) {}
 
     /**
@@ -118,7 +123,8 @@ class Programmes
         if ($unit->linked_project_id === $projectId) {
             if ((bool) $unit->shares_with_project_reports !== $shares) {
                 DB::transaction(function () use ($unit, $shares, $user) {
-                    $unit->update(['shares_with_project_reports' => $shares]);
+                    // Switched off, the release is withdrawn too: switching on again starts at the owner only.
+                    $unit->update(['shares_with_project_reports' => $shares, ...($shares ? [] : self::OWNER_ONLY)]);
                     $this->audit->record($shares ? 'unit.project_reporting_on' : 'unit.project_reporting_off', $unit, $user, ['project' => $unit->linked_project_id]);
                 });
             }
@@ -135,8 +141,54 @@ class Programmes
                 throw ValidationException::withMessages(['linked_project_id' => 'That project is already linked to another unit of this programme.']);
             }
 
-            $unit->update(['linked_project_id' => $projectId, 'shares_with_project_reports' => $shares]);
+            // A partner named for the old project means nothing on the new one.
+            $unit->update(['linked_project_id' => $projectId, 'shares_with_project_reports' => $shares, ...self::OWNER_ONLY]);
             $this->audit->record($projectId === null ? 'unit.project_unlinked' : 'unit.project_linked', $unit, $user, ['project' => $projectId, 'project_reporting' => $shares]);
+        });
+    }
+
+    /**
+     * Who the unit's published results are released to in its linked
+     * project's partner reports (ADR-0019 §24): the project owner only, also
+     * a named partner organization (on reports it submits, and to the party
+     * reviewing them), or also donors on published reports. An M&E
+     * decision, separate from verifying and publishing results in M&E and
+     * from publishing a report in Projects. The caller has checked, in
+     * Projects, that the partner is active on the project. It applies to
+     * reports submitted from now on; reports already submitted keep what
+     * they recorded.
+     */
+    public function setProjectAudience(ProgrammeUnit $unit, string $audience, ?string $partnerId, ?string $partnerName, User $user): void
+    {
+        $this->assertNotArchived($unit->programme);
+        if ($unit->linked_project_id === null || ! $unit->shares_with_project_reports) {
+            throw ValidationException::withMessages(['audience' => 'Link the unit to a project and report its results there first.']);
+        }
+        if (! in_array($audience, self::AUDIENCES, true)) {
+            throw ValidationException::withMessages(['audience' => 'Choose who sees the results.']);
+        }
+        if ($audience === 'partner' && $partnerId === null) {
+            throw ValidationException::withMessages(['partner_organization_id' => 'Choose the partner organization.']);
+        }
+        $partnerId = $audience === 'owner' || $partnerId === null ? null : strtolower($partnerId);
+        $partnerName = $partnerId === null ? null : $partnerName;
+
+        $before = ['audience' => $unit->project_report_audience, 'partner' => $unit->project_report_partner_organization_id];
+        if ($before === ['audience' => $audience, 'partner' => $partnerId]) {
+            return;
+        }
+
+        DB::transaction(function () use ($unit, $audience, $partnerId, $partnerName, $user, $before) {
+            $unit->update([
+                'project_report_audience' => $audience,
+                'project_report_partner_organization_id' => $partnerId,
+                'project_report_partner_name' => $partnerName,
+            ]);
+            $this->audit->record('unit.project_audience_changed', $unit, $user, [
+                'project' => $unit->linked_project_id,
+                'from' => $before,
+                'to' => ['audience' => $audience, 'partner' => $partnerId, 'partner_name' => $partnerName],
+            ]);
         });
     }
 

@@ -3,6 +3,7 @@
 namespace App\Collaboration;
 
 use App\Collaboration\Models\Report;
+use Illuminate\Support\Str;
 use Miles\PlatformClient\Integration\IntegrationClient;
 use Miles\PlatformClient\Integration\IntegrationResult;
 use Miles\PlatformClient\Integration\IntegrationStatus;
@@ -17,10 +18,12 @@ use Miles\PlatformClient\Integration\IntegrationStatus;
  *     this project, for periods overlapping the report period (required).
  *   - The read is the owner organization's, made by Projects itself, not on
  *     behalf of the submitting member: a partner gains no access to M&E.
- *   - The results are recorded with the version but shown only to members
- *     of the project's owner organization (Reports::seesMelResults). Partners,
- *     sub-partners and donors never receive them, whoever submitted the
- *     report or whether it was published.
+ *   - The results are recorded with the version, each with the audience M&E
+ *     released it to (owner, partner, donors) and the partner organization it
+ *     names, and shown per result by Reports::visibleMelResults (ADR-0019
+ *     §24): the owner always; the named partner and its reviewer when that
+ *     partner submitted the report; donors on the published report when M&E
+ *     released the result to donors. Anything else sees none of them.
  *   - Indicator ids, units, values and verification dates as M&E gave them,
  *     each on its own, never added up; evidence names only; no Data
  *     Collection submissions, narratives or personal data.
@@ -32,6 +35,9 @@ use Miles\PlatformClient\Integration\IntegrationStatus;
 final class MelResults
 {
     public const PAIR = 'mel';
+
+    /** Who M&E released a result to (ADR-0019 §24): the owner only, a named partner too, donors on publication too. */
+    public const AUDIENCES = ['owner', 'partner', 'donors'];
 
     /** M&E answered with results. */
     public const CAPTURED = 'captured';
@@ -145,6 +151,10 @@ final class MelResults
             'periodEndsOn' => $text('periodEndsOn'),
             'verifiedAt' => $text('verifiedAt'),
             'publishedAt' => $text('publishedAt'),
+            // Who M&E released it to (Reports::visibleMelResults); anything
+            // unknown is the owner only.
+            'audience' => in_array($row['audience'] ?? null, self::AUDIENCES, true) ? $row['audience'] : 'owner',
+            'partnerOrganizationId' => is_string($row['partnerOrganizationId'] ?? null) && Str::isUuid($row['partnerOrganizationId']) ? strtolower($row['partnerOrganizationId']) : null,
             'evidence' => array_values(array_map(fn (mixed $file) => [
                 'name' => is_array($file) && is_scalar($file['name'] ?? null) ? (string) $file['name'] : '',
                 'mimeType' => is_array($file) && is_scalar($file['mimeType'] ?? null) ? (string) $file['mimeType'] : null,

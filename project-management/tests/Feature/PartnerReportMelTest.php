@@ -10,6 +10,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 
 /*
@@ -275,4 +276,148 @@ it('keeps the results from the lead, the sub-partner and the donor (donor, lead 
     $this->actingAsMember('acme', ['projects.view']);
     $this->get($this->organizationUrl('acme', "projects/{$this->project->id}/reports/{$report->id}"))->assertOk()
         ->assertInertia(fn (Assert $page) => $page->where('version.content.system.mel.0.value', '120.000000'));
+});
+
+/*
+| Results M&E released beyond the owner (ADR-0019 §24): per result, frozen
+| with the version, default deny.
+*/
+
+/**
+ * A result row with the audience M&E released it to (null: an older M&E
+ * that sends none).
+ *
+ * @return array<string, mixed>
+ */
+function sharedRow(string $id, string $value, ?string $audience, ?string $partner): array
+{
+    $row = melRow($value);
+    $row['id'] = $id;
+    if ($audience !== null) {
+        $row['audience'] = $audience;
+        $row['partnerOrganizationId'] = $partner;
+    }
+
+    return $row;
+}
+
+/**
+ * The values of the results a report page shows.
+ *
+ * @return list<string>
+ */
+function shownValues(TestResponse $response): array
+{
+    $page = $response->viewData('page');
+
+    return array_column($page['props']['version']['content']['system']['mel'], 'value');
+}
+
+it('shows the submitting partner only the results M&E released to it', function () {
+    melOn();
+    $leadOrg = $this->organization('lead-ngo')->id;
+    $this->mel = Http::response(['linked' => true, 'units' => 3, 'shared' => 3, 'truncated' => false, 'data' => [
+        sharedRow('0198a3b2-0000-7000-8000-000000000101', '1.000000', 'partner', $leadOrg),
+        sharedRow('0198a3b2-0000-7000-8000-000000000102', '2.000000', 'partner', $this->organization('field-ngo')->id),
+        sharedRow('0198a3b2-0000-7000-8000-000000000103', '3.000000', 'owner', null),
+        sharedRow('0198a3b2-0000-7000-8000-000000000104', '4.000000', null, null),
+        sharedRow('0198a3b2-0000-7000-8000-000000000105', '5.000000', 'everyone', $leadOrg),
+    ]]);
+    $report = submitQ3();
+
+    expect(array_column(systemOf($report)['mel'], 'audience'))->toBe(['partner', 'partner', 'owner', 'owner', 'owner']);
+
+    $page = $this->get($this->organizationUrl('lead-ngo', "shared-projects/{$this->lead->id}/reports/{$report->id}"))->assertOk();
+    expect(shownValues($page))->toBe(['1.000000']);
+    $page->assertInertia(fn (Assert $p) => $p->missing('version.content.system.melSource'));
+
+    $this->actingAsMember('acme', ['projects.view', 'projects.reports.review']);
+    expect(shownValues($this->get($this->organizationUrl('acme', "projects/{$this->project->id}/reports/{$report->id}"))->assertOk()))
+        ->toBe(['1.000000', '2.000000', '3.000000', '4.000000', '5.000000']);
+});
+
+it('shows a sub-partner its own released results, its lead within the reporting relationship, and donors only donor-released ones once published', function () {
+    melOn();
+    $lead = acceptProjectInvitation(inviteToProject($this->project, 'lead2', 'lead_implementer', ['view', 'partners.manage', 'reports.submit', 'reports.review', 'reports.publish']), 'lead2');
+    $donor = acceptProjectInvitation(inviteToProject($this->project, 'global-fund', 'donor', ['view', 'donor_reports.view']), 'global-fund');
+    $this->actingAsMember('lead2', COLLAB_MANAGER);
+    $this->post($this->organizationUrl('lead2', "shared-projects/{$lead->id}/invitations"), [
+        'organization_id' => $this->organization('field-ngo')->id, 'relationship' => 'sub_implementer', 'capabilities' => ['view', 'reports.submit'],
+    ])->assertSessionHasNoErrors();
+    $sub = acceptProjectInvitation(Invitation::query()->where('invited_organization_id', $this->organization('field-ngo')->id)->sole(), 'field-ngo');
+    $field = $this->organization('field-ngo')->id;
+    $this->mel = Http::response(['linked' => true, 'units' => 3, 'shared' => 3, 'truncated' => false, 'data' => [
+        sharedRow('0198a3b2-0000-7000-8000-000000000201', '10.000000', 'partner', $field),
+        sharedRow('0198a3b2-0000-7000-8000-000000000202', '20.000000', 'donors', $field),
+        sharedRow('0198a3b2-0000-7000-8000-000000000203', '30.000000', 'donors', null),
+        sharedRow('0198a3b2-0000-7000-8000-000000000204', '40.000000', 'partner', $this->organization('lead2')->id),
+        sharedRow('0198a3b2-0000-7000-8000-000000000205', '50.000000', 'owner', null),
+    ]]);
+
+    $this->actingAsMember('field-ngo', MR_PARTNER);
+    $this->post($this->organizationUrl('field-ngo', "shared-projects/{$sub->id}/reports"), ['title' => 'Field Q3', 'category' => 'mel', 'period_start' => '2026-07-01', 'period_end' => '2026-09-30'])->assertSessionHasNoErrors();
+    $report = Report::query()->where('title', 'Field Q3')->sole();
+    $this->put($this->organizationUrl('field-ngo', "shared-projects/{$sub->id}/reports/{$report->id}"), ['content' => [
+        'implementation' => ['activities_completed' => 'Two wells'], 'narrative' => [], 'financial' => ['lines' => [], 'note' => null],
+    ]])->assertSessionHasNoErrors();
+    $this->post($this->organizationUrl('field-ngo', "shared-projects/{$sub->id}/reports/{$report->id}/action"), ['action' => 'submit'])->assertSessionHasNoErrors();
+
+    // The sub-partner: its own scope.
+    expect(shownValues($this->get($this->organizationUrl('field-ngo', "shared-projects/{$sub->id}/reports/{$report->id}"))->assertOk()))->toBe(['10.000000', '20.000000']);
+
+    // Its lead reviews it: the sub-partner's released results, not those of the lead's own unit.
+    $this->actingAsMember('lead2', MR_PARTNER);
+    expect(shownValues($this->get($this->organizationUrl('lead2', "shared-projects/{$lead->id}/reports/{$report->id}"))->assertOk()))->toBe(['10.000000', '20.000000']);
+
+    // Donors: not before publication.
+    $this->actingAsMember('global-fund', MR_PARTNER);
+    $this->get($this->organizationUrl('global-fund', "shared-projects/{$donor->id}/reports/{$report->id}"))->assertNotFound();
+
+    $this->actingAsMember('lead2', MR_PARTNER);
+    $this->post($this->organizationUrl('lead2', "shared-projects/{$lead->id}/reports/{$report->id}/action"), ['action' => 'approve'])->assertSessionHasNoErrors();
+    $this->post($this->organizationUrl('lead2', "shared-projects/{$lead->id}/reports/{$report->id}/action"), ['action' => 'publish'])->assertSessionHasNoErrors();
+
+    // Published: donors see what M&E released to donors, nothing else.
+    $this->actingAsMember('global-fund', MR_PARTNER);
+    $page = $this->get($this->organizationUrl('global-fund', "shared-projects/{$donor->id}/reports/{$report->id}"))->assertOk();
+    expect(shownValues($page))->toBe(['20.000000', '30.000000']);
+    $page->assertInertia(fn (Assert $p) => $p->missing('version.content.system.melSource'));
+
+    // The first implementer, not a party to this report and not a donor: cannot open it.
+    $this->actingAsMember('lead-ngo', MR_PARTNER);
+    $this->get($this->organizationUrl('lead-ngo', "shared-projects/{$this->lead->id}/reports/{$report->id}"))->assertNotFound();
+});
+
+it('keeps what was released with a submitted version, and loses it with access to the report', function () {
+    melOn();
+    $leadOrg = $this->organization('lead-ngo')->id;
+    $this->mel = Http::response(['linked' => true, 'units' => 1, 'shared' => 1, 'truncated' => false, 'data' => [sharedRow('0198a3b2-0000-7000-8000-000000000301', '7.000000', 'partner', $leadOrg)]]);
+    $report = submitQ3();
+    $url = $this->organizationUrl('lead-ngo', "shared-projects/{$this->lead->id}/reports/{$report->id}");
+    expect(shownValues($this->get($url)->assertOk()))->toBe(['7.000000']);
+
+    // M&E withdraws the release: the recorded version keeps what it was given...
+    $this->mel = Http::response(['linked' => true, 'units' => 1, 'shared' => 1, 'truncated' => false, 'data' => [sharedRow('0198a3b2-0000-7000-8000-000000000301', '7.000000', 'owner', null)]]);
+    expect(shownValues($this->get($url)->assertOk()))->toBe(['7.000000']);
+
+    // ...and the next submission records the new release.
+    $this->actingAsMember('acme', ['projects.view', 'projects.reports.review']);
+    $this->post($this->organizationUrl('acme', "projects/{$this->project->id}/reports/{$report->id}/action"), ['action' => 'changes', 'comment' => 'Add the narrative'])->assertSessionHasNoErrors();
+    $submitter = User::query()->findOrFail($report->refresh()->currentVersion->submitted_by);
+    $this->actingAsMember('lead-ngo', MR_PARTNER, user: $submitter);
+    $this->put($url, ['content' => [
+        'implementation' => ['activities_completed' => 'Drilled four wells'], 'narrative' => ['achievements' => 'Two villages'], 'financial' => ['lines' => [], 'note' => null],
+    ]])->assertSessionHasNoErrors();
+    $this->post($this->organizationUrl('lead-ngo', "shared-projects/{$this->lead->id}/reports/{$report->id}/action"), ['action' => 'submit'])->assertSessionHasNoErrors();
+    expect($report->refresh()->currentVersion->number)->toBe(2)
+        ->and(shownValues($this->get($url)->assertOk()))->toBe([]);
+
+    // The owner ends the participation: the report, and its results, are gone for the partner.
+    $this->actingAsMember('acme', [], owner: true);
+    $this->post($this->organizationUrl('acme', "projects/{$this->project->id}/collaboration/participants/{$this->lead->id}/status"), ['status' => 'revoked'])->assertSessionHasNoErrors();
+    $this->actingAsMember('lead-ngo', MR_PARTNER, user: $submitter);
+    expect($this->get($url)->status())->toBeIn([403, 404]);
+
+    // Both versions stay as recorded.
+    expect($report->versions()->orderBy('number')->get()->map(fn ($version) => $version->content['system']['mel'][0]['audience'])->all())->toBe(['partner', 'owner']);
 });

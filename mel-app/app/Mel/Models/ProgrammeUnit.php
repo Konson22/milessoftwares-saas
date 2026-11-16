@@ -22,6 +22,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $location_id
  * @property string|null $linked_project_id
  * @property bool $shares_with_project_reports whether its published results go to the linked project's partner reports (ADR-0019 §20.4)
+ * @property string $project_report_audience who they are released to there: owner, partner, donors (ADR-0019 §24)
+ * @property string|null $project_report_partner_organization_id the partner organization (platform id) for "partner" and "donors"
+ * @property string|null $project_report_partner_name its name when it was chosen, for display
  * @property CarbonImmutable|null $archived_at
  * @property-read Programme $programme
  * @property-read Partner|null $partner
