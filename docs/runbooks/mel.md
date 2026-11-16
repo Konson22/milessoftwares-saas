@@ -1,5 +1,8 @@
 # M&E and Data Collection: go-live and operations
 
+> The standalone Tatook M&E application (`mel-app`, ADR-0019) is built but not deployed; its first-deploy
+> steps are in `docs/runbooks/mel-app.md`. Until the M2B switch-over this page is what runs in production.
+
 Monitoring & Evaluation and its Data Collection module are part of Tatook Projects
 (`project-management`, ADR-0013), at `{workspace}/projects/mel`. They deploy with Projects
 (`docs/runbooks/deploy.md`, Products) and use its database: tables `mel_*` and `collect_*`. This
