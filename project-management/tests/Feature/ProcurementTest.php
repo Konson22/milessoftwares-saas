@@ -18,6 +18,7 @@ use App\Models\UserNotification;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Inertia\Testing\AssertableInertia as Assert;
 
 /*
@@ -449,13 +450,16 @@ it('sends an order\'s spending to Finance only once the goods arrived and the in
     test()->asTenant('acme', fn () => Procurement::receive($order, $lines->mapWithKeys(fn ($line) => [$line->id => (string) $line->quantity])->all(), CarbonImmutable::parse('2026-11-05'), null, $this->buyer));
     expect($requests())->toBe(0);
 
-    test()->asTenant('acme', fn () => Procurement::recordInvoice($order->refresh(), 'INV-77', CarbonImmutable::parse('2026-11-06'), $this->buyer));
+    $invoice = fn (string $number) => ['number' => $number, 'amount_minor' => 100000, 'currency' => 'USD', 'invoice_on' => CarbonImmutable::parse('2026-11-06'), 'due_on' => null];
+    test()->asTenant('acme', fn () => Procurement::recordInvoice($order->refresh(), $invoice('INV-77'), null, $this->buyer));
     $events = $this->financeEvents('acme', 'finance.spending.submitted');
     expect($requests())->toBe(1)
         ->and($events)->toHaveCount(1)
-        ->and($events[0]['payload']['expense_id'])->toBe($order->expense_id);
+        ->and($events[0]['payload']['expense_id'])->toBe($order->expense_id)
+        ->and($events[0]['payload']['amount_minor'])->toBe(100000);
 
-    // Recorded again (a corrected invoice number): still one request.
-    test()->asTenant('acme', fn () => Procurement::recordInvoice($order->refresh(), 'INV-77A', CarbonImmutable::parse('2026-11-06'), $this->buyer));
+    // Once with Finance, it pays what was sent: no further invoice, and still one request (ADR-0020).
+    expect(fn () => test()->asTenant('acme', fn () => Procurement::recordInvoice($order->refresh(), $invoice('INV-77A'), null, $this->buyer)))
+        ->toThrow(ValidationException::class);
     expect($requests())->toBe(1);
 });

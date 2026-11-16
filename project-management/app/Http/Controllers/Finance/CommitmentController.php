@@ -64,7 +64,9 @@ class CommitmentController extends Controller
 
         $projectId = $request->string('project')->toString();
         $listed = $projectId === '' ? $open : $open->where('project_id', $projectId)->values();
-        $orders = PurchaseOrder::query()->whereIn('expense_id', $listed->pluck('id'))->pluck('number', 'expense_id');
+        $orders = PurchaseOrder::query()->whereIn('expense_id', $listed->pluck('id'))
+            ->withSum(['invoices as invoiced_minor' => fn ($query) => $query->live()], 'amount_minor')
+            ->get(['id', 'number', 'expense_id', 'invoice_reference'])->keyBy('expense_id');
 
         return Inertia::render('portal/finance/commitments', [
             'byCurrency' => $byCurrency,
@@ -91,7 +93,9 @@ class CommitmentController extends Controller
                 'category' => $expense->category->label(),
                 'description' => $expense->description,
                 'supplier' => $expense->supplier,
-                'order' => $orders[$expense->id] ?? null,
+                'order' => $orders[$expense->id]->number ?? null,
+                // Supplier invoices recorded against the order (ADR-0020); null when not bought through an order.
+                'invoicedMinor' => isset($orders[$expense->id]) ? self::invoiced($orders[$expense->id], $expense) : null,
                 'grant' => $expense->grant?->reference,
                 'amountMinor' => $expense->amount_minor,
                 'currency' => $expense->project->currency,
@@ -101,5 +105,15 @@ class CommitmentController extends Controller
             ]),
             'projectFilter' => $projectId === '' ? null : $projectId,
         ]);
+    }
+
+    /**
+     * An order invoiced before invoices were kept (only a reference) counts as invoiced in full.
+     */
+    private static function invoiced(PurchaseOrder $order, Expense $expense): int
+    {
+        $sum = (int) ($order->getAttribute('invoiced_minor') ?? 0);
+
+        return $sum === 0 && $order->invoice_reference !== null ? $expense->amount_minor : $sum;
     }
 }

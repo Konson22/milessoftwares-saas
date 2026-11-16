@@ -20,6 +20,8 @@ Route::prefix('procurement')->name('procurement.')->group(function () {
 
     Route::prefix('{purchaseRequest}')->whereUuid('purchaseRequest')->scopeBindings()->group(function () {
         Route::middleware('can:procurement.view')->get('quotes/{quote}/document', [ProcurementController::class, 'quoteDocument'])->whereUuid('quote')->name('quotes.document');
+        Route::middleware('can:procurement.view')->get('orders/{order}/invoices/{invoice}/document', [ProcurementController::class, 'invoiceDocument'])->whereUuid(['order', 'invoice'])->name('orders.invoices.document');
+        Route::middleware('can:procurement.view')->get('orders/{order}/receipts/{receipt}/evidence', [ProcurementController::class, 'receiptEvidence'])->whereUuid(['order', 'receipt'])->name('orders.receipts.evidence');
 
         Route::middleware('can:procurement.request')->group(function () {
             Route::post('submit', [ProcurementController::class, 'submit'])->name('submit');
@@ -38,6 +40,8 @@ Route::prefix('procurement')->name('procurement.')->group(function () {
             Route::post('orders', [ProcurementController::class, 'raiseOrder'])->name('orders.store');
             Route::post('orders/{order}/receipts', [ProcurementController::class, 'receive'])->whereUuid('order')->name('orders.receive');
             Route::post('orders/{order}/invoice', [ProcurementController::class, 'recordInvoice'])->whereUuid('order')->name('orders.invoice');
+            Route::post('orders/{order}/invoices/{invoice}/void', [ProcurementController::class, 'voidInvoice'])->whereUuid(['order', 'invoice'])->name('orders.invoices.void');
+            Route::post('orders/{order}/close', [ProcurementController::class, 'closeOrder'])->whereUuid('order')->name('orders.close');
         });
     });
 });

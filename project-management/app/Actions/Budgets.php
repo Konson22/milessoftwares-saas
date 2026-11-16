@@ -28,6 +28,8 @@ use Illuminate\Validation\ValidationException;
  *   spent in it.
  * - The project's budget is the approved total, or until there is one the
  *   working version's total.
+ * - Lines keep their key across versions (ADR-0020). A revision cannot take
+ *   a line below what is committed or spent on it, nor drop such a line.
  * Every change runs in a transaction on the locked project and is audited.
  */
 final class Budgets
@@ -75,6 +77,8 @@ final class Budgets
                     'category' => $line->category,
                     'description' => $line->description,
                     'amount_minor' => $line->amount_minor,
+                    // The same line in the new version: what is charged to it follows.
+                    'line_key' => $line->line_key,
                 ]);
             }
             Audit::record('budget.version_created', $version, ['project' => $project->code, 'number' => $version->number, 'from' => $approved?->number], actor: $by);
@@ -200,6 +204,15 @@ final class Budgets
                     throw ValidationException::withMessages(['budget' => "{$label}: ".Money::format((int) $amount, $project->currency).' is already committed or spent, more than this version gives it.']);
                 }
             }
+            // And each line charged by key keeps at least what is charged to it.
+            $byLine = $version->lines()->get()->groupBy('line_key')->map->sum('amount_minor');
+            foreach (self::usedByLine($project) as $key => $amount) {
+                if ($amount > (int) ($byLine[$key] ?? 0)) {
+                    $line = BudgetLine::query()->where('project_id', $project->id)->where('line_key', $key)->latest()->first();
+                    $name = $line === null ? 'A budget line' : $line->category->label().($line->description === null ? '' : " ({$line->description})");
+                    throw ValidationException::withMessages(['budget' => "{$name}: ".Money::format($amount, $project->currency).' is already committed or spent on this line, more than this version gives it.']);
+                }
+            }
 
             $previous = self::approved($project);
             $previous?->forceFill(['status' => BudgetVersionStatus::Superseded])->save();
@@ -253,6 +266,44 @@ final class Budgets
 
         return $approved->lines()->groupBy('category')->orderBy('category')->selectRaw('category, sum(amount_minor) as amount')
             ->pluck('amount', 'category')->map(fn (mixed $amount) => (int) $amount)->all();
+    }
+
+    /**
+     * The approved version's line with this key, or null (ADR-0020).
+     */
+    public static function approvedLine(Project $project, string $lineKey): ?BudgetLine
+    {
+        $approved = self::approved($project);
+
+        return $approved === null ? null : $approved->lines()->where('line_key', $lineKey)->first();
+    }
+
+    /**
+     * Committed and spent on each line charged by key (approved or paid
+     * spending). Older spending without a key counts by category only.
+     *
+     * @return array<string, int>
+     */
+    public static function usedByLine(Project $project): array
+    {
+        return Expense::query()->where('project_id', $project->id)->whereNotNull('budget_line_key')
+            ->whereIn('status', [ExpenseStatus::Approved, ExpenseStatus::Paid])
+            ->groupBy('budget_line_key')->selectRaw('budget_line_key, sum(amount_minor) as amount')
+            ->pluck('amount', 'budget_line_key')->map(fn (mixed $amount) => (int) $amount)->all();
+    }
+
+    /**
+     * What is left on an approved line: its amount less what is committed or
+     * spent on it. Null when the approved budget has no such line.
+     */
+    public static function lineAvailable(Project $project, string $lineKey): ?int
+    {
+        $line = self::approvedLine($project, $lineKey);
+        if ($line === null) {
+            return null;
+        }
+
+        return $line->amount_minor - (self::usedByLine($project)[$lineKey] ?? 0);
     }
 
     private static function retotal(BudgetVersion $version): void

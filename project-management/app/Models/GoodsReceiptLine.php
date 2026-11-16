@@ -25,7 +25,7 @@ class GoodsReceiptLine extends Model implements ProjectBound
 
     protected function casts(): array
     {
-        return ['quantity' => 'decimal:2'];
+        return ['quantity' => 'decimal:2', 'rejected_quantity' => 'decimal:2'];
     }
 
     /**

@@ -91,6 +91,16 @@ class BudgetController extends Controller
             ];
         })->filter(fn (array $row) => $row['budgetMinor'] > 0 || $row['actualMinor'] > 0 || $row['committedMinor'] > 0)->values();
 
+        // Committed and paid on each line of the approved version (ADR-0020);
+        // older spending without a line counts only in its category above.
+        $byLine = Expense::query()->where('project_id', $project->id)->whereNotNull('budget_line_key')
+            ->whereIn('status', [ExpenseStatus::Approved, ExpenseStatus::Paid])
+            ->groupBy('budget_line_key', 'status')->selectRaw('budget_line_key, status, sum(amount_minor) as amount')
+            ->get();
+        $lineUse = fn (BudgetLine $line, ExpenseStatus $status) => (int) $byLine
+            ->filter(fn (Expense $row) => $row->budget_line_key === $line->line_key && $row->status === $status)
+            ->sum(fn (Expense $row) => (int) $row->getAttribute('amount'));
+
         $charged = Expense::query()->where('project_id', $project->id)->whereNotNull('grant_id')
             ->whereIn('status', [ExpenseStatus::Approved, ExpenseStatus::Paid])
             ->groupBy('grant_id', 'status')->selectRaw('grant_id, status, sum(amount_minor) as amount')
@@ -121,6 +131,9 @@ class BudgetController extends Controller
                     'category' => $line->category->label(),
                     'description' => $line->description,
                     'amountMinor' => $line->amount_minor,
+                    'use' => $version->status->value === 'approved'
+                        ? ['committedMinor' => $lineUse($line, ExpenseStatus::Approved), 'paidMinor' => $lineUse($line, ExpenseStatus::Paid)]
+                        : null,
                 ]),
             ]),
             // The grants paying for it, in the project's currency at the
