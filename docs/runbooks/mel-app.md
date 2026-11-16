@@ -65,3 +65,31 @@ maps `mel` to `mel-app` by default). What is specific to it:
   a member without an M&E role gets 403; revoking `mel` cuts open sessions off at the next request
   (403) and removes the workspace's sign-in callback at Central, so a new sign-in is refused
   (`invalid_client`); data is kept and returns with re-entitlement.
+
+## Data Collection, field app and desktop (ADR-0019 §21–§24)
+
+- **Migrations.** `2026_11_17_090000` (Data Collection intake) and `2026_11_17_120000` (who
+  results are released to in project reports) are additive. They add columns, PostgreSQL CHECK
+  constraints and one trigger. Both run with the deploy.
+- **Field app sign-in.**
+  1. Register the field app's public client in Central: admin → Applications → `mel`, a sign-in
+     client, public, with the redirect URIs of `mel-mobile-app` (scheme `com.tatook.mel`).
+  2. Put its id in `PLATFORM_MOBILE_CLIENT_ID` in mel-app's `.env`, and in
+     `EXPO_PUBLIC_CLIENT_ID` for the app's build.
+  - Until this is done, `{ws}/mel/api/v1/*` answers 404 by design.
+- **Field API limits.** 300 requests a minute per user (`throttle:collect-api`). Photos are at most
+  10 MB, or twice the workspace's photo limit, whichever is smaller. Photos are stored in
+  `storage/app/private/collect/{org}/{submission}/`: back them up with evidence files.
+- **Exports** are generated synchronously (at most 50,000 rows) into
+  `storage/app/private/collect/{org}/exports/`. Downloads stop after 7 days; the files can be pruned after
+  that.
+- **Desktop app (PWA).**
+  - `public/mel/manifest.webmanifest`, `sw.js`, `offline.html` and `icons/` must be served as
+    static files at `/mel/…`.
+  - nginx must not cache `/mel/sw.js` for long: `Cache-Control: no-cache` on that file.
+  - It needs HTTPS (or localhost) to install.
+  - When `offline.html` or the icons change, bump `VERSION` in `sw.js`, so installed copies take
+    the new ones.
+- **Results in partner reports.** Who sees a unit's results in a project's reports is set on the
+  programme page (`mel.projects.link`). Nothing changes until someone sets it: every unit starts at
+  "project owner only". Projects must run the release with `GET integration/v1/projects/{id}/participants`.

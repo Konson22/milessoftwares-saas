@@ -1,8 +1,8 @@
 # ADR-0019: Tatook M&E as a standalone application, extracted from Projects
 
 - Status: **Accepted** (2026-11-16), with the recommended answer to each open decision (§15).
-  **M1 is built locally** and uncommitted (§16). Nothing is deployed, and `project-management`
-  is unchanged.
+  M1–M7 are built and committed locally on `products/mel-collect` (§16–§25). **Nothing is
+  deployed**, and nothing has run on a device, in staging or in production.
 - Would supersede: ADR-0013 for M&E and Data Collection, which merged them into
   `project-management`. ADR-0011 (M&E domain) and ADR-0012 (Data Collection: engine, mobile app, sync
   protocol) stay valid and are the domain design this ADR builds on.
@@ -998,6 +998,9 @@ Values are never added up, so measurements that cannot be combined are not combi
 
 ### 20.6 Disclosure policy (the security review's decision)
 
+> **Superseded by §24 (M7):** results are now released per unit and per result to the submitting
+> partner, its reviewer and donors on publication. What follows is the M3 rule, kept as history.
+
 **Problem.** As first built, the results went into the report content and were visible to every
 party that could see the report: the submitting partner, a lead reviewing a sub-partner, and
 donors once the report was published.
@@ -1144,7 +1147,245 @@ Central on :8101, PM on :9300, M&E on :9400. They were run as scripts, **not in 
   watch the `Integration request` duration logs, and the timeout should be revisited if `timeout`
   snapshots appear.
 - **Deviations from the M3 brief.**
-  - Results are owner-only for now. The brief's partner and donor audiences wait for the decision
-    in §20.6.
+  - Results were owner-only in M3. The partner and donor audiences were built in M7 (§24).
   - M&E sends nothing until a manager turns sharing on.
   - A report period is now required for M&E results.
+
+## 21. As built: M4 (2026-11-16, committed 575ccd1, local, not deployed) — Data Collection backend
+
+**Intake (`App\Collect\Submissions`).**
+
+- `POST {ws}/mel/api/v1/collect/submissions` takes a whole submission with an id the phone made
+  (UUIDv7).
+  - The same id, author and content (canonical hash, ignoring `app_version`) is a replay: 200 with
+    `replayed: true`.
+  - The same id with other content, or another person's, is 409 `id_conflict`.
+- Refusals carry a machine code (`App\Collect\Refused`):
+  - 404 `form_not_found`: unknown version, or no live assignment;
+  - 403 `assignment_revoked` and `assignment_closed`;
+  - 409 `form_archived` and `version_closed`;
+  - 422 `consent_required`;
+  - 422 `invalid` with per-question rule errors. The server runs the same rules engine, against the
+    shared conformance cases.
+- Photos.
+  - The submission lists its photo manifest (question, sha256, size, mime). It must match the
+    photo answers, which are the sha256.
+  - Files arrive one by one with `PUT …/attachments/{question}` (raw body or multipart). Each is
+    checked against the manifest and sniffed as JPEG, PNG or WebP.
+  - A resent identical file is accepted; a different one is 409 `file_conflict`.
+  - The submission stays `receiving` until the last photo arrives, then becomes `submitted`.
+    `GET …/submissions/{id}` lists what is `missing`.
+- `GET …/submissions?since&after&limit` is an incremental feed (cursor `updated_at` + id) of the
+  collector's own submissions, so the phone learns about reviews.
+- Corrections (`POST …/corrections`) need the base revision. A stale base is 409
+  `revision_conflict`; a lost reply's resend is recognised. Photos cannot change in a correction.
+- Every submission keeps its revisions (`collect_submission_revisions`). The current answers are
+  the last revision's.
+
+**Review (`App\Collect\Review`, web).**
+
+- The queue, a submission page and the actions.
+  - The actions are start, accept, reject (with a reason), request correction (comment plus notes
+    per question) and reopen (with a reason).
+  - Separation of duties: the reviewer must not be the author when
+    `collect_reviewer_must_differ` is set.
+- Every decision is a `collect_review_decisions` row plus an audit event.
+- Personal answers, photos and locations are hidden on the server without
+  `mel.collect.personal_data`. Viewing a photo needs that permission, is audited, and is served
+  `no-store` with `default-src 'none'`.
+- The web form designer (outline, properties, choices, rules, live preview, autosave, publish),
+  versions, assignments and a summary of accepted data are in the same release.
+
+**Exports (`App\Collect\Exports`).**
+
+- CSV (BOM, formula-escaped) or XLSX, synchronous, at most 50,000 rows.
+- Current or original answers; one column per question per type version.
+- Personal columns only with `mel.collect.personal_data`, otherwise a note says they were left out.
+  Photos are never exported.
+- Only the requester can download (404 for others), and only while the form is still in their
+  reach. A download is refused with 410 after 7 days, and with 403 once the personal-data
+  permission is withdrawn.
+- Requests and downloads are audited.
+
+**Database (additive migration `2026_11_17_090000`).**
+
+- `collect_submissions.source` and `collect_exports.answers`, plus a sync index.
+- On PostgreSQL:
+  - CHECK constraints on every status and on received ≤ expected photos;
+  - trigger `collect_revisions_not_decided`, which refuses a revision on an accepted or rejected
+    submission.
+
+**Decisions.**
+
+- No server-side drafts: drafts live on the phone (ADR-0012 §14, no web data entry in the MVP).
+- Exports are synchronous.
+- Phone-only enumerators become workspace members on their first API call (`RememberMember` on the
+  API), so they can be assigned.
+
+**Not built.** Indicator mapping and calculation runs from collected data (ADR-0012 §11).
+
+## 22. As built: M5 (2026-11-16, committed 34ddcab, local) — the field app `mel-mobile-app`
+
+- **Stack.** Expo SDK 57 and expo-router, scaffolded from `petrol-mobile-app`'s sign-in and API
+  layer. Android first.
+- **Sign-in.** Central PKCE or Google through Central; tokens are kept in the Android Keystore. Then
+  `POST {ws}/mel/api/session` and `GET api/v1/me` (new). The person chooses the organization when
+  they belong to more than one.
+- **Storage.**
+  - One SQLCipher database (`expo-sqlite` with `useSQLCipher`). Its key is 32 random bytes in the
+    secure store.
+  - Records are scoped `workspace|user`, so another person on the same phone sees nothing.
+  - Rows that cannot be read are moved to `quarantine`, never dropped.
+  - `allowBackup` is false. Storage, audio and gallery permissions are blocked.
+- **Forms.**
+  - The assignment kit, and immutable versions downloaded once per hash.
+  - Rendered from the definition with `src/collect/rules.ts` and `definition.ts`, byte-identical
+    copies of mel-app's (`npm run rules:check`), tested against `contracts/collect/rules-cases.json`.
+  - A consent gate: declining deletes the draft.
+  - Drafts autosave about once a second and on leaving.
+  - Photos are re-encoded to JPEG under the workspace limit, which drops EXIF. They are stored
+    privately and deleted once the server has them.
+  - GPS records its accuracy, and a fix worse than 50 m gets a warning.
+- **Sync (`src/collect/sync.ts`, pure TypeScript).**
+  - A lost reply is settled by resending the same id.
+  - "Synced" only once the server reports the submission past `receiving`.
+  - Photo uploads resume from the server's `missing` list.
+  - Offline, timeouts, 429 and 5xx back off with jitter from 30 s to 30 min.
+  - 401 waits for sign-in.
+  - 403, 404, 409, 410, 422 and 426 become *Action required* and are never retried alone.
+  - Correction requests are pulled from the feed and sent against the reviewer's base revision.
+  - Sync runs on reconnect, on returning to the foreground and every minute.
+- **Sign-out.** Unsent records are never deleted. With unsent work, signing out needs a typed
+  confirmation.
+- **Tests and checks.**
+  - Jest, 45 tests: the protocol against a fake server that drops requests or loses replies; a
+    restart mid-upload; a week offline; refusals; corrections; quarantine; UUIDv7; and the
+    conformance cases.
+  - `tsc` and ESLint are clean, and the Android JS bundle exports.
+- **Not verified.**
+  - Not run on a device or emulator, so SQLCipher, camera, location and files are untested at
+    runtime.
+  - No EAS project yet.
+  - `PLATFORM_MOBILE_CLIENT_ID` is not registered. Until it is, the field API answers 404 (by
+    design, `RequirePlatformToken`), as seen over HTTP locally.
+  - The icon and splash are placeholders.
+
+## 23. As built: M6 (2026-11-16, committed 38a5b69, local) — desktop PWA
+
+- **Installable.** `public/mel/manifest.webmanifest` (scope `/mel/`, standalone), icons (any and
+  maskable) cut from the Tatook mark, and the theme colour. The manifest is linked from every page.
+- **Service worker (`public/mel/sw.js`).**
+  - It precaches only a data-free `offline.html` (no script) and the icons.
+  - At runtime it caches only content-hashed `/mel/build/assets/*` files without a query, and never
+    one marked `no-store` or `private`.
+  - Pages, JSON, the API, the integration API, exports, photos and Vite's manifest always go to the
+    network and are never stored.
+  - When a page fails to load offline, it serves the offline page.
+  - Old `mel-*` caches are dropped when a new version activates.
+- **Page.** An offline banner, and a "new version ready — reload" prompt (`skip-waiting`, then
+  reload on `controllerchange`). It checks for updates hourly and is off in development.
+- **No Electron or Tauri.** Nothing needs native desktop access. Offline data entry is the phone's.
+- **Tests.**
+  - Vitest runs the real `sw.js` in a sandbox (what may be cached, the precache list, data requests
+    left alone).
+  - Pest covers the manifest, icon sizes, the offline page and the manifest link.
+  - Over HTTP through Apache, the manifest, worker, offline page and icons are served with the
+    right types.
+- **Not verified:** installing it in a browser, and the update prompt in a browser.
+
+## 24. As built: M7 (2026-11-16, committed 96b209b, local) — releasing M&E results to project parties
+
+This replaces §20.6's owner-only rule. The M7 brief is the business decision §20.6 waited for:
+alternatives B and C, made per unit and per result.
+
+**Separate decisions, each by its own owner:**
+
+1. **Verification** of a result in M&E.
+2. **Publication** of a result in M&E (§20.4: only published results leave).
+3. **Release** to project parties.
+   - This is a per-unit M&E decision, audited `unit.project_audience_changed`, made by those with
+     `mel.projects.link`.
+   - The audience is `owner` (the default, and what every unit had), `partner`, or `donors`.
+   - `partner` and `donors` name a partner organization, checked in Projects as active on the
+     project (`GET projects/integration/v1/projects/{id}/participants`, new).
+   - The release is withdrawn when reporting to the project is switched off or the link changes.
+4. **Publication of the report** in Projects.
+
+**On the wire.** Each verified result carries `audience` and `partnerOrganizationId`. Projects
+freezes both with the version (`MelResults::result`). An unknown or absent audience is stored as
+`owner`.
+
+**Who sees a recorded result (`Reports::visibleMelResults`, server side, default deny):**
+
+| Party | Sees |
+|---|---|
+| Project owner members with `projects.view` | all results |
+| The partner that submitted the report (prepare permission + `reports.submit`) | results with audience `partner` or `donors` whose partner is that organization |
+| The party reviewing that report, e.g. the lead for a sub-partner (review permission + `reports.review`) | the same results: the submitter's released scope, never other units' |
+| A sub-partner | only results released to itself, on its own reports |
+| Donors (`donor_reports.view`) | only `donors` results, only once the report is published |
+| Anyone else, and legacy snapshots for non-owners | nothing |
+
+`melSource`, the record of how the read went, stays with the owner.
+
+**History and revocation.**
+
+- A submitted version keeps the audience M&E gave at submission.
+  - Withdrawing or narrowing a release in M&E applies from the next submission and does not rewrite
+    a recorded version. This is the same rule as values (§20.5).
+  - If a released result must be withdrawn from a submitted report, the owner asks for changes and
+    the partner resubmits; the new version records the new release.
+- Ending a participation, or withdrawing its report capabilities, removes access to the report
+  through Projects' existing rules, and the results go with it. This was tested with a revoked
+  participation.
+
+**Never sent:** raw Data Collection responses, personal data, narratives, disaggregation cells or
+evidence files. Evidence goes by name only.
+
+**Database.**
+
+- Additive migration `2026_11_17_120000`: three columns on `mel_programme_units`.
+- On PostgreSQL, CHECK constraints: the audience is one of the three values, and `partner` requires
+  a partner organization.
+
+**Tests.**
+
+- PM `PartnerReportMelTest` (+3):
+  - only the released result reaches the submitting partner;
+  - sub-partner, lead and donor before and after publication, and a non-party;
+  - a release withdrawn after submission, the next version, and a revoked participation.
+- PM `MelIntegrationApiTest` (+1): participants.
+- M&E `ProjectLinkTest` (+4) and `VerifiedResultsApiTest` (+2, one PostgreSQL only).
+
+**Real HTTP (local; tokens issued by Central, between :9300 and :9400):**
+
+- M&E read the project's participants from Projects, and an unknown project was refused
+  (`unknown_project`).
+- M&E's service set a unit to `donors` with that partner, and the change was audited.
+- Projects then read the verified result with `audience: donors` and the partner id.
+- The unit was set back to `owner`.
+
+**Not verified:** the partner, lead and donor report pages in a browser, and a full
+submission → publication chain over HTTP. Both are covered by feature tests only.
+
+## 25. Verification of M4–M7 (2026-11-16, local)
+
+| Suite | Result |
+|---|---|
+| mel-app Pest, SQLite | 142 passed, 2 skipped (PostgreSQL-only trigger and constraints) |
+| mel-app Pest, PostgreSQL (`mel_test`) | 144 passed |
+| mel-app Vitest | 42 passed |
+| project-management | 455 passed, 7 skipped |
+| platform-client | 146 passed |
+| central-app | 895 passed, 1 failed, 1 skipped |
+| mel-mobile-app Jest | 45 passed |
+| Projects ⇄ Finance E2E | 17 of 17 |
+
+- **The Central failure.** `ProductSalesTest` › "shows an ERP solution with its applications and
+  plans" expects `public/landing` and gets `public/pharmacy`. It is in the public marketing site,
+  which has other uncommitted work in this tree. Central was not changed in M4–M7.
+- **Static checks:**
+  - PHPStan is clean in mel-app and project-management, and Pint passes.
+  - `tsc` is clean in mel-app and mel-mobile-app.
+  - `vp check` is clean on the changed files, and ESLint is clean in mel-mobile-app.
+  - The mel-app production build succeeds.
