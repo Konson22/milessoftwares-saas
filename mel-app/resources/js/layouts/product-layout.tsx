@@ -6,6 +6,7 @@ import { activeItem, crumbsFor } from '@miles/ui/shell/navigation';
 import { QuickSearch } from '@miles/ui/shell/quick-search';
 import { ShellSidebar } from '@miles/ui/shell/sidebar';
 import { UserMenu } from '@miles/ui/shell/user-menu';
+import { AppStatus } from '@/components/app-status';
 import { useCan } from '@/lib/access';
 import { visibleNavigation } from '@/lib/navigation';
 import { home } from '@/routes/mel';
@@ -81,6 +82,7 @@ export default function ProductLayout({ children }: PropsWithChildren) {
                 />
             )}
         >
+            <AppStatus />
             {children}
         </AppShell>
     );

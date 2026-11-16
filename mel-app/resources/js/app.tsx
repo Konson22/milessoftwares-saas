@@ -1,5 +1,6 @@
 import { createInertiaApp } from '@inertiajs/react';
 import ProductLayout from '@/layouts/product-layout';
+import { registerServiceWorker } from '@/lib/pwa';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Tatook M&E';
 
@@ -11,3 +12,5 @@ void createInertiaApp({
         color: '#4B5563',
     },
 });
+
+registerServiceWorker();

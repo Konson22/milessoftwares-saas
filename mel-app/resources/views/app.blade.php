@@ -21,6 +21,10 @@
         <link rel="icon" href="/favicon-96x96.png" type="image/png" sizes="96x96">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
+        {{-- Installable as a desktop app (public/mel: manifest, icons, a service worker for static files only). --}}
+        <link rel="manifest" href="/mel/manifest.webmanifest">
+        <meta name="theme-color" content="#166534">
+
         @fonts
 
         @viteReactRefresh
