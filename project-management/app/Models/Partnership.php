@@ -31,6 +31,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $created_slug its workspace address
  * @property CarbonImmutable|null $declined_at
  * @property string|null $declined_by
+ * @property CarbonImmutable|null $revoked_at withdrawn by the donor: kept for history, hidden from every query (see booted)
+ * @property string|null $revoked_by
  * @property string|null $funder_id
  * @property string $label
  * @property string|null $role the role key the invited person holds in the new organization, besides owning it
@@ -55,11 +57,21 @@ class Partnership extends Model
     /** What the donor calls them; both get the same workspace. */
     public const LABELS = ['beneficiary' => 'Beneficiary', 'implementer' => 'Project implementer'];
 
-    protected $guarded = ['donor_organization_id', 'beneficiary_organization_id', 'invited_organization_id', 'platform_claim_id', 'created_organization_id', 'created_slug', 'funder_id', 'token_hash', 'accepted_at', 'accepted_by', 'declined_at', 'declined_by'];
+    protected $guarded = ['donor_organization_id', 'beneficiary_organization_id', 'invited_organization_id', 'platform_claim_id', 'created_organization_id', 'created_slug', 'funder_id', 'token_hash', 'accepted_at', 'accepted_by', 'declined_at', 'declined_by', 'revoked_at', 'revoked_by'];
+
+    /**
+     * A withdrawn invitation stays in the table for history but is gone for
+     * everything else, as when it was deleted. Read it with
+     * withoutGlobalScope('live').
+     */
+    protected static function booted(): void
+    {
+        static::addGlobalScope('live', fn (Builder $query) => $query->whereNull($query->qualifyColumn('revoked_at')));
+    }
 
     protected function casts(): array
     {
-        return ['expires_at' => 'immutable_datetime', 'accepted_at' => 'immutable_datetime', 'declined_at' => 'immutable_datetime'];
+        return ['expires_at' => 'immutable_datetime', 'accepted_at' => 'immutable_datetime', 'declined_at' => 'immutable_datetime', 'revoked_at' => 'immutable_datetime'];
     }
 
     /**

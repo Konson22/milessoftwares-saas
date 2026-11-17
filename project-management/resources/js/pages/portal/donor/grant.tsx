@@ -14,6 +14,13 @@ import {
     TableRow,
 } from '@miles/ui/components/ui/table';
 import { Field } from '@/components/field';
+import {
+    AGREEMENT_STEPS,
+    AgreementDecision,
+    DonorPaymentActions,
+    PaymentStep,
+    paymentDetail,
+} from '@/components/grant-agreement';
 import { formatMoney } from '@/lib/money';
 import {
     formatDate,
@@ -100,7 +107,26 @@ type Props = {
         dueOn: string;
         amountMinor: number;
         receivedOn: string | null;
+        status: string;
+        decisionNote: string | null;
+        sentOn: string | null;
+        sentReference: string | null;
+        disputeNote: string | null;
     }[];
+    /** Terms the recipient proposed to this donor on Tatook, if any. */
+    agreement: {
+        status: string;
+        proposedMinor: number;
+        approvedMinor: number | null;
+        endOn: string | null;
+        proposedAt: string | null;
+        decidedAt: string | null;
+        note: string | null;
+    } | null;
+    /** A donor on Tatook that may approve terms and payments. */
+    canAgree?: boolean;
+    /** The donor's copy of the financial report, on Tatook only. */
+    financialReportUrl?: string;
     reports: Report[];
     projects: Project[];
     messages: {
@@ -432,6 +458,9 @@ export default function DonorGrant({
     grant,
     amendments,
     payments,
+    agreement,
+    canAgree = false,
+    financialReportUrl,
     reports,
     projects,
     messages,
@@ -483,6 +512,36 @@ export default function DonorGrant({
                 </p>
             )}
 
+            {agreement && (
+                <Panel className="mt-6">
+                    <PanelHeader
+                        title="Agreement"
+                        description={AGREEMENT_STEPS[agreement.status]}
+                    />
+                    <PanelBody className="grid gap-2 text-sm">
+                        {agreement.approvedMinor !== null && (
+                            <p>
+                                You approved {money(agreement.approvedMinor)}
+                                {agreement.decidedAt &&
+                                    ` on ${formatDate(agreement.decidedAt)}`}
+                                .
+                            </p>
+                        )}
+                        {agreement.note && (
+                            <p className="text-muted-foreground">
+                                “{agreement.note}”
+                            </p>
+                        )}
+                        {agreement.status === 'proposed' && canAgree && (
+                            <AgreementDecision
+                                action={`${base}/agreement/decision`}
+                                proposed={`${money(agreement.proposedMinor)}${agreement.endOn ? `, ending ${formatDate(agreement.endOn)}` : ''}`}
+                            />
+                        )}
+                    </PanelBody>
+                </Panel>
+            )}
+
             <Panel className="mt-6">
                 <PanelHeader title="Reports" />
                 <PanelBody>
@@ -505,30 +564,57 @@ export default function DonorGrant({
             </Panel>
 
             <Panel className="mt-6">
-                <PanelHeader title="Payments" />
+                <PanelHeader
+                    title="Payments"
+                    actions={
+                        financialReportUrl && (
+                            <Button variant="outline" size="sm" asChild>
+                                <a href={financialReportUrl}>
+                                    Financial report (CSV)
+                                </a>
+                            </Button>
+                        )
+                    }
+                />
                 <PanelBody>
                     {payments.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
                             No payments scheduled.
                         </p>
                     ) : (
-                        <ul className="space-y-1 text-sm">
+                        <ul className="space-y-3 text-sm">
                             {payments.map((payment) => (
-                                <li
-                                    key={payment.id}
-                                    className="flex justify-between gap-2"
-                                >
-                                    <span>
-                                        Due {formatDate(payment.dueOn)}
-                                        <span className="text-muted-foreground">
-                                            {payment.receivedOn
-                                                ? `, received ${formatDate(payment.receivedOn)}`
-                                                : ', not received yet'}
+                                <li key={payment.id}>
+                                    <span className="flex justify-between gap-2">
+                                        <span>
+                                            Due {formatDate(payment.dueOn)}{' '}
+                                            {agreement ? (
+                                                <PaymentStep
+                                                    status={payment.status}
+                                                />
+                                            ) : (
+                                                <span className="text-muted-foreground">
+                                                    {payment.receivedOn
+                                                        ? `, received ${formatDate(payment.receivedOn)}`
+                                                        : ', not received yet'}
+                                                </span>
+                                            )}
+                                        </span>
+                                        <span className="tabular-nums">
+                                            {money(payment.amountMinor)}
                                         </span>
                                     </span>
-                                    <span className="tabular-nums">
-                                        {money(payment.amountMinor)}
-                                    </span>
+                                    {agreement && paymentDetail(payment) && (
+                                        <span className="block text-xs text-muted-foreground">
+                                            {paymentDetail(payment)}
+                                        </span>
+                                    )}
+                                    {agreement && canAgree && (
+                                        <DonorPaymentActions
+                                            base={base}
+                                            payment={payment}
+                                        />
+                                    )}
                                 </li>
                             ))}
                         </ul>

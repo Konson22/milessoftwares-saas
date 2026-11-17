@@ -44,6 +44,7 @@ import { index as deliverables } from '@/routes/projects/deliverables';
 import { index as expenses } from '@/routes/projects/expenses';
 import { index as partnerReports } from '@/routes/projects/reports';
 import { index as partnerRequests } from '@/routes/projects/requests';
+import { index as sharedTasks } from '@/routes/projects/shared-tasks';
 import { index as risks } from '@/routes/projects/risks';
 import { index as tasks } from '@/routes/projects/tasks';
 import type { ProjectHeader } from '@/types';
@@ -108,6 +109,11 @@ export function ProjectFrame({
             label: 'Partners',
             icon: Handshake,
             href: collaboration({ project: project.id }),
+        },
+        {
+            label: 'Shared tasks',
+            icon: ListChecks,
+            href: sharedTasks({ project: project.id }),
         },
         {
             label: 'Reports',

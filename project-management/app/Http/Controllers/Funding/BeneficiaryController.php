@@ -4,22 +4,29 @@ namespace App\Http\Controllers\Funding;
 
 use App\Actions\Beneficiaries;
 use App\Actions\DonorPortal;
+use App\Actions\GrantAgreements;
 use App\Audit\Audit;
 use App\Enums\GrantReportStatus;
 use App\Http\Controllers\Concerns\ValidatesOrganizationDetails;
 use App\Http\Controllers\Controller;
 use App\Models\Grant;
+use App\Models\GrantDisbursement;
 use App\Models\GrantReport;
 use App\Models\GrantReportDocument;
 use App\Models\Organization;
 use App\Models\Partnership;
+use App\Reports\GrantFinancialReport;
+use App\Support\CsvExport;
 use App\Support\DonorProjection;
 use App\Tenancy\CurrentOrganization;
 use App\Tenancy\Hosts;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -88,6 +95,30 @@ class BeneficiaryController extends Controller
     }
 
     /**
+     * Invites an organization already on Tatook, found by name or address
+     * (collaboration.organizations). Its administrators accept or decline.
+     */
+    public function inviteOrganization(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'organization_id' => ['required', 'uuid'],
+            'label' => ['required', Rule::in(array_keys(Partnership::LABELS))],
+        ]);
+        $organization = Organization::query()->find((string) $validated['organization_id']);
+        if ($organization === null) {
+            throw ValidationException::withMessages(['organization_id' => 'That organization is not on Tatook Projects.']);
+        }
+
+        $partnership = Beneficiaries::inviteOrganization($this->donor(), $organization, $this->member($request), (string) $validated['label']);
+
+        return back()->with('success', match (true) {
+            $partnership->isAccepted() => "You are already connected to {$organization->name}.",
+            $partnership->wasRecentlyCreated => "Invitation sent to {$organization->name}. Its administrators accept or decline it in Tatook.",
+            default => "{$organization->name} has your invitation already: it is waiting for their answer.",
+        });
+    }
+
+    /**
      * The donor creates the organization's workspace for the person who will
      * run it, instead of inviting them to make one.
      */
@@ -145,7 +176,7 @@ class BeneficiaryController extends Controller
         ]);
     }
 
-    public function grant(string $partnership, string $grant): Response
+    public function grant(Request $request, string $partnership, string $grant): Response
     {
         $partnership = $this->connected($partnership);
         $payload = $this->inBeneficiary($partnership, fn () => DonorProjection::grant($this->sharedGrant($partnership, $grant)));
@@ -154,6 +185,9 @@ class BeneficiaryController extends Controller
             ...$payload,
             'base' => route('beneficiaries.grants.show', ['partnership' => $partnership->id, 'grant' => $grant], false),
             'back' => route('beneficiaries.show', ['partnership' => $partnership->id], false),
+            // Agreements and payment approvals are between organizations on Tatook.
+            'canAgree' => $this->can($request, 'grants.manage'),
+            'financialReportUrl' => route('beneficiaries.grants.financial-report', ['partnership' => $partnership->id, 'grant' => $grant], false),
         ]);
     }
 
@@ -171,6 +205,54 @@ class BeneficiaryController extends Controller
         });
 
         return back()->with('success', $validated['status'] === GrantReportStatus::Accepted->value ? 'Report accepted.' : 'Revision requested.');
+    }
+
+    /** The donor approves or declines the terms its recipient proposed. */
+    public function decideAgreement(Request $request, string $partnership, string $grant): RedirectResponse
+    {
+        $partnership = $this->connected($partnership);
+        $validated = $request->validate(['decision' => ['required', Rule::in(['approve', 'decline'])], 'note' => ['nullable', 'string', 'max:2000']]);
+        GrantAgreements::decide($partnership, $grant, $validated['decision'] === 'approve', $validated['note'] ?? null, $this->member($request));
+
+        return back()->with('success', $validated['decision'] === 'approve' ? 'Grant terms approved.' : 'Grant terms declined.');
+    }
+
+    public function decidePayment(Request $request, string $partnership, string $grant, string $disbursement): RedirectResponse
+    {
+        $partnership = $this->connected($partnership);
+        $validated = $request->validate(['decision' => ['required', Rule::in(['approve', 'reject'])], 'note' => ['nullable', 'string', 'max:2000']]);
+        $this->requirePaymentOfGrant($partnership, $grant, $disbursement);
+        GrantAgreements::decidePayment($partnership, $disbursement, $validated['decision'] === 'approve', $validated['note'] ?? null, $this->member($request));
+
+        return back()->with('success', $validated['decision'] === 'approve' ? 'Payment approved.' : 'Payment request rejected.');
+    }
+
+    /** The donor records the transfer it made. Not a Finance confirmation. */
+    public function markSent(Request $request, string $partnership, string $grant, string $disbursement): RedirectResponse
+    {
+        $partnership = $this->connected($partnership);
+        $validated = $request->validate(['sent_on' => ['required', 'date', 'before_or_equal:today'], 'reference' => ['required', 'string', 'max:100']]);
+        $this->requirePaymentOfGrant($partnership, $grant, $disbursement);
+        GrantAgreements::markSent($partnership, $disbursement, CarbonImmutable::parse($validated['sent_on']), $validated['reference'], $this->member($request));
+
+        return back()->with('success', 'Transfer recorded. The recipient confirms it once it arrives.');
+    }
+
+    /** The donor's copy of the financial report: only what the grant shares. */
+    public function financialReport(string $partnership, string $grant): StreamedResponse
+    {
+        $partnership = $this->connected($partnership);
+        [$shared, $report] = $this->inBeneficiary($partnership, function () use ($partnership, $grant) {
+            $shared = $this->sharedGrant($partnership, $grant);
+
+            return [$shared, GrantFinancialReport::forDonor($shared)];
+        });
+
+        return CsvExport::download(
+            Str::slug("{$shared->reference}-financial-report"),
+            ['Section' => 'section', 'Line' => 'line', 'Currency' => 'currency', 'Amount' => 'amount'],
+            GrantFinancialReport::rows($shared, $report),
+        );
     }
 
     public function post(Request $request, string $partnership, string $grant): RedirectResponse
@@ -237,6 +319,15 @@ class BeneficiaryController extends Controller
         abort_unless(DonorProjection::canSee((string) $partnership->funder_id, $grant), 404);
 
         return $grant;
+    }
+
+    /** The payment belongs to this grant, and the grant to this donor. */
+    private function requirePaymentOfGrant(Partnership $partnership, string $grant, string $disbursement): void
+    {
+        $this->inBeneficiary($partnership, function () use ($partnership, $grant, $disbursement) {
+            $shared = $this->sharedGrant($partnership, $grant);
+            abort_unless(GrantDisbursement::query()->where('grant_id', $shared->id)->whereKey($disbursement)->exists(), 404);
+        });
     }
 
     private function report(Grant $grant, string $id): GrantReport

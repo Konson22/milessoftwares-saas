@@ -16,6 +16,7 @@ Route::middleware('can:grants.view')->group(function () {
     Route::get('grants', [GrantController::class, 'index'])->name('grants.index');
     Route::get('grants/export', [GrantController::class, 'export'])->name('grants.export');
     Route::get('grants/{grant}', [GrantController::class, 'show'])->whereUuid('grant')->name('grants.show');
+    Route::get('grants/{grant}/financial-report', [GrantController::class, 'financialReport'])->whereUuid('grant')->name('grants.financial-report');
     Route::get('grants/{grant}/reports/{report}/documents/{document}', [GrantPortalController::class, 'document'])->whereUuid(['grant', 'report', 'document'])->scopeBindings()->name('grants.reports.documents.show');
 });
 
@@ -44,6 +45,10 @@ Route::middleware('can:grants.manage')->group(function () {
 
         Route::post('disbursements', [GrantFundingController::class, 'schedule'])->name('disbursements.store');
         Route::post('disbursements/{disbursement}/receive', [GrantFundingController::class, 'receive'])->whereUuid('disbursement')->name('disbursements.receive');
+        // Agreed with a donor on Tatook (App\Actions\GrantAgreements).
+        Route::post('agreement', [GrantFundingController::class, 'proposeAgreement'])->middleware('throttle:20,1')->name('agreement.propose');
+        Route::post('disbursements/{disbursement}/request', [GrantFundingController::class, 'requestPayment'])->whereUuid('disbursement')->middleware('throttle:30,1')->name('disbursements.request');
+        Route::post('disbursements/{disbursement}/confirm', [GrantFundingController::class, 'confirmPayment'])->whereUuid('disbursement')->name('disbursements.confirm');
         Route::delete('disbursements/{disbursement}', [GrantFundingController::class, 'unschedule'])->whereUuid('disbursement')->name('disbursements.destroy');
 
         Route::post('reports', [GrantFundingController::class, 'addReport'])->name('reports.store');

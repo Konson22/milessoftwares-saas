@@ -8,6 +8,7 @@ import type { ApprovalBand } from '@/components/approval-bands';
 import { Field, invalid } from '@/components/field';
 import {
     accountType as saveAccountType,
+    discoverable as saveDiscoverable,
     financeLimits as saveFinanceLimits,
     health,
     modules as saveModule,
@@ -25,6 +26,7 @@ type Settings = {
         enabled: boolean;
     }[];
     accountType: 'funder' | 'implementer' | null;
+    discoverable: boolean;
     funding: { enabled: boolean; canTurnOff: boolean };
     financeLimits: {
         currency: string;
@@ -161,6 +163,53 @@ function AccountTypePanel({
 }
 
 /**
+ * Whether other organizations on Tatook Projects can find this one by name.
+ */
+function DiscoverablePanel({ discoverable }: { discoverable: boolean }) {
+    return (
+        <Panel className="mt-4">
+            <PanelHeader
+                title="Finding you"
+                description="Other organizations on Tatook Projects can search for you by name to invite you to a project or to partner. They see your name, workspace address and country only."
+            />
+            <PanelBody>
+                <Form
+                    {...saveDiscoverable.form()}
+                    options={{ preserveScroll: true }}
+                    className="grid gap-3"
+                >
+                    {({ processing }) => (
+                        <>
+                            <input
+                                type="hidden"
+                                name="discoverable"
+                                value={discoverable ? '0' : '1'}
+                            />
+                            <p className="text-sm text-muted-foreground">
+                                {discoverable
+                                    ? 'On: organizations can find you by name.'
+                                    : 'Off: only those who know your exact workspace address can find you.'}
+                            </p>
+                            <div>
+                                <Button
+                                    type="submit"
+                                    variant="outline"
+                                    disabled={processing}
+                                >
+                                    {discoverable
+                                        ? 'Stop appearing in search'
+                                        : 'Let organizations find us'}
+                                </Button>
+                            </div>
+                        </>
+                    )}
+                </Form>
+            </PanelBody>
+        </Panel>
+    );
+}
+
+/**
  * Administration → Settings: the organization's name and defaults.
  */
 export default function OrganizationSettings({
@@ -208,6 +257,8 @@ export default function OrganizationSettings({
                 accountType={settings.accountType}
                 canTurnOff={settings.funding.canTurnOff}
             />
+
+            <DiscoverablePanel discoverable={settings.discoverable} />
 
             <HealthThresholds {...settings.health} />
             {settings.financeLimits && (

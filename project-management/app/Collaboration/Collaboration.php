@@ -80,6 +80,12 @@ final class Collaboration
                 if (Invitation::query()->where('project_id', $project->id)->where('invited_organization_id', $organization->id)->open()->exists()) {
                     throw ValidationException::withMessages(['organization_id' => "{$organization->name} has an invitation waiting already. Resend it instead."]);
                 }
+                // One that expired unanswered gives way to the new one (the database allows
+                // one unanswered invitation per project and organization). Kept, closed, audited.
+                foreach (Invitation::query()->where('project_id', $project->id)->where('invited_organization_id', $organization->id)->unanswered()->get() as $expired) {
+                    $expired->forceFill(['revoked_at' => now()])->save();
+                    Audit::record('collaboration.invitation_superseded', $expired, ['project' => $project->code, 'invitee' => $organization->name, 'expired_at' => $expired->expires_at->toIso8601String()], $project->organization_id, $by);
+                }
             } else {
                 $email = mb_strtolower(trim((string) ($details['email'] ?? '')));
                 if ($email === '' || trim((string) ($details['contact_name'] ?? '')) === '') {
@@ -301,7 +307,9 @@ final class Collaboration
                     ->update(['revoked_at' => now(), 'revoked_by' => $by->id, 'token_hash' => null]);
             }
 
-            Audit::change('collaboration.status_changed', $participant, ['status' => $before], ['status' => $status], ['organization' => $participant->organization->name], $participant->organization_id, $by);
+            // Its tasks stay the owner's: those still open are counted, for the owner to give to someone else.
+            $open = in_array($status, Participant::ENDED, true) ? SharedTasks::openFor($participant) : null;
+            Audit::change('collaboration.status_changed', $participant, ['status' => $before], ['status' => $status], ['organization' => $participant->organization->name, 'open_tasks_left' => $open], $participant->organization_id, $by);
             Audit::record('collaboration.status_changed', $participant, ['project' => $participant->project->name, 'status' => $status], $participant->participant_organization_id, $by);
             self::tellManagers($participant->organization, $by, "Your participation in {$participant->project->name} is now {$status}", null);
         });

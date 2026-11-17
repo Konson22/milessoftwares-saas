@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Funding;
 
+use App\Actions\GrantAgreements;
 use App\Actions\Grants;
 use App\Actions\Spending;
 use App\Enums\ExpenseStatus;
@@ -19,6 +20,7 @@ use App\Models\GrantReport;
 use App\Models\GrantReportDocument;
 use App\Models\Invitation;
 use App\Models\Project;
+use App\Reports\GrantFinancialReport;
 use App\Support\CsvExport;
 use App\Support\DonorProjection;
 use App\Support\Money;
@@ -27,6 +29,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -143,6 +146,16 @@ class GrantController extends Controller
         return to_route('grants.show', ['grant' => $grant->id])->with('success', "{$grant->reference} recorded.");
     }
 
+    /** Where the grant's money stands, stage by stage (App\Reports\GrantFinancialReport). */
+    public function financialReport(Grant $grant): StreamedResponse
+    {
+        return CsvExport::download(
+            Str::slug("{$grant->reference}-financial-report"),
+            ['Section' => 'section', 'Line' => 'line', 'Currency' => 'currency', 'Amount' => 'amount'],
+            GrantFinancialReport::rows($grant, GrantFinancialReport::build($grant)),
+        );
+    }
+
     public function show(Request $request, Grant $grant): Response
     {
         $grant->load(['funder:id,name', 'allocations.project:id,code,name,currency', 'amendments.recorder:id,name']);
@@ -207,7 +220,14 @@ class GrantController extends Controller
                 'receivedOn' => $disbursement->received_on?->toDateString(),
                 'overdue' => $disbursement->received_on === null && $disbursement->due_on->lt(today()),
                 'note' => $disbursement->note,
+                'status' => $disbursement->status,
+                'decisionNote' => $disbursement->decision_note,
+                'sentOn' => $disbursement->sent_on?->toDateString(),
+                'sentReference' => $disbursement->sent_reference,
+                'disputeNote' => $disbursement->dispute_note,
             ]),
+            'agreement' => $this->agreement($grant),
+            'funding' => GrantFinancialReport::build($grant)['funding'],
             'reports' => $grant->reports()->get()->map(fn (GrantReport $report) => [
                 'id' => $report->id,
                 'title' => $report->title,
@@ -409,5 +429,31 @@ class GrantController extends Controller
         }
 
         return $details;
+    }
+
+    /**
+     * The grant's terms as agreed with a donor on Tatook, when its funder is
+     * one (App\Actions\GrantAgreements); null otherwise.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function agreement(Grant $grant): ?array
+    {
+        $partnership = GrantAgreements::partnership($grant);
+        if ($partnership === null) {
+            return null;
+        }
+
+        return [
+            'donor' => $partnership->donor->name,
+            'status' => $grant->agreement_status,
+            'approvedMinor' => $grant->agreement_amount_minor,
+            'committedMinor' => GrantAgreements::committedMinor($grant),
+            'proposedAt' => $grant->agreement_proposed_at?->toIso8601String(),
+            'decidedAt' => $grant->agreement_decided_at?->toIso8601String(),
+            'note' => $grant->agreement_note,
+            'canPropose' => $grant->agreement_status !== GrantAgreements::PROPOSED && ! in_array($grant->status, [GrantStatus::Closed, GrantStatus::Declined], true) && $grant->amount_minor > 0,
+            'changed' => $grant->agreement_status === GrantAgreements::APPROVED && ($grant->amount_minor !== $grant->agreement_amount_minor),
+        ];
     }
 }

@@ -23,6 +23,7 @@ Route::prefix('beneficiaries')->name('beneficiaries.')->group(function () {
 
     Route::middleware('can:organization.manage')->group(function () {
         Route::post('/', [BeneficiaryController::class, 'store'])->middleware('throttle:30,1')->name('store');
+        Route::post('organizations', [BeneficiaryController::class, 'inviteOrganization'])->middleware('throttle:30,1')->name('organizations.store');
         Route::post('workspaces', [BeneficiaryController::class, 'createWorkspace'])->middleware('throttle:20,60')->name('workspaces.store');
         Route::post('{partnership}/resend', [BeneficiaryController::class, 'resend'])->whereUuid('partnership')->middleware('throttle:30,1')->name('resend');
         Route::delete('{partnership}', [BeneficiaryController::class, 'destroy'])->whereUuid('partnership')->name('destroy');
@@ -33,8 +34,12 @@ Route::prefix('beneficiaries')->name('beneficiaries.')->group(function () {
 
         Route::prefix('grants/{grant}')->whereUuid('grant')->name('grants.')->group(function () {
             Route::get('/', [BeneficiaryController::class, 'grant'])->name('show');
+            Route::get('financial-report', [BeneficiaryController::class, 'financialReport'])->name('financial-report');
             Route::post('messages', [BeneficiaryController::class, 'post'])->middleware(['can:grants.manage', 'throttle:20,1'])->name('messages.store');
             Route::post('reports/{report}/decision', [BeneficiaryController::class, 'decide'])->whereUuid('report')->middleware('can:grants.manage')->name('reports.decide');
+            Route::post('agreement/decision', [BeneficiaryController::class, 'decideAgreement'])->middleware('can:grants.manage')->name('agreement.decide');
+            Route::post('payments/{disbursement}/decision', [BeneficiaryController::class, 'decidePayment'])->whereUuid('disbursement')->middleware('can:grants.manage')->name('payments.decide');
+            Route::post('payments/{disbursement}/sent', [BeneficiaryController::class, 'markSent'])->whereUuid('disbursement')->middleware('can:grants.manage')->name('payments.sent');
             Route::get('reports/{report}/documents/{document}', [BeneficiaryController::class, 'document'])->whereUuid(['report', 'document'])->name('reports.document');
         });
     });

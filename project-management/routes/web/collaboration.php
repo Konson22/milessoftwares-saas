@@ -4,6 +4,7 @@ use App\Http\Controllers\Collaboration\InvitationLinkController;
 use App\Http\Controllers\Collaboration\ReportController;
 use App\Http\Controllers\Collaboration\RequestController;
 use App\Http\Controllers\Collaboration\SharedProjectController;
+use App\Http\Controllers\Collaboration\SharedTaskController;
 use App\Http\Controllers\Projects\CollaborationController;
 use Illuminate\Support\Facades\Route;
 
@@ -19,8 +20,10 @@ use Illuminate\Support\Facades\Route;
 Route::get('shared-projects', [SharedProjectController::class, 'index'])->name('shared-projects.index');
 Route::get('shared-projects/{participant}', [SharedProjectController::class, 'show'])->whereUuid('participant')->name('shared-projects.show');
 
+// Finding an organization to invite: to a project, or (a donor) to partner. The controller checks either permission.
+Route::get('collaboration/organizations', [CollaborationController::class, 'organizations'])->middleware('throttle:60,1')->name('collaboration.organizations');
+
 Route::middleware('can:projects.partners.manage')->group(function () {
-    Route::get('collaboration/organizations', [CollaborationController::class, 'organizations'])->middleware('throttle:60,1')->name('collaboration.organizations');
 
     // An emailed invitation, opened in this workspace through its link.
     Route::get('project-invitations/{token}/open', [InvitationLinkController::class, 'show'])->where('token', '[A-Za-z0-9]{48}')->name('collaboration.show');
@@ -61,6 +64,18 @@ $partnerWork = function () {
         Route::delete('sources/{source}', [ReportController::class, 'removeSource'])->whereUuid('source')->name('sources.destroy');
         Route::post('attachments', [ReportController::class, 'attach'])->middleware('throttle:30,1')->name('attachments.store');
         Route::get('attachments/{attachment}', [ReportController::class, 'download'])->whereUuid('attachment')->name('attachments.show');
+    });
+
+    // Shared tasks (App\Collaboration\SharedTasks).
+    Route::get('shared-tasks', [SharedTaskController::class, 'index'])->name('shared-tasks.index');
+    Route::prefix('shared-tasks/{task}')->whereUuid('task')->name('shared-tasks.')->group(function () {
+        Route::get('/', [SharedTaskController::class, 'show'])->name('show');
+        Route::put('sharing', [SharedTaskController::class, 'share'])->name('sharing');
+        Route::post('comments', [SharedTaskController::class, 'comment'])->middleware('throttle:30,1')->name('comments.store');
+        Route::post('attachments', [SharedTaskController::class, 'attach'])->middleware('throttle:30,1')->name('attachments.store');
+        Route::get('attachments/{attachment}', [SharedTaskController::class, 'download'])->whereUuid('attachment')->name('attachments.show');
+        Route::post('progress', [SharedTaskController::class, 'progress'])->middleware('throttle:60,1')->name('progress');
+        Route::post('review', [SharedTaskController::class, 'review'])->middleware('throttle:60,1')->name('review');
     });
 
     Route::get('requests', [RequestController::class, 'index'])->name('requests.index');

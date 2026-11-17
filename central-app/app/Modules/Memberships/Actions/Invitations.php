@@ -85,6 +85,11 @@ final class Invitations
             ];
         }
 
+        // Expired but not yet marked so by the hourly platform:expire-invitations: it
+        // no longer stands in the way of a new invitation to the same address.
+        Invitation::query()->where('status', 'pending')->where('expires_at', '<=', now())
+            ->whereRaw('lower(email) = ?', [$email])->update(['status' => 'expired', 'updated_at' => now()]);
+
         $token = Str::random(48);
 
         try {
@@ -96,7 +101,9 @@ final class Invitations
                 'proposed_access' => $access,
                 'status' => 'pending',
                 'expires_at' => now()->addDays(self::VALID_DAYS),
-            ])->save();
+            ]);
+            // In a savepoint: a refused duplicate must not abort a surrounding transaction (PostgreSQL).
+            DB::transaction(fn () => $invitation->save());
         } catch (QueryException $e) {
             if ($e->getCode() === '23505' && str_contains($e->getMessage(), 'invitations_one_pending_per_email')) {
                 throw new MembershipActionDenied('That person already has a pending invitation. Resend it instead.');

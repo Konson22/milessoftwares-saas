@@ -94,22 +94,26 @@ class CollaborationController extends Controller
     }
 
     /**
-     * Organizations to invite: those with a published profile, by name, or
-     * any active one by its exact workspace address. Never a list of
-     * everyone on the platform.
+     * Organizations to invite, ten at most: by name, those that let themselves
+     * be found (on by default, Settings) or published a profile; any active one
+     * by its exact workspace address. Only name, address and country. Never a
+     * list of everyone: a search of two letters or more.
      */
     public function organizations(Request $request): JsonResponse
     {
+        abort_unless($this->can($request, 'projects.partners.manage') || $this->can($request, 'organization.manage'), 403);
         $query = trim((string) $request->validate(['q' => ['required', 'string', 'min:2', 'max:100']])['q']);
         $here = app(CurrentOrganization::class)->require()->id;
 
+        // By name: those that let themselves be found (Settings, on by default) or published a profile.
         $published = OrganizationProfile::acrossOrganizations()->where('status', OrganizationProfile::PUBLISHED)->pluck('organization_id');
         $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], mb_strtolower($query)).'%';
         $matches = Organization::query()
             ->where('status', Organization::ACTIVE)
             ->where('id', '!=', $here)
             ->where(fn ($where) => $where->where('slug', mb_strtolower($query))
-                ->orWhere(fn ($named) => $named->whereIn('id', $published)->whereRaw('lower(name) like ?', [$like])))
+                ->orWhere(fn ($named) => $named->where(fn ($listed) => $listed->where('discoverable', true)->orWhereIn('id', $published))
+                    ->whereRaw('lower(name) like ?', [$like])))
             ->orderBy('name')->limit(10)->get(['id', 'name', 'slug', 'country_code']);
 
         return response()->json($matches->map(fn (Organization $organization) => [

@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $currency
  * @property string $timezone
  * @property string $status
+ * @property bool $discoverable other organizations on Projects can find it by name (its name, address and country)
  * @property list<string>|null $capabilities
  * @property string|null $account_type funder or implementer; null until someone who manages it chooses
  * @property list<string>|null $disabled_modules
@@ -57,7 +58,7 @@ class Organization extends Model
 
     protected function casts(): array
     {
-        return ['capabilities' => 'array', 'disabled_modules' => 'array', 'suspended_at' => 'datetime', 'health_schedule_slack' => 'integer', 'health_budget_slack' => 'integer', 'petty_cash_max_payment_minor' => 'integer', 'advance_max_minor' => 'integer', 'advance_retire_days' => 'integer'];
+        return ['discoverable' => 'boolean', 'capabilities' => 'array', 'disabled_modules' => 'array', 'suspended_at' => 'datetime', 'health_schedule_slack' => 'integer', 'health_budget_slack' => 'integer', 'petty_cash_max_payment_minor' => 'integer', 'advance_max_minor' => 'integer', 'advance_retire_days' => 'integer'];
     }
 
     /**

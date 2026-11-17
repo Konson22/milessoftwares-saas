@@ -96,6 +96,27 @@ type Overview = {
     toDecide: Report[];
     owed: Report[];
     payments: Payment[];
+    approvalsCount: number;
+    approvals: Approval[];
+};
+
+/** Terms or a payment of a grant agreed on Tatook, waiting on the donor. */
+type Approval = {
+    key: string;
+    kind: 'terms' | 'request' | 'transfer' | 'disputed';
+    grant: string;
+    beneficiary: string;
+    currency: string;
+    amountMinor: number;
+    dueOn: string | null;
+    url: string;
+};
+
+const APPROVAL_LABELS: Record<Approval['kind'], string> = {
+    terms: 'Grant terms to approve',
+    request: 'Payment requested',
+    transfer: 'Approved: record your transfer',
+    disputed: 'Disputed: check your transfer',
 };
 
 function percentOf(part: number, whole: number): number {
@@ -304,6 +325,34 @@ export default function DonorDashboard({
                     }
                 />
             </div>
+
+            {overview.approvalsCount > 0 && (
+                <div className="mt-3">
+                    <WorkList
+                        title="Waiting for your approval"
+                        description={`Grant terms and payments your beneficiaries asked you for.${overview.approvalsCount > overview.approvals.length ? ` The first ${overview.approvals.length} of ${overview.approvalsCount}.` : ''}`}
+                        total={overview.approvalsCount}
+                        empty=""
+                    >
+                        {overview.approvals.map((item) => (
+                            <Row
+                                key={item.key}
+                                href={item.url}
+                                title={APPROVAL_LABELS[item.kind]}
+                                detail={`${item.beneficiary}, ${item.grant}${item.dueOn ? `, due ${formatDate(item.dueOn)}` : ''}`}
+                                aside={
+                                    <span className="tabular-nums">
+                                        {formatMoney(
+                                            item.amountMinor,
+                                            item.currency,
+                                        )}
+                                    </span>
+                                }
+                            />
+                        ))}
+                    </WorkList>
+                </div>
+            )}
 
             <div className="mt-3 grid gap-3 lg:grid-cols-2">
                 <WorkList

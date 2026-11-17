@@ -40,8 +40,9 @@ final class DonorProjection
     public static function canSee(string $funderId, Grant $grant): bool
     {
         return $grant->funder_id === $funderId
-            && $grant->portal_enabled
-            && in_array($grant->status, self::VISIBLE, true);
+            && (($grant->portal_enabled && in_array($grant->status, self::VISIBLE, true))
+                // Terms proposed to the donor (App\Actions\GrantAgreements) show it the grant.
+                || $grant->agreement_status !== null);
     }
 
     public static function documentIsDelivered(GrantReport $report): bool
@@ -103,6 +104,7 @@ final class DonorProjection
             'currency' => $grant->currency,
             'amountMinor' => $grant->amount_minor,
             'receivedMinor' => $grant->receivedMinor(),
+            'agreement' => $grant->agreement_status,
             'reports' => array_values($grant->reports()->get()
                 ->filter(fn (GrantReport $report) => $report->status === GrantReportStatus::Submitted || $report->status->isOutstanding())
                 ->map(fn (GrantReport $report) => [
@@ -118,6 +120,7 @@ final class DonorProjection
                     'id' => $payment->id,
                     'dueOn' => $payment->due_on->toDateString(),
                     'amountMinor' => $payment->amount_minor,
+                    'status' => $payment->status,
                 ])->all()),
         ])->all());
     }
@@ -245,8 +248,10 @@ final class DonorProjection
     private static function shared(string $funderId): Collection
     {
         return Grant::query()
-            ->where('funder_id', $funderId)->where('portal_enabled', true)
-            ->whereIn('status', array_map(fn (GrantStatus $status) => $status->value, self::VISIBLE))
+            ->where('funder_id', $funderId)
+            ->where(fn ($query) => $query
+                ->where(fn ($shared) => $shared->where('portal_enabled', true)->whereIn('status', array_map(fn (GrantStatus $status) => $status->value, self::VISIBLE)))
+                ->orWhereNotNull('agreement_status'))
             ->orderBy('reference')->get();
     }
 
@@ -289,7 +294,21 @@ final class DonorProjection
                 'dueOn' => $payment->due_on->toDateString(),
                 'amountMinor' => $payment->amount_minor,
                 'receivedOn' => $payment->received_on?->toDateString(),
+                'status' => $payment->status,
+                'decisionNote' => $payment->decision_note,
+                'sentOn' => $payment->sent_on?->toDateString(),
+                'sentReference' => $payment->sent_reference,
+                'disputeNote' => $payment->dispute_note,
             ])->all()),
+            'agreement' => $grant->agreement_status === null ? null : [
+                'status' => $grant->agreement_status,
+                'proposedMinor' => $grant->amount_minor,
+                'approvedMinor' => $grant->agreement_amount_minor,
+                'endOn' => $grant->agreement_end_on?->toDateString(),
+                'proposedAt' => $grant->agreement_proposed_at?->toIso8601String(),
+                'decidedAt' => $grant->agreement_decided_at?->toIso8601String(),
+                'note' => $grant->agreement_note,
+            ],
             'reports' => self::reports($grant),
             'projects' => array_values($allocations->map(fn (GrantAllocation $allocation) => self::project($grant, $allocation))->all()),
             'messages' => self::messages($grant),

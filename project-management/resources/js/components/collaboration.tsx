@@ -38,8 +38,7 @@ export type ParticipantRow = {
     joinedAt: string;
     statusChangedAt: string | null;
     representatives:
-        | { id: string; name: string; responsibilities: string[] }[]
-        | null;
+        { id: string; name: string; responsibilities: string[] }[] | null;
 };
 
 export type InvitationRow = {
@@ -191,35 +190,62 @@ export function CapabilityPicker({
 type Found = { id: string; name: string; slug: string; country: string | null };
 
 /**
- * Finds an organization on Tatook to invite: by name among those with a
- * published profile, or by its exact workspace address.
+ * Finds an organization on Tatook to invite: by name among those that let
+ * themselves be found (or published a profile), or by its exact workspace
+ * address. A failed search says so; it is never shown as nothing found.
  */
-function OrganizationSearch({
+export function OrganizationSearch({
     value,
     onChange,
+    notFound = 'No organization on Tatook matches. Check the spelling, try its workspace address, or invite someone there by email.',
 }: {
     value: Found | null;
     onChange: (found: Found | null) => void;
+    notFound?: string;
 }) {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<Found[]>([]);
+    // What the last search came to: an error is never shown as "nothing found".
+    const [state, setState] = useState<
+        'idle' | 'searching' | 'done' | 'failed'
+    >('idle');
 
     useEffect(() => {
         if (query.trim().length < 2) {
             setResults([]);
+            setState('idle');
 
             return;
         }
 
         const controller = new AbortController();
         const timer = window.setTimeout(() => {
+            setState('searching');
             fetch(organizations.url({ query: { q: query.trim() } }), {
                 headers: { Accept: 'application/json' },
                 signal: controller.signal,
             })
-                .then((response) => (response.ok ? response.json() : []))
-                .then((found: Found[]) => setResults(found))
-                .catch(() => undefined);
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error(String(response.status));
+                    }
+
+                    return response.json();
+                })
+                .then((found: Found[]) => {
+                    setResults(found);
+                    setState('done');
+                })
+                .catch((error: unknown) => {
+                    if (
+                        error instanceof DOMException &&
+                        error.name === 'AbortError'
+                    ) {
+                        return;
+                    }
+                    setResults([]);
+                    setState('failed');
+                });
         }, 250);
 
         return () => {
@@ -255,6 +281,23 @@ function OrganizationSearch({
                 placeholder="Organization name or workspace address"
                 autoComplete="off"
             />
+            {state === 'idle' && (
+                <p className="text-xs text-muted-foreground">
+                    Type at least two letters of its name, or its workspace
+                    address.
+                </p>
+            )}
+            {state === 'searching' && (
+                <p className="text-xs text-muted-foreground">Searching…</p>
+            )}
+            {state === 'failed' && (
+                <p className="text-sm text-destructive" role="alert">
+                    The search did not work just now. Try again in a moment.
+                </p>
+            )}
+            {state === 'done' && results.length === 0 && (
+                <p className="text-sm text-muted-foreground">{notFound}</p>
+            )}
             {results.length > 0 && (
                 <ul className="divide-y border text-sm">
                     {results.map((found) => (

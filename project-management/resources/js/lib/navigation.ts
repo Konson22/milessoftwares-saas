@@ -293,6 +293,13 @@ function funderNavigation(): NavGroup[] {
                     icon: Handshake,
                     permission: null,
                 },
+                // A funder runs projects of its own too, and brings in who implements them.
+                {
+                    title: 'Our projects',
+                    href: projects(),
+                    icon: FolderKanban,
+                    permission: 'projects.view',
+                },
             ],
         },
         ...fundingNavigation(),

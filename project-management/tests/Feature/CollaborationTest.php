@@ -367,10 +367,11 @@ it('refuses another organization acting on an invitation that is not its own', f
     expect($invitation->fresh()?->status())->toBe(Invitation::PENDING);
 });
 
-it('finds organizations to invite by published profile or exact address, never all of them', function () {
+it('finds organizations to invite by name unless they opted out, or by exact address, never all of them', function () {
     collabProject();
     $this->organization('water-now');
-    $this->organization('quiet-ngo');
+    // Turned off "Finding you" in Settings: found by its exact address only.
+    $this->organization('quiet-ngo')->forceFill(['discoverable' => false])->save();
 
     $this->getJson($this->organizationUrl('acme', 'collaboration/organizations?q=quiet'))->assertOk()->assertJsonCount(0);
     $this->getJson($this->organizationUrl('acme', 'collaboration/organizations?q=quiet-ngo'))->assertOk()->assertJsonPath('0.name', 'Quiet Ngo');
@@ -427,13 +428,15 @@ it('offers and keeps only the capabilities the application enforces', function (
 
     // Not offered on the page, not suggested by a preset...
     $this->get($this->organizationUrl('acme', "projects/{$project->id}/collaboration"))->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->where('capabilities', fn ($options) => collect($options)->pluck('value')->doesntContain('activities.manage')
-            && collect($options)->pluck('value')->contains('reports.submit'))
-        ->where('grantable', fn ($grantable) => collect($grantable)->doesntContain('activities.manage')));
+        ->where('capabilities', fn ($options) => collect($options)->pluck('value')->doesntContain('procurement.request')
+            && collect($options)->pluck('value')->contains('reports.submit')
+            // Enforced since shared tasks (App\Collaboration\SharedTasks).
+            && collect($options)->pluck('value')->contains('activities.manage'))
+        ->where('grantable', fn ($grantable) => collect($grantable)->doesntContain('procurement.request')));
 
     // ...and not kept when sent anyway, even by the owner.
     $this->post($this->organizationUrl('acme', "projects/{$project->id}/collaboration/invitations"), [
         'organization_id' => $this->organization('water-now')->id, 'relationship' => 'implementer', 'capabilities' => ['view', 'activities.manage', 'procurement.request', 'reports.submit'],
     ])->assertSessionHasNoErrors();
-    expect(Invitation::query()->sole()->capabilities)->toBe(['view', 'reports.submit']);
+    expect(Invitation::query()->sole()->capabilities)->toBe(['view', 'activities.manage', 'reports.submit']);
 });

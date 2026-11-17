@@ -72,12 +72,35 @@ final class Beneficiaries
      */
     public static function invite(Organization $donor, User $by, array $details): Partnership
     {
+        $email = mb_strtolower(trim($details['email']));
+
+        return DB::transaction(function () use ($donor, $by, $details, $email) {
+            // One at a time per donor, so two clicks can't both pass the check.
+            Organization::query()->whereKey($donor->id)->lockForUpdate()->first();
+            // One invitation waiting per address. One that expired, was declined or
+            // withdrawn does not count: the same person may be invited again, and to
+            // as many organizations and projects as they work with.
+            $waiting = Partnership::query()->where('donor_organization_id', $donor->id)->where('email', $email)
+                ->whereNull('accepted_at')->whereNull('declined_at')->where('expires_at', '>', now())->first();
+            if ($waiting !== null) {
+                throw ValidationException::withMessages(['email' => "An invitation to this address is waiting already (for {$waiting->name}, sent {$waiting->created_at?->toDateString()}). Resend it from the list instead."]);
+            }
+
+            return self::sendNew($donor, $by, $details, $email);
+        });
+    }
+
+    /**
+     * @param  array{label: string, role?: string|null, name: string, email: string, currency: string, timezone: string, country_code?: string|null}  $details
+     */
+    private static function sendNew(Organization $donor, User $by, array $details, string $email): Partnership
+    {
         $token = Str::random(48);
         $partnership = new Partnership([
             'label' => $details['label'],
             'role' => $details['role'] ?? null,
             'name' => $details['name'],
-            'email' => mb_strtolower(trim($details['email'])),
+            'email' => $email,
             'currency' => $details['currency'],
             'timezone' => $details['timezone'],
             'country_code' => $details['country_code'] ?? null,
@@ -257,8 +280,9 @@ final class Beneficiaries
                 // Claimed, or gone already.
             }
         }
+        // Kept, marked withdrawn (hidden everywhere by Partnership's 'live' scope); its link stops working.
+        $partnership->forceFill(['revoked_at' => now(), 'revoked_by' => $by->id, 'token_hash' => null])->save();
         Audit::record('beneficiary.invitation_revoked', $partnership, ['email' => $partnership->email, 'organization' => $partnership->invited_organization_id], $partnership->donor_organization_id, $by);
-        $partnership->delete();
     }
 
     /**
@@ -401,7 +425,12 @@ final class Beneficiaries
         return DB::transaction(function () use ($token, $organization, $user) {
             $partnership = Partnership::query()->open()->where('token_hash', Partnership::hashToken($token))->lockForUpdate()->first();
             abort_if($partnership === null, 404);
-            abort_unless(self::connectable($partnership, $organization), 409, 'This organization cannot be connected to this donor.');
+            if ($organization->id === $partnership->donor_organization_id) {
+                abort(409, 'This invitation came from your own organization: accept it in the organization that was invited.');
+            }
+            if (! self::connectable($partnership, $organization)) {
+                abort(409, "{$organization->name} is already connected to {$partnership->donor->name}: there is nothing more to accept. Ask them to withdraw this older invitation.");
+            }
 
             $funder = self::funderFor($partnership->donor, $organization);
             $partnership->forceFill([

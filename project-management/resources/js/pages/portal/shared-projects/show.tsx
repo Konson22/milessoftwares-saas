@@ -38,6 +38,7 @@ import {
 import { update as updateSubPartner } from '@/routes/shared-projects/partners';
 import { index as partnerReports } from '@/routes/shared-projects/reports';
 import { index as partnerRequests } from '@/routes/shared-projects/requests';
+import { index as partnerTasks } from '@/routes/shared-projects/shared-tasks';
 import {
     destroy as removeRepresentative,
     store as addRepresentative,
@@ -120,6 +121,15 @@ export default function SharedProject({
                     <span className="flex flex-wrap items-center gap-2">
                         {project !== null && (
                             <>
+                                <Button asChild size="sm" variant="outline">
+                                    <Link
+                                        href={partnerTasks({
+                                            participant: participation.id,
+                                        })}
+                                    >
+                                        Tasks
+                                    </Link>
+                                </Button>
                                 <Button asChild size="sm" variant="outline">
                                     <Link
                                         href={partnerReports({

@@ -45,6 +45,34 @@ final class MarketplaceView
     }
 
     /**
+     * Organizations on Projects without a published profile that let themselves
+     * be found (organizations.discoverable), by name: only for a search of two
+     * letters or more, never a list of everyone. Name, address and country.
+     *
+     * @return list<array{id: string, slug: string, name: string, countryCode: string|null}>
+     */
+    public static function others(?string $q, string $except): array
+    {
+        $q = trim((string) $q);
+        if (mb_strlen($q) < 2) {
+            return [];
+        }
+        $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], mb_strtolower($q)).'%';
+
+        return array_values(Organization::query()
+            ->where('status', Organization::ACTIVE)->where('discoverable', true)->where('id', '!=', $except)
+            ->whereNotIn('id', OrganizationProfile::visible()->select('organization_id'))
+            ->whereRaw('lower(name) like ?', [$like])
+            ->orderBy('name')->limit(20)->get(['id', 'slug', 'name', 'country_code'])
+            ->map(fn (Organization $organization) => [
+                'id' => $organization->id,
+                'slug' => $organization->slug,
+                'name' => $organization->name,
+                'countryCode' => $organization->country_code,
+            ])->all());
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     public static function organization(string $slug): ?array

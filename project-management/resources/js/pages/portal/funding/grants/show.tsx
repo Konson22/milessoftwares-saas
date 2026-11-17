@@ -1,6 +1,6 @@
 import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import { Trash2 } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useState, type ComponentProps, type ReactNode } from 'react';
 import { PageHeader } from '@miles/ui/components/page-header';
 import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
 import { StatCard } from '@miles/ui/components/stat-card';
@@ -26,10 +26,42 @@ import {
 } from '@/routes/grants/allocations';
 import { store as amend } from '@/routes/grants/amendments';
 import {
+    confirm as confirmPayment,
     destroy as unschedule,
     receive,
+    request as requestPayment,
     store as schedule,
 } from '@/routes/grants/disbursements';
+import { propose as proposeAgreement } from '@/routes/grants/agreement';
+import { financialReport } from '@/routes/grants';
+
+type FundingStage =
+    | 'awardedMinor'
+    | 'agreedMinor'
+    | 'scheduledMinor'
+    | 'requestedMinor'
+    | 'approvedMinor'
+    | 'sentMinor'
+    | 'disputedMinor'
+    | 'receivedMinor'
+    | 'notReceivedMinor';
+
+const FUNDING_STAGES: [FundingStage, string][] = [
+    ['awardedMinor', 'Awarded'],
+    ['agreedMinor', 'Agreed with the donor'],
+    ['scheduledMinor', 'Scheduled'],
+    ['requestedMinor', 'Requested'],
+    ['approvedMinor', 'Approved, not sent'],
+    ['sentMinor', 'Sent by the donor'],
+    ['disputedMinor', 'Disputed'],
+    ['receivedMinor', 'Received'],
+    ['notReceivedMinor', 'Not received yet'],
+];
+import {
+    PaymentStep,
+    RecipientAgreement,
+    paymentDetail,
+} from '@/components/grant-agreement';
 import {
     DonorPortalPanel,
     type GrantPortal,
@@ -88,7 +120,16 @@ type Props = {
         receivedOn: string | null;
         overdue: boolean;
         note: string | null;
+        status: string;
+        decisionNote: string | null;
+        sentOn: string | null;
+        sentReference: string | null;
+        disputeNote: string | null;
     }[];
+    /** Terms agreed with a donor on Tatook (App\Actions\GrantAgreements). */
+    agreement: ComponentProps<typeof RecipientAgreement>['agreement'] | null;
+    /** App\Reports\GrantFinancialReport: the grant's money, one stage at a time. */
+    funding: Record<FundingStage, number | null>;
     reports: {
         id: string;
         title: string;
@@ -143,6 +184,117 @@ function Reveal({
 }
 
 /**
+ * A payment of a grant agreed with a donor on Tatook: ask for it, then
+ * confirm or dispute what the donor recorded as sent.
+ */
+function AgreedPaymentActions({
+    grantId,
+    payment,
+    canAct,
+    today,
+}: {
+    grantId: string;
+    payment: Props['disbursements'][number];
+    canAct: boolean;
+    today: string;
+}) {
+    const route = { grant: grantId, disbursement: payment.id };
+    const detail = paymentDetail(payment);
+
+    return (
+        <span className="flex w-full flex-wrap items-center justify-end gap-2">
+            <PaymentStep status={payment.status} />
+            {detail && (
+                <span className="text-xs text-muted-foreground">{detail}</span>
+            )}
+            {canAct &&
+                (payment.status === 'planned' ||
+                    payment.status === 'rejected') && (
+                    <>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                                router.post(requestPayment.url(route), {}, keep)
+                            }
+                        >
+                            Request from the donor
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            aria-label="Remove payment"
+                            onClick={() =>
+                                router.delete(unschedule.url(route), keep)
+                            }
+                        >
+                            <Trash2 className="size-4" />
+                        </Button>
+                    </>
+                )}
+            {canAct && payment.status === 'sent' && (
+                <>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                            router.post(
+                                confirmPayment.url(route),
+                                { received: 1, on: today },
+                                keep,
+                            )
+                        }
+                    >
+                        Received today
+                    </Button>
+                    <Reveal label="It did not arrive…">
+                        {(close) => (
+                            <Form
+                                {...confirmPayment.form(route)}
+                                options={keep}
+                                onSuccess={close}
+                                className="grid gap-2"
+                            >
+                                {({ errors, processing }) => (
+                                    <>
+                                        <input
+                                            type="hidden"
+                                            name="received"
+                                            value="0"
+                                        />
+                                        <Field
+                                            id={`dispute-${payment.id}`}
+                                            label="What is wrong"
+                                            error={errors.note}
+                                        >
+                                            <Input
+                                                id={`dispute-${payment.id}`}
+                                                name="note"
+                                                required
+                                                maxLength={2000}
+                                            />
+                                        </Field>
+                                        <div>
+                                            <Button
+                                                type="submit"
+                                                size="sm"
+                                                disabled={processing}
+                                            >
+                                                Tell the donor
+                                            </Button>
+                                        </div>
+                                    </>
+                                )}
+                            </Form>
+                        )}
+                    </Reveal>
+                </>
+            )}
+        </span>
+    );
+}
+
+/**
  * One grant: its terms, where its money goes (allocations), when it
  * arrives (payments), what the funder expects (reports), and its
  * amendments. Stage actions move it from application to closeout.
@@ -152,6 +304,8 @@ export default function GrantPage({
     totals,
     allocations,
     disbursements,
+    agreement,
+    funding,
     reports,
     amendments,
     projects,
@@ -693,6 +847,49 @@ export default function GrantPage({
                 )}
             </Panel>
 
+            {agreement && (
+                <div className="mt-4">
+                    <RecipientAgreement
+                        agreement={agreement}
+                        proposeUrl={proposeAgreement.url({ grant: grant.id })}
+                        money={money}
+                        canManage={canManage}
+                    />
+                </div>
+            )}
+
+            <Panel className="mt-4">
+                <PanelHeader
+                    title="Money by stage"
+                    description="Each stage on its own: promised, asked for, sent by the donor, and received. The use of funds per project is in the report."
+                    actions={
+                        <Button variant="outline" size="sm" asChild>
+                            <a
+                                href={financialReport.url({
+                                    grant: grant.id,
+                                })}
+                            >
+                                Financial report (CSV)
+                            </a>
+                        </Button>
+                    }
+                />
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 px-4 py-3 text-sm sm:grid-cols-4">
+                    {FUNDING_STAGES.filter(
+                        ([key]) => funding[key] !== null,
+                    ).map(([key, label]) => (
+                        <div key={key}>
+                            <dt className="text-xs text-muted-foreground">
+                                {label}
+                            </dt>
+                            <dd className="tabular-nums">
+                                {money(funding[key] ?? 0)}
+                            </dd>
+                        </div>
+                    ))}
+                </dl>
+            </Panel>
+
             <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <Panel>
                     <PanelHeader
@@ -742,7 +939,14 @@ export default function GrantPage({
                                 <span className="tabular-nums">
                                     {money(payment.amountMinor)}
                                 </span>
-                                {payment.receivedOn ? (
+                                {agreement && !payment.receivedOn ? (
+                                    <AgreedPaymentActions
+                                        grantId={grant.id}
+                                        payment={payment}
+                                        canAct={manageActive}
+                                        today={today}
+                                    />
+                                ) : payment.receivedOn ? (
                                     <span className="flex items-center gap-2">
                                         <StatusBadge tone="success">
                                             Received{' '}

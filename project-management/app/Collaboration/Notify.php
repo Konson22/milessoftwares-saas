@@ -21,7 +21,7 @@ use Illuminate\Support\Collection;
 final class Notify
 {
     /**
-     * @param  'reports'|'requests'  $kind
+     * @param  'reports'|'requests'|'tasks'  $kind
      */
     public static function party(Project $project, ?Participant $party, string $permission, string $kind, string $id, string $title, ?string $excerpt, ?User $by, ?string $key = null, string $type = UserNotification::MESSAGE): int
     {
@@ -31,9 +31,14 @@ final class Notify
         }
 
         return app(CurrentOrganization::class)->run($organization, function () use ($project, $party, $permission, $kind, $id, $title, $excerpt, $by, $key, $type) {
+            [$route, $parameter] = match ($kind) {
+                'reports' => ['reports.show', 'report'],
+                'requests' => ['requests.show', 'projectRequest'],
+                'tasks' => ['shared-tasks.show', 'task'],
+            };
             $path = $party === null
-                ? route("projects.{$kind}.show", ['project' => $project->id, $kind === 'reports' ? 'report' : 'projectRequest' => $id], false)
-                : route("shared-projects.{$kind}.show", ['participant' => $party->id, $kind === 'reports' ? 'report' : 'projectRequest' => $id], false);
+                ? route("projects.{$route}", ['project' => $project->id, $parameter => $id], false)
+                : route("shared-projects.{$route}", ['participant' => $party->id, $parameter => $id], false);
 
             return Alerts::tell(self::people($party, $permission), $type, $title, $excerpt, $path, $by, $key, email: $type !== UserNotification::REMINDER);
         });

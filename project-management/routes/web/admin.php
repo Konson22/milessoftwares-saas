@@ -28,6 +28,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::put('settings/health', [SettingsController::class, 'updateHealth'])->name('settings.health');
         Route::put('settings/finance-limits', [SettingsController::class, 'updateFinanceLimits'])->name('settings.finance-limits');
         Route::put('settings/funding', [SettingsController::class, 'updateFunding'])->name('settings.funding');
+        Route::put('settings/discoverable', [SettingsController::class, 'updateDiscoverable'])->name('settings.discoverable');
         Route::put('settings/account-type', [SettingsController::class, 'updateAccountType'])->name('settings.account-type');
         Route::put('settings/modules/{module}', [SettingsController::class, 'updateModule'])->whereIn('module', Modules::keys())->name('settings.modules');
         Route::post('approval-policies', [ApprovalPolicyController::class, 'store'])->name('approval-policies.store');

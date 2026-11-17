@@ -8,6 +8,8 @@ import { CommentBody, MentionTextarea } from '@/components/mention-textarea';
 import { ProjectFrame } from '@/components/project-frame';
 import { Priority, Status } from '@/components/status';
 import { TaskForm } from '@/components/task-form';
+import { TaskSharing } from '@/components/task-sharing';
+import type { TaskSharingProps } from '@/components/task-sharing';
 import {
     AttachmentsPanel,
     ChecklistPanel,
@@ -71,6 +73,7 @@ type Props = TaskChoices & {
     statusOptions: Option[];
     statusValue: string;
     mentionable: string[];
+    sharing: TaskSharingProps | null;
 };
 
 /**
@@ -84,6 +87,7 @@ export default function TaskPage({
     statusOptions,
     statusValue,
     mentionable,
+    sharing,
     people,
     milestones,
     priorities,
@@ -488,6 +492,8 @@ export default function TaskPage({
                             </PanelBody>
                         )}
                     </Panel>
+
+                    {sharing && <TaskSharing sharing={sharing} />}
 
                     {task.dependents.length > 0 && (
                         <Panel>

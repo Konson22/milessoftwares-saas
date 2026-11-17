@@ -19,6 +19,7 @@ type Project = {
     dueOn: string | null;
     budget: string;
     hasBudgetLines: boolean;
+    codeLocked: boolean;
     visibility: 'organization' | 'team';
 };
 
@@ -66,17 +67,21 @@ export default function ProjectForm({
                             <>
                                 <Field
                                     id="code"
-                                    label="Code"
+                                    label="Task prefix (optional)"
                                     error={errors.code}
-                                    hint="Starts every task number: WEB-12."
+                                    hint={
+                                        project?.codeLocked
+                                            ? `Tasks are already numbered ${project.code}-1 and on, so the prefix stays.`
+                                            : 'Used to number tasks, for example WEB-1. Leave blank to generate automatically.'
+                                    }
                                 >
                                     <Input
                                         id="code"
                                         name="code"
-                                        required
                                         maxLength={10}
                                         className="uppercase"
                                         defaultValue={project?.code}
+                                        readOnly={project?.codeLocked}
                                         {...invalid('code', errors.code)}
                                     />
                                 </Field>

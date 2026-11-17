@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $id
  * @property string $organization_id
  * @property string $task_id
+ * @property string|null $participant_id written for a participating organization (shared tasks)
  * @property string $user_id
  * @property string $body
  * @property CarbonImmutable $created_at

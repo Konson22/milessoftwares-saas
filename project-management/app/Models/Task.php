@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Access\ProjectBound;
 use App\Access\VisibleThroughProject;
+use App\Collaboration\Models\Participant;
 use App\Enums\TaskPriority;
 use App\Tenancy\BelongsToOrganization;
 use Carbon\CarbonImmutable;
@@ -33,6 +34,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property TaskPriority $priority
  * @property string|null $assignee_id
  * @property string|null $milestone_id
+ * @property bool $shared seen by every organization taking part in the project (App\Collaboration\SharedTasks)
+ * @property string|null $participant_id given to one participating organization
  * @property CarbonImmutable|null $start_on
  * @property CarbonImmutable|null $due_on
  * @property string|null $estimate_hours
@@ -70,6 +73,7 @@ class Task extends Model implements ProjectBound
     {
         return [
             'priority' => TaskPriority::class,
+            'shared' => 'boolean',
             'start_on' => 'date',
             'due_on' => 'date',
             'position' => 'integer',
@@ -83,6 +87,16 @@ class Task extends Model implements ProjectBound
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * The organization taking part that works on it (App\Collaboration\SharedTasks).
+     *
+     * @return BelongsTo<Participant, $this>
+     */
+    public function participant(): BelongsTo
+    {
+        return $this->belongsTo(Participant::class);
     }
 
     /**

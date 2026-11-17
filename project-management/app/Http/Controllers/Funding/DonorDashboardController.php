@@ -73,6 +73,27 @@ class DonorDashboardController extends Controller
             'overdue' => $payment['dueOn'] < $today,
         ], $grant['payments']))->sortBy('dueOn')->values();
 
+        // What waits on the donor in grants agreed on Tatook (App\Actions\GrantAgreements).
+        $approvals = $grants->flatMap(function (array $grant) {
+            $items = [];
+            if ($grant['agreement'] === 'proposed') {
+                $items[] = ['key' => "terms-{$grant['id']}", 'kind' => 'terms', 'grant' => $grant['reference'], 'beneficiary' => $grant['beneficiary'], 'currency' => $grant['currency'], 'amountMinor' => $grant['amountMinor'], 'dueOn' => null, 'url' => $grant['url']];
+            }
+            foreach ($grant['payments'] as $payment) {
+                $kind = match ($payment['status']) {
+                    'requested' => 'request',
+                    'approved' => 'transfer',
+                    'disputed' => 'disputed',
+                    default => null,
+                };
+                if ($kind !== null) {
+                    $items[] = ['key' => "payment-{$payment['id']}", 'kind' => $kind, 'grant' => $grant['reference'], 'beneficiary' => $grant['beneficiary'], 'currency' => $grant['currency'], 'amountMinor' => $payment['amountMinor'], 'dueOn' => $payment['dueOn'], 'url' => $grant['url']];
+                }
+            }
+
+            return $items;
+        })->sortBy(fn (array $item) => [$item['kind'] === 'terms' ? 0 : 1, $item['dueOn'] ?? ''])->values();
+
         $projects = Beneficiaries::across($donor, fn (Partnership $partnership) => array_map(fn (array $project) => [
             'id' => $project['id'],
             'code' => $project['code'],
@@ -96,6 +117,8 @@ class DonorDashboardController extends Controller
                 'invited' => $partnerships->filter(fn (Partnership $partnership) => ! $partnership->isAccepted() && ! $partnership->expires_at->isPast())->count(),
                 'activeGrants' => $active->count(),
                 'toDecideCount' => $toDecide->count(),
+                'approvalsCount' => $approvals->count(),
+                'approvals' => $approvals->take(self::LIST_LENGTH)->values(),
                 'owedCount' => $owed->count(),
                 'paymentsCount' => $payments->count(),
                 'funding' => $this->fundingByCurrency($active),

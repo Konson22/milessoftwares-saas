@@ -1,8 +1,10 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Building2 } from 'lucide-react';
 import { EmptyState } from '@miles/ui/components/empty-state';
 import { PageHeader } from '@miles/ui/components/page-header';
+import { Button } from '@miles/ui/components/ui/button';
 import { MarketplaceFilters } from '@/components/marketplace-filters';
+import { store as inviteOrganization } from '@/routes/beneficiaries/organizations';
 import { show, logo } from '@/routes/marketplace/organizations';
 import type { Option } from '@/types';
 
@@ -17,13 +19,27 @@ type Organization = {
     listings: number;
 };
 
-/** Organizations that published a profile in the funding marketplace. */
+type Other = {
+    id: string;
+    slug: string;
+    name: string;
+    countryCode: string | null;
+};
+
+/**
+ * Organizations that published a profile in the funding marketplace; and,
+ * when searching by name, others on Tatook that let themselves be found.
+ */
 export default function MarketplaceOrganizations({
     organizations,
+    others,
+    canInvite,
     filters,
     sectors,
 }: {
     organizations: Organization[];
+    others: Other[];
+    canInvite: boolean;
     filters: {
         q: string | null;
         sector: string | null;
@@ -36,14 +52,18 @@ export default function MarketplaceOrganizations({
             <Head title="Discover organizations" />
             <PageHeader
                 title="Discover organizations"
-                description="Organizations that published a profile for donors. You see only what each one chose to share."
+                description="Organizations that published a profile for donors, and any other on Tatook you search for by name. You see only what each one chose to share."
             />
 
             <MarketplaceFilters filters={filters} sectors={sectors} />
 
-            {organizations.length === 0 ? (
-                <EmptyState icon={Building2} title="No organizations match" />
-            ) : (
+            {organizations.length === 0 && others.length === 0 ? (
+                <EmptyState icon={Building2} title="No organizations match">
+                    {filters.q
+                        ? 'Check the spelling or try its workspace address. Not on Tatook yet? Invite the person who runs it by email from Beneficiaries.'
+                        : 'Search by name to find any organization on Tatook, or browse those that published a profile here.'}
+                </EmptyState>
+            ) : organizations.length === 0 ? null : (
                 <div className="grid gap-3 md:grid-cols-2">
                     {organizations.map((organization) => (
                         <Link
@@ -90,6 +110,53 @@ export default function MarketplaceOrganizations({
                         </Link>
                     ))}
                 </div>
+            )}
+
+            {others.length > 0 && (
+                <section className="mt-6 grid gap-2">
+                    <h2 className="text-sm font-medium">Also on Tatook</h2>
+                    <p className="text-sm text-muted-foreground">
+                        No public profile yet: you see their name and country
+                        only.
+                    </p>
+                    <ul className="divide-y rounded-lg border bg-card">
+                        {others.map((other) => (
+                            <li
+                                key={other.id}
+                                className="flex items-center justify-between gap-3 px-4 py-3"
+                            >
+                                <span className="min-w-0">
+                                    <span className="font-medium">
+                                        {other.name}
+                                    </span>{' '}
+                                    <span className="text-xs text-muted-foreground">
+                                        {[other.slug, other.countryCode]
+                                            .filter(Boolean)
+                                            .join(' · ')}
+                                    </span>
+                                </span>
+                                {canInvite && (
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() =>
+                                            router.post(
+                                                inviteOrganization.url(),
+                                                {
+                                                    organization_id: other.id,
+                                                    label: 'implementer',
+                                                },
+                                                { preserveScroll: true },
+                                            )
+                                        }
+                                    >
+                                        Invite to partner
+                                    </Button>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
+                </section>
             )}
         </>
     );
