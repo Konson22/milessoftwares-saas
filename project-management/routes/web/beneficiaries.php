@@ -34,6 +34,7 @@ Route::prefix('beneficiaries')->name('beneficiaries.')->group(function () {
 
         Route::prefix('grants/{grant}')->whereUuid('grant')->name('grants.')->group(function () {
             Route::get('/', [BeneficiaryController::class, 'grant'])->name('show');
+            Route::get('financial-report', [BeneficiaryController::class, 'financialReport'])->name('financial-report');
             Route::post('messages', [BeneficiaryController::class, 'post'])->middleware(['can:grants.manage', 'throttle:20,1'])->name('messages.store');
             Route::post('reports/{report}/decision', [BeneficiaryController::class, 'decide'])->whereUuid('report')->middleware('can:grants.manage')->name('reports.decide');
             Route::post('agreement/decision', [BeneficiaryController::class, 'decideAgreement'])->middleware('can:grants.manage')->name('agreement.decide');

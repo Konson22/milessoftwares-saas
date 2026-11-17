@@ -20,6 +20,7 @@ use App\Models\GrantReport;
 use App\Models\GrantReportDocument;
 use App\Models\Invitation;
 use App\Models\Project;
+use App\Reports\GrantFinancialReport;
 use App\Support\CsvExport;
 use App\Support\DonorProjection;
 use App\Support\Money;
@@ -28,6 +29,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -144,6 +146,16 @@ class GrantController extends Controller
         return to_route('grants.show', ['grant' => $grant->id])->with('success', "{$grant->reference} recorded.");
     }
 
+    /** Where the grant's money stands, stage by stage (App\Reports\GrantFinancialReport). */
+    public function financialReport(Grant $grant): StreamedResponse
+    {
+        return CsvExport::download(
+            Str::slug("{$grant->reference}-financial-report"),
+            ['Section' => 'section', 'Line' => 'line', 'Currency' => 'currency', 'Amount' => 'amount'],
+            GrantFinancialReport::rows($grant, GrantFinancialReport::build($grant)),
+        );
+    }
+
     public function show(Request $request, Grant $grant): Response
     {
         $grant->load(['funder:id,name', 'allocations.project:id,code,name,currency', 'amendments.recorder:id,name']);
@@ -215,6 +227,7 @@ class GrantController extends Controller
                 'disputeNote' => $disbursement->dispute_note,
             ]),
             'agreement' => $this->agreement($grant),
+            'funding' => GrantFinancialReport::build($grant)['funding'],
             'reports' => $grant->reports()->get()->map(fn (GrantReport $report) => [
                 'id' => $report->id,
                 'title' => $report->title,

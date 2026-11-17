@@ -125,6 +125,8 @@ type Props = {
     } | null;
     /** A donor on Tatook that may approve terms and payments. */
     canAgree?: boolean;
+    /** The donor's copy of the financial report, on Tatook only. */
+    financialReportUrl?: string;
     reports: Report[];
     projects: Project[];
     messages: {
@@ -458,6 +460,7 @@ export default function DonorGrant({
     payments,
     agreement,
     canAgree = false,
+    financialReportUrl,
     reports,
     projects,
     messages,
@@ -561,7 +564,18 @@ export default function DonorGrant({
             </Panel>
 
             <Panel className="mt-6">
-                <PanelHeader title="Payments" />
+                <PanelHeader
+                    title="Payments"
+                    actions={
+                        financialReportUrl && (
+                            <Button variant="outline" size="sm" asChild>
+                                <a href={financialReportUrl}>
+                                    Financial report (CSV)
+                                </a>
+                            </Button>
+                        )
+                    }
+                />
                 <PanelBody>
                     {payments.length === 0 ? (
                         <p className="text-sm text-muted-foreground">

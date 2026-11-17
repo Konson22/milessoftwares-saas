@@ -15,6 +15,8 @@ use App\Models\GrantReport;
 use App\Models\GrantReportDocument;
 use App\Models\Organization;
 use App\Models\Partnership;
+use App\Reports\GrantFinancialReport;
+use App\Support\CsvExport;
 use App\Support\DonorProjection;
 use App\Tenancy\CurrentOrganization;
 use App\Tenancy\Hosts;
@@ -22,6 +24,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -184,6 +187,7 @@ class BeneficiaryController extends Controller
             'back' => route('beneficiaries.show', ['partnership' => $partnership->id], false),
             // Agreements and payment approvals are between organizations on Tatook.
             'canAgree' => $this->can($request, 'grants.manage'),
+            'financialReportUrl' => route('beneficiaries.grants.financial-report', ['partnership' => $partnership->id, 'grant' => $grant], false),
         ]);
     }
 
@@ -232,6 +236,23 @@ class BeneficiaryController extends Controller
         GrantAgreements::markSent($partnership, $disbursement, CarbonImmutable::parse($validated['sent_on']), $validated['reference'], $this->member($request));
 
         return back()->with('success', 'Transfer recorded. The recipient confirms it once it arrives.');
+    }
+
+    /** The donor's copy of the financial report: only what the grant shares. */
+    public function financialReport(string $partnership, string $grant): StreamedResponse
+    {
+        $partnership = $this->connected($partnership);
+        [$shared, $report] = $this->inBeneficiary($partnership, function () use ($partnership, $grant) {
+            $shared = $this->sharedGrant($partnership, $grant);
+
+            return [$shared, GrantFinancialReport::forDonor($shared)];
+        });
+
+        return CsvExport::download(
+            Str::slug("{$shared->reference}-financial-report"),
+            ['Section' => 'section', 'Line' => 'line', 'Currency' => 'currency', 'Amount' => 'amount'],
+            GrantFinancialReport::rows($shared, $report),
+        );
     }
 
     public function post(Request $request, string $partnership, string $grant): RedirectResponse

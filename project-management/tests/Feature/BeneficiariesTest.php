@@ -1,5 +1,7 @@
 <?php
 
+use App\Actions\Spending;
+use App\Enums\CostCategory;
 use App\Models\AuditEvent;
 use App\Models\Funder;
 use App\Models\Grant;
@@ -874,4 +876,54 @@ it('puts terms and payments waiting on each party on its dashboard, and nothing 
     // Another organization's home lists none of it.
     $this->actingAsMember('other-org', ['projects.view', 'projects.tasks.manage', 'grants.view', 'grants.manage']);
     $this->get($this->organizationUrl('other-org', ''))->assertOk()->assertInertia(fn (Assert $page) => $page->where('partnerWaiting.count', 0));
+});
+
+/*
+| Phase 5 (M11): the grant financial report, each stage on its own; the
+| donor's copy only with what the grant shares, and only for its grants.
+*/
+
+it('reports a grant stage by stage, and the donor only what the grant shares', function () {
+    ['donor' => $donor, 'admin' => $admin, 'partnership' => $partnership] = connectedBeneficiary();
+    $this->actingAs($admin);
+    $grant = beneficiaryGrant('water-now', share: false);
+    [$first] = agreementPayments($grant);
+    $project = fundedProject($grant);
+    // A name a spreadsheet would run as a formula.
+    $this->asTenant('water-now', fn () => $project->forceFill(['name' => '=HYPERLINK("http://x.example","go")'])->save());
+    $this->asTenant('water-now', fn () => Spending::record($project, ['category' => CostCategory::Travel, 'description' => 'Site visit', 'supplier' => null, 'amount_minor' => 30_000, 'grant_id' => $grant->id], CarbonImmutable::parse('2026-11-03'), $admin));
+    $this->post($this->organizationUrl('water-now', "grants/{$grant->id}/agreement"))->assertSessionHasNoErrors();
+
+    $csv = $this->get($this->organizationUrl('water-now', "grants/{$grant->id}/financial-report"))->assertOk()
+        ->assertHeader('content-type', 'text/csv; charset=UTF-8')->streamedContent();
+    expect($csv)->toContain('"Funding GF/1",Awarded,USD,100000.00')
+        ->toContain('"Funding GF/1","Received (confirmed)",USD,0.00')
+        ->toContain('Paid,USD,300.00');
+    // No cell a spreadsheet would run as a formula.
+    $cells = collect(explode('
+', trim($csv)))->flatMap(fn (string $line) => str_getcsv($line, escape: ''));
+    expect($cells->filter(fn (?string $cell) => $cell !== null && ! is_numeric($cell) && preg_match('/^[=+\-@]/', $cell) === 1)->all())->toBe([]);
+    $this->get($this->organizationUrl('water-now', "grants/{$grant->id}"))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('funding.awardedMinor', 10_000_000)->where('funding.agreedMinor', null));
+
+    // The donor: funding in full, spending only once the grant shares it.
+    $this->actingAs($donor);
+    $url = $this->organizationUrl('global-fund', "beneficiaries/{$partnership->id}/grants/{$grant->id}/financial-report");
+    $donorCsv = $this->get($url)->assertOk()->streamedContent();
+    expect($donorCsv)->toContain('Awarded,USD,100000.00')->toContain('Paid,USD,'."\n")->not->toContain('300.00');
+
+    $this->actingAs($admin);
+    shareParts($grant, ['portal_spending' => true]);
+    $this->actingAs($donor);
+    expect($this->get($url)->assertOk()->streamedContent())->toContain('Paid,USD,300.00');
+
+    // No one else: another organization, or a grant of the recipient's that is not this donor's.
+    $other = $this->asTenant('water-now', fn () => Funder::query()->create(['name' => 'Other Fund', 'kind' => 'foundation']));
+    $this->actingAs($admin);
+    $notTheirs = beneficiaryGrant('water-now', 'OF/1', share: true, funderId: $other->id);
+    $this->actingAs($donor);
+    $this->get($this->organizationUrl('global-fund', "beneficiaries/{$partnership->id}/grants/{$notTheirs->id}/financial-report"))->assertNotFound();
+    $this->actingAsMember('other-org', ['grants.view', 'grants.manage']);
+    $this->get($this->organizationUrl('other-org', "beneficiaries/{$partnership->id}/grants/{$grant->id}/financial-report"))->assertNotFound();
+    $this->get($this->organizationUrl('other-org', "grants/{$grant->id}/financial-report"))->assertNotFound();
 });

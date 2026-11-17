@@ -16,6 +16,7 @@ Route::middleware('can:grants.view')->group(function () {
     Route::get('grants', [GrantController::class, 'index'])->name('grants.index');
     Route::get('grants/export', [GrantController::class, 'export'])->name('grants.export');
     Route::get('grants/{grant}', [GrantController::class, 'show'])->whereUuid('grant')->name('grants.show');
+    Route::get('grants/{grant}/financial-report', [GrantController::class, 'financialReport'])->whereUuid('grant')->name('grants.financial-report');
     Route::get('grants/{grant}/reports/{report}/documents/{document}', [GrantPortalController::class, 'document'])->whereUuid(['grant', 'report', 'document'])->scopeBindings()->name('grants.reports.documents.show');
 });
 

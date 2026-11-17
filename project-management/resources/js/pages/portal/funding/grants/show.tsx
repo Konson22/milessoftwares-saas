@@ -33,6 +33,30 @@ import {
     store as schedule,
 } from '@/routes/grants/disbursements';
 import { propose as proposeAgreement } from '@/routes/grants/agreement';
+import { financialReport } from '@/routes/grants';
+
+type FundingStage =
+    | 'awardedMinor'
+    | 'agreedMinor'
+    | 'scheduledMinor'
+    | 'requestedMinor'
+    | 'approvedMinor'
+    | 'sentMinor'
+    | 'disputedMinor'
+    | 'receivedMinor'
+    | 'notReceivedMinor';
+
+const FUNDING_STAGES: [FundingStage, string][] = [
+    ['awardedMinor', 'Awarded'],
+    ['agreedMinor', 'Agreed with the donor'],
+    ['scheduledMinor', 'Scheduled'],
+    ['requestedMinor', 'Requested'],
+    ['approvedMinor', 'Approved, not sent'],
+    ['sentMinor', 'Sent by the donor'],
+    ['disputedMinor', 'Disputed'],
+    ['receivedMinor', 'Received'],
+    ['notReceivedMinor', 'Not received yet'],
+];
 import {
     PaymentStep,
     RecipientAgreement,
@@ -104,6 +128,8 @@ type Props = {
     }[];
     /** Terms agreed with a donor on Tatook (App\Actions\GrantAgreements). */
     agreement: ComponentProps<typeof RecipientAgreement>['agreement'] | null;
+    /** App\Reports\GrantFinancialReport: the grant's money, one stage at a time. */
+    funding: Record<FundingStage, number | null>;
     reports: {
         id: string;
         title: string;
@@ -279,6 +305,7 @@ export default function GrantPage({
     allocations,
     disbursements,
     agreement,
+    funding,
     reports,
     amendments,
     projects,
@@ -830,6 +857,38 @@ export default function GrantPage({
                     />
                 </div>
             )}
+
+            <Panel className="mt-4">
+                <PanelHeader
+                    title="Money by stage"
+                    description="Each stage on its own: promised, asked for, sent by the donor, and received. The use of funds per project is in the report."
+                    actions={
+                        <Button variant="outline" size="sm" asChild>
+                            <a
+                                href={financialReport.url({
+                                    grant: grant.id,
+                                })}
+                            >
+                                Financial report (CSV)
+                            </a>
+                        </Button>
+                    }
+                />
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 px-4 py-3 text-sm sm:grid-cols-4">
+                    {FUNDING_STAGES.filter(
+                        ([key]) => funding[key] !== null,
+                    ).map(([key, label]) => (
+                        <div key={key}>
+                            <dt className="text-xs text-muted-foreground">
+                                {label}
+                            </dt>
+                            <dd className="tabular-nums">
+                                {money(funding[key] ?? 0)}
+                            </dd>
+                        </div>
+                    ))}
+                </dl>
+            </Panel>
 
             <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <Panel>
