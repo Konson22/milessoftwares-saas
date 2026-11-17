@@ -1,11 +1,11 @@
-import { Form, Head, Link } from "@inertiajs/react";
-import { PageHeader } from "@miles/ui/components/page-header";
-import { Panel, PanelBody } from "@miles/ui/components/panel";
-import { Button } from "@miles/ui/components/ui/button";
-import { Input } from "@miles/ui/components/ui/input";
-import { Field, invalid, Select } from "@/components/field";
-import { index, show, store, update } from "@/routes/projects";
-import type { Option } from "@/types";
+import { Form, Head, Link } from '@inertiajs/react';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelBody } from '@miles/ui/components/panel';
+import { Button } from '@miles/ui/components/ui/button';
+import { Input } from '@miles/ui/components/ui/input';
+import { Field, invalid, Select } from '@/components/field';
+import { index, show, store, update } from '@/routes/projects';
+import type { Option } from '@/types';
 
 type Project = {
     id: string;
@@ -20,7 +20,7 @@ type Project = {
     budget: string;
     hasBudgetLines: boolean;
     codeLocked: boolean;
-    visibility: "organization" | "team";
+    visibility: 'organization' | 'team';
 };
 
 /**
@@ -38,7 +38,7 @@ export default function ProjectForm({
     const action = project
         ? update.form({ project: project.id })
         : store.form();
-    const title = project ? `${project.code} ${project.name}` : "New project";
+    const title = project ? `${project.code} ${project.name}` : 'New project';
 
     return (
         <>
@@ -54,7 +54,7 @@ export default function ProjectForm({
                                     : index()
                             }
                         >
-                            ← {project ? project.code : "Projects"}
+                            ← {project ? project.code : 'Projects'}
                         </Link>
                     </Button>
                 }
@@ -72,7 +72,7 @@ export default function ProjectForm({
                                     hint={
                                         project?.codeLocked
                                             ? `Tasks are already numbered ${project.code}-1 and on, so the prefix stays.`
-                                            : "Used to number tasks, for example WEB-1. Leave blank to generate automatically."
+                                            : 'Used to number tasks, for example WEB-1. Leave blank to generate automatically.'
                                     }
                                 >
                                     <Input
@@ -82,7 +82,7 @@ export default function ProjectForm({
                                         className="uppercase"
                                         defaultValue={project?.code}
                                         readOnly={project?.codeLocked}
-                                        {...invalid("code", errors.code)}
+                                        {...invalid('code', errors.code)}
                                     />
                                 </Field>
                                 <Field
@@ -96,7 +96,7 @@ export default function ProjectForm({
                                         name="name"
                                         required
                                         defaultValue={project?.name}
-                                        {...invalid("name", errors.name)}
+                                        {...invalid('name', errors.name)}
                                     />
                                 </Field>
                                 <Field
@@ -110,7 +110,7 @@ export default function ProjectForm({
                                         name="description"
                                         rows={4}
                                         defaultValue={
-                                            project?.description ?? ""
+                                            project?.description ?? ''
                                         }
                                         className="w-full border border-input bg-card px-2.5 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
                                     />
@@ -123,7 +123,7 @@ export default function ProjectForm({
                                     <Input
                                         id="client"
                                         name="client"
-                                        defaultValue={project?.client ?? ""}
+                                        defaultValue={project?.client ?? ''}
                                     />
                                 </Field>
                                 {programmes.length > 0 && (
@@ -137,7 +137,7 @@ export default function ProjectForm({
                                             id="programme_id"
                                             name="programme_id"
                                             defaultValue={
-                                                project?.programmeId ?? ""
+                                                project?.programmeId ?? ''
                                             }
                                             placeholder="None"
                                             options={programmes}
@@ -153,7 +153,7 @@ export default function ProjectForm({
                                     <Select
                                         id="manager_id"
                                         name="manager_id"
-                                        defaultValue={project?.managerId ?? ""}
+                                        defaultValue={project?.managerId ?? ''}
                                         placeholder="Not yet chosen"
                                         options={people}
                                     />
@@ -167,7 +167,7 @@ export default function ProjectForm({
                                         id="start_on"
                                         name="start_on"
                                         type="date"
-                                        defaultValue={project?.startOn ?? ""}
+                                        defaultValue={project?.startOn ?? ''}
                                     />
                                 </Field>
                                 <Field
@@ -179,8 +179,8 @@ export default function ProjectForm({
                                         id="due_on"
                                         name="due_on"
                                         type="date"
-                                        defaultValue={project?.dueOn ?? ""}
-                                        {...invalid("due_on", errors.due_on)}
+                                        defaultValue={project?.dueOn ?? ''}
+                                        {...invalid('due_on', errors.due_on)}
                                     />
                                 </Field>
                                 <Field
@@ -195,16 +195,16 @@ export default function ProjectForm({
                                         name="visibility"
                                         defaultValue={
                                             project?.visibility ??
-                                            "organization"
+                                            'organization'
                                         }
                                         options={[
                                             {
-                                                value: "organization",
-                                                label: "Everyone in the organization who sees projects",
+                                                value: 'organization',
+                                                label: 'Everyone in the organization who sees projects',
                                             },
                                             {
-                                                value: "team",
-                                                label: "Team only",
+                                                value: 'team',
+                                                label: 'Team only',
                                             },
                                         ]}
                                     />
@@ -213,14 +213,14 @@ export default function ProjectForm({
                                     id="budget"
                                     label={
                                         project?.hasBudgetLines
-                                            ? "Budget"
-                                            : "Estimated budget"
+                                            ? 'Budget'
+                                            : 'Estimated budget'
                                     }
                                     error={errors.budget}
                                     hint={
                                         project?.hasBudgetLines
-                                            ? "The total of the latest budget version."
-                                            : "An estimate until a budget is broken into lines and approved."
+                                            ? 'The total of the latest budget version.'
+                                            : 'An estimate until a budget is broken into lines and approved.'
                                     }
                                 >
                                     <Input
@@ -228,13 +228,13 @@ export default function ProjectForm({
                                         name="budget"
                                         inputMode="decimal"
                                         readOnly={project?.hasBudgetLines}
-                                        defaultValue={project?.budget ?? ""}
-                                        {...invalid("budget", errors.budget)}
+                                        defaultValue={project?.budget ?? ''}
+                                        {...invalid('budget', errors.budget)}
                                     />
                                 </Field>
                                 <div className="sm:col-span-3">
                                     <Button type="submit" disabled={processing}>
-                                        {project ? "Save" : "Set up project"}
+                                        {project ? 'Save' : 'Set up project'}
                                     </Button>
                                 </div>
                             </>

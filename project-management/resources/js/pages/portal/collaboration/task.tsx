@@ -1,18 +1,18 @@
-import { Form, Link } from "@inertiajs/react";
-import { Panel, PanelBody, PanelHeader } from "@miles/ui/components/panel";
-import { Button } from "@miles/ui/components/ui/button";
-import { Field, Select } from "@/components/field";
-import type { AttachmentRow, WorkFrame } from "@/components/partner-work";
+import { Form, Link } from '@inertiajs/react';
+import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
+import { Button } from '@miles/ui/components/ui/button';
+import { Field, Select } from '@/components/field';
+import type { AttachmentRow, WorkFrame } from '@/components/partner-work';
 import {
     Attachments,
     Facts,
     TextArea,
     WorkPage,
-} from "@/components/partner-work";
-import { Priority, Status } from "@/components/status";
-import { formatDate } from "@/lib/status";
-import type { Option } from "@/types";
-import type { SharedTaskRow } from "./tasks";
+} from '@/components/partner-work';
+import { Priority, Status } from '@/components/status';
+import { formatDate } from '@/lib/status';
+import type { Option } from '@/types';
+import type { SharedTaskRow } from './tasks';
 
 type Comment = {
     id: string;
@@ -37,7 +37,7 @@ export default function SharedTask({
     urls,
 }: {
     frame: WorkFrame;
-    task: Omit<SharedTaskRow, "url"> & {
+    task: Omit<SharedTaskRow, 'url'> & {
         description: string | null;
         startOn: string | null;
     };
@@ -76,23 +76,23 @@ export default function SharedTask({
                 <PanelBody className="grid gap-4">
                     <Facts
                         items={[
-                            ["Status", <Status key="s" status={task.status} />],
+                            ['Status', <Status key="s" status={task.status} />],
                             [
-                                "Priority",
+                                'Priority',
                                 <Priority key="p" priority={task.priority} />,
                             ],
                             [
-                                "Who works on it",
+                                'Who works on it',
                                 task.givenTo ??
-                                    (task.shared ? "Shared with all" : "—"),
+                                    (task.shared ? 'Shared with all' : '—'),
                             ],
                             [
-                                "Due",
+                                'Due',
                                 task.dueOn
-                                    ? `${formatDate(task.dueOn)}${task.overdue ? " · overdue" : ""}`
-                                    : "—",
+                                    ? `${formatDate(task.dueOn)}${task.overdue ? ' · overdue' : ''}`
+                                    : '—',
                             ],
-                            ["Milestone", task.milestone ?? "—"],
+                            ['Milestone', task.milestone ?? '—'],
                         ]}
                     />
                     {task.description && (
@@ -127,8 +127,8 @@ export default function SharedTask({
                                             id="status"
                                             name="status"
                                             defaultValue={
-                                                task.status === "done"
-                                                    ? "review"
+                                                task.status === 'done'
+                                                    ? 'review'
                                                     : task.status
                                             }
                                             options={statuses}

@@ -1,12 +1,12 @@
-import { Head, Link, router } from "@inertiajs/react";
-import { Building2 } from "lucide-react";
-import { EmptyState } from "@miles/ui/components/empty-state";
-import { PageHeader } from "@miles/ui/components/page-header";
-import { Button } from "@miles/ui/components/ui/button";
-import { MarketplaceFilters } from "@/components/marketplace-filters";
-import { store as inviteOrganization } from "@/routes/beneficiaries/organizations";
-import { show, logo } from "@/routes/marketplace/organizations";
-import type { Option } from "@/types";
+import { Head, Link, router } from '@inertiajs/react';
+import { Building2 } from 'lucide-react';
+import { EmptyState } from '@miles/ui/components/empty-state';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Button } from '@miles/ui/components/ui/button';
+import { MarketplaceFilters } from '@/components/marketplace-filters';
+import { store as inviteOrganization } from '@/routes/beneficiaries/organizations';
+import { show, logo } from '@/routes/marketplace/organizations';
+import type { Option } from '@/types';
 
 type Organization = {
     slug: string;
@@ -60,8 +60,8 @@ export default function MarketplaceOrganizations({
             {organizations.length === 0 && others.length === 0 ? (
                 <EmptyState icon={Building2} title="No organizations match">
                     {filters.q
-                        ? "Check the spelling or try its workspace address. Not on Tatook yet? Invite the person who runs it by email from Beneficiaries."
-                        : "Search by name to find any organization on Tatook, or browse those that published a profile here."}
+                        ? 'Check the spelling or try its workspace address. Not on Tatook yet? Invite the person who runs it by email from Beneficiaries.'
+                        : 'Search by name to find any organization on Tatook, or browse those that published a profile here.'}
                 </EmptyState>
             ) : organizations.length === 0 ? null : (
                 <div className="grid gap-3 md:grid-cols-2">
@@ -92,7 +92,7 @@ export default function MarketplaceOrganizations({
                                         organization.countryCode,
                                     ]
                                         .filter(Boolean)
-                                        .join(" · ")}
+                                        .join(' · ')}
                                     {organization.listings > 0 &&
                                         ` · ${organization.listings} seeking funding`}
                                 </span>
@@ -103,7 +103,7 @@ export default function MarketplaceOrganizations({
                                 )}
                                 {organization.sectors.length > 0 && (
                                     <span className="text-xs text-muted-foreground">
-                                        {organization.sectors.join(", ")}
+                                        {organization.sectors.join(', ')}
                                     </span>
                                 )}
                             </span>
@@ -128,11 +128,11 @@ export default function MarketplaceOrganizations({
                                 <span className="min-w-0">
                                     <span className="font-medium">
                                         {other.name}
-                                    </span>{" "}
+                                    </span>{' '}
                                     <span className="text-xs text-muted-foreground">
                                         {[other.slug, other.countryCode]
                                             .filter(Boolean)
-                                            .join(" · ")}
+                                            .join(' · ')}
                                     </span>
                                 </span>
                                 {canInvite && (
@@ -144,7 +144,7 @@ export default function MarketplaceOrganizations({
                                                 inviteOrganization.url(),
                                                 {
                                                     organization_id: other.id,
-                                                    label: "implementer",
+                                                    label: 'implementer',
                                                 },
                                                 { preserveScroll: true },
                                             )

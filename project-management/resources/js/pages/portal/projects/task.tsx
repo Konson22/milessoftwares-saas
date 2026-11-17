@@ -1,42 +1,42 @@
-import { Form, Link, router } from "@inertiajs/react";
-import { Pencil, X } from "lucide-react";
-import { useState } from "react";
-import { Panel, PanelBody, PanelHeader } from "@miles/ui/components/panel";
-import { Button } from "@miles/ui/components/ui/button";
-import { Select } from "@/components/field";
-import { CommentBody, MentionTextarea } from "@/components/mention-textarea";
-import { ProjectFrame } from "@/components/project-frame";
-import { Priority, Status } from "@/components/status";
-import { TaskForm } from "@/components/task-form";
-import { TaskSharing } from "@/components/task-sharing";
-import type { TaskSharingProps } from "@/components/task-sharing";
+import { Form, Link, router } from '@inertiajs/react';
+import { Pencil, X } from 'lucide-react';
+import { useState } from 'react';
+import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
+import { Button } from '@miles/ui/components/ui/button';
+import { Select } from '@/components/field';
+import { CommentBody, MentionTextarea } from '@/components/mention-textarea';
+import { ProjectFrame } from '@/components/project-frame';
+import { Priority, Status } from '@/components/status';
+import { TaskForm } from '@/components/task-form';
+import { TaskSharing } from '@/components/task-sharing';
+import type { TaskSharingProps } from '@/components/task-sharing';
 import {
     AttachmentsPanel,
     ChecklistPanel,
     CollaboratorsPanel,
     SubtasksPanel,
-} from "@/components/task-parts";
+} from '@/components/task-parts';
 import type {
     Attachment,
     ChecklistItem,
     Subtask,
-} from "@/components/task-parts";
-import { formatMoney } from "@/lib/money";
+} from '@/components/task-parts';
+import { formatMoney } from '@/lib/money';
 import {
     formatDate,
     formatDateTime,
     formatMinutes,
     TASK_STATUSES,
-} from "@/lib/status";
-import { show as showList } from "@/routes/lists";
-import { board } from "@/routes/projects";
-import { move, show } from "@/routes/projects/tasks";
-import { store as comment } from "@/routes/projects/tasks/comments";
+} from '@/lib/status';
+import { show as showList } from '@/routes/lists';
+import { board } from '@/routes/projects';
+import { move, show } from '@/routes/projects/tasks';
+import { store as comment } from '@/routes/projects/tasks/comments';
 import {
     destroy as unlink,
     store as link,
-} from "@/routes/projects/tasks/dependencies";
-import type { Option, ProjectHeader, TaskCard, TaskChoices } from "@/types";
+} from '@/routes/projects/tasks/dependencies';
+import type { Option, ProjectHeader, TaskCard, TaskChoices } from '@/types';
 
 type Related = { id: string; number: string; title: string; status: string };
 
@@ -115,7 +115,7 @@ export default function TaskPage({
                     >
                         <span className="text-muted-foreground">
                             {item.number}
-                        </span>{" "}
+                        </span>{' '}
                         {item.title}
                     </Link>
                     <Status status={item.status} />
@@ -160,7 +160,7 @@ export default function TaskPage({
                                 <>
                                     <span className="text-muted-foreground">
                                         {task.number}
-                                    </span>{" "}
+                                    </span>{' '}
                                     {task.title}
                                 </>
                             }
@@ -196,7 +196,7 @@ export default function TaskPage({
                                 <>
                                     {task.parent && (
                                         <p className="mb-3 text-sm text-muted-foreground">
-                                            Subtask of{" "}
+                                            Subtask of{' '}
                                             <Link
                                                 href={show({
                                                     project: project.id,
@@ -204,7 +204,7 @@ export default function TaskPage({
                                                 })}
                                                 className="text-foreground hover:underline"
                                             >
-                                                {task.parent.number}{" "}
+                                                {task.parent.number}{' '}
                                                 {task.parent.title}
                                             </Link>
                                         </p>
@@ -276,7 +276,7 @@ export default function TaskPage({
                                                 Assignee
                                             </dt>
                                             <dd>
-                                                {task.assignee ?? "Unassigned"}
+                                                {task.assignee ?? 'Unassigned'}
                                             </dd>
                                         </div>
                                         <div>
@@ -286,17 +286,17 @@ export default function TaskPage({
                                             <dd
                                                 className={
                                                     task.overdue
-                                                        ? "font-medium text-destructive"
+                                                        ? 'font-medium text-destructive'
                                                         : undefined
                                                 }
                                             >
                                                 {task.startOn
                                                     ? formatDate(task.startOn)
-                                                    : "…"}{" "}
-                                                →{" "}
+                                                    : '…'}{' '}
+                                                →{' '}
                                                 {task.dueOn
                                                     ? formatDate(task.dueOn)
-                                                    : "…"}
+                                                    : '…'}
                                             </dd>
                                         </div>
                                         <div>
@@ -306,8 +306,8 @@ export default function TaskPage({
                                             <dd className="tabular-nums">
                                                 {task.estimateHours !== null
                                                     ? `${task.estimateHours} h`
-                                                    : "—"}{" "}
-                                                /{" "}
+                                                    : '—'}{' '}
+                                                /{' '}
                                                 {formatMinutes(
                                                     task.loggedMinutes,
                                                 )}
@@ -317,7 +317,7 @@ export default function TaskPage({
                                             <dt className="text-xs text-muted-foreground">
                                                 Milestone
                                             </dt>
-                                            <dd>{task.milestone ?? "—"}</dd>
+                                            <dd>{task.milestone ?? '—'}</dd>
                                         </div>
                                         <div>
                                             <dt className="text-xs text-muted-foreground">
@@ -342,7 +342,7 @@ export default function TaskPage({
                                     )}
                                     {task.completedAt && (
                                         <p className="mt-4 text-xs text-muted-foreground">
-                                            Done{" "}
+                                            Done{' '}
                                             {formatDateTime(task.completedAt)}
                                         </p>
                                     )}
@@ -356,7 +356,7 @@ export default function TaskPage({
                             route={route}
                             subtasks={task.subtaskList}
                             people={people}
-                            canAdd={editable && task.status !== "done"}
+                            canAdd={editable && task.status !== 'done'}
                         />
                     )}
 
@@ -369,7 +369,7 @@ export default function TaskPage({
                     <Panel className="overflow-visible">
                         <PanelHeader
                             title="Discussion"
-                            description={`${task.comments.length} comment${task.comments.length === 1 ? "" : "s"}`}
+                            description={`${task.comments.length} comment${task.comments.length === 1 ? '' : 's'}`}
                         />
                         <ul className="divide-y">
                             {task.comments.map((item) => (
@@ -377,7 +377,7 @@ export default function TaskPage({
                                     <p className="text-xs text-muted-foreground">
                                         <span className="font-medium text-foreground">
                                             {item.author}
-                                        </span>{" "}
+                                        </span>{' '}
                                         · {formatDateTime(item.at)}
                                     </p>
                                     <p className="mt-1 whitespace-pre-line">
@@ -521,7 +521,7 @@ export default function TaskPage({
                                         <span className="flex-1">
                                             {entry.person}
                                             <span className="text-xs text-muted-foreground">
-                                                {" "}
+                                                {' '}
                                                 · {formatDate(entry.workedOn)}
                                             </span>
                                         </span>

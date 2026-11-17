@@ -1,12 +1,12 @@
-import { Form, Head, Link, router, usePage } from "@inertiajs/react";
-import { Trash2 } from "lucide-react";
-import { useState, type ComponentProps, type ReactNode } from "react";
-import { PageHeader } from "@miles/ui/components/page-header";
-import { Panel, PanelBody, PanelHeader } from "@miles/ui/components/panel";
-import { StatCard } from "@miles/ui/components/stat-card";
-import { StatusBadge } from "@miles/ui/components/status-badge";
-import { Button } from "@miles/ui/components/ui/button";
-import { Input } from "@miles/ui/components/ui/input";
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
+import { Trash2 } from 'lucide-react';
+import { useState, type ComponentProps, type ReactNode } from 'react';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
+import { StatCard } from '@miles/ui/components/stat-card';
+import { StatusBadge } from '@miles/ui/components/status-badge';
+import { Button } from '@miles/ui/components/ui/button';
+import { Input } from '@miles/ui/components/ui/input';
 import {
     Table,
     TableBody,
@@ -14,40 +14,40 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from "@miles/ui/components/ui/table";
-import { Field, invalid, Select } from "@/components/field";
-import { formatMoney, toMajor } from "@/lib/money";
-import { formatDate, statusLabel, statusTone } from "@/lib/status";
-import { budget } from "@/routes/projects";
-import { apply, award, close, decline, edit, index } from "@/routes/grants";
+} from '@miles/ui/components/ui/table';
+import { Field, invalid, Select } from '@/components/field';
+import { formatMoney, toMajor } from '@/lib/money';
+import { formatDate, statusLabel, statusTone } from '@/lib/status';
+import { budget } from '@/routes/projects';
+import { apply, award, close, decline, edit, index } from '@/routes/grants';
 import {
     destroy as removeAllocation,
     store as allocate,
-} from "@/routes/grants/allocations";
-import { store as amend } from "@/routes/grants/amendments";
+} from '@/routes/grants/allocations';
+import { store as amend } from '@/routes/grants/amendments';
 import {
     confirm as confirmPayment,
     destroy as unschedule,
     receive,
     request as requestPayment,
     store as schedule,
-} from "@/routes/grants/disbursements";
-import { propose as proposeAgreement } from "@/routes/grants/agreement";
+} from '@/routes/grants/disbursements';
+import { propose as proposeAgreement } from '@/routes/grants/agreement';
 import {
     PaymentStep,
     RecipientAgreement,
     paymentDetail,
-} from "@/components/grant-agreement";
+} from '@/components/grant-agreement';
 import {
     DonorPortalPanel,
     type GrantPortal,
-} from "@/components/donor-portal-panel";
+} from '@/components/donor-portal-panel';
 import {
     destroy as removeReport,
     status as moveReport,
     store as addReport,
-} from "@/routes/grants/reports";
-import type { Option } from "@/types";
+} from '@/routes/grants/reports';
+import type { Option } from '@/types';
 
 type Grant = {
     id: string;
@@ -103,7 +103,7 @@ type Props = {
         disputeNote: string | null;
     }[];
     /** Terms agreed with a donor on Tatook (App\Actions\GrantAgreements). */
-    agreement: ComponentProps<typeof RecipientAgreement>["agreement"] | null;
+    agreement: ComponentProps<typeof RecipientAgreement>['agreement'] | null;
     reports: {
         id: string;
         title: string;
@@ -139,11 +139,11 @@ const keep = { preserveScroll: true };
 /** A form folded away behind a button until needed. */
 function Reveal({
     label,
-    variant = "outline",
+    variant = 'outline',
     children,
 }: {
     label: string;
-    variant?: "outline" | "default";
+    variant?: 'outline' | 'default';
     children: (close: () => void) => ReactNode;
 }) {
     const [open, setOpen] = useState(false);
@@ -168,7 +168,7 @@ function AgreedPaymentActions({
     today,
 }: {
     grantId: string;
-    payment: Props["disbursements"][number];
+    payment: Props['disbursements'][number];
     canAct: boolean;
     today: string;
 }) {
@@ -182,8 +182,8 @@ function AgreedPaymentActions({
                 <span className="text-xs text-muted-foreground">{detail}</span>
             )}
             {canAct &&
-                (payment.status === "planned" ||
-                    payment.status === "rejected") && (
+                (payment.status === 'planned' ||
+                    payment.status === 'rejected') && (
                     <>
                         <Button
                             size="sm"
@@ -206,7 +206,7 @@ function AgreedPaymentActions({
                         </Button>
                     </>
                 )}
-            {canAct && payment.status === "sent" && (
+            {canAct && payment.status === 'sent' && (
                 <>
                     <Button
                         size="sm"
@@ -292,9 +292,9 @@ export default function GrantPage({
     }>().props;
     const paymentError = pageErrors.disbursement ?? pageErrors.received_on;
     const money = (minor: number) => formatMoney(minor, grant.currency);
-    const active = grant.status === "active";
+    const active = grant.status === 'active';
     const manageActive = canManage && active;
-    const [projectId, setProjectId] = useState("");
+    const [projectId, setProjectId] = useState('');
     const chosenCurrency = projects.find(
         (project) => project.value === projectId,
     )?.currency;
@@ -338,7 +338,7 @@ export default function GrantPage({
             {canManage && (grant.pipeline || active) && (
                 <Panel className="mb-4">
                     <PanelBody className="flex flex-wrap items-start gap-2">
-                        {grant.status === "opportunity" && (
+                        {grant.status === 'opportunity' && (
                             <Button
                                 size="sm"
                                 variant="outline"
@@ -377,7 +377,7 @@ export default function GrantPage({
                                                             inputMode="decimal"
                                                             required
                                                             {...invalid(
-                                                                "award_amount",
+                                                                'award_amount',
                                                                 errors.amount,
                                                             )}
                                                         />
@@ -407,7 +407,7 @@ export default function GrantPage({
                                                             type="date"
                                                             defaultValue={
                                                                 grant.startOn ??
-                                                                ""
+                                                                ''
                                                             }
                                                         />
                                                     </Field>
@@ -422,7 +422,7 @@ export default function GrantPage({
                                                             type="date"
                                                             defaultValue={
                                                                 grant.endOn ??
-                                                                ""
+                                                                ''
                                                             }
                                                         />
                                                     </Field>
@@ -490,7 +490,7 @@ export default function GrantPage({
                                                                 grant.currency,
                                                             )}
                                                             {...invalid(
-                                                                "amend_amount",
+                                                                'amend_amount',
                                                                 errors.amount,
                                                             )}
                                                         />
@@ -506,7 +506,7 @@ export default function GrantPage({
                                                             type="date"
                                                             defaultValue={
                                                                 grant.endOn ??
-                                                                ""
+                                                                ''
                                                             }
                                                         />
                                                     </Field>
@@ -536,7 +536,7 @@ export default function GrantPage({
                                                             name="reason"
                                                             required
                                                             {...invalid(
-                                                                "amend_reason",
+                                                                'amend_reason',
                                                                 errors.reason,
                                                             )}
                                                         />
@@ -600,11 +600,11 @@ export default function GrantPage({
 
             <div className="grid gap-3 sm:grid-cols-3">
                 <StatCard
-                    label={grant.pipeline ? "Requested" : "Amount"}
+                    label={grant.pipeline ? 'Requested' : 'Amount'}
                     value={money(grant.amountMinor)}
                     hint={
                         grant.startOn || grant.endOn
-                            ? `${grant.startOn ? formatDate(grant.startOn) : "…"} – ${grant.endOn ? formatDate(grant.endOn) : "…"}`
+                            ? `${grant.startOn ? formatDate(grant.startOn) : '…'} – ${grant.endOn ? formatDate(grant.endOn) : '…'}`
                             : undefined
                     }
                 />
@@ -684,7 +684,7 @@ export default function GrantPage({
                                         {allocation.projectCurrency !==
                                             grant.currency && (
                                             <p className="text-xs text-muted-foreground">
-                                                at {allocation.exchangeRate}{" "}
+                                                at {allocation.exchangeRate}{' '}
                                                 {allocation.projectCurrency}/
                                                 {grant.currency}
                                             </p>
@@ -730,13 +730,13 @@ export default function GrantPage({
                 )}
                 {manageActive && projects.length > 0 ? (
                     <PanelBody
-                        className={allocations.length > 0 ? "border-t" : ""}
+                        className={allocations.length > 0 ? 'border-t' : ''}
                     >
                         <Form
                             {...allocate.form({ grant: grant.id })}
                             options={keep}
                             resetOnSuccess
-                            onSuccess={() => setProjectId("")}
+                            onSuccess={() => setProjectId('')}
                             className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr_auto] sm:items-end"
                         >
                             {({ errors, processing }) => (
@@ -768,7 +768,7 @@ export default function GrantPage({
                                             inputMode="decimal"
                                             required
                                             {...invalid(
-                                                "allocation_amount",
+                                                'allocation_amount',
                                                 errors.amount,
                                             )}
                                         />
@@ -785,7 +785,7 @@ export default function GrantPage({
                                                 inputMode="decimal"
                                                 required
                                                 {...invalid(
-                                                    "exchange_rate",
+                                                    'exchange_rate',
                                                     errors.exchange_rate,
                                                 )}
                                             />
@@ -813,8 +813,8 @@ export default function GrantPage({
                     allocations.length === 0 && (
                         <p className="px-3 py-3 text-sm text-muted-foreground">
                             {active
-                                ? "Not allocated to a project yet."
-                                : "Allocated once the grant is awarded."}
+                                ? 'Not allocated to a project yet.'
+                                : 'Allocated once the grant is awarded.'}
                         </p>
                     )
                 )}
@@ -864,7 +864,7 @@ export default function GrantPage({
                                     <span
                                         className={
                                             payment.overdue
-                                                ? "text-destructive"
+                                                ? 'text-destructive'
                                                 : undefined
                                         }
                                     >
@@ -872,7 +872,7 @@ export default function GrantPage({
                                     </span>
                                     {payment.note && (
                                         <span className="text-muted-foreground">
-                                            {" "}
+                                            {' '}
                                             · {payment.note}
                                         </span>
                                     )}
@@ -890,7 +890,7 @@ export default function GrantPage({
                                 ) : payment.receivedOn ? (
                                     <span className="flex items-center gap-2">
                                         <StatusBadge tone="success">
-                                            Received{" "}
+                                            Received{' '}
                                             {formatDate(payment.receivedOn)}
                                         </StatusBadge>
                                     </span>
@@ -969,7 +969,7 @@ export default function GrantPage({
                                                 inputMode="decimal"
                                                 required
                                                 {...invalid(
-                                                    "payment_amount",
+                                                    'payment_amount',
                                                     errors.amount,
                                                 )}
                                             />
@@ -1005,7 +1005,7 @@ export default function GrantPage({
                                     <span className="flex-1 font-medium">
                                         {report.title}
                                         <span className="font-normal text-muted-foreground">
-                                            {" "}
+                                            {' '}
                                             · {report.kind}
                                         </span>
                                     </span>
@@ -1018,11 +1018,11 @@ export default function GrantPage({
                                 <p
                                     className={
                                         report.overdue
-                                            ? "text-xs text-destructive"
-                                            : "text-xs text-muted-foreground"
+                                            ? 'text-xs text-destructive'
+                                            : 'text-xs text-muted-foreground'
                                     }
                                 >
-                                    {report.overdue ? "Was due" : "Due"}{" "}
+                                    {report.overdue ? 'Was due' : 'Due'}{' '}
                                     {formatDate(report.dueOn)}
                                     {report.submittedOn &&
                                         ` · submitted ${formatDate(report.submittedOn)}`}
@@ -1052,7 +1052,7 @@ export default function GrantPage({
                                                 {next.label}
                                             </Button>
                                         ))}
-                                        {report.status === "due" &&
+                                        {report.status === 'due' &&
                                             !report.submittedOn && (
                                                 <Button
                                                     size="sm"
@@ -1076,7 +1076,7 @@ export default function GrantPage({
                             </li>
                         ))}
                     </ul>
-                    {canManage && (active || grant.status === "applied") && (
+                    {canManage && (active || grant.status === 'applied') && (
                         <PanelBody className="border-t">
                             <Form
                                 {...addReport.form({ grant: grant.id })}
@@ -1154,28 +1154,28 @@ export default function GrantPage({
                             >
                                 <span className="font-medium">
                                     No. {amendment.number}
-                                </span>{" "}
+                                </span>{' '}
                                 <span className="text-muted-foreground">
-                                    effective{" "}
-                                    {formatDate(amendment.effectiveOn)} ·{" "}
+                                    effective{' '}
+                                    {formatDate(amendment.effectiveOn)} ·{' '}
                                     {amendment.recordedBy}
                                 </span>
                                 <p>
-                                    {money(amendment.amountBeforeMinor)} →{" "}
+                                    {money(amendment.amountBeforeMinor)} →{' '}
                                     {money(amendment.amountAfterMinor)}
                                     {amendment.endBefore !==
                                         amendment.endAfter && (
                                         <>
-                                            {" · ends "}
+                                            {' · ends '}
                                             {amendment.endBefore
                                                 ? formatDate(
                                                       amendment.endBefore,
                                                   )
-                                                : "open"}{" "}
-                                            →{" "}
+                                                : 'open'}{' '}
+                                            →{' '}
                                             {amendment.endAfter
                                                 ? formatDate(amendment.endAfter)
-                                                : "open"}
+                                                : 'open'}
                                         </>
                                     )}
                                 </p>
@@ -1190,7 +1190,7 @@ export default function GrantPage({
 
             <DonorPortalPanel
                 grantId={grant.id}
-                visible={grant.status === "active" || grant.status === "closed"}
+                visible={grant.status === 'active' || grant.status === 'closed'}
                 canManage={canManage}
                 portal={portal}
             />

@@ -1,7 +1,7 @@
-import { Link } from "@inertiajs/react";
-import { ListChecks } from "lucide-react";
-import { EmptyState } from "@miles/ui/components/empty-state";
-import { Panel, PanelHeader } from "@miles/ui/components/panel";
+import { Link } from '@inertiajs/react';
+import { ListChecks } from 'lucide-react';
+import { EmptyState } from '@miles/ui/components/empty-state';
+import { Panel, PanelHeader } from '@miles/ui/components/panel';
 import {
     Table,
     TableBody,
@@ -9,11 +9,11 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from "@miles/ui/components/ui/table";
-import type { WorkFrame } from "@/components/partner-work";
-import { WorkPage } from "@/components/partner-work";
-import { Status } from "@/components/status";
-import { formatDate } from "@/lib/status";
+} from '@miles/ui/components/ui/table';
+import type { WorkFrame } from '@/components/partner-work';
+import { WorkPage } from '@/components/partner-work';
+import { Status } from '@/components/status';
+import { formatDate } from '@/lib/status';
 
 export type SharedTaskRow = {
     id: string;
@@ -41,7 +41,7 @@ export default function SharedTasks({
     frame: WorkFrame;
     tasks: SharedTaskRow[];
 }) {
-    const owner = frame.side === "owner";
+    const owner = frame.side === 'owner';
 
     return (
         <WorkPage frame={frame} title="Shared tasks">
@@ -50,15 +50,15 @@ export default function SharedTasks({
                     title="Shared tasks"
                     description={
                         owner
-                            ? "Tasks you shared with the organizations taking part, or gave to one of them. Share a task from its own page. Only you mark one done, once you have reviewed it."
-                            : "Tasks the project owner shared with you, or gave to your organization. Move yours along and send it for review when it is done."
+                            ? 'Tasks you shared with the organizations taking part, or gave to one of them. Share a task from its own page. Only you mark one done, once you have reviewed it.'
+                            : 'Tasks the project owner shared with you, or gave to your organization. Move yours along and send it for review when it is done.'
                     }
                 />
                 {tasks.length === 0 ? (
                     <EmptyState icon={ListChecks} title="No shared tasks">
                         {owner
-                            ? "Open a task and choose who it is shared with."
-                            : "Nothing has been shared with you yet."}
+                            ? 'Open a task and choose who it is shared with.'
+                            : 'Nothing has been shared with you yet.'}
                     </EmptyState>
                 ) : (
                     <Table>
@@ -89,16 +89,16 @@ export default function SharedTasks({
                                     <TableCell className="text-sm">
                                         {task.givenTo ??
                                             (task.shared
-                                                ? "Shared with all"
-                                                : "—")}
+                                                ? 'Shared with all'
+                                                : '—')}
                                     </TableCell>
                                     <TableCell
-                                        className={`text-sm ${task.overdue ? "text-destructive" : ""}`}
+                                        className={`text-sm ${task.overdue ? 'text-destructive' : ''}`}
                                     >
                                         {task.dueOn
                                             ? formatDate(task.dueOn)
-                                            : "—"}
-                                        {task.overdue && " · overdue"}
+                                            : '—'}
+                                        {task.overdue && ' · overdue'}
                                     </TableCell>
                                     <TableCell>
                                         <Status status={task.status} />

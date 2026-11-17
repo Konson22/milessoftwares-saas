@@ -1,8 +1,8 @@
-import { Form, Link } from "@inertiajs/react";
-import { Panel, PanelBody, PanelHeader } from "@miles/ui/components/panel";
-import { Button } from "@miles/ui/components/ui/button";
-import { Select } from "@/components/field";
-import type { Option } from "@/types";
+import { Form, Link } from '@inertiajs/react';
+import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
+import { Button } from '@miles/ui/components/ui/button';
+import { Select } from '@/components/field';
+import type { Option } from '@/types';
 
 export type TaskSharingProps = {
     shared: boolean;
@@ -23,8 +23,8 @@ export function TaskSharing({ sharing }: { sharing: TaskSharingProps }) {
     const current = sharing.participantId
         ? `give:${sharing.participantId}`
         : sharing.shared
-          ? "shared"
-          : "internal";
+          ? 'shared'
+          : 'internal';
 
     return (
         <Panel>
@@ -35,10 +35,10 @@ export function TaskSharing({ sharing }: { sharing: TaskSharingProps }) {
             <PanelBody className="grid gap-3 text-sm">
                 <p>
                     {sharing.givenTo
-                        ? `Given to ${sharing.givenTo}${sharing.shared ? ", and shared with all partners" : ""}.`
+                        ? `Given to ${sharing.givenTo}${sharing.shared ? ', and shared with all partners' : ''}.`
                         : sharing.shared
-                          ? "Shared with every partner on the project."
-                          : "Internal: no partner sees it."}
+                          ? 'Shared with every partner on the project.'
+                          : 'Internal: no partner sees it.'}
                 </p>
                 {sharing.givenTo && !sharing.givenToActive && (
                     <p className="text-destructive">
@@ -52,11 +52,11 @@ export function TaskSharing({ sharing }: { sharing: TaskSharingProps }) {
                         method="put"
                         options={{ preserveScroll: true }}
                         transform={(data) => {
-                            const choice = String(data.choice ?? "internal");
+                            const choice = String(data.choice ?? 'internal');
 
                             return {
-                                shared: choice === "shared" ? "1" : "0",
-                                participant_id: choice.startsWith("give:")
+                                shared: choice === 'shared' ? '1' : '0',
+                                participant_id: choice.startsWith('give:')
                                     ? choice.slice(5)
                                     : null,
                             };
@@ -71,12 +71,12 @@ export function TaskSharing({ sharing }: { sharing: TaskSharingProps }) {
                                     defaultValue={current}
                                     options={[
                                         {
-                                            value: "internal",
-                                            label: "Internal",
+                                            value: 'internal',
+                                            label: 'Internal',
                                         },
                                         {
-                                            value: "shared",
-                                            label: "Shared with all partners",
+                                            value: 'shared',
+                                            label: 'Shared with all partners',
                                         },
                                         ...sharing.participants.map(
                                             (option) => ({

@@ -1,10 +1,10 @@
-import { Form } from "@inertiajs/react";
-import { useState } from "react";
-import { Panel, PanelBody, PanelHeader } from "@miles/ui/components/panel";
-import { StatusBadge } from "@miles/ui/components/status-badge";
-import { Button } from "@miles/ui/components/ui/button";
-import { Field } from "@/components/field";
-import { formatDate } from "@/lib/status";
+import { Form } from '@inertiajs/react';
+import { useState } from 'react';
+import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
+import { StatusBadge } from '@miles/ui/components/status-badge';
+import { Button } from '@miles/ui/components/ui/button';
+import { Field } from '@/components/field';
+import { formatDate } from '@/lib/status';
 
 /**
  * The steps of a grant payment agreed between two organizations on Tatook
@@ -15,32 +15,32 @@ export const PAYMENT_STEPS: Record<
     string,
     {
         label: string;
-        tone: "neutral" | "info" | "success" | "warning" | "danger";
+        tone: 'neutral' | 'info' | 'success' | 'warning' | 'danger';
     }
 > = {
-    planned: { label: "Planned", tone: "neutral" },
-    requested: { label: "Requested", tone: "info" },
-    approved: { label: "Approved", tone: "info" },
-    rejected: { label: "Rejected", tone: "danger" },
-    sent: { label: "Sent by donor", tone: "warning" },
-    received: { label: "Received", tone: "success" },
-    disputed: { label: "Disputed", tone: "danger" },
+    planned: { label: 'Planned', tone: 'neutral' },
+    requested: { label: 'Requested', tone: 'info' },
+    approved: { label: 'Approved', tone: 'info' },
+    rejected: { label: 'Rejected', tone: 'danger' },
+    sent: { label: 'Sent by donor', tone: 'warning' },
+    received: { label: 'Received', tone: 'success' },
+    disputed: { label: 'Disputed', tone: 'danger' },
 };
 
 export function PaymentStep({ status }: { status: string }) {
-    const step = PAYMENT_STEPS[status] ?? { label: status, tone: "neutral" };
+    const step = PAYMENT_STEPS[status] ?? { label: status, tone: 'neutral' };
 
     return <StatusBadge tone={step.tone}>{step.label}</StatusBadge>;
 }
 
 export const AGREEMENT_STEPS: Record<string, string> = {
-    proposed: "Waiting for the donor",
-    approved: "Approved by the donor",
-    declined: "Declined by the donor",
+    proposed: 'Waiting for the donor',
+    approved: 'Approved by the donor',
+    declined: 'Declined by the donor',
 };
 
 const textareaClass =
-    "w-full rounded-md border bg-transparent px-3 py-2 text-sm";
+    'w-full rounded-md border bg-transparent px-3 py-2 text-sm';
 
 /** The donor's decision on terms proposed to it. */
 export function AgreementDecision({
@@ -115,7 +115,7 @@ export function DonorPaymentActions({
     const [rejecting, setRejecting] = useState(false);
     const today = new Date().toISOString().slice(0, 10);
 
-    if (payment.status === "requested") {
+    if (payment.status === 'requested') {
         return (
             <Form
                 action={`${base}/payments/${payment.id}/decision`}
@@ -186,7 +186,7 @@ export function DonorPaymentActions({
         );
     }
 
-    if (payment.status === "approved" || payment.status === "disputed") {
+    if (payment.status === 'approved' || payment.status === 'disputed') {
         return (
             <Form
                 action={`${base}/payments/${payment.id}/sent`}
@@ -252,14 +252,14 @@ export function paymentDetail(payment: {
     if (payment.receivedOn) {
         return `Received ${formatDate(payment.receivedOn)}`;
     }
-    if (payment.status === "sent" && payment.sentOn) {
-        return `Sent ${formatDate(payment.sentOn)}${payment.sentReference ? `, reference ${payment.sentReference}` : ""}`;
+    if (payment.status === 'sent' && payment.sentOn) {
+        return `Sent ${formatDate(payment.sentOn)}${payment.sentReference ? `, reference ${payment.sentReference}` : ''}`;
     }
-    if (payment.status === "disputed") {
-        return `Disputed: ${payment.disputeNote ?? ""}`;
+    if (payment.status === 'disputed') {
+        return `Disputed: ${payment.disputeNote ?? ''}`;
     }
-    if (payment.status === "rejected") {
-        return `Rejected: ${payment.decisionNote ?? ""}`;
+    if (payment.status === 'rejected') {
+        return `Rejected: ${payment.decisionNote ?? ''}`;
     }
 
     return null;
@@ -295,7 +295,7 @@ export function RecipientAgreement({
             <PanelBody className="grid gap-2 text-sm">
                 <p>
                     {agreement.status === null
-                        ? "Not proposed yet."
+                        ? 'Not proposed yet.'
                         : AGREEMENT_STEPS[agreement.status]}
                     {agreement.approvedMinor !== null &&
                         ` · ${money(agreement.approvedMinor)} approved, ${money(agreement.committedMinor)} requested so far`}
@@ -338,8 +338,8 @@ export function RecipientAgreement({
                                         disabled={processing}
                                     >
                                         {agreement.status === null
-                                            ? "Send the terms for approval"
-                                            : "Propose the terms again"}
+                                            ? 'Send the terms for approval'
+                                            : 'Propose the terms again'}
                                     </Button>
                                 </div>
                             </>

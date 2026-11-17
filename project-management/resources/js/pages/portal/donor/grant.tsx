@@ -1,10 +1,10 @@
-import { Form, Head, Link, usePage } from "@inertiajs/react";
-import { useState } from "react";
-import { PageHeader } from "@miles/ui/components/page-header";
-import { Panel, PanelBody, PanelHeader } from "@miles/ui/components/panel";
-import { StatCard } from "@miles/ui/components/stat-card";
-import { StatusBadge } from "@miles/ui/components/status-badge";
-import { Button } from "@miles/ui/components/ui/button";
+import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { useState } from 'react';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
+import { StatCard } from '@miles/ui/components/stat-card';
+import { StatusBadge } from '@miles/ui/components/status-badge';
+import { Button } from '@miles/ui/components/ui/button';
 import {
     Table,
     TableBody,
@@ -12,22 +12,22 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from "@miles/ui/components/ui/table";
-import { Field } from "@/components/field";
+} from '@miles/ui/components/ui/table';
+import { Field } from '@/components/field';
 import {
     AGREEMENT_STEPS,
     AgreementDecision,
     DonorPaymentActions,
     PaymentStep,
     paymentDetail,
-} from "@/components/grant-agreement";
-import { formatMoney } from "@/lib/money";
+} from '@/components/grant-agreement';
+import { formatMoney } from '@/lib/money';
 import {
     formatDate,
     formatDateTime,
     statusLabel,
     statusTone,
-} from "@/lib/status";
+} from '@/lib/status';
 
 type Report = {
     id: string;
@@ -296,7 +296,7 @@ function ProjectPanel({ project }: { project: Project }) {
                                         <span>{milestone.name}</span>
                                         <span className="text-muted-foreground">
                                             {milestone.reached
-                                                ? "Reached"
+                                                ? 'Reached'
                                                 : `Due ${formatDate(milestone.dueOn)}`}
                                         </span>
                                     </li>
@@ -322,12 +322,12 @@ function ProjectPanel({ project }: { project: Project }) {
                                         <span>
                                             <span className="text-muted-foreground">
                                                 {task.number}
-                                            </span>{" "}
+                                            </span>{' '}
                                             {task.title}
                                         </span>
                                         <span className="shrink-0 text-muted-foreground">
                                             {statusLabel(task.status)}
-                                            {task.status !== "done" &&
+                                            {task.status !== 'done' &&
                                                 task.dueOn &&
                                                 `, due ${formatDate(task.dueOn)}`}
                                         </span>
@@ -363,11 +363,11 @@ function ProjectPanel({ project }: { project: Project }) {
                             Spending on this grant
                         </h3>
                         <p className="text-xs text-muted-foreground">
-                            {money(project.spending.paidMinor)} paid,{" "}
+                            {money(project.spending.paidMinor)} paid,{' '}
                             {project.spending.provenance?.paidStatus ===
-                            "posted"
-                                ? "posted in Finance"
-                                : "as recorded by the organization, not verified by Finance"}
+                            'posted'
+                                ? 'posted in Finance'
+                                : 'as recorded by the organization, not verified by Finance'}
                             .
                         </p>
                         {project.spending.lines.length > 0 && (
@@ -391,7 +391,7 @@ function ProjectPanel({ project }: { project: Project }) {
                                                         ? formatDate(
                                                               line.paidOn,
                                                           )
-                                                        : "Not dated"}
+                                                        : 'Not dated'}
                                                 </TableCell>
                                                 <TableCell>
                                                     {line.category}
@@ -474,7 +474,7 @@ export default function DonorGrant({
                 title={`${grant.reference} ${grant.title}`}
                 description={
                     grant.startOn
-                        ? `${formatDate(grant.startOn)}${grant.endOn ? ` to ${formatDate(grant.endOn)}` : ""}`
+                        ? `${formatDate(grant.startOn)}${grant.endOn ? ` to ${formatDate(grant.endOn)}` : ''}`
                         : undefined
                 }
                 actions={
@@ -529,10 +529,10 @@ export default function DonorGrant({
                                 “{agreement.note}”
                             </p>
                         )}
-                        {agreement.status === "proposed" && canAgree && (
+                        {agreement.status === 'proposed' && canAgree && (
                             <AgreementDecision
                                 action={`${base}/agreement/decision`}
-                                proposed={`${money(agreement.proposedMinor)}${agreement.endOn ? `, ending ${formatDate(agreement.endOn)}` : ""}`}
+                                proposed={`${money(agreement.proposedMinor)}${agreement.endOn ? `, ending ${formatDate(agreement.endOn)}` : ''}`}
                             />
                         )}
                     </PanelBody>
@@ -573,7 +573,7 @@ export default function DonorGrant({
                                 <li key={payment.id}>
                                     <span className="flex justify-between gap-2">
                                         <span>
-                                            Due {formatDate(payment.dueOn)}{" "}
+                                            Due {formatDate(payment.dueOn)}{' '}
                                             {agreement ? (
                                                 <PaymentStep
                                                     status={payment.status}
@@ -582,7 +582,7 @@ export default function DonorGrant({
                                                 <span className="text-muted-foreground">
                                                     {payment.receivedOn
                                                         ? `, received ${formatDate(payment.receivedOn)}`
-                                                        : ", not received yet"}
+                                                        : ', not received yet'}
                                                 </span>
                                             )}
                                         </span>
@@ -619,7 +619,7 @@ export default function DonorGrant({
                                     className="flex justify-between gap-2"
                                 >
                                     <span>
-                                        Amendment {amendment.number}, from{" "}
+                                        Amendment {amendment.number}, from{' '}
                                         {formatDate(amendment.effectiveOn)}
                                         {amendment.endAfter &&
                                             `, ending ${formatDate(amendment.endAfter)}`}
@@ -650,7 +650,7 @@ export default function DonorGrant({
                         {messages.map((message) => (
                             <li key={message.id}>
                                 <p className="text-xs text-muted-foreground">
-                                    {message.author},{" "}
+                                    {message.author},{' '}
                                     {formatDateTime(message.at)}
                                 </p>
                                 <p className="whitespace-pre-wrap">

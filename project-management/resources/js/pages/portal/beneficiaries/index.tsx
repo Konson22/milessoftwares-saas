@@ -1,10 +1,10 @@
-import { Form, Head, Link, router } from "@inertiajs/react";
-import { useState } from "react";
-import { PageHeader } from "@miles/ui/components/page-header";
-import { Panel, PanelBody, PanelHeader } from "@miles/ui/components/panel";
-import { StatusBadge } from "@miles/ui/components/status-badge";
-import { Button } from "@miles/ui/components/ui/button";
-import { Input } from "@miles/ui/components/ui/input";
+import { Form, Head, Link, router } from '@inertiajs/react';
+import { useState } from 'react';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
+import { StatusBadge } from '@miles/ui/components/status-badge';
+import { Button } from '@miles/ui/components/ui/button';
+import { Input } from '@miles/ui/components/ui/input';
 import {
     Table,
     TableBody,
@@ -12,21 +12,21 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from "@miles/ui/components/ui/table";
-import { OrganizationSearch } from "@/components/collaboration";
-import { Field, Select, invalid } from "@/components/field";
-import { useCan } from "@/lib/access";
-import { formatDate } from "@/lib/status";
-import { destroy, resend, show, store } from "@/routes/beneficiaries";
-import { store as inviteOrganization } from "@/routes/beneficiaries/organizations";
-import { store as createWorkspace } from "@/routes/beneficiaries/workspaces";
+} from '@miles/ui/components/ui/table';
+import { OrganizationSearch } from '@/components/collaboration';
+import { Field, Select, invalid } from '@/components/field';
+import { useCan } from '@/lib/access';
+import { formatDate } from '@/lib/status';
+import { destroy, resend, show, store } from '@/routes/beneficiaries';
+import { store as inviteOrganization } from '@/routes/beneficiaries/organizations';
+import { store as createWorkspace } from '@/routes/beneficiaries/workspaces';
 
 type Partnership = {
     id: string;
     name: string;
     label: string;
     email: string | null;
-    status: "connected" | "invited" | "expired" | "declined";
+    status: 'connected' | 'invited' | 'expired' | 'declined';
     direct: boolean;
     /** A workspace you created, waiting to be claimed: its address. */
     created: string | null;
@@ -37,11 +37,11 @@ type Partnership = {
 type Option = { value: string; label: string };
 
 const statuses = {
-    connected: { label: "Connected", tone: "success" },
-    invited: { label: "Invitation sent", tone: "info" },
-    awaiting: { label: "Waiting to be claimed", tone: "info" },
-    expired: { label: "Invitation expired", tone: "warning" },
-    declined: { label: "Declined", tone: "danger" },
+    connected: { label: 'Connected', tone: 'success' },
+    invited: { label: 'Invitation sent', tone: 'info' },
+    awaiting: { label: 'Waiting to be claimed', tone: 'info' },
+    expired: { label: 'Invitation expired', tone: 'warning' },
+    declined: { label: 'Declined', tone: 'danger' },
 } as const;
 
 const keep = { preserveScroll: true };
@@ -62,11 +62,11 @@ export default function Beneficiaries({
 }) {
     const can = useCan();
     // Invite them to set up (or connect) their workspace, or create it for them.
-    const [mode, setMode] = useState<"find" | "invite" | "create">("find");
+    const [mode, setMode] = useState<'find' | 'invite' | 'create'>('find');
     const badge = (partnership: Partnership) =>
         statuses[
-            partnership.status === "invited" && partnership.created
-                ? "awaiting"
+            partnership.status === 'invited' && partnership.created
+                ? 'awaiting'
                 : partnership.status
         ];
 
@@ -83,8 +83,8 @@ export default function Beneficiaries({
                     <PanelBody>
                         <p className="text-sm text-muted-foreground">
                             Nobody yet.
-                            {can("organization.manage") &&
-                                " Invite the first one below, or create their workspace."}
+                            {can('organization.manage') &&
+                                ' Invite the first one below, or create their workspace.'}
                         </p>
                     </PanelBody>
                 ) : (
@@ -104,7 +104,7 @@ export default function Beneficiaries({
                             {partnerships.map((partnership) => (
                                 <TableRow key={partnership.id}>
                                     <TableCell>
-                                        {partnership.status === "connected" ? (
+                                        {partnership.status === 'connected' ? (
                                             <Link
                                                 href={show({
                                                     partnership: partnership.id,
@@ -125,14 +125,14 @@ export default function Beneficiaries({
                                         )}
                                         {partnership.direct &&
                                             partnership.status !==
-                                                "connected" && (
+                                                'connected' && (
                                                 <span className="block text-xs text-muted-foreground">
                                                     Invited on the platform
                                                 </span>
                                             )}
                                         {partnership.created && (
                                             <span className="block text-xs text-muted-foreground">
-                                                Workspace created:{" "}
+                                                Workspace created:{' '}
                                                 {partnership.created}
                                             </span>
                                         )}
@@ -144,10 +144,10 @@ export default function Beneficiaries({
                                         >
                                             {badge(partnership).label}
                                         </StatusBadge>
-                                        {partnership.status === "invited" &&
+                                        {partnership.status === 'invited' &&
                                             partnership.expiresOn && (
                                                 <span className="block text-xs text-muted-foreground">
-                                                    Until{" "}
+                                                    Until{' '}
                                                     {formatDate(
                                                         partnership.expiresOn,
                                                     )}
@@ -155,16 +155,16 @@ export default function Beneficiaries({
                                             )}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
-                                        {partnership.status === "connected"
+                                        {partnership.status === 'connected'
                                             ? partnership.grants
-                                            : ""}
+                                            : ''}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        {partnership.status !== "connected" &&
-                                            can("organization.manage") && (
+                                        {partnership.status !== 'connected' &&
+                                            can('organization.manage') && (
                                                 <span className="flex justify-end gap-2">
                                                     {partnership.status !==
-                                                        "declined" && (
+                                                        'declined' && (
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
@@ -207,20 +207,20 @@ export default function Beneficiaries({
                 )}
             </Panel>
 
-            {can("organization.manage") && (
+            {can('organization.manage') && (
                 <Panel className="mt-6">
                     <PanelHeader
                         title={
-                            mode === "create"
-                                ? "Create an organization"
-                                : "Invite an organization"
+                            mode === 'create'
+                                ? 'Create an organization'
+                                : 'Invite an organization'
                         }
                         description={
-                            mode === "find"
-                                ? "Find an organization already on Tatook by its name or workspace address. Its administrators accept or decline; nothing connects until they do."
-                                : mode === "invite"
-                                  ? "Name the organization and the person who will run it. They get a link to set it up, or to connect the workspace they already have, and then invite their own team. Nothing connects until they accept."
-                                  : "You set up their workspace now; the person who will run it gets a link to claim it and becomes its owner. You have no access to it: it connects to you when they open it, and shares only what they choose, grant by grant."
+                            mode === 'find'
+                                ? 'Find an organization already on Tatook by its name or workspace address. Its administrators accept or decline; nothing connects until they do.'
+                                : mode === 'invite'
+                                  ? 'Name the organization and the person who will run it. They get a link to set it up, or to connect the workspace they already have, and then invite their own team. Nothing connects until they accept.'
+                                  : 'You set up their workspace now; the person who will run it gets a link to claim it and becomes its owner. You have no access to it: it connects to you when they open it, and shares only what they choose, grant by grant.'
                         }
                     />
                     <PanelBody>
@@ -231,9 +231,9 @@ export default function Beneficiaries({
                         >
                             {(
                                 [
-                                    ["find", "Already on Tatook"],
-                                    ["invite", "Invite by email"],
-                                    ["create", "Create their workspace"],
+                                    ['find', 'Already on Tatook'],
+                                    ['invite', 'Invite by email'],
+                                    ['create', 'Create their workspace'],
                                 ] as const
                             ).map(([value, text]) => (
                                 <button
@@ -244,23 +244,23 @@ export default function Beneficiaries({
                                     onClick={() => setMode(value)}
                                     className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
                                         mode === value
-                                            ? "bg-primary text-primary-foreground"
-                                            : "text-muted-foreground hover:text-foreground"
+                                            ? 'bg-primary text-primary-foreground'
+                                            : 'text-muted-foreground hover:text-foreground'
                                     }`}
                                 >
                                     {text}
                                 </button>
                             ))}
                         </div>
-                        {mode === "find" ? (
+                        {mode === 'find' ? (
                             <FindOrganization
                                 labels={labels}
-                                onInviteByEmail={() => setMode("invite")}
+                                onInviteByEmail={() => setMode('invite')}
                             />
                         ) : (
                             <Form
                                 key={mode}
-                                {...(mode === "invite"
+                                {...(mode === 'invite'
                                     ? store.form()
                                     : createWorkspace.form())}
                                 options={keep}
@@ -279,7 +279,7 @@ export default function Beneficiaries({
                                                 name="name"
                                                 required
                                                 {...invalid(
-                                                    "name",
+                                                    'name',
                                                     errors.name,
                                                 )}
                                             />
@@ -296,7 +296,7 @@ export default function Beneficiaries({
                                                 options={labels}
                                             />
                                         </Field>
-                                        {mode === "create" && (
+                                        {mode === 'create' && (
                                             <Field
                                                 id="owner_name"
                                                 label="Name of the person who will run it"
@@ -307,7 +307,7 @@ export default function Beneficiaries({
                                                     name="owner_name"
                                                     required
                                                     {...invalid(
-                                                        "owner_name",
+                                                        'owner_name',
                                                         errors.owner_name,
                                                     )}
                                                 />
@@ -318,8 +318,8 @@ export default function Beneficiaries({
                                             label="Email of the person who will run it"
                                             error={errors.email}
                                             hint={
-                                                mode === "create"
-                                                    ? "They claim the workspace with this address and become its owner."
+                                                mode === 'create'
+                                                    ? 'They claim the workspace with this address and become its owner.'
                                                     : undefined
                                             }
                                         >
@@ -329,7 +329,7 @@ export default function Beneficiaries({
                                                 type="email"
                                                 required
                                                 {...invalid(
-                                                    "email",
+                                                    'email',
                                                     errors.email,
                                                 )}
                                             />
@@ -348,7 +348,7 @@ export default function Beneficiaries({
                                                 defaultValue={defaults.currency}
                                                 className="uppercase"
                                                 {...invalid(
-                                                    "currency",
+                                                    'currency',
                                                     errors.currency,
                                                 )}
                                             />
@@ -358,30 +358,30 @@ export default function Beneficiaries({
                                             label="Country code"
                                             error={errors.country_code}
                                             hint={
-                                                mode === "create"
-                                                    ? "Two letters, e.g. SS, KE."
-                                                    : "Two letters, e.g. SS, KE. Optional."
+                                                mode === 'create'
+                                                    ? 'Two letters, e.g. SS, KE.'
+                                                    : 'Two letters, e.g. SS, KE. Optional.'
                                             }
                                         >
                                             <Input
                                                 id="country_code"
                                                 name="country_code"
                                                 maxLength={2}
-                                                required={mode === "create"}
+                                                required={mode === 'create'}
                                                 defaultValue={
-                                                    mode === "create"
+                                                    mode === 'create'
                                                         ? (defaults.country ??
-                                                          "")
+                                                          '')
                                                         : undefined
                                                 }
                                                 className="uppercase"
                                                 {...invalid(
-                                                    "country_code",
+                                                    'country_code',
                                                     errors.country_code,
                                                 )}
                                             />
                                         </Field>
-                                        {mode === "create" && (
+                                        {mode === 'create' && (
                                             <Field
                                                 id="slug"
                                                 label="Workspace address"
@@ -397,7 +397,7 @@ export default function Beneficiaries({
                                                     placeholder="their-organization"
                                                     className="lowercase"
                                                     {...invalid(
-                                                        "slug",
+                                                        'slug',
                                                         errors.slug,
                                                     )}
                                                 />
@@ -408,9 +408,9 @@ export default function Beneficiaries({
                                             label="Time zone"
                                             error={errors.timezone}
                                             className={
-                                                mode === "create"
+                                                mode === 'create'
                                                     ? undefined
-                                                    : "sm:col-span-2"
+                                                    : 'sm:col-span-2'
                                             }
                                         >
                                             <Select
@@ -430,9 +430,9 @@ export default function Beneficiaries({
                                                 type="submit"
                                                 disabled={processing}
                                             >
-                                                {mode === "invite"
-                                                    ? "Send the invitation"
-                                                    : "Create the workspace"}
+                                                {mode === 'invite'
+                                                    ? 'Send the invitation'
+                                                    : 'Create the workspace'}
                                             </Button>
                                         </div>
                                     </>

@@ -1,11 +1,11 @@
-import { Form, Head, Link, router } from "@inertiajs/react";
-import { Flag, Handshake, Mail, Users } from "lucide-react";
-import { EmptyState } from "@miles/ui/components/empty-state";
-import { PageHeader } from "@miles/ui/components/page-header";
-import { Panel, PanelBody, PanelHeader } from "@miles/ui/components/panel";
-import { StatCard } from "@miles/ui/components/stat-card";
-import { StatusBadge } from "@miles/ui/components/status-badge";
-import { Button } from "@miles/ui/components/ui/button";
+import { Form, Head, Link, router } from '@inertiajs/react';
+import { Flag, Handshake, Mail, Users } from 'lucide-react';
+import { EmptyState } from '@miles/ui/components/empty-state';
+import { PageHeader } from '@miles/ui/components/page-header';
+import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
+import { StatCard } from '@miles/ui/components/stat-card';
+import { StatusBadge } from '@miles/ui/components/status-badge';
+import { Button } from '@miles/ui/components/ui/button';
 import {
     Table,
     TableBody,
@@ -13,37 +13,37 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from "@miles/ui/components/ui/table";
+} from '@miles/ui/components/ui/table';
 import type {
     CapabilityOption,
     InvitationRow,
     ParticipantRow,
     RelationshipOption,
-} from "@/components/collaboration";
+} from '@/components/collaboration';
 import {
     InvitationsTable,
     InviteForm,
     nextStatuses,
     ParticipationStatus,
-} from "@/components/collaboration";
-import { Field, Select } from "@/components/field";
-import { Progress, Status } from "@/components/status";
-import { formatMoney } from "@/lib/money";
-import { formatDate } from "@/lib/status";
+} from '@/components/collaboration';
+import { Field, Select } from '@/components/field';
+import { Progress, Status } from '@/components/status';
+import { formatMoney } from '@/lib/money';
+import { formatDate } from '@/lib/status';
 import {
     resend,
     revoke,
     store as inviteSubPartner,
-} from "@/routes/shared-projects/invitations";
-import { update as updateSubPartner } from "@/routes/shared-projects/partners";
-import { index as partnerReports } from "@/routes/shared-projects/reports";
-import { index as partnerRequests } from "@/routes/shared-projects/requests";
-import { index as partnerTasks } from "@/routes/shared-projects/shared-tasks";
+} from '@/routes/shared-projects/invitations';
+import { update as updateSubPartner } from '@/routes/shared-projects/partners';
+import { index as partnerReports } from '@/routes/shared-projects/reports';
+import { index as partnerRequests } from '@/routes/shared-projects/requests';
+import { index as partnerTasks } from '@/routes/shared-projects/shared-tasks';
 import {
     destroy as removeRepresentative,
     store as addRepresentative,
-} from "@/routes/shared-projects/representatives";
-import type { Option } from "@/types";
+} from '@/routes/shared-projects/representatives';
+import type { Option } from '@/types';
 
 type SharedProject = {
     code: string;
@@ -74,7 +74,7 @@ type Props = {
         id: string;
         organization: string;
         relationshipLabel: string;
-        status: ParticipantRow["status"];
+        status: ParticipantRow['status'];
         isUs: boolean;
     }[];
     canManage: boolean;
@@ -110,7 +110,7 @@ export default function SharedProject({
 }: Props) {
     const title = project
         ? `${project.code} · ${project.name}`
-        : "Shared project";
+        : 'Shared project';
 
     return (
         <>
@@ -164,8 +164,8 @@ export default function SharedProject({
                         icon={Handshake}
                         title="Nothing of this project is shared with you now"
                     >
-                        {participation.status === "active"
-                            ? "The organization you work under is suspended or has left the project."
+                        {participation.status === 'active'
+                            ? 'The organization you work under is suspended or has left the project.'
                             : `Your participation is ${participation.status}. What was recorded stays on record.`}
                     </EmptyState>
                 </Panel>
@@ -185,7 +185,7 @@ export default function SharedProject({
                         <StatCard
                             label="Dates"
                             value={
-                                project.dueOn ? formatDate(project.dueOn) : "—"
+                                project.dueOn ? formatDate(project.dueOn) : '—'
                             }
                             hint={
                                 project.startOn
@@ -199,7 +199,7 @@ export default function SharedProject({
                         <Panel>
                             <PanelHeader
                                 title="About"
-                                description={`You may: ${capabilityLabels.join(", ")}.`}
+                                description={`You may: ${capabilityLabels.join(', ')}.`}
                             />
                             <PanelBody className="grid gap-3 text-sm">
                                 {project.description && (
@@ -222,8 +222,8 @@ export default function SharedProject({
                                             <span
                                                 className={
                                                     milestone.reached
-                                                        ? "flex-1 text-muted-foreground line-through"
-                                                        : "flex-1"
+                                                        ? 'flex-1 text-muted-foreground line-through'
+                                                        : 'flex-1'
                                                 }
                                             >
                                                 {milestone.name}
@@ -255,7 +255,7 @@ export default function SharedProject({
                                             {other.organization}
                                             {other.isUs && (
                                                 <span className="text-muted-foreground">
-                                                    {" "}
+                                                    {' '}
                                                     (you)
                                                 </span>
                                             )}
@@ -273,7 +273,7 @@ export default function SharedProject({
                         <Panel>
                             <PanelHeader
                                 title="Approved budget"
-                                description={`Paid so far: ${formatMoney(project.budget.spentMinor, project.currency)} of ${formatMoney(project.budget.approvedMinor, project.currency)}; ${formatMoney(project.budget.committedMinor ?? 0, project.currency)} committed. ${project.budget.provenance?.paidStatus === "posted" ? "Payments posted in Finance" : "Payments as recorded by the owner, not verified by Finance"}, as of ${project.budget.provenance?.asOf ?? "today"}.`}
+                                description={`Paid so far: ${formatMoney(project.budget.spentMinor, project.currency)} of ${formatMoney(project.budget.approvedMinor, project.currency)}; ${formatMoney(project.budget.committedMinor ?? 0, project.currency)} committed. ${project.budget.provenance?.paidStatus === 'posted' ? 'Payments posted in Finance' : 'Payments as recorded by the owner, not verified by Finance'}, as of ${project.budget.provenance?.asOf ?? 'today'}.`}
                             />
                             <Table>
                                 <TableBody>
@@ -318,10 +318,10 @@ export default function SharedProject({
                                             {person.responsibilities.length >
                                                 0 && (
                                                 <span className="text-xs text-muted-foreground">
-                                                    {" "}
-                                                    ·{" "}
+                                                    {' '}
+                                                    ·{' '}
                                                     {person.responsibilities.join(
-                                                        ", ",
+                                                        ', ',
                                                     )}
                                                 </span>
                                             )}
