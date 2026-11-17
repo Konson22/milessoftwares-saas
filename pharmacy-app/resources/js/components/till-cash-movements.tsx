@@ -2,6 +2,7 @@ import { Form } from '@inertiajs/react';
 import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
+import { MoneyInput } from '@miles/ui/components/money-input';
 import { Label } from '@miles/ui/components/ui/label';
 import { useState } from 'react';
 import type { RouteFormDefinition } from '@/wayfinder';
@@ -43,9 +44,8 @@ export function TillCashMovements({
     form: RouteFormDefinition<'post'> | null;
     money: (minor: number) => string;
 }) {
-    const [kind, setKind] = useState<(typeof KINDS)[number]['value']>(
-        'out:safe',
-    );
+    const [kind, setKind] =
+        useState<(typeof KINDS)[number]['value']>('out:safe');
     const [direction, counterpart] = kind.split(':');
 
     if (movements.length === 0 && form === null) {
@@ -69,7 +69,8 @@ export function TillCashMovements({
                                 <div>
                                     <p>{movement.reason}</p>
                                     <p className="text-muted-foreground">
-                                        {movement.label} · {movement.recordedBy},{' '}
+                                        {movement.label} · {movement.recordedBy}
+                                        ,{' '}
                                         {new Date(
                                             movement.recordedAt,
                                         ).toLocaleTimeString()}
@@ -131,10 +132,9 @@ export function TillCashMovements({
                                 </div>
                                 <div className="grid gap-1.5">
                                     <Label htmlFor="amount">Amount</Label>
-                                    <Input
+                                    <MoneyInput
                                         id="amount"
                                         name="amount"
-                                        inputMode="decimal"
                                         required
                                     />
                                 </div>

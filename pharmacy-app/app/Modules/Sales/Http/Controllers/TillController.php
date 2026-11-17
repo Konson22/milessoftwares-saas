@@ -15,6 +15,7 @@ use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 use Miles\PlatformClient\Access\CurrentAccess;
@@ -64,9 +65,18 @@ class TillController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate(['opening_float' => ['required', 'string', Money::rule()]]);
+        $validated = $request->validate([
+            'opening_float' => ['required', 'string', Money::rule()],
+            'opening_float_currency' => Money::currencyRule(),
+        ]);
+        $float = Money::entered($validated, 'opening_float');
 
-        $till = $this->tills->open($this->user($request), $this->branch->id(), Money::toMinor($validated['opening_float']));
+        $till = DB::transaction(function () use ($request, $float) {
+            $till = $this->tills->open($this->user($request), $this->branch->id(), $float->baseMinor);
+            Money::remember($till, 'opening_float', $float, $this->user($request)->id);
+
+            return $till;
+        });
 
         return back()->with('success', "Shift {$till->number} started.");
     }
@@ -119,10 +129,17 @@ class TillController extends Controller
             'direction' => ['required', 'in:'.TillCashMovement::IN.','.TillCashMovement::OUT],
             'counterpart' => ['nullable', 'in:'.implode(',', TillCashMovement::COUNTERPARTS)],
             'amount' => ['required', 'string', Money::rule()],
+            'amount_currency' => Money::currencyRule(),
             'reason' => ['required', 'string', 'max:255'],
         ]);
+        $amount = Money::entered($validated, 'amount');
 
-        $movement = $this->tills->move($till, $this->user($request), $validated['direction'], Money::toMinor($validated['amount']), $validated['reason'], counterpart: $validated['counterpart'] ?? TillCashMovement::SAFE);
+        $movement = DB::transaction(function () use ($request, $till, $validated, $amount) {
+            $movement = $this->tills->move($till, $this->user($request), $validated['direction'], $amount->baseMinor, $validated['reason'], counterpart: $validated['counterpart'] ?? TillCashMovement::SAFE);
+            Money::remember($movement, 'amount', $amount, $this->user($request)->id);
+
+            return $movement;
+        });
 
         return back()->with('success', "{$movement->label()}: ".Money::toMajor($movement->amount_minor).'.');
     }
@@ -132,14 +149,19 @@ class TillController extends Controller
         $this->ensureVisible($request, $till);
         $validated = $request->validate([
             'counted_cash' => ['required', 'string', Money::rule()],
+            'counted_cash_currency' => Money::currencyRule(),
             'closing_note' => ['nullable', 'string', 'max:255'],
         ]);
+        $counted = Money::entered($validated, 'counted_cash');
 
         $managing = $this->manages();
         $rules = $this->shiftRules($this->tills->settings($this->branch->id()), $managing);
         abort_if($rules['managerCloses'] && ! $managing, 403, 'A manager closes shifts at this branch.');
 
-        $this->tills->close($till, $this->user($request), Money::toMinor($validated['counted_cash']), $validated['closing_note'] ?? null, blind: $rules['blind']);
+        DB::transaction(function () use ($request, $till, $validated, $rules, $counted) {
+            $this->tills->close($till, $this->user($request), $counted->baseMinor, $validated['closing_note'] ?? null, blind: $rules['blind']);
+            Money::remember($till, 'counted_cash', $counted, $this->user($request)->id);
+        });
 
         return back()->with('success', "Shift {$till->number} closed.");
     }

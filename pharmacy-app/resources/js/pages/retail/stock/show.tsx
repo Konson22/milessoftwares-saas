@@ -6,6 +6,7 @@ import { StatusBadge } from '@miles/ui/components/status-badge';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
 import { Label } from '@miles/ui/components/ui/label';
+import { MoneyInput } from '@miles/ui/components/money-input';
 import {
     Table,
     TableBody,
@@ -21,13 +22,7 @@ import {
     store as storeDisposal,
 } from '@/routes/retail/disposals';
 import { move as moveStock } from '@/routes/retail/locations';
-import {
-    adjust,
-    hold,
-    index,
-    opening,
-    release,
-} from '@/routes/retail/stock';
+import { adjust, hold, index, opening, release } from '@/routes/retail/stock';
 
 type Batch = {
     id: string;
@@ -54,7 +49,7 @@ type Movement = {
 };
 
 type Props = {
-        item: {
+    item: {
         id: string;
         label: string;
         unit: string;
@@ -355,8 +350,7 @@ export default function RetailStockShow({
                                             .filter(
                                                 (batch) =>
                                                     batch.quantity > 0 &&
-                                                    batch.status !==
-                                                        'recalled',
+                                                    batch.status !== 'recalled',
                                             )
                                             .map((batch) => (
                                                 <option
@@ -665,22 +659,30 @@ export default function RetailStockShow({
                                                 <Label htmlFor={name}>
                                                     {label}
                                                 </Label>
-                                                <Input
-                                                    id={name}
-                                                    name={name}
-                                                    type={type}
-                                                    required
-                                                    inputMode={
-                                                        name === 'unit_cost'
-                                                            ? 'decimal'
-                                                            : undefined
-                                                    }
-                                                    aria-invalid={
-                                                        errors[name]
-                                                            ? true
-                                                            : undefined
-                                                    }
-                                                />
+                                                {name === 'unit_cost' ? (
+                                                    <MoneyInput
+                                                        id={name}
+                                                        name={name}
+                                                        required
+                                                        aria-invalid={
+                                                            errors[name]
+                                                                ? true
+                                                                : undefined
+                                                        }
+                                                    />
+                                                ) : (
+                                                    <Input
+                                                        id={name}
+                                                        name={name}
+                                                        type={type}
+                                                        required
+                                                        aria-invalid={
+                                                            errors[name]
+                                                                ? true
+                                                                : undefined
+                                                        }
+                                                    />
+                                                )}
                                                 {errors[name] && (
                                                     <p className="text-sm text-destructive">
                                                         {errors[name]}

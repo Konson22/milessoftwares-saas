@@ -9,6 +9,8 @@ export type SharedProps = {
     access: { isOwner: boolean; permissions: string[] } | null;
     /** The workspace currency (ISO code); amounts arrive in minor units. */
     currency: string | null;
+    /** Currencies amounts may be typed in: the workspace currency first. */
+    money: import('@miles/ui/components/money-input').MoneyProp | null;
     /** The branch this page works in (pages behind the branch middleware). */
     branch: { id: string; name: string } | null;
     /** Permissions that apply in that branch (UI only). */

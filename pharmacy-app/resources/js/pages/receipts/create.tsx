@@ -6,6 +6,7 @@ import { Panel, PanelBody } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
 import { Label } from '@miles/ui/components/ui/label';
+import { CurrencyField } from '@miles/ui/components/money-input';
 import { PackSelect } from '@/components/pack-select';
 import type { BuyableItem } from '@/components/pack-select';
 import { CostBreakdown } from '@/components/price-badges';
@@ -193,6 +194,11 @@ export default function ReceiveGoods({
                                             required
                                         />
                                     </div>
+                                    <CurrencyField
+                                        name="currency"
+                                        label="Costs in"
+                                        hint="Every cost below is in this currency, kept in the workspace currency at today's rate."
+                                    />
                                 </div>
                                 {errors.purchase_order_id && (
                                     <p className="text-sm text-destructive">

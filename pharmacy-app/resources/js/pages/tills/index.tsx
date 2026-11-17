@@ -11,6 +11,7 @@ import {
 import { StatusBadge } from '@miles/ui/components/status-badge';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
+import { MoneyInput } from '@miles/ui/components/money-input';
 import { Label } from '@miles/ui/components/ui/label';
 import {
     Table,
@@ -132,10 +133,9 @@ export default function Shifts({ day, managing, mine, tills, shifts }: Props) {
                                             <Label htmlFor="opening_float">
                                                 Starting cash in the drawer
                                             </Label>
-                                            <Input
+                                            <MoneyInput
                                                 id="opening_float"
                                                 name="opening_float"
-                                                inputMode="decimal"
                                                 defaultValue={
                                                     shifts.defaultFloat
                                                 }

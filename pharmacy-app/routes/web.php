@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BranchController;
+use App\Http\Controllers\CurrencyController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Reports\CashierReportController;
@@ -25,6 +26,7 @@ use App\Modules\Sales\Http\Controllers\CounterSettingsController;
 use App\Modules\Sales\Http\Controllers\SaleController;
 use App\Modules\Sales\Http\Controllers\TillController;
 use Illuminate\Support\Facades\Route;
+use Miles\PlatformClient\Money\EntryCurrencyController;
 use Miles\PlatformClient\PlatformConfig;
 
 /*
@@ -49,6 +51,13 @@ Route::prefix(app(PlatformConfig::class)->path())
     ->group(function () {
         Route::get('branch', [BranchController::class, 'edit'])->name('branch.edit');
         Route::put('branch', [BranchController::class, 'update'])->name('branch.update');
+
+        // Currencies amounts may be typed in (shared with every product).
+        Route::get('currencies', [CurrencyController::class, 'index'])->name('currencies.index');
+        Route::middleware('can:pharmacy.sales.settings')->group(function () {
+            Route::post('currencies', [EntryCurrencyController::class, 'store'])->name('currencies.store');
+            Route::delete('currencies/{code}', [EntryCurrencyController::class, 'destroy'])->where('code', '[A-Za-z]{3}')->name('currencies.destroy');
+        });
 
         // The catalogue is the organization's, not a branch's.
         Route::get('medicines', [MedicineController::class, 'index'])->can('pharmacy.medicines.view')->name('medicines.index');

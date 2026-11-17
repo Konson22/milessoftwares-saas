@@ -129,6 +129,8 @@ class MedicineController extends Controller
             'prescription_only' => ['boolean'],
             'controlled' => ['boolean'],
             'sell_price' => ['required', 'string', Money::rule()],
+            // Prices typed in another currency are kept in the workspace currency at today's rate.
+            'sell_price_currency' => Money::currencyRule(),
             'reorder_level' => ['required', 'integer', 'min:0', 'max:1000000'],
             'active' => ['boolean'],
             'packs' => ['array', 'max:10'],
@@ -142,20 +144,20 @@ class MedicineController extends Controller
 
         return [
             [
-                ...Arr::except($validated, ['sell_price', 'packs']),
+                ...Arr::except($validated, ['sell_price', 'sell_price_currency', 'packs']),
                 'controlled' => $controlled,
                 'prescription_only' => $controlled || (bool) ($validated['prescription_only'] ?? false),
                 'active' => (bool) ($validated['active'] ?? true),
-                'sell_price_minor' => Money::toMinor($validated['sell_price']),
+                'sell_price_minor' => Money::entered($validated, 'sell_price')->baseMinor,
                 // One spelling per category, whoever typed it first.
                 'category' => $this->category($validated['category'] ?? null),
                 'storage' => $validated['storage'] ?? StorageCondition::Room->value,
             ],
-            array_values(array_map(fn (array $pack) => [
+            array_values(array_map(fn (array $pack, int|string $index) => [
                 'name' => (string) $pack['name'],
                 'units' => (int) $pack['units'],
-                'sell_price_minor' => isset($pack['sell_price']) && $pack['sell_price'] !== '' ? Money::toMinor($pack['sell_price']) : null,
-            ], $validated['packs'] ?? [])),
+                'sell_price_minor' => isset($pack['sell_price']) && $pack['sell_price'] !== '' ? Money::enter($pack['sell_price'], $validated['sell_price_currency'] ?? null, "packs.{$index}.sell_price")->baseMinor : null,
+            ], $validated['packs'] ?? [], array_keys($validated['packs'] ?? []))),
         ];
     }
 

@@ -5,6 +5,7 @@ import { PageHeader } from '@miles/ui/components/page-header';
 import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
+import { MoneyInput } from '@miles/ui/components/money-input';
 import { Label } from '@miles/ui/components/ui/label';
 import {
     Table,
@@ -61,10 +62,9 @@ export default function Loyalty({
                                             Spending this earns one point (
                                             {currency})
                                         </Label>
-                                        <Input
+                                        <MoneyInput
                                             id="spend_per_point"
                                             name="spend_per_point"
-                                            inputMode="decimal"
                                             required
                                             defaultValue={
                                                 program?.spendPerPoint ?? ''
@@ -81,10 +81,9 @@ export default function Loyalty({
                                         <Label htmlFor="point_value">
                                             One point takes off ({currency})
                                         </Label>
-                                        <Input
+                                        <MoneyInput
                                             id="point_value"
                                             name="point_value"
-                                            inputMode="decimal"
                                             required
                                             defaultValue={
                                                 program?.pointValue ?? ''

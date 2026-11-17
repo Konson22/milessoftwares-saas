@@ -3,6 +3,7 @@ import { PageHeader } from '@miles/ui/components/page-header';
 import { Panel, PanelBody } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
+import { MoneyInput } from '@miles/ui/components/money-input';
 import { Label } from '@miles/ui/components/ui/label';
 import { index, show, store, update } from '@/routes/retail/customers';
 
@@ -81,10 +82,9 @@ export default function CustomerForm({ customer, priceLists }: Props) {
                                     <Label htmlFor="credit_limit">
                                         Credit limit (0: pays at once)
                                     </Label>
-                                    <Input
+                                    <MoneyInput
                                         id="credit_limit"
                                         name="credit_limit"
-                                        inputMode="decimal"
                                         required
                                         defaultValue={
                                             customer?.creditLimit ?? '0'

@@ -17,6 +17,7 @@ use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -75,21 +76,25 @@ class PurchaseOrderController extends Controller
             'lines.*.pack_id' => ['nullable', 'uuid'],
             'lines.*.quantity' => ['required', 'integer', 'min:1', 'max:1000000'],
             'lines.*.unit_cost' => ['required', 'string', Money::rule()],
+            // The currency every unit cost is typed in; blank: the workspace's.
+            'currency' => Money::currencyRule(),
         ]);
+        $validated['lines'] = array_values($validated['lines']);
+        $costs = Money::enterLines($validated['lines'], 'unit_cost', $validated['currency'] ?? null);
 
-        $order = $purchasing->createOrder(
+        $order = DB::transaction(fn () => tap($purchasing->createOrder(
             by: $this->user($request),
             branchId: $this->branch->id(),
             supplier: Supplier::query()->findOrFail((string) $validated['supplier_id']),
-            lines: array_values(array_map(fn (array $line) => [
+            lines: array_values(array_map(fn (array $line, int $index) => [
                 'item_id' => $line['item_id'],
                 'pack_id' => $line['pack_id'] ?? null,
                 'quantity' => (int) $line['quantity'],
-                'unit_cost_minor' => Money::toMinor($line['unit_cost']),
-            ], $validated['lines'])),
+                'unit_cost_minor' => $costs[$index]->baseMinor,
+            ], $validated['lines'], array_keys($validated['lines']))),
             expectedOn: isset($validated['expected_on']) ? CarbonImmutable::parse($validated['expected_on']) : null,
             notes: $validated['notes'] ?? null,
-        );
+        ), fn ($order) => Money::rememberLines($order, 'unit_cost', $costs, $this->user($request)->id)));
 
         return to_route($this->industry->route('purchase-orders.show'), $order)->with('success', "Order {$order->number} drafted.");
     }

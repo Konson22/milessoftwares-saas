@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Miles\PlatformClient\Access\CurrentAccess;
 use Miles\PlatformClient\Api\Branch;
+use Miles\PlatformClient\Money\EntryCurrencies;
 use Miles\PlatformClient\Tenancy\CurrentTenant;
 
 class HandleInertiaRequests extends Middleware
@@ -56,6 +57,8 @@ class HandleInertiaRequests extends Middleware
             },
             // The workspace currency: amounts are sent in its minor unit.
             'currency' => fn () => app(CurrentTenant::class)->has() ? Money::currency() : null,
+            // Currencies amounts may be typed in, with their rates.
+            'money' => fn () => app(CurrentTenant::class)->has() ? app(EntryCurrencies::class)->forPage() : null,
             // The branch this page works in, and whether the member can switch.
             'branch' => function () {
                 $branch = app(CurrentBranch::class)->get();

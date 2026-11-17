@@ -6,6 +6,7 @@ import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
 import { StatusBadge } from '@miles/ui/components/status-badge';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
+import { MoneyInput } from '@miles/ui/components/money-input';
 import { Label } from '@miles/ui/components/ui/label';
 import { CustomerFields } from '@/components/customer-fields';
 import { formatMoney } from '@/lib/money';
@@ -264,10 +265,9 @@ export default function Counter({
                                         <Label htmlFor="opening_float">
                                             Starting cash in the drawer
                                         </Label>
-                                        <Input
+                                        <MoneyInput
                                             id="opening_float"
                                             name="opening_float"
-                                            inputMode="decimal"
                                             defaultValue={counter.defaultFloat}
                                             className="w-44"
                                         />

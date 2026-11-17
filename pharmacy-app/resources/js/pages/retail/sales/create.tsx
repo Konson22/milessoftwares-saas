@@ -6,6 +6,11 @@ import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
 import { StatusBadge } from '@miles/ui/components/status-badge';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
+import {
+    MoneyInput,
+    toBaseMinor,
+    useMoney,
+} from '@miles/ui/components/money-input';
 import { Label } from '@miles/ui/components/ui/label';
 import { formatMoney } from '@/lib/money';
 import { uuid } from '@/lib/uuid';
@@ -132,6 +137,9 @@ export default function RetailCounter({
     const [basket, setBasket] = useState<BasketLine[]>([]);
     const [method, setMethod] = useState(paymentMethods[0]?.value ?? 'cash');
     const [tendered, setTendered] = useState('');
+    // Cash may be handed over in another currency: change is in the workspace's.
+    const [tenderedCurrency, setTenderedCurrency] = useState('');
+    const entry = useMoney();
     const [customerId, setCustomerId] = useState('');
     const [memberId, setMemberId] = useState('');
     const [redeem, setRedeem] = useState('');
@@ -180,9 +188,9 @@ export default function RetailCounter({
     const total = subtotal - redeemPoints * (loyalty?.pointValueMinor ?? 0);
     const earns =
         member && loyalty ? Math.floor(total / loyalty.spendPerPointMinor) : 0;
-    const tenderedMinor = Math.round(
-        Number.parseFloat(tendered || '0') * 10 ** decimals,
-    );
+    const tenderedMinor =
+        toBaseMinor(entry, tendered, tenderedCurrency || undefined) ??
+        Math.round(Number.parseFloat(tendered || '0') * 10 ** decimals);
     const customer = customers.find((c) => c.id === customerId) ?? null;
     const overLimit =
         account && customer !== null && total > customer.availableMinor;
@@ -331,10 +339,9 @@ export default function RetailCounter({
                                         <Label htmlFor="opening_float">
                                             Starting cash in the drawer
                                         </Label>
-                                        <Input
+                                        <MoneyInput
                                             id="opening_float"
                                             name="opening_float"
-                                            inputMode="decimal"
                                             defaultValue="0"
                                             className="w-44"
                                         />
@@ -808,14 +815,13 @@ export default function RetailCounter({
                                     <Label htmlFor="amount_tendered">
                                         Cash given
                                     </Label>
-                                    <Input
+                                    <MoneyInput
                                         id="amount_tendered"
                                         name="amount_tendered"
-                                        inputMode="decimal"
                                         value={tendered}
-                                        onChange={(event) =>
-                                            setTendered(event.target.value)
-                                        }
+                                        onChange={setTendered}
+                                        currency={tenderedCurrency || undefined}
+                                        onCurrencyChange={setTenderedCurrency}
                                         aria-invalid={
                                             errors.amount_tendered
                                                 ? true

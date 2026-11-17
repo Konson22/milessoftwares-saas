@@ -191,9 +191,11 @@ class CounterOrderController extends Controller
             'payment_method' => ['required', Rule::enum(PaymentMethod::class)->except(PaymentMethod::Account)],
             'payment_reference' => ['nullable', 'string', 'max:64'],
             'amount_tendered' => ['nullable', 'string', Money::rule()],
+            'amount_tendered_currency' => Money::currencyRule(),
             'customer_name' => ['nullable', 'string', 'max:255'],
             'customer_phone' => ['nullable', 'string', 'max:32'],
         ]);
+        $tendered = Money::enteredOptional($validated, 'amount_tendered');
 
         try {
             $sale = $this->orders->pay(
@@ -201,12 +203,15 @@ class CounterOrderController extends Controller
                 by: $this->user($request),
                 method: PaymentMethod::from($validated['payment_method']),
                 paymentReference: $validated['payment_reference'] ?? null,
-                tenderedMinor: isset($validated['amount_tendered']) ? Money::toMinor($validated['amount_tendered']) : null,
+                tenderedMinor: $tendered?->baseMinor,
                 customerName: $validated['customer_name'] ?? null,
                 customerPhone: $validated['customer_phone'] ?? null,
             );
         } catch (InsufficientStock $e) {
             throw ValidationException::withMessages(['payment_method' => $e->getMessage()]);
+        }
+        if ($sale->amount_tendered_minor !== null) {
+            Money::remember($sale, 'amount_tendered', $tendered, $this->user($request)->id);
         }
 
         $order->refresh();

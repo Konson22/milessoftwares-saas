@@ -4,6 +4,7 @@ import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
 import { StatusBadge } from '@miles/ui/components/status-badge';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
+import { MoneyInput } from '@miles/ui/components/money-input';
 import { Label } from '@miles/ui/components/ui/label';
 import {
     TillCashMovements,
@@ -176,7 +177,10 @@ export default function ShowShift({
                                                     Cash taken out
                                                 </dt>
                                                 <dd className="text-right tabular-nums">
-                                                    −{money(summary.cashOutMinor)}
+                                                    −
+                                                    {money(
+                                                        summary.cashOutMinor,
+                                                    )}
                                                 </dd>
                                             </>
                                         )}
@@ -238,10 +242,9 @@ export default function ShowShift({
                                             <Label htmlFor="counted_cash">
                                                 Cash counted in the drawer
                                             </Label>
-                                            <Input
+                                            <MoneyInput
                                                 id="counted_cash"
                                                 name="counted_cash"
-                                                inputMode="decimal"
                                                 required
                                             />
                                             {errors.counted_cash && (

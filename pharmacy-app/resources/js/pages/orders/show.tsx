@@ -6,6 +6,11 @@ import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
 import { StatusBadge } from '@miles/ui/components/status-badge';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
+import {
+    MoneyInput,
+    toBaseMinor,
+    useMoney,
+} from '@miles/ui/components/money-input';
 import { Label } from '@miles/ui/components/ui/label';
 import {
     Table,
@@ -100,11 +105,15 @@ export default function Order({
     const decimals = money(0).includes('.') ? 2 : 0;
     const [method, setMethod] = useState(paymentMethods[0]?.value ?? 'cash');
     const [tendered, setTendered] = useState('');
+    // Cash may be handed over in another currency: change is in the workspace's.
+    const [tenderedCurrency, setTenderedCurrency] = useState('');
+    const entry = useMoney();
     const handOverVerb =
         order.handOver === 'collection' ? 'Collected' : 'Dispensed';
     const change =
         method === 'cash' && tendered !== ''
-            ? Math.round(Number.parseFloat(tendered) * 10 ** decimals) -
+            ? (toBaseMinor(entry, tendered, tenderedCurrency || undefined) ??
+                  Math.round(Number.parseFloat(tendered) * 10 ** decimals)) -
               order.totalMinor
             : null;
 
@@ -300,10 +309,9 @@ export default function Order({
                                                         Start your shift:
                                                         starting cash
                                                     </Label>
-                                                    <Input
+                                                    <MoneyInput
                                                         id="opening_float"
                                                         name="opening_float"
-                                                        inputMode="decimal"
                                                         defaultValue={
                                                             shifts.defaultFloat
                                                         }
@@ -368,15 +376,17 @@ export default function Order({
                                                 <Label htmlFor="amount_tendered">
                                                     Cash given
                                                 </Label>
-                                                <Input
+                                                <MoneyInput
                                                     id="amount_tendered"
                                                     name="amount_tendered"
-                                                    inputMode="decimal"
                                                     value={tendered}
-                                                    onChange={(event) =>
-                                                        setTendered(
-                                                            event.target.value,
-                                                        )
+                                                    onChange={setTendered}
+                                                    currency={
+                                                        tenderedCurrency ||
+                                                        undefined
+                                                    }
+                                                    onCurrencyChange={
+                                                        setTenderedCurrency
                                                     }
                                                 />
                                                 {change !== null && (

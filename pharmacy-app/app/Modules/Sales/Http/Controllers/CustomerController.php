@@ -161,18 +161,20 @@ class CustomerController extends Controller
 
         $validated = $request->validate([
             'amount' => ['required', 'string', Money::rule()],
+            'amount_currency' => Money::currencyRule(),
             'method' => ['required', Rule::enum(PaymentMethod::class)->except(PaymentMethod::Account)],
             'reference' => ['nullable', 'string', 'max:128'],
             'note' => ['nullable', 'string', 'max:255'],
             'submission_id' => ['nullable', 'uuid'],
         ]);
+        $amount = Money::entered($validated, 'amount');
 
         $user = $request->user();
         abort_unless($user instanceof User, 401);
 
         $payment = $this->accounts->receive(
             customerId: $customer->id,
-            amountMinor: Money::toMinor($validated['amount']),
+            amountMinor: $amount->baseMinor,
             method: PaymentMethod::from($validated['method']),
             by: $user,
             branchId: $branch->id(),
@@ -180,6 +182,9 @@ class CustomerController extends Controller
             note: $validated['note'] ?? null,
             submissionId: $validated['submission_id'] ?? (string) Str::uuid(),
         );
+        if ($payment->wasRecentlyCreated) {
+            Money::remember($payment, 'amount', $amount, $user->id);
+        }
 
         return back()->with('success', "Payment {$payment->number} of ".Money::format($payment->amount_minor).' received.');
     }
@@ -198,6 +203,7 @@ class CustomerController extends Controller
             'email' => ['nullable', 'email', 'max:255'],
             'address' => ['nullable', 'string', 'max:500'],
             'credit_limit' => ['required', 'string', Money::rule()],
+            'credit_limit_currency' => Money::currencyRule(),
             'payment_terms_days' => ['required', 'integer', 'min:0', 'max:365'],
             'price_list_id' => ['nullable', 'uuid', Rule::exists('price_lists', 'id')
                 ->where('organization_id', app(CurrentTenant::class)->id())
@@ -210,7 +216,8 @@ class CustomerController extends Controller
             'phone' => $validated['phone'] ?? null,
             'email' => $validated['email'] ?? null,
             'address' => $validated['address'] ?? null,
-            'credit_limit_minor' => Money::toMinor($validated['credit_limit']),
+            // A limit in another currency is set in the workspace currency at today's rate.
+            'credit_limit_minor' => Money::entered($validated, 'credit_limit')->baseMinor,
             'payment_terms_days' => (int) $validated['payment_terms_days'],
             'price_list_id' => $validated['price_list_id'] ?? null,
             'active' => (bool) ($validated['active'] ?? true),
