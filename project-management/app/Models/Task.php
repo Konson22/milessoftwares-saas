@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Access\ProjectBound;
 use App\Access\VisibleThroughProject;
+use App\Collaboration\Models\Participant;
 use App\Enums\TaskPriority;
 use App\Tenancy\BelongsToOrganization;
 use Carbon\CarbonImmutable;
@@ -86,6 +87,16 @@ class Task extends Model implements ProjectBound
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * The organization taking part that works on it (App\Collaboration\SharedTasks).
+     *
+     * @return BelongsTo<Participant, $this>
+     */
+    public function participant(): BelongsTo
+    {
+        return $this->belongsTo(Participant::class);
     }
 
     /**

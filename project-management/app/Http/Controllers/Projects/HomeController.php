@@ -8,6 +8,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Support\Money;
+use App\Support\PartnerWaiting;
 use App\Support\PortfolioTrends;
 use App\Support\ProjectFinance;
 use App\Support\ProjectMetrics;
@@ -93,6 +94,8 @@ class HomeController extends Controller
                 'dueOn' => $task->due_on?->toDateString(),
                 'overdue' => $task->overdue(),
             ]),
+            // From the organizations it works with (App\Support\PartnerWaiting).
+            'partnerWaiting' => PartnerWaiting::for($this->member($request)),
             'myMinutesThisWeek' => $me === null ? 0 : (int) TimeEntry::query()->where('person_id', $me->id)
                 ->whereBetween('worked_on', [today()->startOfWeek(), today()->endOfWeek()])->sum('minutes'),
         ]);

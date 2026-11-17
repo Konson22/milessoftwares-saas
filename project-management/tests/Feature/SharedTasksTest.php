@@ -177,3 +177,26 @@ it('offers the owner sharing on the task page only once the project has partners
     $this->get($this->organizationUrl('global-fund', "projects/{$project->id}/tasks/{$task->id}"))->assertOk()
         ->assertInertia(fn (Assert $page) => $page->where('sharing.shared', false)->where('sharing.participants.0.value', $implementer->id)->where('sharing.canChange', true));
 });
+
+it('lists given tasks on the partner home and partner work to review on the owner home', function () {
+    ['project' => $project, 'implementer' => $implementer] = sharedTaskSetup();
+    $drill = sharedTaskOf($project, 'Drill the wells');
+    $this->put(ownerTaskUrl($project, $drill, '/sharing'), ['shared' => '0', 'participant_id' => $implementer->id])->assertSessionHasNoErrors();
+
+    // The implementer's home: the task given to it.
+    $this->actingAsMember('water-now', PARTNER_WORKER);
+    $this->get($this->organizationUrl('water-now', ''))->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->where('partnerWaiting.count', 1)->where('partnerWaiting.items.0.kind', 'given')
+        ->where('partnerWaiting.items.0.url', '/projects/shared-projects/'.$implementer->id.'/shared-tasks/'.$drill->id));
+    $this->post(partnerTaskUrl($implementer, 'water-now', $drill, '/progress'), ['status' => 'review'])->assertSessionHasNoErrors();
+    $this->get($this->organizationUrl('water-now', ''))->assertOk()->assertInertia(fn (Assert $page) => $page->where('partnerWaiting.count', 0));
+
+    // The owner's home: its review.
+    $this->actingAsMember('global-fund', [], owner: true);
+    $this->get($this->organizationUrl('global-fund', ''))->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->where('partnerWaiting.count', 1)->where('partnerWaiting.items.0.kind', 'review'));
+
+    // A member without projects.tasks.manage is shown neither.
+    $this->actingAsMember('water-now', ['projects.view']);
+    $this->get($this->organizationUrl('water-now', ''))->assertOk()->assertInertia(fn (Assert $page) => $page->where('partnerWaiting.count', 0));
+});

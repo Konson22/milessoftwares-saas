@@ -843,3 +843,35 @@ it('keeps agreements and payments between the two connected organizations', func
     expect($this->asTenant('water-now', fn () => $grant->fresh()?->agreement_status))->toBe('proposed')
         ->and($this->asTenant('water-now', fn () => $first->fresh()?->status))->toBe('planned');
 });
+
+it('puts terms and payments waiting on each party on its dashboard, and nothing on anyone else', function () {
+    ['donor' => $donor, 'admin' => $admin, 'partnership' => $partnership] = connectedBeneficiary();
+    $this->actingAs($admin);
+    $grant = beneficiaryGrant('water-now', share: false);
+    [$first] = agreementPayments($grant);
+    $this->post($this->organizationUrl('water-now', "grants/{$grant->id}/agreement"))->assertSessionHasNoErrors();
+
+    $this->actingAs($donor);
+    $this->get($this->organizationUrl('global-fund', 'funding'))->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->where('overview.approvalsCount', 1)->where('overview.approvals.0.kind', 'terms')->where('overview.approvals.0.beneficiary', 'Water Now'));
+    $base = "beneficiaries/{$partnership->id}/grants/{$grant->id}";
+    $this->post($this->organizationUrl('global-fund', "{$base}/agreement/decision"), ['decision' => 'approve'])->assertSessionHasNoErrors();
+
+    $this->actingAs($admin);
+    $this->post($this->organizationUrl('water-now', "grants/{$grant->id}/disbursements/{$first->id}/request"))->assertSessionHasNoErrors();
+    $this->actingAs($donor);
+    $this->get($this->organizationUrl('global-fund', 'funding'))->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->where('overview.approvalsCount', 1)->where('overview.approvals.0.kind', 'request')->where('overview.approvals.0.amountMinor', 6_000_000));
+    $this->post($this->organizationUrl('global-fund', "{$base}/payments/{$first->id}/decision"), ['decision' => 'approve'])->assertSessionHasNoErrors();
+    $this->post($this->organizationUrl('global-fund', "{$base}/payments/{$first->id}/sent"), ['sent_on' => '2026-11-04', 'reference' => 'TRX-9'])->assertSessionHasNoErrors();
+    $this->get($this->organizationUrl('global-fund', 'funding'))->assertOk()->assertInertia(fn (Assert $page) => $page->where('overview.approvalsCount', 0));
+
+    // Now it waits on the recipient: on its home.
+    $this->actingAs($admin);
+    $this->get($this->organizationUrl('water-now', ''))->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->component('portal/home')->where('partnerWaiting.count', 1)->where('partnerWaiting.items.0.kind', 'confirm'));
+
+    // Another organization's home lists none of it.
+    $this->actingAsMember('other-org', ['projects.view', 'projects.tasks.manage', 'grants.view', 'grants.manage']);
+    $this->get($this->organizationUrl('other-org', ''))->assertOk()->assertInertia(fn (Assert $page) => $page->where('partnerWaiting.count', 0));
+});

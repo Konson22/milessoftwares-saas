@@ -82,6 +82,17 @@ type Props = {
     portfolio: Portfolio | null;
     myTasks: MyTask[];
     myMinutesThisWeek: number;
+    partnerWaiting: {
+        count: number;
+        items: {
+            key: string;
+            kind: 'review' | 'given' | 'confirm' | 'declined';
+            title: string;
+            detail: string;
+            dueOn: string | null;
+            url: string;
+        }[];
+    };
 };
 
 const dayMonth = (date: string) =>
@@ -324,7 +335,12 @@ function BudgetUse({
  * The portfolio at a glance: how it stands, how work and money are moving,
  * then each project, worst first, and the member's own work.
  */
-export default function Home({ portfolio, myTasks, myMinutesThisWeek }: Props) {
+export default function Home({
+    portfolio,
+    myTasks,
+    myMinutesThisWeek,
+    partnerWaiting,
+}: Props) {
     const { organization, user } = usePage().props;
     const can = useCan();
     const money = useMoney();
@@ -514,6 +530,39 @@ export default function Home({ portfolio, myTasks, myMinutesThisWeek }: Props) {
                                 ))}
                             </ul>
                         )}
+                    </Panel>
+                )}
+
+                {partnerWaiting.count > 0 && (
+                    <Panel>
+                        <PanelHeader
+                            title="Waiting on you from partners"
+                            description={`Partner work to review, tasks given to you on other projects, and grant payments to confirm.${partnerWaiting.count > partnerWaiting.items.length ? ` The first ${partnerWaiting.items.length} of ${partnerWaiting.count}.` : ''}`}
+                        />
+                        <ul className="divide-y">
+                            {partnerWaiting.items.map((item) => (
+                                <li key={item.key}>
+                                    <Link
+                                        href={item.url}
+                                        className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-4 py-2.5 text-sm hover:bg-accent"
+                                    >
+                                        <span className="min-w-0">
+                                            <span className="font-medium">
+                                                {item.title}
+                                            </span>
+                                            <span className="block text-xs text-muted-foreground">
+                                                {item.detail}
+                                            </span>
+                                        </span>
+                                        {item.dueOn && (
+                                            <span className="text-xs text-muted-foreground">
+                                                Due {formatDate(item.dueOn)}
+                                            </span>
+                                        )}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
                     </Panel>
                 )}
 
