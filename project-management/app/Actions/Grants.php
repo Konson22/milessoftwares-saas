@@ -98,6 +98,7 @@ final class Grants
         if ($amountMinor <= 0) {
             throw ValidationException::withMessages(['amount' => 'The amount awarded must be more than zero.']);
         }
+        GrantAgreements::ensureWithinAgreement($grant, $amountMinor);
         if ($startOn !== null && $endOn !== null && $endOn->lt($startOn)) {
             throw ValidationException::withMessages(['end_on' => 'The agreement cannot end before it starts.']);
         }
@@ -163,6 +164,9 @@ final class Grants
 
             if ($amountMinor === $grant->amount_minor && $endOn?->toDateString() === $grant->end_on?->toDateString()) {
                 throw ValidationException::withMessages(['amount' => 'Change the amount or the end date.']);
+            }
+            if ($amountMinor !== $grant->amount_minor) {
+                GrantAgreements::ensureWithinAgreement($grant, $amountMinor);
             }
             $floor = max($grant->allocatedMinor(), $grant->scheduledMinor());
             if ($amountMinor < $floor) {
@@ -306,7 +310,7 @@ final class Grants
         }
 
         DB::transaction(function () use ($disbursement, $on, $by) {
-            $disbursement->forceFill(['received_on' => $on])->save();
+            $disbursement->forceFill(['received_on' => $on, 'status' => 'received'])->save();
             $grant = Grant::query()->findOrFail($disbursement->grant_id);
             app(ProjectBooks::class)->grantReceived($disbursement, $grant);
             Audit::record('grant.disbursement_received', $disbursement, ['amount_minor' => $disbursement->amount_minor, 'on' => $on->toDateString()], actor: $by);
@@ -322,6 +326,9 @@ final class Grants
     {
         if ($disbursement->received_on !== null) {
             throw ValidationException::withMessages(['disbursement' => 'A received payment stays on record.']);
+        }
+        if (! in_array($disbursement->status, ['planned', 'rejected'], true)) {
+            throw ValidationException::withMessages(['disbursement' => 'This payment is with the donor: it stays on record.']);
         }
 
         $disbursement->delete();

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Funding;
 
+use App\Actions\GrantAgreements;
 use App\Actions\Grants;
 use App\Actions\Spending;
 use App\Enums\ExpenseStatus;
@@ -207,7 +208,13 @@ class GrantController extends Controller
                 'receivedOn' => $disbursement->received_on?->toDateString(),
                 'overdue' => $disbursement->received_on === null && $disbursement->due_on->lt(today()),
                 'note' => $disbursement->note,
+                'status' => $disbursement->status,
+                'decisionNote' => $disbursement->decision_note,
+                'sentOn' => $disbursement->sent_on?->toDateString(),
+                'sentReference' => $disbursement->sent_reference,
+                'disputeNote' => $disbursement->dispute_note,
             ]),
+            'agreement' => $this->agreement($grant),
             'reports' => $grant->reports()->get()->map(fn (GrantReport $report) => [
                 'id' => $report->id,
                 'title' => $report->title,
@@ -409,5 +416,31 @@ class GrantController extends Controller
         }
 
         return $details;
+    }
+
+    /**
+     * The grant's terms as agreed with a donor on Tatook, when its funder is
+     * one (App\Actions\GrantAgreements); null otherwise.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function agreement(Grant $grant): ?array
+    {
+        $partnership = GrantAgreements::partnership($grant);
+        if ($partnership === null) {
+            return null;
+        }
+
+        return [
+            'donor' => $partnership->donor->name,
+            'status' => $grant->agreement_status,
+            'approvedMinor' => $grant->agreement_amount_minor,
+            'committedMinor' => GrantAgreements::committedMinor($grant),
+            'proposedAt' => $grant->agreement_proposed_at?->toIso8601String(),
+            'decidedAt' => $grant->agreement_decided_at?->toIso8601String(),
+            'note' => $grant->agreement_note,
+            'canPropose' => $grant->agreement_status !== GrantAgreements::PROPOSED && ! in_array($grant->status, [GrantStatus::Closed, GrantStatus::Declined], true) && $grant->amount_minor > 0,
+            'changed' => $grant->agreement_status === GrantAgreements::APPROVED && ($grant->amount_minor !== $grant->agreement_amount_minor),
+        ];
     }
 }

@@ -17,6 +17,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * @property string $id
  * @property string $organization_id
+ * @property string|null $agreement_status proposed, approved, declined (App\Actions\GrantAgreements)
+ * @property int|null $agreement_amount_minor what the donor approved: a ceiling
+ * @property CarbonImmutable|null $agreement_end_on
+ * @property CarbonImmutable|null $agreement_proposed_at
+ * @property string|null $agreement_proposed_by
+ * @property CarbonImmutable|null $agreement_decided_at
+ * @property string|null $agreement_decided_by
+ * @property string|null $agreement_note
  * @property string $funder_id
  * @property string $reference
  * @property string $title
@@ -60,6 +68,10 @@ class Grant extends Model
             'awarded_on' => 'date',
             'closed_on' => 'date',
             'declined_on' => 'date',
+            'agreement_amount_minor' => 'integer',
+            'agreement_end_on' => 'date',
+            'agreement_proposed_at' => 'immutable_datetime',
+            'agreement_decided_at' => 'immutable_datetime',
         ];
     }
 

@@ -1,10 +1,10 @@
-import { Form, Head, Link, usePage } from '@inertiajs/react';
-import { useState } from 'react';
-import { PageHeader } from '@miles/ui/components/page-header';
-import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
-import { StatCard } from '@miles/ui/components/stat-card';
-import { StatusBadge } from '@miles/ui/components/status-badge';
-import { Button } from '@miles/ui/components/ui/button';
+import { Form, Head, Link, usePage } from "@inertiajs/react";
+import { useState } from "react";
+import { PageHeader } from "@miles/ui/components/page-header";
+import { Panel, PanelBody, PanelHeader } from "@miles/ui/components/panel";
+import { StatCard } from "@miles/ui/components/stat-card";
+import { StatusBadge } from "@miles/ui/components/status-badge";
+import { Button } from "@miles/ui/components/ui/button";
 import {
     Table,
     TableBody,
@@ -12,15 +12,22 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '@miles/ui/components/ui/table';
-import { Field } from '@/components/field';
-import { formatMoney } from '@/lib/money';
+} from "@miles/ui/components/ui/table";
+import { Field } from "@/components/field";
+import {
+    AGREEMENT_STEPS,
+    AgreementDecision,
+    DonorPaymentActions,
+    PaymentStep,
+    paymentDetail,
+} from "@/components/grant-agreement";
+import { formatMoney } from "@/lib/money";
 import {
     formatDate,
     formatDateTime,
     statusLabel,
     statusTone,
-} from '@/lib/status';
+} from "@/lib/status";
 
 type Report = {
     id: string;
@@ -100,7 +107,24 @@ type Props = {
         dueOn: string;
         amountMinor: number;
         receivedOn: string | null;
+        status: string;
+        decisionNote: string | null;
+        sentOn: string | null;
+        sentReference: string | null;
+        disputeNote: string | null;
     }[];
+    /** Terms the recipient proposed to this donor on Tatook, if any. */
+    agreement: {
+        status: string;
+        proposedMinor: number;
+        approvedMinor: number | null;
+        endOn: string | null;
+        proposedAt: string | null;
+        decidedAt: string | null;
+        note: string | null;
+    } | null;
+    /** A donor on Tatook that may approve terms and payments. */
+    canAgree?: boolean;
     reports: Report[];
     projects: Project[];
     messages: {
@@ -272,7 +296,7 @@ function ProjectPanel({ project }: { project: Project }) {
                                         <span>{milestone.name}</span>
                                         <span className="text-muted-foreground">
                                             {milestone.reached
-                                                ? 'Reached'
+                                                ? "Reached"
                                                 : `Due ${formatDate(milestone.dueOn)}`}
                                         </span>
                                     </li>
@@ -298,12 +322,12 @@ function ProjectPanel({ project }: { project: Project }) {
                                         <span>
                                             <span className="text-muted-foreground">
                                                 {task.number}
-                                            </span>{' '}
+                                            </span>{" "}
                                             {task.title}
                                         </span>
                                         <span className="shrink-0 text-muted-foreground">
                                             {statusLabel(task.status)}
-                                            {task.status !== 'done' &&
+                                            {task.status !== "done" &&
                                                 task.dueOn &&
                                                 `, due ${formatDate(task.dueOn)}`}
                                         </span>
@@ -339,11 +363,11 @@ function ProjectPanel({ project }: { project: Project }) {
                             Spending on this grant
                         </h3>
                         <p className="text-xs text-muted-foreground">
-                            {money(project.spending.paidMinor)} paid,{' '}
+                            {money(project.spending.paidMinor)} paid,{" "}
                             {project.spending.provenance?.paidStatus ===
-                            'posted'
-                                ? 'posted in Finance'
-                                : 'as recorded by the organization, not verified by Finance'}
+                            "posted"
+                                ? "posted in Finance"
+                                : "as recorded by the organization, not verified by Finance"}
                             .
                         </p>
                         {project.spending.lines.length > 0 && (
@@ -367,7 +391,7 @@ function ProjectPanel({ project }: { project: Project }) {
                                                         ? formatDate(
                                                               line.paidOn,
                                                           )
-                                                        : 'Not dated'}
+                                                        : "Not dated"}
                                                 </TableCell>
                                                 <TableCell>
                                                     {line.category}
@@ -432,6 +456,8 @@ export default function DonorGrant({
     grant,
     amendments,
     payments,
+    agreement,
+    canAgree = false,
     reports,
     projects,
     messages,
@@ -448,7 +474,7 @@ export default function DonorGrant({
                 title={`${grant.reference} ${grant.title}`}
                 description={
                     grant.startOn
-                        ? `${formatDate(grant.startOn)}${grant.endOn ? ` to ${formatDate(grant.endOn)}` : ''}`
+                        ? `${formatDate(grant.startOn)}${grant.endOn ? ` to ${formatDate(grant.endOn)}` : ""}`
                         : undefined
                 }
                 actions={
@@ -483,6 +509,36 @@ export default function DonorGrant({
                 </p>
             )}
 
+            {agreement && (
+                <Panel className="mt-6">
+                    <PanelHeader
+                        title="Agreement"
+                        description={AGREEMENT_STEPS[agreement.status]}
+                    />
+                    <PanelBody className="grid gap-2 text-sm">
+                        {agreement.approvedMinor !== null && (
+                            <p>
+                                You approved {money(agreement.approvedMinor)}
+                                {agreement.decidedAt &&
+                                    ` on ${formatDate(agreement.decidedAt)}`}
+                                .
+                            </p>
+                        )}
+                        {agreement.note && (
+                            <p className="text-muted-foreground">
+                                “{agreement.note}”
+                            </p>
+                        )}
+                        {agreement.status === "proposed" && canAgree && (
+                            <AgreementDecision
+                                action={`${base}/agreement/decision`}
+                                proposed={`${money(agreement.proposedMinor)}${agreement.endOn ? `, ending ${formatDate(agreement.endOn)}` : ""}`}
+                            />
+                        )}
+                    </PanelBody>
+                </Panel>
+            )}
+
             <Panel className="mt-6">
                 <PanelHeader title="Reports" />
                 <PanelBody>
@@ -512,23 +568,39 @@ export default function DonorGrant({
                             No payments scheduled.
                         </p>
                     ) : (
-                        <ul className="space-y-1 text-sm">
+                        <ul className="space-y-3 text-sm">
                             {payments.map((payment) => (
-                                <li
-                                    key={payment.id}
-                                    className="flex justify-between gap-2"
-                                >
-                                    <span>
-                                        Due {formatDate(payment.dueOn)}
-                                        <span className="text-muted-foreground">
-                                            {payment.receivedOn
-                                                ? `, received ${formatDate(payment.receivedOn)}`
-                                                : ', not received yet'}
+                                <li key={payment.id}>
+                                    <span className="flex justify-between gap-2">
+                                        <span>
+                                            Due {formatDate(payment.dueOn)}{" "}
+                                            {agreement ? (
+                                                <PaymentStep
+                                                    status={payment.status}
+                                                />
+                                            ) : (
+                                                <span className="text-muted-foreground">
+                                                    {payment.receivedOn
+                                                        ? `, received ${formatDate(payment.receivedOn)}`
+                                                        : ", not received yet"}
+                                                </span>
+                                            )}
+                                        </span>
+                                        <span className="tabular-nums">
+                                            {money(payment.amountMinor)}
                                         </span>
                                     </span>
-                                    <span className="tabular-nums">
-                                        {money(payment.amountMinor)}
-                                    </span>
+                                    {agreement && paymentDetail(payment) && (
+                                        <span className="block text-xs text-muted-foreground">
+                                            {paymentDetail(payment)}
+                                        </span>
+                                    )}
+                                    {agreement && canAgree && (
+                                        <DonorPaymentActions
+                                            base={base}
+                                            payment={payment}
+                                        />
+                                    )}
                                 </li>
                             ))}
                         </ul>
@@ -547,7 +619,7 @@ export default function DonorGrant({
                                     className="flex justify-between gap-2"
                                 >
                                     <span>
-                                        Amendment {amendment.number}, from{' '}
+                                        Amendment {amendment.number}, from{" "}
                                         {formatDate(amendment.effectiveOn)}
                                         {amendment.endAfter &&
                                             `, ending ${formatDate(amendment.endAfter)}`}
@@ -578,7 +650,7 @@ export default function DonorGrant({
                         {messages.map((message) => (
                             <li key={message.id}>
                                 <p className="text-xs text-muted-foreground">
-                                    {message.author},{' '}
+                                    {message.author},{" "}
                                     {formatDateTime(message.at)}
                                 </p>
                                 <p className="whitespace-pre-wrap">

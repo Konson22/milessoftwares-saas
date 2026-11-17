@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Funding;
 
 use App\Actions\DonorPortal;
+use App\Actions\GrantAgreements;
 use App\Actions\Grants;
 use App\Audit\Audit;
 use App\Enums\GrantReportStatus;
@@ -79,6 +80,36 @@ class GrantFundingController extends Controller
         Grants::receive($disbursement, CarbonImmutable::parse($on), $this->member($request));
 
         return back()->with('success', 'Payment recorded as received.');
+    }
+
+    /** The recipient asks its connected donor to approve the grant's terms. */
+    public function proposeAgreement(Request $request, Grant $grant): RedirectResponse
+    {
+        $validated = $request->validate(['note' => ['nullable', 'string', 'max:2000']]);
+        GrantAgreements::propose($grant, $validated['note'] ?? null, $this->member($request));
+
+        return back()->with('success', 'Terms sent to the donor for approval.');
+    }
+
+    public function requestPayment(Request $request, Grant $grant, GrantDisbursement $disbursement): RedirectResponse
+    {
+        GrantAgreements::request($disbursement, $this->member($request));
+
+        return back()->with('success', 'Payment requested from the donor.');
+    }
+
+    /** The money the donor recorded as sent arrived, or it did not. */
+    public function confirmPayment(Request $request, Grant $grant, GrantDisbursement $disbursement): RedirectResponse
+    {
+        $validated = $request->validate([
+            'received' => ['required', 'boolean'],
+            'on' => ['nullable', 'date', 'before_or_equal:today'],
+            'note' => ['nullable', 'string', 'max:2000'],
+        ]);
+        $received = (bool) $validated['received'];
+        GrantAgreements::confirm($disbursement, $received, isset($validated['on']) ? CarbonImmutable::parse($validated['on']) : null, $validated['note'] ?? null, $this->member($request));
+
+        return back()->with('success', $received ? 'Payment confirmed as received.' : 'Dispute sent to the donor.');
     }
 
     public function unschedule(Request $request, Grant $grant, GrantDisbursement $disbursement): RedirectResponse

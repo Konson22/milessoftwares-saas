@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Funding;
 
 use App\Actions\Beneficiaries;
 use App\Actions\DonorPortal;
+use App\Actions\GrantAgreements;
 use App\Audit\Audit;
 use App\Enums\GrantReportStatus;
 use App\Http\Controllers\Concerns\ValidatesOrganizationDetails;
 use App\Http\Controllers\Controller;
 use App\Models\Grant;
+use App\Models\GrantDisbursement;
 use App\Models\GrantReport;
 use App\Models\GrantReportDocument;
 use App\Models\Organization;
@@ -16,6 +18,7 @@ use App\Models\Partnership;
 use App\Support\DonorProjection;
 use App\Tenancy\CurrentOrganization;
 use App\Tenancy\Hosts;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -170,7 +173,7 @@ class BeneficiaryController extends Controller
         ]);
     }
 
-    public function grant(string $partnership, string $grant): Response
+    public function grant(Request $request, string $partnership, string $grant): Response
     {
         $partnership = $this->connected($partnership);
         $payload = $this->inBeneficiary($partnership, fn () => DonorProjection::grant($this->sharedGrant($partnership, $grant)));
@@ -179,6 +182,8 @@ class BeneficiaryController extends Controller
             ...$payload,
             'base' => route('beneficiaries.grants.show', ['partnership' => $partnership->id, 'grant' => $grant], false),
             'back' => route('beneficiaries.show', ['partnership' => $partnership->id], false),
+            // Agreements and payment approvals are between organizations on Tatook.
+            'canAgree' => $this->can($request, 'grants.manage'),
         ]);
     }
 
@@ -196,6 +201,37 @@ class BeneficiaryController extends Controller
         });
 
         return back()->with('success', $validated['status'] === GrantReportStatus::Accepted->value ? 'Report accepted.' : 'Revision requested.');
+    }
+
+    /** The donor approves or declines the terms its recipient proposed. */
+    public function decideAgreement(Request $request, string $partnership, string $grant): RedirectResponse
+    {
+        $partnership = $this->connected($partnership);
+        $validated = $request->validate(['decision' => ['required', Rule::in(['approve', 'decline'])], 'note' => ['nullable', 'string', 'max:2000']]);
+        GrantAgreements::decide($partnership, $grant, $validated['decision'] === 'approve', $validated['note'] ?? null, $this->member($request));
+
+        return back()->with('success', $validated['decision'] === 'approve' ? 'Grant terms approved.' : 'Grant terms declined.');
+    }
+
+    public function decidePayment(Request $request, string $partnership, string $grant, string $disbursement): RedirectResponse
+    {
+        $partnership = $this->connected($partnership);
+        $validated = $request->validate(['decision' => ['required', Rule::in(['approve', 'reject'])], 'note' => ['nullable', 'string', 'max:2000']]);
+        $this->requirePaymentOfGrant($partnership, $grant, $disbursement);
+        GrantAgreements::decidePayment($partnership, $disbursement, $validated['decision'] === 'approve', $validated['note'] ?? null, $this->member($request));
+
+        return back()->with('success', $validated['decision'] === 'approve' ? 'Payment approved.' : 'Payment request rejected.');
+    }
+
+    /** The donor records the transfer it made. Not a Finance confirmation. */
+    public function markSent(Request $request, string $partnership, string $grant, string $disbursement): RedirectResponse
+    {
+        $partnership = $this->connected($partnership);
+        $validated = $request->validate(['sent_on' => ['required', 'date', 'before_or_equal:today'], 'reference' => ['required', 'string', 'max:100']]);
+        $this->requirePaymentOfGrant($partnership, $grant, $disbursement);
+        GrantAgreements::markSent($partnership, $disbursement, CarbonImmutable::parse($validated['sent_on']), $validated['reference'], $this->member($request));
+
+        return back()->with('success', 'Transfer recorded. The recipient confirms it once it arrives.');
     }
 
     public function post(Request $request, string $partnership, string $grant): RedirectResponse
@@ -262,6 +298,15 @@ class BeneficiaryController extends Controller
         abort_unless(DonorProjection::canSee((string) $partnership->funder_id, $grant), 404);
 
         return $grant;
+    }
+
+    /** The payment belongs to this grant, and the grant to this donor. */
+    private function requirePaymentOfGrant(Partnership $partnership, string $grant, string $disbursement): void
+    {
+        $this->inBeneficiary($partnership, function () use ($partnership, $grant, $disbursement) {
+            $shared = $this->sharedGrant($partnership, $grant);
+            abort_unless(GrantDisbursement::query()->where('grant_id', $shared->id)->whereKey($disbursement)->exists(), 404);
+        });
     }
 
     private function report(Grant $grant, string $id): GrantReport

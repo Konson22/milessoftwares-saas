@@ -1,7 +1,9 @@
 <?php
 
+use App\Models\AuditEvent;
 use App\Models\Funder;
 use App\Models\Grant;
+use App\Models\GrantDisbursement;
 use App\Models\GrantReport;
 use App\Models\Organization;
 use App\Models\OrganizationMembership;
@@ -721,4 +723,123 @@ it('inventories donor and partner records for the participation model, changing 
     // Read-only: every record as it was.
     expect(collect($tables)->mapWithKeys(fn (string $table) => [$table => DB::table($table)->orderBy('id')->get()->toJson()])->all())->toBe($before);
     expect($new->id)->not->toBeEmpty();
+});
+
+/*
+| Phase 5, grant agreements (App\Actions\GrantAgreements): the recipient
+| proposes the terms, the donor approves them, then each payment is
+| requested, approved, recorded as sent by the donor, and confirmed (or
+| disputed) by the recipient. Nothing is marked received for the recipient.
+*/
+
+/**
+ * @return list<GrantDisbursement>
+ */
+function agreementPayments(Grant $grant): array
+{
+    test()->post(test()->organizationUrl('water-now', "grants/{$grant->id}/disbursements"), ['due_on' => '2026-11-01', 'amount' => '60000'])->assertSessionHasNoErrors();
+    test()->post(test()->organizationUrl('water-now', "grants/{$grant->id}/disbursements"), ['due_on' => '2027-05-01', 'amount' => '40000'])->assertSessionHasNoErrors();
+
+    return test()->asTenant('water-now', fn () => GrantDisbursement::query()->where('grant_id', $grant->id)->orderBy('due_on')->get()->all());
+}
+
+it('agrees a grant and moves a payment from request to confirmed receipt, both parties acting', function () {
+    ['donor' => $donor, 'admin' => $admin, 'partnership' => $partnership] = connectedBeneficiary();
+    $this->actingAs($admin);
+    $grant = beneficiaryGrant('water-now', share: false);
+    [$first] = agreementPayments($grant);
+    $grantUrl = fn (string $path = '') => $this->organizationUrl('water-now', "grants/{$grant->id}{$path}");
+    $donorUrl = fn (string $path = '') => $this->organizationUrl('global-fund', "beneficiaries/{$partnership->id}/grants/{$grant->id}{$path}");
+
+    // No payment is requested before the donor approves the terms.
+    $this->post($grantUrl("/disbursements/{$first->id}/request"))->assertSessionHasErrors('disbursement');
+    $this->flushSession();
+    $this->get($grantUrl())->assertOk()->assertInertia(fn (Assert $page) => $page->where('agreement.status', null)->where('agreement.canPropose', true)->where('disbursements.0.status', 'planned'));
+    $this->post($grantUrl('/agreement'), ['note' => 'As agreed in our call.'])->assertSessionHasNoErrors();
+    $this->post($grantUrl('/agreement'))->assertSessionHasErrors('agreement');
+    $this->flushSession();
+
+    // The donor sees the terms, though the grant is not shared on its portal.
+    $this->actingAs($donor);
+    $this->get($donorUrl())->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->component('portal/donor/grant')->where('agreement.status', 'proposed')->where('agreement.proposedMinor', 10_000_000)->where('canAgree', true));
+    $this->post($donorUrl('/agreement/decision'), ['decision' => 'decline'])->assertSessionHasErrors('note');
+    $this->flushSession();
+    $this->post($donorUrl('/agreement/decision'), ['decision' => 'approve'])->assertSessionHasNoErrors();
+    $stored = $this->asTenant('water-now', fn () => $grant->fresh());
+    expect($stored?->agreement_status)->toBe('approved')->and($stored?->agreement_amount_minor)->toBe(10_000_000);
+
+    // The approved amount is a ceiling for the recipient.
+    $this->actingAs($admin);
+    $this->post($grantUrl('/amendments'), ['amount' => '120000', 'effective_on' => '2026-11-04', 'reason' => 'More wells'])->assertSessionHasErrors('amount');
+    $this->flushSession();
+
+    $this->post($grantUrl("/disbursements/{$first->id}/request"))->assertSessionHasNoErrors();
+    $this->delete($grantUrl("/disbursements/{$first->id}"))->assertSessionHasErrors('disbursement');
+    $this->flushSession();
+    expect($this->asTenant('global-fund', fn () => UserNotification::query()->where('user_id', $donor->id)->where('title', 'like', '%requests%')->count()))->toBe(1);
+
+    // The donor approves and records its transfer; that is not a receipt.
+    $this->actingAs($donor);
+    $this->post($donorUrl("/payments/{$first->id}/sent"), ['sent_on' => '2026-11-04', 'reference' => 'TRX-1'])->assertSessionHasErrors('disbursement');
+    $this->flushSession();
+    $this->post($donorUrl("/payments/{$first->id}/decision"), ['decision' => 'approve'])->assertSessionHasNoErrors();
+    $this->post($donorUrl("/payments/{$first->id}/sent"), ['sent_on' => '2026-11-05', 'reference' => 'TRX-1'])->assertSessionHasErrors('sent_on');
+    $this->flushSession();
+    $this->post($donorUrl("/payments/{$first->id}/sent"), ['sent_on' => '2026-11-04', 'reference' => 'TRX-1'])->assertSessionHasNoErrors();
+    $sent = $this->asTenant('water-now', fn () => $first->fresh());
+    expect($sent?->status)->toBe('sent')->and($sent?->received_on)->toBeNull();
+
+    // The recipient disputes, the donor corrects, the recipient confirms.
+    $this->actingAs($admin);
+    $this->post($grantUrl("/disbursements/{$first->id}/confirm"), ['received' => '0'])->assertSessionHasErrors('note');
+    $this->flushSession();
+    $this->post($grantUrl("/disbursements/{$first->id}/confirm"), ['received' => '0', 'note' => 'Only half arrived.'])->assertSessionHasNoErrors();
+    $this->actingAs($donor);
+    $this->post($donorUrl("/payments/{$first->id}/sent"), ['sent_on' => '2026-11-04', 'reference' => 'TRX-1b'])->assertSessionHasNoErrors();
+    $this->actingAs($admin);
+    $this->post($grantUrl("/disbursements/{$first->id}/confirm"), ['received' => '1', 'on' => '2026-11-04'])->assertSessionHasNoErrors();
+
+    $done = $this->asTenant('water-now', fn () => $first->fresh());
+    expect($done?->status)->toBe('received')->and($done?->received_on?->toDateString())->toBe('2026-11-04')->and($done?->sent_reference)->toBe('TRX-1b');
+    // Each step recorded on both sides.
+    foreach (['grant.agreement_proposed', 'grant.agreement_approved', 'grant.disbursement_requested', 'grant.disbursement_approved', 'grant.disbursement_sent', 'grant.disbursement_disputed', 'grant.disbursement_confirmed'] as $action) {
+        expect(AuditEvent::query()->withoutGlobalScopes()->where('action', $action)->distinct()->count('organization_id'))->toBe(2, $action);
+    }
+});
+
+it('keeps agreements and payments between the two connected organizations', function () {
+    ['donor' => $donor, 'admin' => $admin, 'partnership' => $partnership] = connectedBeneficiary();
+    $this->actingAs($admin);
+    $grant = beneficiaryGrant('water-now', share: false);
+    [$first] = agreementPayments($grant);
+    // A grant from another funder, not connected on Tatook.
+    $otherFunder = $this->asTenant('water-now', fn () => Funder::query()->create(['name' => 'Other Fund', 'kind' => 'institutional']));
+    $other = beneficiaryGrant('water-now', 'OF/1', share: true, funderId: $otherFunder->id);
+    $this->post($this->organizationUrl('water-now', "grants/{$other->id}/disbursements"), ['due_on' => '2026-12-01', 'amount' => '1000'])->assertSessionHasNoErrors();
+    $otherPayment = $this->asTenant('water-now', fn () => GrantDisbursement::query()->where('grant_id', $other->id)->sole());
+
+    $this->post($this->organizationUrl('water-now', "grants/{$other->id}/agreement"))->assertSessionHasErrors('agreement');
+    $this->flushSession();
+    $this->get($this->organizationUrl('water-now', "grants/{$other->id}"))->assertOk()->assertInertia(fn (Assert $page) => $page->where('agreement', null));
+    $this->post($this->organizationUrl('water-now', "grants/{$grant->id}/agreement"))->assertSessionHasNoErrors();
+
+    $base = "beneficiaries/{$partnership->id}/grants/{$grant->id}";
+    // Not the donor's grant, or its payment, through its own URL.
+    $this->actingAs($donor);
+    $this->get($this->organizationUrl('global-fund', "beneficiaries/{$partnership->id}/grants/{$other->id}"))->assertNotFound();
+    $this->post($this->organizationUrl('global-fund', "{$base}/payments/{$otherPayment->id}/decision"), ['decision' => 'approve'])->assertNotFound();
+
+    // A donor member without grants.manage reads, and decides nothing.
+    $this->actingAsMember('global-fund', ['grants.view']);
+    $this->get($this->organizationUrl('global-fund', $base))->assertOk()->assertInertia(fn (Assert $page) => $page->where('canAgree', false));
+    $this->post($this->organizationUrl('global-fund', "{$base}/agreement/decision"), ['decision' => 'approve'])->assertForbidden();
+
+    // Another organization reaches nothing.
+    $this->actingAsMember('other-org', ['grants.view', 'grants.manage']);
+    $this->post($this->organizationUrl('other-org', "{$base}/agreement/decision"), ['decision' => 'approve'])->assertNotFound();
+    $this->post($this->organizationUrl('other-org', "{$base}/payments/{$first->id}/decision"), ['decision' => 'approve'])->assertNotFound();
+
+    expect($this->asTenant('water-now', fn () => $grant->fresh()?->agreement_status))->toBe('proposed')
+        ->and($this->asTenant('water-now', fn () => $first->fresh()?->status))->toBe('planned');
 });

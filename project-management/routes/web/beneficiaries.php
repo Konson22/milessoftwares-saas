@@ -36,6 +36,9 @@ Route::prefix('beneficiaries')->name('beneficiaries.')->group(function () {
             Route::get('/', [BeneficiaryController::class, 'grant'])->name('show');
             Route::post('messages', [BeneficiaryController::class, 'post'])->middleware(['can:grants.manage', 'throttle:20,1'])->name('messages.store');
             Route::post('reports/{report}/decision', [BeneficiaryController::class, 'decide'])->whereUuid('report')->middleware('can:grants.manage')->name('reports.decide');
+            Route::post('agreement/decision', [BeneficiaryController::class, 'decideAgreement'])->middleware('can:grants.manage')->name('agreement.decide');
+            Route::post('payments/{disbursement}/decision', [BeneficiaryController::class, 'decidePayment'])->whereUuid('disbursement')->middleware('can:grants.manage')->name('payments.decide');
+            Route::post('payments/{disbursement}/sent', [BeneficiaryController::class, 'markSent'])->whereUuid('disbursement')->middleware('can:grants.manage')->name('payments.sent');
             Route::get('reports/{report}/documents/{document}', [BeneficiaryController::class, 'document'])->whereUuid(['report', 'document'])->name('reports.document');
         });
     });
