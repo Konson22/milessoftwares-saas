@@ -33,6 +33,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property TaskPriority $priority
  * @property string|null $assignee_id
  * @property string|null $milestone_id
+ * @property bool $shared seen by every organization taking part in the project (App\Collaboration\SharedTasks)
+ * @property string|null $participant_id given to one participating organization
  * @property CarbonImmutable|null $start_on
  * @property CarbonImmutable|null $due_on
  * @property string|null $estimate_hours
@@ -70,6 +72,7 @@ class Task extends Model implements ProjectBound
     {
         return [
             'priority' => TaskPriority::class,
+            'shared' => 'boolean',
             'start_on' => 'date',
             'due_on' => 'date',
             'position' => 'integer',

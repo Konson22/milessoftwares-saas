@@ -1,4 +1,4 @@
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Head, Link, usePage } from "@inertiajs/react";
 import {
     AlertTriangle,
     Building2,
@@ -20,14 +20,14 @@ import {
     UserRound,
     Users,
     Wallet,
-} from 'lucide-react';
-import type { ReactNode } from 'react';
-import { useEffect, useRef } from 'react';
-import { Button } from '@miles/ui/components/ui/button';
-import { cn } from '@miles/ui/lib/utils';
-import { Select } from '@/components/field';
-import { Progress, Status } from '@/components/status';
-import { formatDate, PROJECT_STATUSES, statusLabel } from '@/lib/status';
+} from "lucide-react";
+import type { ReactNode } from "react";
+import { useEffect, useRef } from "react";
+import { Button } from "@miles/ui/components/ui/button";
+import { cn } from "@miles/ui/lib/utils";
+import { Select } from "@/components/field";
+import { Progress, Status } from "@/components/status";
+import { formatDate, PROJECT_STATUSES, statusLabel } from "@/lib/status";
 import {
     board,
     budget,
@@ -38,15 +38,16 @@ import {
     team,
     time,
     timeline,
-} from '@/routes/projects';
-import { index as changes } from '@/routes/projects/changes';
-import { index as deliverables } from '@/routes/projects/deliverables';
-import { index as expenses } from '@/routes/projects/expenses';
-import { index as partnerReports } from '@/routes/projects/reports';
-import { index as partnerRequests } from '@/routes/projects/requests';
-import { index as risks } from '@/routes/projects/risks';
-import { index as tasks } from '@/routes/projects/tasks';
-import type { ProjectHeader } from '@/types';
+} from "@/routes/projects";
+import { index as changes } from "@/routes/projects/changes";
+import { index as deliverables } from "@/routes/projects/deliverables";
+import { index as expenses } from "@/routes/projects/expenses";
+import { index as partnerReports } from "@/routes/projects/reports";
+import { index as partnerRequests } from "@/routes/projects/requests";
+import { index as sharedTasks } from "@/routes/projects/shared-tasks";
+import { index as risks } from "@/routes/projects/risks";
+import { index as tasks } from "@/routes/projects/tasks";
+import type { ProjectHeader } from "@/types";
 
 /**
  * Every page of a project: its name and how it stands, the tabs, then the
@@ -80,54 +81,59 @@ export function ProjectFrame({
     }, [url]);
     const tabs = [
         {
-            label: 'Overview',
+            label: "Overview",
             icon: LayoutDashboard,
             href: show({ project: project.id }),
         },
         {
-            label: 'Board',
+            label: "Board",
             icon: SquareKanban,
             href: board({ project: project.id }),
         },
         {
-            label: 'Tasks',
+            label: "Tasks",
             icon: ListChecks,
             href: tasks({ project: project.id }),
         },
         {
-            label: 'Timeline',
+            label: "Timeline",
             icon: ChartGantt,
             href: timeline({ project: project.id }),
         },
         {
-            label: 'Team',
+            label: "Team",
             icon: Users,
             href: team({ project: project.id }),
         },
         {
-            label: 'Partners',
+            label: "Partners",
             icon: Handshake,
             href: collaboration({ project: project.id }),
         },
         {
-            label: 'Reports',
+            label: "Shared tasks",
+            icon: ListChecks,
+            href: sharedTasks({ project: project.id }),
+        },
+        {
+            label: "Reports",
             icon: FileText,
             href: partnerReports({ project: project.id }),
         },
         {
-            label: 'Requests',
+            label: "Requests",
             icon: Inbox,
             href: partnerRequests({ project: project.id }),
         },
         {
-            label: 'Time',
+            label: "Time",
             icon: Clock,
             href: time({ project: project.id }),
         },
         ...(project.can.finance
             ? [
                   {
-                      label: 'Budget',
+                      label: "Budget",
                       icon: Wallet,
                       href: budget({ project: project.id }),
                   },
@@ -136,29 +142,29 @@ export function ProjectFrame({
         ...(project.can.finance || project.can.requestSpending
             ? [
                   {
-                      label: 'Spending',
+                      label: "Spending",
                       icon: Receipt,
                       href: expenses({ project: project.id }),
                   },
               ]
             : []),
         {
-            label: 'Risks',
+            label: "Risks",
             icon: ShieldAlert,
             href: risks({ project: project.id }),
         },
         {
-            label: 'Deliverables',
+            label: "Deliverables",
             icon: PackageCheck,
             href: deliverables({ project: project.id }),
         },
         {
-            label: 'Changes',
+            label: "Changes",
             icon: GitPullRequestArrow,
             href: changes({ project: project.id }),
         },
     ];
-    const path = url.split('?')[0];
+    const path = url.split("?")[0];
     const current = tabs.reduce<(typeof tabs)[number] | null>(
         (best, tab) =>
             path.startsWith(tab.href.url) &&
@@ -267,7 +273,7 @@ export function ProjectFrame({
                                 className="size-3.5 shrink-0 text-[var(--viz-warning)]"
                                 aria-hidden
                             />
-                            {reasons.join(' · ')}
+                            {reasons.join(" · ")}
                         </p>
                     )}
                 </div>
@@ -284,18 +290,18 @@ export function ProjectFrame({
                             <Link
                                 key={label}
                                 href={href}
-                                aria-current={active ? 'page' : undefined}
+                                aria-current={active ? "page" : undefined}
                                 className={cn(
-                                    'flex shrink-0 items-center gap-1.5 border-b-2 px-2.5 py-2 text-sm whitespace-nowrap transition-colors focus-visible:bg-muted focus-visible:outline-none',
+                                    "flex shrink-0 items-center gap-1.5 border-b-2 px-2.5 py-2 text-sm whitespace-nowrap transition-colors focus-visible:bg-muted focus-visible:outline-none",
                                     active
-                                        ? 'border-primary font-medium text-foreground'
-                                        : 'border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                                        ? "border-primary font-medium text-foreground"
+                                        : "border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                                 )}
                             >
                                 <Icon
                                     className={cn(
-                                        'size-4',
-                                        active && 'text-primary',
+                                        "size-4",
+                                        active && "text-primary",
                                     )}
                                     aria-hidden
                                 />

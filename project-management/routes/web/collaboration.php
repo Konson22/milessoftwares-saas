@@ -4,6 +4,7 @@ use App\Http\Controllers\Collaboration\InvitationLinkController;
 use App\Http\Controllers\Collaboration\ReportController;
 use App\Http\Controllers\Collaboration\RequestController;
 use App\Http\Controllers\Collaboration\SharedProjectController;
+use App\Http\Controllers\Collaboration\SharedTaskController;
 use App\Http\Controllers\Projects\CollaborationController;
 use Illuminate\Support\Facades\Route;
 
@@ -63,6 +64,18 @@ $partnerWork = function () {
         Route::delete('sources/{source}', [ReportController::class, 'removeSource'])->whereUuid('source')->name('sources.destroy');
         Route::post('attachments', [ReportController::class, 'attach'])->middleware('throttle:30,1')->name('attachments.store');
         Route::get('attachments/{attachment}', [ReportController::class, 'download'])->whereUuid('attachment')->name('attachments.show');
+    });
+
+    // Shared tasks (App\Collaboration\SharedTasks).
+    Route::get('shared-tasks', [SharedTaskController::class, 'index'])->name('shared-tasks.index');
+    Route::prefix('shared-tasks/{task}')->whereUuid('task')->name('shared-tasks.')->group(function () {
+        Route::get('/', [SharedTaskController::class, 'show'])->name('show');
+        Route::put('sharing', [SharedTaskController::class, 'share'])->name('sharing');
+        Route::post('comments', [SharedTaskController::class, 'comment'])->middleware('throttle:30,1')->name('comments.store');
+        Route::post('attachments', [SharedTaskController::class, 'attach'])->middleware('throttle:30,1')->name('attachments.store');
+        Route::get('attachments/{attachment}', [SharedTaskController::class, 'download'])->whereUuid('attachment')->name('attachments.show');
+        Route::post('progress', [SharedTaskController::class, 'progress'])->middleware('throttle:60,1')->name('progress');
+        Route::post('review', [SharedTaskController::class, 'review'])->middleware('throttle:60,1')->name('review');
     });
 
     Route::get('requests', [RequestController::class, 'index'])->name('requests.index');

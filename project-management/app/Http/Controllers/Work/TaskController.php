@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Work;
 use App\Actions\Inbox;
 use App\Actions\Tasks;
 use App\Actions\WorkStructure;
+use App\Collaboration\Models\Participant;
 use App\Enums\TaskPriority;
 use App\Http\Controllers\Concerns\ShowsProject;
 use App\Http\Controllers\Controller;
@@ -170,6 +171,7 @@ class TaskController extends Controller
                 ]),
                 'loggedMinutes' => (int) $task->timeEntries->sum('minutes'),
             ],
+            'sharing' => $this->sharing($request, $project, $task),
             'mentionable' => Inbox::reachable()->pluck('name')->unique()->values()->all(),
             'statusOptions' => Tasks::statusOptions($task),
             'statusValue' => $task->list_status_id ?? $task->status,
@@ -373,6 +375,35 @@ class TaskController extends Controller
             'due_on' => $validated['due_on'] ?? null,
             'estimate_hours' => $validated['estimate_hours'] ?? null,
             'list_id' => $validated['list_id'] ?? null,
+        ];
+    }
+
+    /**
+     * Who else sees the task (App\Collaboration\SharedTasks): only for a task
+     * of its own, on a project that has partners or a task already shared.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function sharing(Request $request, Project $project, Task $task): ?array
+    {
+        if ($task->parent_id !== null) {
+            return null;
+        }
+        $participants = Participant::query()->with('organization:id,name')->where('project_id', $project->id)->where('status', Participant::ACTIVE)->get();
+        if ($participants->isEmpty() && ! $task->shared && $task->participant_id === null) {
+            return null;
+        }
+        $givenTo = $task->participant_id === null ? null : Participant::query()->with('organization:id,name')->find($task->participant_id);
+
+        return [
+            'shared' => $task->shared,
+            'participantId' => $task->participant_id,
+            'givenTo' => $givenTo?->organization->name,
+            'givenToActive' => $givenTo?->status === Participant::ACTIVE,
+            'participants' => $participants->map(fn (Participant $participant) => ['value' => $participant->id, 'label' => "{$participant->organization->name} ({$participant->relationshipLabel()})"])->values(),
+            'canChange' => $this->can($request, 'projects.tasks.manage'),
+            'url' => route('projects.shared-tasks.sharing', ['project' => $project->id, 'task' => $task->id]),
+            'view' => $task->shared || $task->participant_id !== null ? route('projects.shared-tasks.show', ['project' => $project->id, 'task' => $task->id]) : null,
         ];
     }
 }

@@ -428,13 +428,15 @@ it('offers and keeps only the capabilities the application enforces', function (
 
     // Not offered on the page, not suggested by a preset...
     $this->get($this->organizationUrl('acme', "projects/{$project->id}/collaboration"))->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->where('capabilities', fn ($options) => collect($options)->pluck('value')->doesntContain('activities.manage')
-            && collect($options)->pluck('value')->contains('reports.submit'))
-        ->where('grantable', fn ($grantable) => collect($grantable)->doesntContain('activities.manage')));
+        ->where('capabilities', fn ($options) => collect($options)->pluck('value')->doesntContain('procurement.request')
+            && collect($options)->pluck('value')->contains('reports.submit')
+            // Enforced since shared tasks (App\Collaboration\SharedTasks).
+            && collect($options)->pluck('value')->contains('activities.manage'))
+        ->where('grantable', fn ($grantable) => collect($grantable)->doesntContain('procurement.request')));
 
     // ...and not kept when sent anyway, even by the owner.
     $this->post($this->organizationUrl('acme', "projects/{$project->id}/collaboration/invitations"), [
         'organization_id' => $this->organization('water-now')->id, 'relationship' => 'implementer', 'capabilities' => ['view', 'activities.manage', 'procurement.request', 'reports.submit'],
     ])->assertSessionHasNoErrors();
-    expect(Invitation::query()->sole()->capabilities)->toBe(['view', 'reports.submit']);
+    expect(Invitation::query()->sole()->capabilities)->toBe(['view', 'activities.manage', 'reports.submit']);
 });

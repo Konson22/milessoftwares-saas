@@ -307,7 +307,9 @@ final class Collaboration
                     ->update(['revoked_at' => now(), 'revoked_by' => $by->id, 'token_hash' => null]);
             }
 
-            Audit::change('collaboration.status_changed', $participant, ['status' => $before], ['status' => $status], ['organization' => $participant->organization->name], $participant->organization_id, $by);
+            // Its tasks stay the owner's: those still open are counted, for the owner to give to someone else.
+            $open = in_array($status, Participant::ENDED, true) ? SharedTasks::openFor($participant) : null;
+            Audit::change('collaboration.status_changed', $participant, ['status' => $before], ['status' => $status], ['organization' => $participant->organization->name, 'open_tasks_left' => $open], $participant->organization_id, $by);
             Audit::record('collaboration.status_changed', $participant, ['project' => $participant->project->name, 'status' => $status], $participant->participant_organization_id, $by);
             self::tellManagers($participant->organization, $by, "Your participation in {$participant->project->name} is now {$status}", null);
         });

@@ -56,7 +56,8 @@ final class Capability
     public const ALL = [
         self::VIEW => ['label' => 'View project', 'implies' => ['projects.view'], 'effective' => true],
         self::EDIT => ['label' => 'Edit project', 'implies' => ['projects.manage'], 'effective' => false],
-        self::ACTIVITIES_MANAGE => ['label' => 'Manage activities', 'implies' => ['projects.tasks.manage'], 'effective' => false],
+        // Enforced by App\Collaboration\SharedTasks: work on the tasks given to it.
+        self::ACTIVITIES_MANAGE => ['label' => 'Work on tasks given to it', 'implies' => ['projects.tasks.manage'], 'effective' => true],
         self::MEMBERS_MANAGE => ['label' => 'Manage project members', 'implies' => ['projects.manage'], 'effective' => false],
         self::PARTNERS_MANAGE => ['label' => 'Manage partner relationships', 'implies' => ['projects.partners.manage'], 'effective' => true],
         self::BUDGET_VIEW => ['label' => 'View approved budgets', 'implies' => ['projects.finance.view'], 'effective' => true],
