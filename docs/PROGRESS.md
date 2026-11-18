@@ -27,6 +27,8 @@
   cross-host link and form broke on :8100.
 - Dev domain is `milesoftwares.localhost` since 2026-10-20 (user decision): Google OAuth accepts
   `.localhost` redirect URIs but not `.local`. Same Apache/Acrylic setup, new name.
+- Dev domain is `tatook.localhost` since 2026-11-15 (user decision), matching production's `tatook.com`.
+  Same Apache/Acrylic setup, new name; the Google callback bounce goes to `auth.tatook.localhost`.
 - Repository layout since 2026-10-11 (user decision): the Laravel app is `central-app/`; inside it each
   site (public, admin, central) owns its routes, controllers, pages and layouts, and page names are
   `{site}/{page}` (`docs/architecture.md` section 8). Run `composer run dev` and every artisan command

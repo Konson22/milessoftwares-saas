@@ -173,7 +173,7 @@ to customer data requires a `support_access_grant` that is time-boxed, justified
 
 ## 5. Multi-tenant routing design
 
-Host classes (config `platform.root_domain`; dev uses `milesoftwares.localhost`, which browsers
+Host classes (config `platform.root_domain`; dev uses `tatook.localhost`, which browsers
 resolve to 127.0.0.1 without hosts-file edits):
 
 | Host                                                                                       | Handler                                      |

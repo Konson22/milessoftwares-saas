@@ -102,7 +102,7 @@ foreach ($files as $file) {
     $copied++;
 }
 
-$host = 'milesoftwares.localhost';
+$host = 'tatook.localhost';
 echo <<<TXT
 Created {$code}-app ({$copied} files).
 
