@@ -1,18 +1,19 @@
-import { Form, Head, usePage } from '@inertiajs/react';
-import { Fuel, Pencil, Plus, UserCheck, UserPlus, Users } from 'lucide-react';
-import { useState } from 'react';
-import { EmptyState } from '@miles/ui/components/empty-state';
-import { PageHeader } from '@miles/ui/components/page-header';
-import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
-import { SearchField } from '@miles/ui/components/search-field';
-import { StatCard } from '@miles/ui/components/stat-card';
-import { StatusBadge } from '@miles/ui/components/status-badge';
-import { Button } from '@miles/ui/components/ui/button';
-import { Input } from '@miles/ui/components/ui/input';
-import { cn } from '@miles/ui/lib/utils';
-import { Field, Select } from '@/components/field';
-import { formatMoney } from '@/lib/money';
-import { store, update } from '@/routes/staff';
+import { Form, Head, usePage } from "@inertiajs/react";
+import { Fuel, Pencil, Plus, UserCheck, UserPlus, Users } from "lucide-react";
+import { useState } from "react";
+import { EmptyState } from "@miles/ui/components/empty-state";
+import { PageHeader } from "@miles/ui/components/page-header";
+import { Panel, PanelBody, PanelHeader } from "@miles/ui/components/panel";
+import { SearchField } from "@miles/ui/components/search-field";
+import { StatCard } from "@miles/ui/components/stat-card";
+import { StatusBadge } from "@miles/ui/components/status-badge";
+import { Button } from "@miles/ui/components/ui/button";
+import { Input } from "@miles/ui/components/ui/input";
+import { cn } from "@miles/ui/lib/utils";
+import { Field, Select } from "@/components/field";
+import { HandOver, SignInChoice } from "@/components/attendant-sign-in";
+import { formatMoney } from "@/lib/money";
+import { store, update } from "@/routes/staff";
 
 type Attendant = {
     id: string;
@@ -31,7 +32,7 @@ type Attendant = {
 
 type Station = { id: string; name: string; canManage: boolean };
 
-type Show = 'all' | 'duty' | 'active' | 'inactive';
+type Show = "all" | "duty" | "active" | "inactive";
 
 /**
  * The company's pump attendants: where each works, who is on a pump now,
@@ -48,30 +49,34 @@ export default function Staff({
     users: { id: string; name: string; email: string }[];
     canManage: boolean;
 }) {
-    const { workspace, currency } = usePage().props;
-    const money = (minor: number) => formatMoney(minor, currency ?? 'SSP');
-    const [editing, setEditing] = useState<Attendant | 'new' | null>(null);
-    const [search, setSearch] = useState('');
-    const [station, setStation] = useState('');
-    const [show, setShow] = useState<Show>('all');
+    const { workspace, currency, flash } = usePage().props;
+    const handOver = flash.attendantSignIn;
+    // A sign-in belongs to one attendant: offer only the free ones.
+    const linked = new Set(attendants.map((row) => row.userId).filter(Boolean));
+    const freeUsers = users.filter((user) => !linked.has(user.id));
+    const money = (minor: number) => formatMoney(minor, currency ?? "SSP");
+    const [editing, setEditing] = useState<Attendant | "new" | null>(null);
+    const [search, setSearch] = useState("");
+    const [station, setStation] = useState("");
+    const [show, setShow] = useState<Show>("all");
     const members = workspace
-        ? new URL('members', workspace.url).toString()
+        ? new URL("members", workspace.url).toString()
         : null;
     const stationName = (id: string) =>
-        stations.find((row) => row.id === id)?.name ?? 'Station';
+        stations.find((row) => row.id === id)?.name ?? "Station";
 
     const query = search.trim().toLowerCase();
     const shown = attendants.filter(
         (row) =>
-            (query === '' ||
+            (query === "" ||
                 row.name.toLowerCase().includes(query) ||
                 row.employeeCode.toLowerCase().includes(query) ||
-                (row.phone ?? '').includes(query)) &&
-            (station === '' || row.stations.includes(station)) &&
-            (show === 'all' ||
-                (show === 'duty' && row.onDuty.length > 0) ||
-                (show === 'active' && row.active) ||
-                (show === 'inactive' && !row.active)),
+                (row.phone ?? "").includes(query)) &&
+            (station === "" || row.stations.includes(station)) &&
+            (show === "all" ||
+                (show === "duty" && row.onDuty.length > 0) ||
+                (show === "active" && row.active) ||
+                (show === "inactive" && !row.active)),
     );
     const active = attendants.filter((row) => row.active).length;
     const onDuty = attendants.filter((row) => row.onDuty.length > 0).length;
@@ -99,7 +104,7 @@ export default function Staff({
                             </Button>
                         )}
                         {canManage && (
-                            <Button onClick={() => setEditing('new')}>
+                            <Button onClick={() => setEditing("new")}>
                                 <Plus className="size-4" aria-hidden />
                                 Add attendant
                             </Button>
@@ -135,16 +140,31 @@ export default function Staff({
                     value={unplaced}
                     hint="Active, but at no station in this view"
                     icon={Users}
-                    accent={unplaced > 0 ? 'amber' : 'slate'}
+                    accent={unplaced > 0 ? "amber" : "slate"}
                 />
             </div>
 
+            {handOver && (
+                <div className="mt-4">
+                    <HandOver {...handOver} />
+                </div>
+            )}
+
             {editing !== null && (
                 <AttendantForm
-                    key={editing === 'new' ? 'new' : editing.id}
-                    attendant={editing === 'new' ? null : editing}
+                    key={editing === "new" ? "new" : editing.id}
+                    attendant={editing === "new" ? null : editing}
                     stations={stations}
-                    users={users}
+                    users={
+                        editing === "new"
+                            ? freeUsers
+                            : [
+                                  ...users.filter(
+                                      (user) => user.id === editing.userId,
+                                  ),
+                                  ...freeUsers,
+                              ]
+                    }
                     onDone={() => setEditing(null)}
                 />
             )}
@@ -186,10 +206,10 @@ export default function Staff({
                                     setShow(event.target.value as Show)
                                 }
                                 options={[
-                                    { value: 'all', label: 'Everyone' },
-                                    { value: 'duty', label: 'On a pump now' },
-                                    { value: 'active', label: 'Active' },
-                                    { value: 'inactive', label: 'Inactive' },
+                                    { value: "all", label: "Everyone" },
+                                    { value: "duty", label: "On a pump now" },
+                                    { value: "active", label: "Active" },
+                                    { value: "inactive", label: "Inactive" },
                                 ]}
                                 className="w-36"
                             />
@@ -202,13 +222,13 @@ export default function Staff({
                             icon={Users}
                             title={
                                 attendants.length === 0
-                                    ? 'No attendants yet'
-                                    : 'Nobody matches'
+                                    ? "No attendants yet"
+                                    : "Nobody matches"
                             }
                             action={
                                 canManage &&
                                 attendants.length === 0 && (
-                                    <Button onClick={() => setEditing('new')}>
+                                    <Button onClick={() => setEditing("new")}>
                                         Add the first attendant
                                     </Button>
                                 )
@@ -243,8 +263,8 @@ export default function Staff({
                                     <tr
                                         key={row.id}
                                         className={cn(
-                                            'border-b align-top last:border-0',
-                                            !row.active && 'opacity-60',
+                                            "border-b align-top last:border-0",
+                                            !row.active && "opacity-60",
                                         )}
                                     >
                                         <td className="px-3 py-2.5">
@@ -255,7 +275,7 @@ export default function Staff({
                                                 {row.employeeCode}
                                                 {row.phone
                                                     ? ` · ${row.phone}`
-                                                    : ''}
+                                                    : ""}
                                             </p>
                                         </td>
                                         <td className="px-3 py-2.5">
@@ -286,7 +306,7 @@ export default function Staff({
                                                     >
                                                         <StatusBadge tone="success">
                                                             On {duty.pump}
-                                                        </StatusBadge>{' '}
+                                                        </StatusBadge>{" "}
                                                         <span className="text-muted-foreground">
                                                             {duty.station} ·
                                                             shift {duty.shift}
@@ -308,7 +328,7 @@ export default function Staff({
                                                         )}
                                                     </p>
                                                     <p className="text-xs text-muted-foreground">
-                                                        {row.litresToday} L ·{' '}
+                                                        {row.litresToday} L ·{" "}
                                                         {row.salesToday} sales
                                                     </p>
                                                 </>
@@ -377,7 +397,7 @@ function AttendantForm({
     return (
         <Panel className="mt-4 border-primary/40">
             <PanelHeader
-                title={attendant ? `Edit ${attendant.name}` : 'New attendant'}
+                title={attendant ? `Edit ${attendant.name}` : "New attendant"}
                 actions={
                     <Button variant="ghost" size="sm" onClick={onDone}>
                         Close
@@ -428,27 +448,38 @@ function AttendantForm({
                                         id="phone"
                                         name="phone"
                                         type="tel"
-                                        defaultValue={attendant?.phone ?? ''}
+                                        defaultValue={attendant?.phone ?? ""}
                                     />
                                 </Field>
-                                <Field
-                                    id="user_id"
-                                    label="Sign-in"
-                                    hint="For an attendant who records their own sales."
-                                    error={errors.user_id}
-                                >
-                                    <Select
+                                {attendant?.userId && (
+                                    <Field
                                         id="user_id"
-                                        name="user_id"
-                                        defaultValue={attendant?.userId ?? ''}
-                                        placeholder="None"
-                                        options={users.map((user) => ({
-                                            value: user.id,
-                                            label: `${user.name} (${user.email})`,
-                                        }))}
-                                    />
-                                </Field>
+                                        label="Sign-in"
+                                        hint="Choose None to unlink it. The account itself stays in the workspace's members."
+                                        error={errors.user_id}
+                                    >
+                                        <Select
+                                            id="user_id"
+                                            name="user_id"
+                                            defaultValue={attendant.userId}
+                                            placeholder="None"
+                                            options={users.map((user) => ({
+                                                value: user.id,
+                                                label: `${user.name} (${user.email})`,
+                                            }))}
+                                        />
+                                    </Field>
+                                )}
                             </div>
+
+                            {!attendant?.userId && (
+                                <SignInChoice
+                                    idPrefix={attendant ? attendant.id : "new"}
+                                    users={users}
+                                    errors={errors}
+                                    allowLink
+                                />
+                            )}
 
                             <fieldset>
                                 <legend className="mb-2 text-sm font-medium">
@@ -478,16 +509,16 @@ function AttendantForm({
                                 </div>
                                 {elsewhere.length > 0 && (
                                     <p className="mt-2 text-xs text-muted-foreground">
-                                        Also at{' '}
+                                        Also at{" "}
                                         {elsewhere
                                             .map(
                                                 (id) =>
                                                     stations.find(
                                                         (row) => row.id === id,
                                                     )?.name ??
-                                                    'another station',
+                                                    "another station",
                                             )
-                                            .join(', ')}
+                                            .join(", ")}
                                         , which you do not manage.
                                     </p>
                                 )}
@@ -525,8 +556,8 @@ function AttendantForm({
                                     </Button>
                                     <Button type="submit" disabled={processing}>
                                         {attendant
-                                            ? 'Save attendant'
-                                            : 'Add attendant'}
+                                            ? "Save attendant"
+                                            : "Add attendant"}
                                     </Button>
                                 </div>
                             </div>

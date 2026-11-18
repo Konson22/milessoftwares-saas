@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\CreatesAttendantSignIns;
 use App\Http\Controllers\Concerns\SeesAcrossBranches;
 use App\Models\Attendant;
 use App\Models\AttendantStation;
@@ -9,6 +10,7 @@ use App\Models\FuelSale;
 use App\Models\Shift;
 use App\Models\ShiftAssignment;
 use App\Models\User;
+use App\Petrol\AttendantSignIn;
 use App\Petrol\Permissions;
 use App\Petrol\StationSetup;
 use App\Support\Branches;
@@ -16,6 +18,7 @@ use App\Support\BusinessDate;
 use App\Support\Volume;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -25,10 +28,11 @@ use Miles\PlatformClient\Api\Branch;
  * The company's pump attendants in one place: the stations each works at,
  * who is on a pump right now, and what each sold today. Their sign-in
  * accounts and roles are the workspace's (Members); here an attendant may be
- * linked to one.
+ * linked to one, or given a new username sign-in for the mobile app.
  */
 class StaffController extends Controller
 {
+    use CreatesAttendantSignIns;
     use SeesAcrossBranches;
 
     public function index(Branches $branches): Response
@@ -98,20 +102,49 @@ class StaffController extends Controller
         ]);
     }
 
-    public function store(Request $request, Branches $branches, StationSetup $setup): RedirectResponse
+    public function store(Request $request, Branches $branches, StationSetup $setup, AttendantSignIn $signIns): RedirectResponse
     {
         [$input, $chosen, $managed] = $this->input($request, $branches, null);
-        $attendant = $setup->saveAttendantAcross($input, null, $chosen, $managed);
+        $signIn = $this->signInInput($request, $input['user_id']);
+
+        $attendant = DB::transaction(function () use ($request, $setup, $signIns, $input, $chosen, $managed, $signIn) {
+            $created = $signIn === null ? null : $this->createSignIn($request, $signIns, $input['name'], $signIn, $this->roleStation($chosen, null));
+
+            return $setup->saveAttendantAcross([...$input, 'user_id' => $created !== null ? $created->id : $input['user_id']], null, $chosen, $managed);
+        });
 
         return back()->with('success', "{$attendant->name} added.");
     }
 
-    public function update(Request $request, Attendant $attendant, Branches $branches, StationSetup $setup): RedirectResponse
+    public function update(Request $request, Attendant $attendant, Branches $branches, StationSetup $setup, AttendantSignIn $signIns): RedirectResponse
     {
         [$input, $chosen, $managed] = $this->input($request, $branches, $attendant);
-        $setup->saveAttendantAcross($input, $attendant, $chosen, $managed);
+        $signIn = $this->signInInput($request, $input['user_id']);
+
+        DB::transaction(function () use ($request, $setup, $signIns, $input, $chosen, $managed, $signIn, $attendant) {
+            $created = $signIn === null ? null : $this->createSignIn($request, $signIns, $input['name'], $signIn, $this->roleStation($chosen, $attendant));
+
+            $setup->saveAttendantAcross([...$input, 'user_id' => $created !== null ? $created->id : $input['user_id']], $attendant, $chosen, $managed);
+        });
 
         return back()->with('success', "{$attendant->name} saved.");
+    }
+
+    /**
+     * The station a new sign-in gets the Attendant role at: the first one
+     * chosen on the form, or one the attendant already works at.
+     *
+     * @param  list<string>  $chosen
+     */
+    private function roleStation(array $chosen, ?Attendant $attendant): string
+    {
+        $branchId = $chosen[0] ?? ($attendant === null ? null : AttendantStation::query()
+            ->where('attendant_id', $attendant->id)->where('active', true)->value('branch_id'));
+        if (! is_string($branchId)) {
+            throw ValidationException::withMessages(['stations' => 'Choose the station they work at before giving them a sign-in.']);
+        }
+
+        return $branchId;
     }
 
     /**

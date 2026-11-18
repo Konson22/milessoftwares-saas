@@ -4,6 +4,7 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RequireApiBranch;
 use App\Http\Middleware\RequireBranch;
 use App\Http\Middleware\RequireBranchPermission;
+use App\Http\Middleware\RequireWebRole;
 use App\Support\AppPages;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -42,6 +43,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'branch' => RequireBranch::class,
             'branch.can' => RequireBranchPermission::class,
             'branch.api' => RequireApiBranch::class,
+            'web.role' => RequireWebRole::class,
         ]);
 
         $middleware->redirectGuestsTo(fn () => route('platform.login'));

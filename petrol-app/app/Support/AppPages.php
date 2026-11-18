@@ -24,8 +24,8 @@ final class AppPages
     /** Web-only: the app chooses its branch itself. */
     private const SKIP = ['branch.edit', 'branch.update'];
 
-    /** The web's sign-in and branch, swapped for the API's. */
-    private const REPLACED = ['web', 'platform', 'branch'];
+    /** The web's sign-in and branch, swapped for the API's; the web-only role check, dropped. */
+    private const REPLACED = ['web', 'platform', 'web.role', 'branch'];
 
     public static function mirror(Router $router, PlatformConfig $platform): void
     {
