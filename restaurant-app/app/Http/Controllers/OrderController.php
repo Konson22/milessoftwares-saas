@@ -37,7 +37,7 @@ class OrderController extends Controller
         $open = Order::query()
             ->where('branch_id', $this->branchId())
             ->where('status', Order::OPEN)
-            ->with('opener:id,name')
+            ->with(['opener:id,name', 'lines' => fn ($query) => $query->whereNull('voided_at'), 'lines.item:id,price_minor'])
             ->withExists(['tickets as has_ready' => fn ($query) => $query->where('status', KitchenTicket::READY)])
             ->orderBy('opened_at')
             ->get();
@@ -259,7 +259,8 @@ class OrderController extends Controller
             'customerName' => $order->customer_name,
             'openedAt' => $order->opened_at->toIso8601String(),
             'openedBy' => $order->opener->name,
-            'totalMinor' => $this->orders->bill($order)['total_minor'],
+            // As Orders::bill() prices it (today's menu prices), from the lines loaded with the floor.
+            'totalMinor' => (int) $order->lines->sum(fn (OrderLine $line) => $line->item === null ? 0 : $line->quantity * $line->item->price_minor),
             'hasReady' => (bool) $order->getAttribute('has_ready'),
         ];
     }

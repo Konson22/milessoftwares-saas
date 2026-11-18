@@ -53,7 +53,7 @@ export default function ChooseRestaurantScreen() {
               accessibilityRole="button"
               disabled={busy !== null || item.status !== 'active'}
               onPress={() => choose(item.slug)}
-              className={`flex-row items-center gap-3 bg-white p-4 active:bg-brand-50 ${item.status !== 'active' ? 'opacity-60' : ''}`}>
+              className={`flex-row items-center gap-3 p-4 ${item.status !== 'active' ? 'bg-slate-100' : 'bg-white active:bg-brand-50'}`}>
               <View className="h-11 w-11 items-center justify-center bg-brand-50">
                 <Ionicons name="restaurant-outline" size={22} color={colors.brand[700]} />
               </View>

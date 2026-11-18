@@ -323,7 +323,7 @@ export function OrderScreen({ page, path, reload }: ScreenProps<Props>) {
               onPress={() => setReviewing(true)}
               className="flex-row items-center gap-3 bg-brand-600 px-4 pt-3 active:bg-brand-700"
               style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
-              <View className="h-8 min-w-8 items-center justify-center bg-white/20 px-1.5">
+              <View className="h-8 min-w-8 items-center justify-center bg-brand-800 px-1.5">
                 <Text className="text-base font-bold text-white">{draftCount}</Text>
               </View>
               <Text className="flex-1 text-base font-semibold text-white">Review and send</Text>
@@ -349,10 +349,10 @@ export function OrderScreen({ page, path, reload }: ScreenProps<Props>) {
               <Text className="px-4 py-6 text-center text-base text-slate-500">Nothing yet: add from the menu.</Text>
             ) : (
               order.lines.map((line) => (
-                <View key={line.id} className={`flex-row items-start gap-2 border-b border-slate-100 px-4 py-2.5 ${line.status === 'voided' ? 'opacity-60' : ''}`}>
+                <View key={line.id} className={`flex-row items-start gap-2 border-b border-slate-100 px-4 py-2.5 ${line.status === 'voided' ? 'bg-slate-50' : ''}`}>
                   <Text className="w-8 text-base font-bold text-slate-900">{line.quantity}×</Text>
                   <View className="flex-1 gap-1">
-                    <Text className={`text-base font-medium text-slate-900 ${line.status === 'voided' ? 'line-through' : ''}`}>{line.name}</Text>
+                    <Text className={`text-base font-medium ${line.status === 'voided' ? 'text-slate-500 line-through' : 'text-slate-900'}`}>{line.name}</Text>
                     {line.note ? <Text className="text-sm text-amber-800">“{line.note}”</Text> : null}
                     {line.status === 'voided' ? (
                       <Text className="text-sm text-red-700">

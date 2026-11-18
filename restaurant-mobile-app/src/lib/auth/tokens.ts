@@ -357,7 +357,7 @@ export async function accessToken(force = false): Promise<string | null> {
  */
 export async function freshIdToken(): Promise<string> {
   const tokens = await refreshed();
-  if (!tokens?.idToken) throw new Error('Cannot reach Miles Softwares. Check the connection, or sign in again.');
+  if (!tokens?.idToken) throw new Error('Cannot reach Tatook. Check the connection, or sign in again.');
   return tokens.idToken;
 }
 

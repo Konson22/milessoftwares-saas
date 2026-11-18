@@ -179,7 +179,7 @@ class Bills
 
             $refundTill = null;
             if ($locked->payment_method === PaymentMethod::Cash && $locked->total_minor > 0) {
-                $refundTill = $this->tills->openFor($by, $locked->branch_id)
+                $refundTill = $this->tills->openFor($by, $locked->branch_id, lock: true)
                     ?? throw ValidationException::withMessages(['reason' => 'Open your till at this branch: the cash is given back from it.']);
             }
 

@@ -28,7 +28,7 @@ export function Badge({ label, tone = 'neutral', a11y }: { label: string; tone?:
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <View className={`border border-slate-200 bg-white p-4 shadow-sm shadow-brand-900/10 ${className}`}>
+    <View className={`border border-slate-200 bg-white p-4 ${className}`}>
       {children}
     </View>
   );
@@ -42,7 +42,7 @@ export function Hero({ children, className = '' }: { children: ReactNode; classN
 /** A small figure on a Hero: label above, value below. */
 export function HeroStat({ label, value, align = 'left' }: { label: string; value: string; align?: 'left' | 'right' }) {
   return (
-    <View className={`flex-1 bg-white/10 px-3 py-2.5 ${align === 'right' ? 'items-end' : ''}`}>
+    <View className={`flex-1 bg-brand-700 px-3 py-2.5 ${align === 'right' ? 'items-end' : ''}`}>
       <Text className="text-xs font-medium text-brand-100">{label}</Text>
       <Text className="mt-0.5 text-base font-bold text-white" numberOfLines={1}>
         {value}
@@ -69,7 +69,7 @@ export function ScreenTitle({ title, subtitle, right }: { title: string; subtitl
 export function SectionTitle({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (
     <View className="mb-2 flex-row items-center justify-between">
-      <Text className="text-xs font-bold uppercase tracking-wider text-slate-600">{children}</Text>
+      <Text className="text-sm font-semibold text-slate-700">{children}</Text>
       {right}
     </View>
   );

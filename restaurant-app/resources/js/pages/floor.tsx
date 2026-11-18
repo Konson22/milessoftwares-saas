@@ -121,7 +121,7 @@ export default function Floor({ tables, takeaways }: Props) {
                                     <Link
                                         key={table.id}
                                         href={show(table.order.id)}
-                                        className="rounded-lg border border-primary/40 bg-primary/5 p-3 transition hover:bg-primary/10"
+                                        className="rounded-lg border border-primary bg-muted p-3 transition hover:bg-accent"
                                     >
                                         <div className="flex items-center justify-between">
                                             <span className="text-lg font-semibold">

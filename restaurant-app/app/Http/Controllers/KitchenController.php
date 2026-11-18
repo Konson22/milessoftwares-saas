@@ -37,6 +37,8 @@ class KitchenController extends Controller
                 'sentAt' => $ticket->sent_at->toIso8601String(),
                 'readyAt' => $ticket->ready_at?->toIso8601String(),
                 'sentBy' => $ticket->sender->name,
+                // Nothing left to make: the cook stops and clears it.
+                'cancelled' => $ticket->lines->every(fn (OrderLine $line) => $line->voided()),
                 'order' => [
                     'id' => $ticket->order->id,
                     'number' => $ticket->order->number,
@@ -69,5 +71,13 @@ class KitchenController extends Controller
         $this->orders->served($ticket);
 
         return back()->with('success', "Ticket {$ticket->number} served.");
+    }
+
+    public function clear(KitchenTicket $ticket): RedirectResponse
+    {
+        $this->ensureHere($ticket->branch_id);
+        $this->orders->clear($ticket);
+
+        return back()->with('success', "Ticket {$ticket->number} cleared.");
     }
 }

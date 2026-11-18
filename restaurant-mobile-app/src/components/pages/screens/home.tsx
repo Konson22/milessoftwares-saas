@@ -56,7 +56,7 @@ export function HomeScreen({ page, path, reload }: ScreenProps<Props>) {
         </Text>
         <View className="mt-3 flex-row items-center gap-1.5">
           <Ionicons name={reachable ? 'cloud-done-outline' : 'cloud-offline-outline'} size={14} color={colors.brand[100]} />
-          <Text className="text-xs font-semibold uppercase tracking-wider text-brand-100">
+          <Text className="text-sm font-semibold text-brand-100">
             {reachable ? 'Online' : 'No connection'}
           </Text>
         </View>

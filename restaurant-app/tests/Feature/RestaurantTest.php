@@ -343,6 +343,33 @@ describe('the kitchen', function () {
         $this->actingAs($cook);
         $this->get(at('kitchen'))->assertInertia(fn (Assert $page) => $page->has('tickets', 0));
     });
+
+    it('flags the ticket of a cancelled order for the cook to clear, and clears only that', function () {
+        member(['restaurant.orders.take', 'restaurant.orders.void']);
+        $cancelled = tableOrder([[$this->beans, 1]]);
+        $this->post(at("orders/{$cancelled->id}/cancel"), ['reason' => 'Guests left'])->assertSessionHasNoErrors();
+        $this->post(at('orders'), ['service' => 'takeaway'])->assertSessionHasNoErrors();
+        $live = $this->asTenant('acme', fn () => Order::query()->where('service', 'takeaway')->sole());
+        $this->post(at("orders/{$live->id}/lines"), ['lines' => [['item_id' => $this->beans->id, 'quantity' => 1]]])->assertSessionHasNoErrors();
+        $this->post(at("orders/{$live->id}/send"))->assertSessionHasNoErrors();
+        [$gone, $cooking] = $this->asTenant('acme', fn () => [
+            KitchenTicket::query()->where('order_id', $cancelled->id)->sole(),
+            KitchenTicket::query()->where('order_id', $live->id)->sole(),
+        ]);
+
+        member(['restaurant.kitchen.view']);
+        $this->get(at('kitchen'))->assertInertia(fn (Assert $page) => $page
+            ->has('tickets', 2)
+            ->where('tickets.0.cancelled', true)
+            ->where('tickets.1.cancelled', false));
+
+        $this->post(at("kitchen/{$cooking->id}/clear"))->assertSessionHasErrors('ticket');
+        $this->post(at("kitchen/{$gone->id}/clear"))->assertSessionHasNoErrors();
+        $this->post(at("kitchen/{$gone->id}/clear"))->assertSessionHasErrors('ticket');
+
+        expect($this->asTenant('acme', fn () => $gone->fresh()->status))->toBe('cleared');
+        $this->get(at('kitchen'))->assertInertia(fn (Assert $page) => $page->has('tickets', 1)->where('tickets.0.id', $cooking->id));
+    });
 });
 
 describe('the bill', function () {

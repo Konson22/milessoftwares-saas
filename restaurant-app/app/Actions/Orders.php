@@ -345,6 +345,30 @@ class Orders
         return $this->advance($ticket, KitchenTicket::READY, KitchenTicket::SERVED, 'served_at');
     }
 
+    /**
+     * Takes a ticket with nothing left to make (every line voided) off the
+     * kitchen screen.
+     *
+     * @throws ValidationException
+     */
+    public function clear(KitchenTicket $ticket): KitchenTicket
+    {
+        return DB::transaction(function () use ($ticket) {
+            $locked = KitchenTicket::query()->whereKey($ticket->id)->lockForUpdate()->firstOrFail();
+
+            if (! in_array($locked->status, [KitchenTicket::PREPARING, KitchenTicket::READY], true)) {
+                throw ValidationException::withMessages(['ticket' => "Ticket {$locked->number} is already {$locked->status}."]);
+            }
+            if ($locked->lines()->whereNull('voided_at')->exists()) {
+                throw ValidationException::withMessages(['ticket' => "Ticket {$locked->number} still has something to make."]);
+            }
+
+            $locked->forceFill(['status' => KitchenTicket::CLEARED])->save();
+
+            return $locked;
+        });
+    }
+
     private function advance(KitchenTicket $ticket, string $from, string $to, string $stamp): KitchenTicket
     {
         return DB::transaction(function () use ($ticket, $from, $to, $stamp) {

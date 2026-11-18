@@ -33,7 +33,7 @@ export function DrawerMenu({ navigation }: DrawerContentComponentProps) {
     <View className="flex-1 bg-white">
       <View className="bg-brand-logo px-5 pb-5" style={{ paddingTop: insets.top + 16 }}>
         <View className="flex-row items-center gap-3">
-          <View className="h-12 w-12 items-center justify-center rounded-full border border-white/25 bg-white/15">
+          <View className="h-12 w-12 items-center justify-center rounded-full border border-brand-400 bg-brand-700">
             <Text className="text-base font-bold text-white">{user ? initials(user.name) : '?'}</Text>
           </View>
           <View className="flex-1">
@@ -50,7 +50,7 @@ export function DrawerMenu({ navigation }: DrawerContentComponentProps) {
       <DrawerContentScrollView contentContainerStyle={{ paddingTop: 8, paddingBottom: 16 }}>
         {groups.map((group) => (
           <View key={group.title} className="px-3 pb-2">
-            <Text className="px-3 pb-1 pt-3 text-xs font-bold uppercase tracking-wider text-slate-500">{group.title}</Text>
+            <Text className="px-3 pb-1 pt-3 text-sm font-semibold text-slate-700">{group.title}</Text>
             {group.items.map((item) => {
               const on = active(item);
               return (

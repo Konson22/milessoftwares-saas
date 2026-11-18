@@ -22,7 +22,7 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
   return (
     <View
       accessibilityRole="tablist"
-      className="border-t border-slate-200 bg-white px-2 pt-1.5 shadow-lg shadow-brand-900/10"
+      className="border-t border-slate-200 bg-white px-2 pt-1.5"
       style={{ paddingBottom: Math.max(insets.bottom, 8) }}>
       <View className="w-full max-w-xl flex-row self-center">
         {routes.map((route) => {

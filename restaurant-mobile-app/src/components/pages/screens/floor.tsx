@@ -76,7 +76,7 @@ export function FloorScreen({ page, path, reload }: ScreenProps<Props>) {
         ) : (
           areas.map((area) => (
             <View key={area} className="gap-2">
-              {areas.length > 1 || area ? <Text className="text-xs font-bold uppercase tracking-wider text-slate-500">{area || 'Other'}</Text> : null}
+              {areas.length > 1 || area ? <Text className="text-sm font-semibold text-slate-700">{area || 'Other'}</Text> : null}
               <View className="flex-row flex-wrap gap-2">
                 {tables
                   .filter((table) => (table.area ?? '') === area)

@@ -83,6 +83,7 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::middleware('branch.can:restaurant.kitchen.view')->group(function () {
                 Route::get('kitchen', [KitchenController::class, 'index'])->name('kitchen');
                 Route::post('kitchen/{ticket}/ready', [KitchenController::class, 'ready'])->whereUuid('ticket')->name('kitchen.ready');
+                Route::post('kitchen/{ticket}/clear', [KitchenController::class, 'clear'])->whereUuid('ticket')->name('kitchen.clear');
             });
             Route::post('kitchen/{ticket}/served', [KitchenController::class, 'served'])
                 ->whereUuid('ticket')

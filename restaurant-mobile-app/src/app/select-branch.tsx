@@ -73,7 +73,7 @@ export default function SelectBranchScreen() {
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
                 onPress={() => setSelected(item.id)}
-                className={`flex-row items-center gap-3 border-2 p-4 ${active ? 'border-accent bg-white' : 'border-transparent bg-white/95'}`}>
+                className={`flex-row items-center gap-3 border-2 p-4 ${active ? 'border-accent bg-white' : 'border-brand-900 bg-slate-100'}`}>
                 <View className={`h-11 w-11 items-center justify-center ${active ? 'bg-brand-600' : 'bg-brand-50'}`}>
                   <Ionicons name="storefront-outline" size={22} color={active ? colors.white : colors.brand[700]} />
                 </View>

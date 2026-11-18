@@ -11,7 +11,8 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
 
 /**
  * What one "send to the kitchen" sent: the order's new lines at that
- * moment. The kitchen marks it ready, the waiter served.
+ * moment. The kitchen marks it ready, the waiter served; one with nothing
+ * left to make (every line voided) is cleared.
  *
  * @property string $id
  * @property string $organization_id
@@ -36,6 +37,9 @@ class KitchenTicket extends Model
     public const READY = 'ready';
 
     public const SERVED = 'served';
+
+    /** Every line voided (the order was cancelled, say): cleared off the kitchen screen. */
+    public const CLEARED = 'cleared';
 
     protected $guarded = ['organization_id'];
 

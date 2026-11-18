@@ -78,7 +78,7 @@ export default function ChooseBranch({
                                                 {branch.name}
                                             </span>
                                             {branch.city && (
-                                                <span className="text-xs opacity-80">
+                                                <span className="text-xs font-normal">
                                                     {branch.city}
                                                 </span>
                                             )}

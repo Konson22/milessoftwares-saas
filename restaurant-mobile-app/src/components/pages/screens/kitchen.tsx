@@ -22,6 +22,8 @@ interface Ticket {
   sentBy: string;
   order: { id: string; number: string; service: 'dine_in' | 'takeaway'; table: string | null; customerName: string | null };
   lines: { id: string; name: string; quantity: number; note: string | null; voided: boolean }[];
+  /** Every line voided: nothing to make, the cook clears it. */
+  cancelled?: boolean;
 }
 
 /**
@@ -33,8 +35,9 @@ export function KitchenScreen({ page, path, reload }: ScreenProps<{ tickets: Tic
   const { tickets } = page.props;
   const { run, busy } = useAction(path, reload);
   const canOpenOrders = (page.props.branchPermissions ?? []).includes('restaurant.orders.take') || page.props.access?.isOwner;
-  const cooking = tickets.filter((t) => t.status === 'preparing').length;
-  const ready = tickets.length - cooking;
+  const live = tickets.filter((t) => !t.cancelled);
+  const cooking = live.filter((t) => t.status === 'preparing').length;
+  const ready = live.length - cooking;
 
   return (
     <Scroll onRefresh={reload}>
@@ -49,11 +52,12 @@ export function KitchenScreen({ page, path, reload }: ScreenProps<{ tickets: Tic
         <EmptyState icon="flame-outline" title="Nothing to cook" message="Tickets sent from the floor show up here." />
       ) : (
         tickets.map((ticket) => {
-          const isReady = ticket.status === 'ready';
+          const cancelled = ticket.cancelled ?? false;
+          const isReady = !cancelled && ticket.status === 'ready';
           const minutes = minutesSince(ticket.sentAt);
-          const late = !isReady && minutes >= 20;
+          const late = !isReady && !cancelled && minutes >= 20;
           return (
-            <View key={ticket.id} className={`border-2 bg-white ${isReady ? 'border-emerald-400' : late ? 'border-amber-400' : 'border-slate-200'}`}>
+            <View key={ticket.id} className={`border-2 bg-white ${cancelled ? 'border-red-400' : isReady ? 'border-emerald-400' : late ? 'border-amber-400' : 'border-slate-200'}`}>
               <Pressable
                 accessibilityRole={canOpenOrders ? 'button' : undefined}
                 disabled={!canOpenOrders}
@@ -68,7 +72,13 @@ export function KitchenScreen({ page, path, reload }: ScreenProps<{ tickets: Tic
                     {ticket.number} · {time(ticket.sentAt)} · {ticket.sentBy}
                   </Text>
                 </View>
-                {isReady ? <Badge label="Ready" tone="green" /> : <Badge label={since(ticket.sentAt)} tone={late ? 'amber' : 'neutral'} />}
+                {cancelled ? (
+                  <Badge label="Cancelled" tone="red" />
+                ) : isReady ? (
+                  <Badge label="Ready" tone="green" />
+                ) : (
+                  <Badge label={since(ticket.sentAt)} tone={late ? 'amber' : 'neutral'} />
+                )}
                 <IconButton
                   icon="print-outline"
                   label={`Print ticket ${ticket.number}`}
@@ -95,7 +105,9 @@ export function KitchenScreen({ page, path, reload }: ScreenProps<{ tickets: Tic
                 ))}
               </View>
               <View className="border-t border-slate-100 p-2">
-                {isReady ? (
+                {cancelled ? (
+                  <Button title="Stop and clear" icon="close" variant="danger" size="lg" disabled={busy} onPress={() => void run('POST', `kitchen/${ticket.id}/clear`)} />
+                ) : isReady ? (
                   <Button title="Served" icon="checkmark" variant="secondary" size="lg" disabled={busy} onPress={() => void run('POST', `kitchen/${ticket.id}/served`)} />
                 ) : (
                   <Button title="Ready" icon="notifications-outline" variant="accent" size="lg" disabled={busy} onPress={() => void run('POST', `kitchen/${ticket.id}/ready`)} />

@@ -15,7 +15,7 @@ export function GoogleButton({ onPress, loading, disabled, title = 'Continue wit
       accessibilityState={{ disabled: !!inactive, busy: !!loading }}
       onPress={onPress}
       disabled={inactive}
-      className={`min-h-11 flex-row items-center justify-center gap-3 rounded border border-[#747775] bg-white px-3 active:bg-[#f2f2f2] ${inactive ? 'opacity-60' : ''}`}>
+      className={`min-h-11 flex-row items-center justify-center gap-3 rounded border border-[#747775] px-3 ${inactive ? 'bg-[#f2f2f2]' : 'bg-white active:bg-[#f2f2f2]'}`}>
       {loading ? (
         <ActivityIndicator size="small" color="#1f1f1f" style={{ width: 22, height: 22 }} />
       ) : (
