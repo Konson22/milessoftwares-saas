@@ -105,6 +105,8 @@ export async function floorAction(method: Method, path: string, data: Record<str
   const what = classify(method, path);
   const owner = scope();
   if (!what || !owner) return null;
+  // A part of the bill or a discount needs the connection: it goes as the web form does.
+  if (what.kind === 'order.pay' && (data.line_ids || data.parts || data.discount)) return null;
 
   const order = what.orderId ? await cachedPage<OrderProps>(`orders/${what.orderId}`) : null;
   const where = order ? whereOf(order.props.order) : '';

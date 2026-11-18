@@ -62,6 +62,12 @@ class BillController extends Controller
                 'order' => ['id' => $bill->order->id, 'number' => $bill->order->number, 'table' => $bill->order->table?->name],
                 'customerName' => $bill->customer_name,
                 'currency' => $bill->currency,
+                'subtotalMinor' => $bill->subtotal_minor,
+                'discountMinor' => $bill->discount_minor,
+                'discountReason' => $bill->discount_reason,
+                // An equal share of the order: share part of parts.
+                'part' => $bill->part,
+                'parts' => $bill->parts,
                 'totalMinor' => $bill->total_minor,
                 'paymentMethod' => $bill->payment_method->label(),
                 'paymentReference' => $bill->payment_reference,

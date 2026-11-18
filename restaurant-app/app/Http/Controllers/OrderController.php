@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Bills;
 use App\Actions\Orders;
 use App\Actions\Tills;
 use App\Enums\PaymentMethod;
 use App\Http\Controllers\Concerns\WorksInBranch;
+use App\Models\Bill;
 use App\Models\DiningTable;
 use App\Models\KitchenTicket;
 use App\Models\MenuItem;
@@ -15,6 +17,7 @@ use App\Support\Money;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -37,8 +40,9 @@ class OrderController extends Controller
         $open = Order::query()
             ->where('branch_id', $this->branchId())
             ->where('status', Order::OPEN)
-            ->with(['opener:id,name', 'lines' => fn ($query) => $query->whereNull('voided_at'), 'lines.item:id,price_minor'])
+            ->with(['opener:id,name', 'lines' => fn ($query) => $query->whereNull('voided_at')->whereNull('bill_id'), 'lines.item:id,price_minor'])
             ->withExists(['tickets as has_ready' => fn ($query) => $query->where('status', KitchenTicket::READY)])
+            ->withSum(['bills as shares_paid_minor' => fn ($query) => $query->where('status', Bill::PAID)->whereNotNull('parts')], 'subtotal_minor')
             ->orderBy('opened_at')
             ->get();
         $byTable = $open->whereNotNull('dining_table_id')->keyBy('dining_table_id');
@@ -72,7 +76,7 @@ class OrderController extends Controller
         $orders = Order::query()
             ->where('branch_id', $this->branchId())
             ->whereBetween('opened_at', [$day, $day->endOfDay()])
-            ->with(['table:id,name', 'opener:id,name', 'bill:id,order_id,number,total_minor,status'])
+            ->with(['table:id,name', 'opener:id,name', 'bills:id,order_id,number,total_minor,status,paid_at'])
             ->latest('opened_at')
             ->get();
 
@@ -87,7 +91,7 @@ class OrderController extends Controller
                 'status' => $order->status,
                 'openedAt' => $order->opened_at->toIso8601String(),
                 'openedBy' => $order->opener->name,
-                'bill' => $order->bill === null ? null : ['id' => $order->bill->id, 'number' => $order->bill->number, 'totalMinor' => $order->bill->total_minor, 'status' => $order->bill->status],
+                'bill' => $this->billsSummary($order),
             ]),
         ]);
     }
@@ -116,7 +120,8 @@ class OrderController extends Controller
     public function show(Request $request, Order $order, Tills $tills): Response
     {
         $this->ensureHere($order->branch_id);
-        $order->load(['table:id,name', 'opener:id,name', 'bill:id,order_id,number,total_minor,status', 'lines.item:id,name,kind', 'lines.ticket:id,number,status', 'lines.voider:id,name']);
+        $order->load(['table:id,name', 'opener:id,name', 'bills', 'lines.item:id,name,kind', 'lines.ticket:id,number,status', 'lines.voider:id,name']);
+        $billNumbers = $order->bills->pluck('number', 'id');
 
         return Inertia::render('orders/show', [
             'order' => [
@@ -130,7 +135,19 @@ class OrderController extends Controller
                 'openedAt' => $order->opened_at->toIso8601String(),
                 'openedBy' => $order->opener->name,
                 'cancelReason' => $order->cancel_reason,
-                'bill' => $order->bill === null ? null : ['id' => $order->bill->id, 'number' => $order->bill->number, 'totalMinor' => $order->bill->total_minor, 'status' => $order->bill->status],
+                // The bill that closed it (the last one paid).
+                'bill' => ($last = $order->bills->last()) === null ? null : ['id' => $last->id, 'number' => $last->number, 'totalMinor' => $last->total_minor, 'status' => $last->status],
+                'bills' => $order->bills->map(fn (Bill $bill) => [
+                    'id' => $bill->id,
+                    'number' => $bill->number,
+                    'totalMinor' => $bill->total_minor,
+                    'discountMinor' => $bill->discount_minor,
+                    'part' => $bill->part,
+                    'parts' => $bill->parts,
+                    'paymentMethod' => $bill->payment_method->label(),
+                    'status' => $bill->status,
+                    'paidAt' => $bill->paid_at->toIso8601String(),
+                ])->values(),
                 'lines' => $order->lines->map(fn (OrderLine $line) => [
                     'id' => $line->id,
                     'name' => $line->item->name,
@@ -142,6 +159,7 @@ class OrderController extends Controller
                     'ticket' => $line->ticket?->number,
                     'voidReason' => $line->void_reason,
                     'voidedBy' => $line->voider?->name,
+                    'paidOn' => $line->bill_id === null ? null : $billNumbers->get($line->bill_id),
                 ]),
             ],
             'bill' => $this->orders->bill($order),
@@ -154,6 +172,7 @@ class OrderController extends Controller
             'can' => [
                 'void' => $this->canHere('restaurant.orders.void'),
                 'pay' => $this->canHere('restaurant.bills.take'),
+                'discount' => $this->canHere('restaurant.bills.discount'),
             ],
         ]);
     }
@@ -218,21 +237,92 @@ class OrderController extends Controller
             'payment_method' => ['required', Rule::enum(PaymentMethod::class)],
             'payment_reference' => ['nullable', 'string', 'max:64'],
             'amount_tendered' => ['nullable', 'string', Money::rule()],
+            // A part of the bill: some of its lines, or the next of so many equal shares.
+            'line_ids' => ['nullable', 'array', 'min:1', 'max:200', 'prohibits:parts'],
+            'line_ids.*' => ['uuid', 'distinct'],
+            'parts' => ['nullable', 'integer', 'min:2', 'max:'.Bills::MAX_PARTS],
+            'discount_type' => ['nullable', Rule::in(['amount', 'percent'])],
+            'discount' => ['nullable', 'string', 'max:32'],
+            'discount_reason' => ['nullable', 'required_with:discount', 'string', 'max:255'],
         ]);
 
-        $paid = $this->orders->pay(
+        $discount = null;
+        if (filled($validated['discount'] ?? null)) {
+            abort_unless($this->canHere('restaurant.bills.discount'), 403, 'You may not discount bills in this branch.');
+            $discount = ($validated['discount_type'] ?? 'amount') === 'percent'
+                ? $this->percent((string) $validated['discount'])
+                : $this->discountAmount((string) $validated['discount']);
+            $discount['reason'] = (string) $validated['discount_reason'];
+        }
+
+        $bill = $this->orders->pay(
             $order,
             $this->member($request),
             PaymentMethod::from($validated['payment_method']),
             isset($validated['amount_tendered']) && $validated['amount_tendered'] !== '' ? Money::toMinor($validated['amount_tendered']) : null,
             $validated['payment_reference'] ?? null,
+            lineIds: isset($validated['line_ids']) ? array_values(array_map('strval', $validated['line_ids'])) : null,
+            parts: isset($validated['parts']) ? (int) $validated['parts'] : null,
+            discount: $discount,
         );
-        $bill = $paid->bill()->firstOrFail();
+        $fresh = $order->fresh();
+        $left = $fresh !== null && $fresh->isOpen() ? $this->orders->bill($fresh)['total_minor'] : 0;
 
-        return to_route('orders.show', $paid)->with(
+        return to_route('orders.show', $order)->with(
             'success',
-            "Bill {$bill->number} paid".($bill->change_minor ? ', change '.Money::format($bill->change_minor) : '').'.',
+            "Bill {$bill->number} paid"
+                .($bill->isShare() ? " (share {$bill->part} of {$bill->parts})" : '')
+                .($bill->change_minor ? ', change '.Money::format($bill->change_minor) : '')
+                .($left > 0 ? '. Still to pay: '.Money::format($left) : '')
+                .'.',
         );
+    }
+
+    /**
+     * A discount typed as a percentage ("10" or "10%").
+     *
+     * @return array{percent: int}
+     */
+    private function percent(string $typed): array
+    {
+        if (preg_match('/^\s*(\d{1,3})\s*%?\s*$/', $typed, $match) !== 1) {
+            throw ValidationException::withMessages(['discount' => 'A whole percentage, from 1 to 100.']);
+        }
+
+        return ['percent' => (int) $match[1]];
+    }
+
+    /**
+     * A discount typed as an amount.
+     *
+     * @return array{amount_minor: int}
+     */
+    private function discountAmount(string $typed): array
+    {
+        validator(['discount' => $typed], ['discount' => [Money::rule()]])->validate();
+
+        return ['amount_minor' => Money::toMinor($typed)];
+    }
+
+    /**
+     * Its bills on the day's list: one, or the parts added up.
+     *
+     * @return array{id: string, number: string, totalMinor: int, status: string}|null
+     */
+    private function billsSummary(Order $order): ?array
+    {
+        $bills = $order->bills;
+        if ($bills->isEmpty()) {
+            return null;
+        }
+        $kept = $bills->where('status', Bill::PAID);
+
+        return [
+            'id' => $bills->last()->id,
+            'number' => $bills->count() === 1 ? $bills->first()->number : "{$bills->first()->number} +".($bills->count() - 1),
+            'totalMinor' => (int) $kept->sum('total_minor'),
+            'status' => $kept->isEmpty() ? Bill::VOIDED : Bill::PAID,
+        ];
     }
 
     public function cancel(Request $request, Order $order): RedirectResponse
@@ -259,8 +349,8 @@ class OrderController extends Controller
             'customerName' => $order->customer_name,
             'openedAt' => $order->opened_at->toIso8601String(),
             'openedBy' => $order->opener->name,
-            // As Orders::bill() prices it (today's menu prices), from the lines loaded with the floor.
-            'totalMinor' => (int) $order->lines->sum(fn (OrderLine $line) => $line->quantity * $line->item->price_minor),
+            // Still to pay, as Orders::bill() prices it (today's menu prices), from what the floor loaded.
+            'totalMinor' => max((int) $order->lines->sum(fn (OrderLine $line) => $line->quantity * $line->item->price_minor) - (int) $order->getAttribute('shares_paid_minor'), 0),
             'hasReady' => (bool) $order->getAttribute('has_ready'),
         ];
     }

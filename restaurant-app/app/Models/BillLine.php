@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
  *
  * @property string $id
  * @property string $bill_id
- * @property string $menu_item_id
+ * @property string|null $menu_item_id null on a share's one line ("Share 1 of 3")
  * @property string $name
  * @property int $quantity
  * @property int $unit_price_minor

@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $voided_by
  * @property CarbonImmutable|null $voided_at
  * @property string|null $void_reason
+ * @property string|null $bill_id the bill that paid it
  * @property-read MenuItem $item
  * @property-read KitchenTicket|null $ticket
  * @property-read User|null $voider

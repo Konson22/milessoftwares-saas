@@ -254,8 +254,9 @@ class OutboxController extends Controller
         ])->validate();
 
         // Taken on the phone without a connection: the customer has paid,
-        // so it is recorded (Bills::pay) rather than refused.
-        $paid = $this->orders->pay(
+        // so it is recorded (Bills::pay) rather than refused. Everything left
+        // is paid: parts and discounts need the connection.
+        $bill = $this->orders->pay(
             $order,
             $by,
             PaymentMethod::from($pay['payment_method']),
@@ -263,7 +264,6 @@ class OutboxController extends Controller
             $pay['payment_reference'] ?? null,
             (bool) ($pay['taken_offline'] ?? false),
         );
-        $bill = $paid->bill()->firstOrFail();
 
         return ['bill_id' => $bill->id, 'bill_number' => $bill->number, 'total_minor' => $bill->total_minor, 'change_minor' => $bill->change_minor];
     }

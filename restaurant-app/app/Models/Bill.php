@@ -11,8 +11,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Miles\PlatformClient\Tenancy\BelongsToTenant;
 
 /**
- * The paid bill of an order, into the cashier's till: Finance hears of it as
- * an invoice paid at once. Voided whole, once (App\Actions\Bills).
+ * A paid bill of an order, into the cashier's till: Finance hears of it as
+ * an invoice paid at once. Voided whole, once (App\Actions\Bills). An order
+ * paid in parts has several: some of its lines each, or equal shares of what
+ * was left (part of parts). The subtotal less the discount is what was taken.
  *
  * @property string $id
  * @property string $organization_id
@@ -21,6 +23,12 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property string $till_shift_id
  * @property string $number
  * @property string $currency
+ * @property int $subtotal_minor
+ * @property int $discount_minor
+ * @property string|null $discount_reason
+ * @property string|null $discounted_by
+ * @property int|null $part
+ * @property int|null $parts
  * @property int $total_minor
  * @property int $cost_minor
  * @property PaymentMethod $payment_method
@@ -54,6 +62,10 @@ class Bill extends Model
     protected function casts(): array
     {
         return [
+            'subtotal_minor' => 'integer',
+            'discount_minor' => 'integer',
+            'part' => 'integer',
+            'parts' => 'integer',
             'total_minor' => 'integer',
             'cost_minor' => 'integer',
             'tendered_minor' => 'integer',
@@ -70,6 +82,12 @@ class Bill extends Model
     public function lines(): HasMany
     {
         return $this->hasMany(BillLine::class)->orderBy('name');
+    }
+
+    /** An equal share of what was left of the order, not some of its lines. */
+    public function isShare(): bool
+    {
+        return $this->parts !== null;
     }
 
     /**

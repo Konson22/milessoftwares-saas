@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Stock;
+use App\Actions\Tills;
 use App\Models\Bill;
 use App\Models\DiningTable;
 use App\Models\KitchenTicket;
@@ -13,6 +14,7 @@ use App\Models\TillShift;
 use App\Models\User;
 use App\Models\Workspace;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Miles\SharedModuleKit\Envelope;
 
@@ -488,6 +490,126 @@ describe('the bill', function () {
             ->component('bills/index')
             ->has('bills', 1)
             ->where('takings.totalMinor', 0));
+    });
+});
+
+describe('split bills and discounts', function () {
+    it('splits by items: each part its own bill, the order closed by the last', function () {
+        member(['restaurant.orders.take', 'restaurant.orders.void', 'restaurant.bills.take']);
+        $order = tableOrder([[$this->beans, 2], [$this->soda, 1]]);
+        [$beans, $soda] = $this->asTenant('acme', fn () => [
+            OrderLine::query()->where('menu_item_id', $this->beans->id)->sole(),
+            OrderLine::query()->where('menu_item_id', $this->soda->id)->sole(),
+        ]);
+
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash', 'line_ids' => [(string) Str::uuid()]])->assertSessionHasErrors('line_ids');
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'card', 'line_ids' => [$soda->id]])->assertSessionHasNoErrors();
+
+        expect($this->asTenant('acme', fn () => $order->fresh()->status))->toBe('open')
+            ->and(sodasInJuba())->toBe(23);
+        $this->get(at("orders/{$order->id}"))->assertInertia(fn (Assert $page) => $page
+            ->where('bill.total_minor', 3000)
+            ->where('bill.paid_minor', 300)
+            ->has('bill.lines_open', 1)
+            ->where('order.bills.0.totalMinor', 300));
+
+        // Paid lines stay paid: no void, no cancel, no paying them again.
+        $this->post(at("orders/{$order->id}/lines/{$soda->id}/void"), ['reason' => 'Spilt'])->assertSessionHasErrors('line');
+        $this->post(at("orders/{$order->id}/cancel"), ['reason' => 'Left'])->assertSessionHasErrors('reason');
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash', 'line_ids' => [$soda->id]])->assertSessionHasErrors('line_ids');
+
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash', 'line_ids' => [$beans->id], 'amount_tendered' => '30.00'])->assertSessionHasNoErrors();
+
+        expect($this->asTenant('acme', fn () => $order->fresh()->status))->toBe('paid')
+            ->and($this->asTenant('acme', fn () => Bill::query()->orderBy('number')->pluck('total_minor')->all()))->toBe([300, 3000])
+            ->and(financeEvents())->toBe(['finance.invoice.issued', 'finance.payment.received', 'finance.invoice.issued', 'finance.payment.received']);
+        $this->get(at('orders'))->assertInertia(fn (Assert $page) => $page
+            ->where('orders.0.bill.number', 'B-000001 +1')
+            ->where('orders.0.bill.totalMinor', 3300));
+    });
+
+    it('splits in equal shares of what is left, the last taking the rest and the drinks', function () {
+        member(['restaurant.orders.take', 'restaurant.bills.take', 'restaurant.bills.void', 'restaurant.bills.view']);
+        // 2 × 15.00 + 3.00 + a 0.01 tea: 33.01, which thirds do not divide.
+        $tea = $this->asTenant('acme', fn () => MenuItem::factory()->create(['name' => 'Tea', 'price_minor' => 1]));
+        $order = tableOrder([[$this->beans, 2], [$this->soda, 1], [$tea, 1]]);
+
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash', 'parts' => 3])->assertSessionHasNoErrors();
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash', 'parts' => 4])->assertSessionHasErrors('parts');
+        $this->get(at("orders/{$order->id}"))->assertInertia(fn (Assert $page) => $page
+            ->where('bill.total_minor', 2201)
+            ->where('bill.shares.paid', 1)
+            ->where('bill.shares.next_minor', 1100));
+        expect(sodasInJuba())->toBe(24);
+
+        // A share given back while the order is open is owed again.
+        $first = $this->asTenant('acme', fn () => Bill::query()->sole());
+        $this->post(at("bills/{$first->id}/void"), ['reason' => 'Paid twice'])->assertSessionHasNoErrors();
+        $this->get(at("orders/{$order->id}"))->assertInertia(fn (Assert $page) => $page->where('bill.total_minor', 3301)->where('bill.shares', null));
+
+        foreach ([1, 2, 3] as $part) {
+            $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'card', 'parts' => 3])->assertSessionHasNoErrors();
+        }
+
+        $shares = $this->asTenant('acme', fn () => Bill::query()->where('status', 'paid')->orderBy('number')->with('lines')->get());
+        expect($shares->pluck('total_minor')->all())->toBe([1100, 1100, 1101])
+            ->and($shares->pluck('part')->all())->toBe([1, 2, 3])
+            ->and($shares->last()->lines->sole()->name)->toBe('Share 3 of 3')
+            ->and($shares->last()->cost_minor)->toBe(150)
+            ->and($shares->first()->cost_minor)->toBe(0)
+            ->and(sodasInJuba())->toBe(23)
+            ->and($this->asTenant('acme', fn () => $order->fresh()->status))->toBe('paid')
+            ->and($this->asTenant('acme', fn () => OrderLine::query()->whereNull('bill_id')->count()))->toBe(0);
+
+        $invoice = collect($this->platform()->moduleEvents['finance'])->map(fn (array $e) => Envelope::fromArray($e))
+            ->filter(fn (Envelope $e) => $e->eventType === 'finance.invoice.issued')->last();
+        expect($invoice->payload['lines'][0]['description'])->toBe("Share 3 of 3, order {$order->fresh()->number}")
+            ->and($invoice->payload['lines'][0]['cost_minor'])->toBe(150);
+    });
+
+    it('takes the rest of the shares at once', function () {
+        member(['restaurant.orders.take', 'restaurant.bills.take', 'restaurant.bills.view']);
+        $order = tableOrder([[$this->beans, 2]]);
+
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash', 'parts' => 3])->assertSessionHasNoErrors();
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash', 'line_ids' => [$this->asTenant('acme', fn () => OrderLine::query()->value('id'))]])
+            ->assertSessionHasErrors('line_ids');
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash'])->assertSessionHasNoErrors();
+
+        $rest = $this->asTenant('acme', fn () => Bill::query()->orderByDesc('number')->with('lines')->first());
+        expect($rest->total_minor)->toBe(2000)
+            ->and($rest->lines->sole()->name)->toBe('Shares 2 to 3 of 3')
+            ->and($this->asTenant('acme', fn () => $order->fresh()->status))->toBe('paid');
+    });
+
+    it('discounts a bill with a reason, only with the right to, and tells Finance', function () {
+        member(['restaurant.orders.take', 'restaurant.bills.take']);
+        $order = tableOrder([[$this->beans, 2], [$this->soda, 1]]);
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash', 'discount' => '10', 'discount_type' => 'percent', 'discount_reason' => 'Regular'])->assertForbidden();
+
+        $cashier = member(['restaurant.orders.take', 'restaurant.bills.take', 'restaurant.bills.discount', 'restaurant.bills.view']);
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash', 'discount' => '10', 'discount_type' => 'percent'])->assertSessionHasErrors('discount_reason');
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash', 'discount' => '40.00', 'discount_reason' => 'Regular'])->assertSessionHasErrors('discount');
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash', 'discount' => '10%', 'discount_type' => 'percent', 'discount_reason' => 'Regular', 'amount_tendered' => '29.70'])
+            ->assertSessionHasNoErrors();
+
+        $bill = $this->asTenant('acme', fn () => Bill::query()->sole());
+        expect($bill->subtotal_minor)->toBe(3300)
+            ->and($bill->discount_minor)->toBe(330)
+            ->and($bill->total_minor)->toBe(2970)
+            ->and($bill->change_minor)->toBe(0)
+            ->and($bill->discount_reason)->toBe('Regular');
+
+        $invoice = Envelope::fromArray($this->platform()->moduleEvents['finance'][0]);
+        expect($invoice->payload['total_minor'])->toBe(2970)
+            ->and(array_sum(array_column($invoice->payload['lines'], 'amount_minor')))->toBe(2970)
+            ->and(collect($invoice->payload['lines'])->last()['description'])->toBe('Discount: Regular');
+
+        $this->get(at("bills/{$bill->id}"))->assertInertia(fn (Assert $page) => $page
+            ->where('bill.subtotalMinor', 3300)
+            ->where('bill.discountMinor', 330));
+        $till = $this->asTenant('acme', fn () => TillShift::query()->where('opened_by', $cashier->id)->sole());
+        expect($this->asTenant('acme', fn () => app(Tills::class)->summary($till)['takenMinor']['cash']))->toBe(2970);
     });
 });
 

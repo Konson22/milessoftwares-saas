@@ -20,6 +20,12 @@ type Props = {
         order: { id: string; number: string; table: string | null };
         customerName: string | null;
         currency: string;
+        subtotalMinor: number;
+        discountMinor: number;
+        discountReason: string | null;
+        /** An equal share of the order: share part of parts. */
+        part: number | null;
+        parts: number | null;
         totalMinor: number;
         paymentMethod: string;
         paymentReference: string | null;
@@ -120,6 +126,29 @@ export default function ShowBill({ bill, canVoid }: Props) {
                             ))}
                         </tbody>
                         <tfoot className="border-t">
+                            {bill.discountMinor > 0 && (
+                                <>
+                                    <tr>
+                                        <td className="py-0.5">Subtotal</td>
+                                        <td className="py-0.5 text-right tabular-nums">
+                                            {money(bill.subtotalMinor)}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-0.5">
+                                            Discount
+                                            {bill.discountReason && (
+                                                <span className="block text-xs text-muted-foreground">
+                                                    {bill.discountReason}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="py-0.5 text-right tabular-nums">
+                                            − {money(bill.discountMinor)}
+                                        </td>
+                                    </tr>
+                                </>
+                            )}
                             <tr className="font-semibold">
                                 <td className="py-1.5">Total</td>
                                 <td className="py-1.5 text-right tabular-nums">
