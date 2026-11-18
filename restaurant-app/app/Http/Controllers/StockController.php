@@ -8,6 +8,7 @@ use App\Models\MenuItem;
 use App\Models\StockLevel;
 use App\Models\StockMovement;
 use App\Support\Money;
+use App\Support\MovementLedger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -54,6 +55,18 @@ class StockController extends Controller
             'rows' => $rows->when($filter === 'low', fn ($rows) => $rows->where('low', true))->values(),
             'filters' => ['search' => $search, 'filter' => $filter],
             'canReceive' => $this->canHere('restaurant.stock.receive'),
+        ]);
+    }
+
+    /** Every drink's movements at the branch: deliveries, sales, counts and write-offs. */
+    public function movements(Request $request, MovementLedger $ledger): Response
+    {
+        $filters = $ledger->filters($request);
+
+        return Inertia::render('stock/movements', [
+            'filters' => $ledger->shown($filters),
+            'movements' => $ledger->page([$this->branchId()], $filters),
+            ...$ledger->options(),
         ]);
     }
 

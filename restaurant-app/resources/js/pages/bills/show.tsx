@@ -43,13 +43,18 @@ type Props = {
             totalMinor: number;
         }[];
     };
+    receipt: {
+        header: string | null;
+        footer: string | null;
+        phone: string | null;
+    };
     canVoid: boolean;
 };
 
 /**
  * A paid bill, printable as the receipt, and for managers voiding it.
  */
-export default function ShowBill({ bill, canVoid }: Props) {
+export default function ShowBill({ bill, receipt, canVoid }: Props) {
     const { workspace, branch } = usePage().props;
     const money = (minor: number) => formatMoney(minor, bill.currency);
 
@@ -91,7 +96,13 @@ export default function ShowBill({ bill, canVoid }: Props) {
                         <p className="font-semibold">{workspace?.name}</p>
                         <p className="text-sm text-muted-foreground">
                             {branch?.name}
+                            {receipt.phone && ` · ${receipt.phone}`}
                         </p>
+                        {receipt.header && (
+                            <p className="mt-1 text-sm whitespace-pre-line">
+                                {receipt.header}
+                            </p>
+                        )}
                         <h1 className="mt-3 text-xl font-semibold">
                             Receipt {bill.number}
                         </h1>
@@ -179,6 +190,12 @@ export default function ShowBill({ bill, canVoid }: Props) {
                             )}
                         </tfoot>
                     </table>
+
+                    {receipt.footer && (
+                        <p className="mt-4 text-center text-sm whitespace-pre-line text-muted-foreground">
+                            {receipt.footer}
+                        </p>
+                    )}
 
                     {bill.status === 'voided' && (
                         <p className="mt-4 text-sm text-destructive">

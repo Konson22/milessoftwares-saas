@@ -33,7 +33,7 @@ type Ticket = {
     cancelled: boolean;
 };
 
-type Props = { tickets: Ticket[] };
+type Props = { tickets: Ticket[]; slowMinutes: number };
 
 /** How often the screen looks for new tickets. */
 const REFRESH_MS = 15000;
@@ -49,7 +49,7 @@ function minutesSince(iso: string): number {
  * The kitchen's tickets, oldest first: cooking, then ready to go out. The
  * screen refreshes by itself.
  */
-export default function Kitchen({ tickets }: Props) {
+export default function Kitchen({ tickets, slowMinutes }: Props) {
     useEffect(() => {
         const timer = window.setInterval(
             () => router.reload({ only: ['tickets'] }),
@@ -82,7 +82,7 @@ export default function Kitchen({ tickets }: Props) {
                         return (
                             <article
                                 key={ticket.id}
-                                className={`flex flex-col rounded-lg border p-3 ${ticket.cancelled ? 'border-destructive bg-muted' : ticket.status === 'ready' ? 'border-green-600 bg-green-50 dark:bg-green-950' : waiting >= 20 ? 'border-destructive' : ''}`}
+                                className={`flex flex-col rounded-lg border p-3 ${ticket.cancelled ? 'border-destructive bg-muted' : ticket.status === 'ready' ? 'border-green-600 bg-green-50 dark:bg-green-950' : waiting >= slowMinutes ? 'border-destructive' : ''}`}
                             >
                                 <header className="flex items-start justify-between gap-2">
                                     <div>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Orders;
 use App\Http\Controllers\Concerns\WorksInBranch;
+use App\Models\BranchSetting;
 use App\Models\KitchenTicket;
 use App\Models\OrderLine;
 use Illuminate\Http\RedirectResponse;
@@ -30,6 +31,8 @@ class KitchenController extends Controller
             ->get();
 
         return Inertia::render('kitchen', [
+            // Minutes after which a ticket still cooking is flagged (the branch's setting).
+            'slowMinutes' => BranchSetting::for($this->branchId())->slowTicketMinutes(),
             'tickets' => $tickets->map(fn (KitchenTicket $ticket) => [
                 'id' => $ticket->id,
                 'number' => $ticket->number,

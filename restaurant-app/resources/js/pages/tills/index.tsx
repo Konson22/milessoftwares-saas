@@ -23,6 +23,7 @@ import {
 import { useCanHere } from '@/lib/access';
 import { formatMoney } from '@/lib/money';
 import { statusTone } from '@/lib/status';
+import { index as handovers } from '@/routes/handovers';
 import { index, show, store } from '@/routes/tills';
 
 export type Till = {
@@ -45,6 +46,8 @@ type Props = {
     managing: boolean;
     mine: Till | null;
     tills: Till[];
+    defaultFloat: string | null;
+    pendingHandovers: number;
 };
 
 export const STATUS_LABELS: Record<string, string> = {
@@ -57,7 +60,14 @@ export const STATUS_LABELS: Record<string, string> = {
  * (for managers) every cashier's count against what their drawer should
  * hold.
  */
-export default function Shifts({ day, managing, mine, tills }: Props) {
+export default function Shifts({
+    day,
+    managing,
+    mine,
+    tills,
+    defaultFloat,
+    pendingHandovers,
+}: Props) {
     const { branch, currency } = usePage().props;
     const canHere = useCanHere();
     const money = (minor: number) => formatMoney(minor, currency ?? 'USD');
@@ -73,6 +83,15 @@ export default function Shifts({ day, managing, mine, tills }: Props) {
                     managing
                         ? `${branch?.name}: every cashier's shift`
                         : branch?.name
+                }
+                actions={
+                    <Button variant="outline" size="sm" asChild>
+                        <Link href={handovers()}>
+                            Cash handovers
+                            {pendingHandovers > 0 &&
+                                ` (${pendingHandovers} waiting)`}
+                        </Link>
+                    </Button>
                 }
             />
 
@@ -117,6 +136,9 @@ export default function Shifts({ day, managing, mine, tills }: Props) {
                                                 name="opening_float"
                                                 inputMode="decimal"
                                                 placeholder="0.00"
+                                                defaultValue={
+                                                    defaultFloat ?? undefined
+                                                }
                                                 className="w-44"
                                             />
                                             {errors.opening_float && (

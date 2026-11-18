@@ -7,7 +7,9 @@ import { Input } from '@miles/ui/components/ui/input';
 import { Label } from '@miles/ui/components/ui/label';
 import { formatMoney } from '@/lib/money';
 import { statusTone } from '@/lib/status';
+import { index as handovers, store as handOver } from '@/routes/handovers';
 import { close, index } from '@/routes/tills';
+import { HandoverBadge, HandoverReceipt, type Handover } from './handovers';
 import { STATUS_LABELS, type Till } from './index';
 
 type Props = {
@@ -20,6 +22,9 @@ type Props = {
         expectedCashMinor: number;
     };
     methods: { value: string; label: string }[];
+    handover: Handover | null;
+    canHandOver: boolean;
+    suggestedHandover: string | null;
 };
 
 /**
@@ -27,7 +32,14 @@ type Props = {
  * closes it. A count that differs from what the drawer should hold needs a
  * reason.
  */
-export default function ShowShift({ till, summary, methods }: Props) {
+export default function ShowShift({
+    till,
+    summary,
+    methods,
+    handover,
+    canHandOver,
+    suggestedHandover,
+}: Props) {
     const { currency } = usePage().props;
     const money = (minor: number) => formatMoney(minor, currency ?? 'USD');
     const expected =
@@ -179,6 +191,106 @@ export default function ShowShift({ till, summary, methods }: Props) {
                     </PanelBody>
                 </Panel>
             </div>
+
+            {(handover || canHandOver) && (
+                <Panel className="mt-3">
+                    <PanelHeader
+                        title="Cash handover"
+                        description="The counted cash goes to a manager, who counts it again and receives it."
+                    />
+                    <PanelBody>
+                        {handover ? (
+                            <div className="grid gap-1 text-sm">
+                                <p className="flex flex-wrap items-center gap-2">
+                                    <span className="font-medium">
+                                        {handover.number}
+                                    </span>
+                                    <HandoverBadge status={handover.status} />
+                                    <span>
+                                        {money(handover.amountMinor)} handed
+                                        over by {handover.handedBy},{' '}
+                                        {new Date(
+                                            handover.handedAt,
+                                        ).toLocaleString()}
+                                    </span>
+                                </p>
+                                {handover.note && (
+                                    <p className="text-muted-foreground">
+                                        “{handover.note}”
+                                    </p>
+                                )}
+                                {handover.status === 'received' ? (
+                                    <HandoverReceipt
+                                        handover={handover}
+                                        money={money}
+                                    />
+                                ) : (
+                                    <p className="text-muted-foreground">
+                                        Waiting for a manager to receive it.{' '}
+                                        <Link
+                                            href={handovers()}
+                                            className="text-primary hover:underline"
+                                        >
+                                            Cash handovers
+                                        </Link>
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <Form
+                                {...handOver.form({ till: till.id })}
+                                className="grid gap-3"
+                            >
+                                {({ errors, processing }) => (
+                                    <>
+                                        <div className="grid gap-1.5">
+                                            <Label htmlFor="amount">
+                                                Cash handed over
+                                            </Label>
+                                            <Input
+                                                id="amount"
+                                                name="amount"
+                                                inputMode="decimal"
+                                                defaultValue={
+                                                    suggestedHandover ?? ''
+                                                }
+                                                required
+                                                className="w-44"
+                                            />
+                                            {errors.amount && (
+                                                <p className="text-sm text-destructive">
+                                                    {errors.amount}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="grid gap-1.5">
+                                            <Label htmlFor="note">Note</Label>
+                                            <Input
+                                                id="note"
+                                                name="note"
+                                                placeholder="Needed when it is not the cash counted"
+                                            />
+                                            {errors.note && (
+                                                <p className="text-sm text-destructive">
+                                                    {errors.note}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <Button
+                                                type="submit"
+                                                disabled={processing}
+                                            >
+                                                Hand over the cash
+                                            </Button>
+                                        </div>
+                                    </>
+                                )}
+                            </Form>
+                        )}
+                    </PanelBody>
+                </Panel>
+            )}
         </>
     );
 }

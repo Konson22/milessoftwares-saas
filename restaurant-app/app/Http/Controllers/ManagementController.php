@@ -6,7 +6,9 @@ use App\Models\MenuItem;
 use App\Models\StockLevel;
 use App\Support\Branches;
 use App\Support\BranchFigures;
+use App\Support\ManagementPeriod;
 use App\Support\Money;
+use App\Support\MovementLedger;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -74,6 +76,20 @@ class ManagementController extends Controller
             'currency' => Money::currency(),
             'branches' => array_map(fn (Branch $branch) => ['id' => $branch->id, 'name' => $branch->name], $open),
             'drinks' => $drinks,
+        ]);
+    }
+
+    /** Stock movements of every drink across the branches (or one of them). */
+    public function movements(Request $request, MovementLedger $ledger): Response
+    {
+        $period = ManagementPeriod::from($request, $this->branches);
+        $filters = $ledger->filters($request);
+
+        return Inertia::render('management/movements', [
+            ...$period->props(),
+            'filters' => [...$ledger->shown($filters), 'branch' => $period->chosen],
+            'movements' => $ledger->page($period->ids(), $filters, $period->names()),
+            ...$ledger->options(),
         ]);
     }
 

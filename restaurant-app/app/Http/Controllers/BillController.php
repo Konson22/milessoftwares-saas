@@ -6,6 +6,7 @@ use App\Actions\Bills;
 use App\Http\Controllers\Concerns\WorksInBranch;
 use App\Models\Bill;
 use App\Models\BillLine;
+use App\Models\BranchSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -84,6 +85,12 @@ class BillController extends Controller
                     'totalMinor' => $line->total_minor,
                 ]),
             ],
+            // The branch's own lines on its receipts (its settings).
+            'receipt' => (function () use ($bill) {
+                $settings = BranchSetting::for($bill->branch_id);
+
+                return ['header' => $settings->receipt_header, 'footer' => $settings->receipt_footer, 'phone' => $settings->phone];
+            })(),
             'canVoid' => $this->canHere('restaurant.bills.void'),
         ]);
     }

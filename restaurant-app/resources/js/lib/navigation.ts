@@ -3,8 +3,13 @@ import {
     Boxes,
     Building2,
     ChartColumn,
+    ArrowLeftRight,
     ChefHat,
     ClipboardList,
+    FileChartColumn,
+    HandCoins,
+    Settings,
+    TrendingUp,
     KeyRound,
     LayoutDashboard,
     LayoutGrid,
@@ -19,15 +24,20 @@ import {
 import type { ShellNavItem } from '@miles/ui/shell/navigation';
 import { floor, home, kitchen, overview } from '@/routes';
 import { index as bills } from '@/routes/bills';
+import { edit as branchSettings } from '@/routes/branch/settings';
+import { index as handovers } from '@/routes/handovers';
 import {
     branches as managementBranches,
     inventory as managementInventory,
+    movements as managementMovements,
+    reports as managementReports,
+    sales as managementSales,
 } from '@/routes/management';
 import { index as menu } from '@/routes/menu';
 import { index as orders } from '@/routes/orders';
 import { day as dayReport } from '@/routes/reports';
 import { index as staff } from '@/routes/staff';
-import { index as stock } from '@/routes/stock';
+import { index as stock, movements as stockMovements } from '@/routes/stock';
 import { index as deliveries } from '@/routes/stock/deliveries';
 import { index as tables } from '@/routes/tables';
 import { index as tills } from '@/routes/tills';
@@ -63,6 +73,18 @@ export function managementNavigation(workspaceUrl: string | null): NavGroup[] {
                     icon: LayoutDashboard,
                     permission: 'restaurant.branches.overview',
                 },
+                {
+                    title: 'Sales',
+                    href: managementSales(),
+                    icon: TrendingUp,
+                    permission: 'restaurant.branches.overview',
+                },
+                {
+                    title: 'Reports',
+                    href: managementReports(),
+                    icon: FileChartColumn,
+                    permission: 'restaurant.branches.overview',
+                },
             ],
         },
         {
@@ -94,6 +116,12 @@ export function managementNavigation(workspaceUrl: string | null): NavGroup[] {
                     title: 'Inventory',
                     href: managementInventory(),
                     icon: Warehouse,
+                    permission: 'restaurant.branches.overview',
+                },
+                {
+                    title: 'Stock movements',
+                    href: managementMovements(),
+                    icon: ArrowLeftRight,
                     permission: 'restaurant.branches.overview',
                 },
                 {
@@ -196,6 +224,12 @@ export function branchNavigation(): NavGroup[] {
                     permission: 'restaurant.stock.view',
                 },
                 {
+                    title: 'Stock movements',
+                    href: stockMovements(),
+                    icon: ArrowLeftRight,
+                    permission: 'restaurant.stock.view',
+                },
+                {
                     title: 'Stock receipts',
                     href: deliveries(),
                     icon: Truck,
@@ -217,6 +251,13 @@ export function branchNavigation(): NavGroup[] {
                     permission: 'restaurant.bills.take',
                     anyOf: ['restaurant.bills.take', 'restaurant.tills.manage'],
                 },
+                {
+                    title: 'Cash handovers',
+                    href: handovers(),
+                    icon: HandCoins,
+                    permission: 'restaurant.tills.manage',
+                    anyOf: ['restaurant.bills.take', 'restaurant.tills.manage'],
+                },
             ],
         },
         {
@@ -227,6 +268,17 @@ export function branchNavigation(): NavGroup[] {
                     href: dayReport(),
                     icon: ChartColumn,
                     permission: 'restaurant.reports.view',
+                },
+            ],
+        },
+        {
+            title: 'Branch',
+            items: [
+                {
+                    title: 'Branch settings',
+                    href: branchSettings(),
+                    icon: Settings,
+                    permission: 'restaurant.branch.configure',
                 },
             ],
         },

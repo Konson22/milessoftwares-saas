@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Actions\Tills;
 use App\Enums\PaymentMethod;
 use App\Http\Controllers\Concerns\WorksInBranch;
+use App\Models\BranchSetting;
+use App\Models\CashHandover;
 use App\Models\TillShift;
 use App\Support\Money;
 use Illuminate\Http\RedirectResponse;
@@ -36,8 +38,17 @@ class TillController extends Controller
             ->latest('opened_at')
             ->get();
         $mine = $this->tills->openFor($member, $this->branchId());
+        $float = BranchSetting::for($this->branchId())->default_float_minor;
 
         return Inertia::render('tills/index', [
+            // The branch's usual starting cash, offered when a shift starts.
+            'defaultFloat' => $float === null ? null : Money::toMajor($float),
+            // Cash handed over and not yet received here (managers: all; cashiers: theirs).
+            'pendingHandovers' => CashHandover::query()
+                ->where('branch_id', $this->branchId())
+                ->where('status', CashHandover::PENDING)
+                ->when(! $managing, fn ($query) => $query->where('handed_by', $member->id))
+                ->count(),
             'day' => $day->toDateString(),
             'managing' => $managing,
             'mine' => $mine === null ? null : $this->summary($mine->load(['opener:id,name', 'closer:id,name'])),
@@ -59,9 +70,14 @@ class TillController extends Controller
     {
         $this->ensureMine($request, $till);
         $till->load(['opener:id,name', 'closer:id,name']);
+        $handover = CashHandover::query()->where('till_shift_id', $till->id)->with(['hander:id,name', 'receiver:id,name'])->first();
 
         return Inertia::render('tills/show', [
             'till' => $this->summary($till),
+            'handover' => $handover === null ? null : HandoverController::present($handover),
+            // The cashier, or a manager for them, hands a closed till's cash over.
+            'canHandOver' => ! $till->isOpen() && $handover === null,
+            'suggestedHandover' => $till->counted_cash_minor === null ? null : Money::toMajor($till->counted_cash_minor),
             'summary' => $this->tills->summary($till),
             'methods' => PaymentMethod::options(),
         ]);

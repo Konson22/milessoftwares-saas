@@ -2,8 +2,11 @@
 
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\BranchController;
+use App\Http\Controllers\BranchSettingsController;
+use App\Http\Controllers\ConsolidatedController;
 use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\DiningTableController;
+use App\Http\Controllers\HandoverController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\KitchenController;
 use App\Http\Controllers\ManagementController;
@@ -54,6 +57,9 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::get('/', OverviewController::class)->name('overview');
             Route::get('branches', [ManagementController::class, 'branches'])->name('management.branches');
             Route::get('inventory', [ManagementController::class, 'inventory'])->name('management.inventory');
+            Route::get('stock-movements', [ManagementController::class, 'movements'])->name('management.movements');
+            Route::get('sales', [ConsolidatedController::class, 'sales'])->name('management.sales');
+            Route::get('reports', [ConsolidatedController::class, 'reports'])->name('management.reports');
             Route::get('staff', StaffController::class)->name('staff.index');
         });
 
@@ -77,6 +83,12 @@ Route::prefix(app(PlatformConfig::class)->path())
         // One branch's workspace: every page names its branch.
         Route::prefix('branches/{branch}')->whereUuid('branch')->middleware('branch')->group(function () {
             Route::get('/', HomeController::class)->name('home');
+
+            // How this branch runs the restaurant (its name and address are the workspace's).
+            Route::middleware('branch.can:restaurant.branch.configure')->group(function () {
+                Route::get('settings', [BranchSettingsController::class, 'edit'])->name('branch.settings.edit');
+                Route::put('settings', [BranchSettingsController::class, 'update'])->name('branch.settings.update');
+            });
 
             // The branch's tables.
             Route::middleware('branch.can:restaurant.tables.manage')->group(function () {
@@ -135,9 +147,16 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::post('tills', [TillController::class, 'store'])->middleware('branch.can:restaurant.bills.take')->name('tills.store');
             Route::middleware('branch.can:restaurant.bills.take,restaurant.tills.manage')->group(function () {
                 Route::get('tills', [TillController::class, 'index'])->name('tills.index');
+                // Cash of a closed till handed to a manager (declared before tills/{till}).
+                Route::get('tills/handovers', [HandoverController::class, 'index'])->name('handovers.index');
+                Route::post('tills/{till}/handover', [HandoverController::class, 'store'])->whereUuid('till')->name('handovers.store');
                 Route::get('tills/{till}', [TillController::class, 'show'])->whereUuid('till')->name('tills.show');
                 Route::post('tills/{till}/close', [TillController::class, 'close'])->whereUuid('till')->name('tills.close');
             });
+            Route::post('tills/handovers/{handover}/receive', [HandoverController::class, 'receive'])
+                ->whereUuid('handover')
+                ->middleware('branch.can:restaurant.tills.manage')
+                ->name('handovers.receive');
 
             // Drinks in stock at the branch (dishes keep none).
             // Deliveries from suppliers (declared before stock/{item}).
@@ -151,6 +170,7 @@ Route::prefix(app(PlatformConfig::class)->path())
             });
             Route::middleware('branch.can:restaurant.stock.view')->group(function () {
                 Route::get('stock', [StockController::class, 'index'])->name('stock.index');
+                Route::get('stock/movements', [StockController::class, 'movements'])->name('stock.movements');
                 Route::get('stock/{item}', [StockController::class, 'show'])->whereUuid('item')->name('stock.show');
             });
             Route::middleware('branch.can:restaurant.stock.adjust')->group(function () {
