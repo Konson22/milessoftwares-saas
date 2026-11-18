@@ -125,13 +125,15 @@ class PriceListController extends Controller
             'prices.*.item_id' => ['required', 'uuid'],
             'prices.*.pack_id' => ['nullable', 'uuid'],
             'prices.*.price' => ['nullable', 'string', Money::rule()],
+            // The currency every price is typed in; kept in the workspace currency.
+            'currency' => Money::currencyRule(),
         ]);
 
-        $prices->set($priceList, array_values(array_map(fn (array $line) => [
+        $prices->set($priceList, array_values(array_map(fn (array $line, int|string $index) => [
             'item_id' => $line['item_id'],
             'pack_id' => $line['pack_id'] ?? null,
-            'price_minor' => ($line['price'] ?? '') === '' ? null : Money::toMinor($line['price']),
-        ], $validated['prices'])));
+            'price_minor' => ($line['price'] ?? '') === '' ? null : Money::enter($line['price'], $validated['currency'] ?? null, "prices.{$index}.price")->baseMinor,
+        ], $validated['prices'], array_keys($validated['prices']))));
 
         return back()->with('success', "Prices of {$priceList->name} saved.");
     }

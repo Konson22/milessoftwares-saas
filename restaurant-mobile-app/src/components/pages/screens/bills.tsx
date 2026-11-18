@@ -79,6 +79,11 @@ export interface BillProps {
     paidBy: string;
     order: { id: string; number: string; table: string | null };
     customerName: string | null;
+    subtotalMinor: number;
+    discountMinor: number;
+    discountReason: string | null;
+    part: number | null;
+    parts: number | null;
     totalMinor: number;
     paymentMethod: string;
     paymentReference: string | null;
@@ -139,6 +144,13 @@ export function BillScreen({ page, path, reload }: ScreenProps<BillProps>) {
             </View>
           ))}
           <View className="px-4 py-2">
+            {bill.discountMinor > 0 ? (
+              <>
+                <Detail label="Subtotal" value={money(bill.subtotalMinor)} />
+                <Detail label={bill.discountReason ? `Discount (${bill.discountReason})` : 'Discount'} value={`− ${money(bill.discountMinor)}`} />
+              </>
+            ) : null}
+            {bill.parts ? <Detail label="Share" value={`${bill.part} of ${bill.parts}`} /> : null}
             <Detail label="Total" value={money(bill.totalMinor)} strong />
           </View>
         </Panel>

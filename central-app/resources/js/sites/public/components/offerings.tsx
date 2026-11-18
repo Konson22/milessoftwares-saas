@@ -15,6 +15,7 @@ import {
     Smartphone,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import type { CSSProperties } from 'react';
 import type { CatalogEntry } from '@/sites/public/components/catalog';
 import { IconBox } from '@/sites/public/components/page-hero';
 import { display } from '@/sites/public/components/styles';
@@ -125,6 +126,8 @@ export const services: Service[] = [
 export type Deployment = {
     id: string;
     icon: LucideIcon;
+    /** The short word on the card's seal. */
+    badge: string;
     title: string;
     tag: string;
     points: string[];
@@ -144,6 +147,7 @@ export function deployments(trialDays: number): Deployment[] {
         {
             id: 'cloud',
             icon: Cloud,
+            badge: 'Cloud',
             title: 'Cloud-based web applications',
             tag: 'In the browser',
             points: [
@@ -157,6 +161,7 @@ export function deployments(trialDays: number): Deployment[] {
         {
             id: 'synced',
             icon: RefreshCw,
+            badge: 'Synced',
             title: 'Desktop and mobile apps with cloud sync',
             tag: 'Works offline',
             points: [
@@ -174,6 +179,7 @@ export function deployments(trialDays: number): Deployment[] {
         {
             id: 'offline',
             icon: HardDrive,
+            badge: 'Offline',
             title: 'Standalone offline desktop applications',
             tag: 'One-time licence',
             points: [
@@ -187,9 +193,114 @@ export function deployments(trialDays: number): Deployment[] {
     ];
 }
 
+/** A scalloped edge for a seal: `points` small bumps around a circle. */
+function sealPath(points: number, outer: number, inner: number): string {
+    const steps = points * 2;
+    const coords = Array.from({ length: steps }, (_, i) => {
+        const angle = (Math.PI * 2 * i) / steps - Math.PI / 2;
+        const r = i % 2 === 0 ? outer : inner;
+        return `${(100 + r * Math.cos(angle)).toFixed(2)} ${(100 + r * Math.sin(angle)).toFixed(2)}`;
+    });
+    return `M${coords.join('L')}Z`;
+}
+
+const seal = sealPath(28, 98, 91);
+
+/**
+ * The badge at the top of a deployment card: a scalloped green seal with a
+ * dotted inner ring, the icon and a short word, a lime ribbon across it and
+ * two tails below.
+ */
+function DeploymentSeal({ option }: { option: Deployment }) {
+    const Icon = option.icon;
+    const gradient = `seal-${option.id}`;
+
+    return (
+        <div className="relative mx-auto size-44 transition-transform duration-500 group-hover:-rotate-3 group-hover:scale-105">
+            {/* Tails, behind the seal. */}
+            <span
+                aria-hidden
+                className="absolute bottom-0 left-1/2 -z-10 h-16 w-10 -translate-x-[95%] translate-y-6 rotate-[18deg] bg-site-accent-deep [clip-path:polygon(0_0,100%_0,100%_100%,50%_78%,0_100%)]"
+            />
+            <span
+                aria-hidden
+                className="absolute bottom-0 left-1/2 -z-10 h-16 w-10 -translate-x-[5%] translate-y-6 -rotate-[18deg] bg-site-accent-deep [clip-path:polygon(0_0,100%_0,100%_100%,50%_78%,0_100%)]"
+            />
+
+            <svg
+                aria-hidden
+                viewBox="0 0 200 200"
+                className="absolute inset-0 size-full drop-shadow-[0_12px_22px_rgba(0,0,0,0.45)]"
+            >
+                <defs>
+                    <linearGradient id={gradient} x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#0a6a2c" />
+                        <stop offset="60%" stopColor="#05451b" />
+                        <stop offset="100%" stopColor="#032a16" />
+                    </linearGradient>
+                </defs>
+                <path
+                    d={seal}
+                    fill={`url(#${gradient})`}
+                    stroke="#8bd103"
+                    strokeWidth="3"
+                    strokeLinejoin="round"
+                />
+                <circle
+                    cx="100"
+                    cy="100"
+                    r="78"
+                    fill="none"
+                    stroke="#8bd103"
+                    strokeOpacity="0.55"
+                    strokeWidth="2"
+                    strokeDasharray="1 6"
+                    strokeLinecap="round"
+                />
+                <circle
+                    cx="100"
+                    cy="100"
+                    r="70"
+                    fill="none"
+                    stroke="#ffffff"
+                    strokeOpacity="0.12"
+                    strokeWidth="1"
+                />
+            </svg>
+
+            <div className="absolute inset-x-0 top-[22%] flex flex-col items-center text-center">
+                <Icon
+                    className="size-7 text-site-highlight"
+                    strokeWidth={1.75}
+                    aria-hidden
+                />
+                <span className="mt-1.5 font-public-display text-[1.65rem] leading-none font-extrabold tracking-tight text-white uppercase">
+                    {option.badge}
+                </span>
+            </div>
+
+            {/* The ribbon across the lower half, wider than the seal. */}
+            <div className="absolute inset-x-[-14%] top-[60%]">
+                <span
+                    aria-hidden
+                    className="absolute top-2 -left-3 -z-10 h-full w-8 bg-[#6da402] [clip-path:polygon(0_0,100%_0,100%_100%,0_100%,35%_50%)]"
+                />
+                <span
+                    aria-hidden
+                    className="absolute top-2 -right-3 -z-10 h-full w-8 bg-[#6da402] [clip-path:polygon(0_0,100%_0,65%_50%,100%_100%,0_100%)]"
+                />
+                <span className="relative block bg-site-highlight px-3 py-1.5 text-center text-xs font-extrabold tracking-[0.12em] text-site-night uppercase shadow-md shadow-site-night/20">
+                    {option.tag}
+                </span>
+            </div>
+        </div>
+    );
+}
+
 /**
  * The ways to run Tatook software, each naming the released products that
- * offer it, so no option reads as available for everything.
+ * offer it, so no option reads as available for everything. Each card leads
+ * with a seal-and-ribbon badge.
  */
 export function DeploymentOptions({
     catalog,
@@ -201,7 +312,7 @@ export function DeploymentOptions({
     const released = catalog.filter((entry) => entry.status !== 'coming_soon');
 
     return (
-        <ul className="grid gap-5 lg:grid-cols-3">
+        <ul className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {deployments(trialDays).map((option) => {
                 const products = released.filter(option.offers);
                 const Icon = option.icon;
@@ -210,37 +321,63 @@ export function DeploymentOptions({
                     <li
                         key={option.id}
                         id={option.id}
-                        className="site-dark group relative isolate flex scroll-mt-28 flex-col overflow-hidden rounded-xl bg-linear-160 from-[#0a5a26] via-[#063519] to-[#032a16] shadow-lg ring-1 shadow-site-night/15 ring-white/10 transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-site-accent/25"
+                        className="group relative isolate flex scroll-mt-28 flex-col overflow-hidden rounded-2xl bg-linear-to-b from-white via-white to-[#f1f9ea] shadow-sm ring-1 ring-site-line transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-site-night/10"
                     >
-                        {/* Faint dots and a large faded icon behind the top of the card. */}
-                        <div
-                            aria-hidden
-                            className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(#a3e63522_1px,transparent_1px)] mask-[linear-gradient(black,transparent_70%)] bg-size-[18px_18px]"
-                        />
+                        {/* A faint watermark of the option's icon in the lower corner. */}
                         <Icon
                             aria-hidden
-                            strokeWidth={1.25}
-                            className="pointer-events-none absolute -top-6 -right-6 -z-10 size-40 text-site-highlight/10 transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-6"
+                            strokeWidth={1}
+                            className="pointer-events-none absolute -right-8 -bottom-8 -z-10 size-48 text-site-accent/[0.07] transition-transform duration-700 group-hover:-rotate-12"
                         />
+
+                        {/* The badge on a deep green stage with sunburst rays. */}
+                        <div className="relative isolate overflow-hidden bg-[linear-gradient(160deg,#0b6b2d,#05451b_55%,#032a16)] px-6 pt-8 pb-14">
+                            <div
+                                aria-hidden
+                                className="pointer-events-none absolute inset-0 -z-10 bg-[repeating-conic-gradient(from_0deg_at_50%_44%,#ffffff14_0deg_7deg,transparent_7deg_15deg)] mask-[radial-gradient(circle_at_50%_44%,black_20%,transparent_70%)] transition-transform duration-[2s] group-hover:rotate-6"
+                            />
+                            <div
+                                aria-hidden
+                                className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(#a3e63530_1px,transparent_1px)] mask-[linear-gradient(to_top,black,transparent_60%)] bg-size-[14px_14px]"
+                            />
+                            <div
+                                aria-hidden
+                                className="pointer-events-none absolute top-[44%] left-1/2 -z-10 size-52 -translate-1/2 rounded-full bg-site-highlight/25 blur-3xl"
+                            />
+                            <DeploymentSeal option={option} />
+
+                            {/* A soft wave into the card body. */}
+                            <svg
+                                aria-hidden
+                                viewBox="0 0 400 40"
+                                preserveAspectRatio="none"
+                                className="pointer-events-none absolute inset-x-0 -bottom-px h-8 w-full"
+                            >
+                                <path
+                                    d="M0 18 C 90 2, 170 34, 260 16 S 370 6, 400 12 V40 H0 Z"
+                                    fill="#8bd103"
+                                    fillOpacity="0.35"
+                                />
+                                <path
+                                    d="M0 28 C 100 12, 190 42, 280 24 S 370 16, 400 22 V40 H0 Z"
+                                    fill="#ffffff"
+                                />
+                            </svg>
+                        </div>
+
                         <div className="flex flex-1 flex-col p-6 sm:p-7">
-                            <div className="flex items-start justify-between gap-4">
-                                <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-site-highlight/15 text-site-highlight ring-1 ring-site-highlight/30">
-                                    <Icon className="size-5" aria-hidden />
-                                </span>
-                                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white ring-1 ring-white/20">
-                                    {option.tag}
-                                </span>
-                            </div>
-                            <h3 className="mt-6 text-xl font-semibold tracking-tight text-balance text-white">
+                            <h3
+                                className={`text-center text-xl text-balance ${display}`}
+                            >
                                 {option.title}
                             </h3>
-                            <ul className="mt-4 space-y-3 text-sm text-slate-200">
+                            <ul className="mt-5 space-y-3 text-sm text-slate-700">
                                 {option.points.map((point) => (
                                     <li
                                         key={point}
                                         className="flex items-start gap-3"
                                     >
-                                        <span className="mt-px inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-site-highlight text-site-night">
+                                        <span className="mt-px inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-site-wash text-site-accent-ink ring-1 ring-site-line">
                                             <Check
                                                 className="size-3"
                                                 strokeWidth={3}
@@ -251,27 +388,20 @@ export function DeploymentOptions({
                                     </li>
                                 ))}
                             </ul>
-                        </div>
 
-                        {/* The foot: a lime and a white wave into a white panel. */}
-                        <div className="relative mt-4">
-                            <svg
-                                aria-hidden
-                                viewBox="0 0 400 48"
-                                preserveAspectRatio="none"
-                                className="pointer-events-none absolute inset-x-0 bottom-[calc(100%-1px)] block h-10 w-full overflow-visible"
-                            >
-                                <path
-                                    d="M0 22 C 80 0, 160 40, 250 16 S 360 4, 400 14 V40 H0 Z"
-                                    className="fill-site-highlight/70 transition-transform duration-700 group-hover:translate-x-[-6px]"
-                                />
-                                <path
-                                    d="M0 34 C 90 14, 180 50, 270 28 S 370 18, 400 26 V56 H0 Z"
-                                    fill="#ffffff"
-                                />
-                            </svg>
-                            <div className="space-y-4 bg-white px-6 pt-3 pb-6 text-sm sm:px-7 sm:pb-7 lg:min-h-[9.5rem]">
-                                <div className="flex items-start gap-2.5 text-site-ink">
+                            {/* Coupon-style foot: a dashed tear line with notches. */}
+                            <div className="relative mt-auto pt-7">
+                                <div className="relative -mx-6 border-t-2 border-dashed border-site-line sm:-mx-7">
+                                    <span
+                                        aria-hidden
+                                        className="absolute top-1/2 -left-3 size-6 -translate-y-1/2 rounded-full bg-site-wash ring-1 ring-site-line"
+                                    />
+                                    <span
+                                        aria-hidden
+                                        className="absolute top-1/2 -right-3 size-6 -translate-y-1/2 rounded-full bg-site-wash ring-1 ring-site-line"
+                                    />
+                                </div>
+                                <div className="mt-5 flex items-start gap-2.5 text-sm text-site-ink">
                                     <BadgeCheck
                                         className="mt-0.5 size-4 shrink-0 text-site-accent-ink"
                                         aria-hidden
@@ -281,7 +411,7 @@ export function DeploymentOptions({
                                     </p>
                                 </div>
                                 {products.length > 0 ? (
-                                    <div className="border-t border-site-line pt-4">
+                                    <div className="mt-4 text-sm">
                                         <p className="text-slate-600">
                                             Available for
                                         </p>
@@ -303,7 +433,7 @@ export function DeploymentOptions({
                                         </ul>
                                     </div>
                                 ) : (
-                                    <p className="border-t border-site-line pt-4 text-slate-600">
+                                    <p className="mt-4 text-sm text-slate-600">
                                         Not offered by a released product yet.
                                     </p>
                                 )}
@@ -358,60 +488,160 @@ const serviceGroups: Omit<Service, 'href' | 'cta'>[] = [
 ];
 
 /**
- * The custom-work services as three numbered cards, each linking to its
- * section on the Services page.
+ * One colour per banner, all from the green brand family: the fill, the
+ * text on that fill, and the colour for headings on white.
+ */
+const bannerThemes: { fill: string; onFill: string; ink: string }[] = [
+    { fill: '#037f1f', onFill: '#ffffff', ink: '#037f1f' },
+    { fill: '#05451b', onFill: '#ffffff', ink: '#05451b' },
+    { fill: '#8bd103', onFill: '#033214', ink: '#3f7300' },
+];
+
+/**
+ * The custom-work services as three roll-up banner stands: a top rail, a
+ * tall banner with a curved coloured header and a round icon frame, the
+ * points, a coloured foot with the link, and the stand's base. Each banner
+ * links to its section on the Services page.
  */
 export function ServiceCards() {
     return (
-        <ol className="grid gap-5 lg:grid-cols-3">
-            {serviceGroups.map((service, i) => (
-                <li key={service.id}>
-                    <Link
-                        href={`/services#${service.id}`}
-                        className="group flex h-full flex-col rounded-xl bg-white p-6 shadow-sm ring-1 ring-site-line transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-site-night/10 sm:p-7"
+        <ol className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
+            {serviceGroups.map((service, i) => {
+                const theme = bannerThemes[i % bannerThemes.length];
+                const Icon = service.icon;
+
+                return (
+                    <li
+                        key={service.id}
+                        className="group flex flex-col items-center"
+                        style={
+                            {
+                                '--banner': theme.fill,
+                                '--banner-on': theme.onFill,
+                                '--banner-ink': theme.ink,
+                            } as CSSProperties
+                        }
                     >
-                        <span className="flex items-center justify-between">
-                            <IconBox icon={service.icon} index={i} />
-                            <span className="font-public-display text-3xl font-semibold text-site-line tabular-nums transition-colors group-hover:text-site-accent/40">
-                                {String(i + 1).padStart(2, '0')}
-                            </span>
-                        </span>
+                        {/* The top rail the banner hangs from. */}
                         <span
-                            className={`mt-5 block text-xl transition-colors group-hover:text-site-accent-ink ${display}`}
+                            aria-hidden
+                            className="relative z-10 h-3 w-[calc(100%+0.75rem)] rounded-full bg-linear-to-b from-slate-300 via-slate-500 to-slate-700 shadow-md"
+                        />
+
+                        <Link
+                            href={`/services#${service.id}`}
+                            className="relative isolate -mt-1.5 flex w-full flex-1 flex-col overflow-hidden bg-white shadow-xl ring-1 shadow-site-night/15 ring-site-line transition-transform duration-300 group-hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--banner)"
                         >
-                            {service.title}
-                        </span>
-                        <span className="mt-2 block text-sm leading-relaxed text-slate-600">
-                            {service.body}
-                        </span>
-                        <span className="mt-5 flex flex-1 flex-col gap-2 border-t border-site-line pt-5">
-                            {service.points.map((point) => (
+                            {/* Header: the banner colour with stripes, a big number and a curved foot. */}
+                            <span className="relative block h-44 bg-(--banner) text-(--banner-on)">
                                 <span
-                                    key={point}
-                                    className="inline-flex items-start gap-2 text-sm text-slate-700"
+                                    aria-hidden
+                                    className="absolute inset-0 bg-[repeating-linear-gradient(135deg,rgba(255,255,255,0.09)_0_14px,transparent_14px_28px)]"
+                                />
+                                <span
+                                    aria-hidden
+                                    className="absolute -top-16 -right-16 size-48 rounded-full bg-white/10"
+                                />
+                                <span
+                                    aria-hidden
+                                    className="absolute top-5 left-6 font-public-display text-6xl leading-none font-extrabold opacity-25 tabular-nums"
                                 >
-                                    <Check
-                                        className="mt-0.5 size-4 shrink-0 text-site-accent-ink"
+                                    {String(i + 1).padStart(2, '0')}
+                                </span>
+                                <svg
+                                    aria-hidden
+                                    viewBox="0 0 400 60"
+                                    preserveAspectRatio="none"
+                                    className="absolute inset-x-0 -bottom-px block h-14 w-full"
+                                >
+                                    <path
+                                        d="M0 30 Q 200 -10 400 30 V60 H0 Z"
+                                        fill="#ffffff"
+                                        fillOpacity="0.35"
+                                    />
+                                    <path
+                                        d="M0 44 Q 200 4 400 44 V60 H0 Z"
+                                        fill="#ffffff"
+                                    />
+                                </svg>
+                                {/* The round frame where a photo would sit on a printed banner. */}
+                                <span className="absolute -bottom-10 left-1/2 inline-flex size-28 -translate-x-1/2 items-center justify-center rounded-full bg-white shadow-lg ring-[6px] shadow-site-night/20 ring-(--banner)/25 transition-transform duration-500 group-hover:scale-105 group-hover:rotate-6">
+                                    <span className="inline-flex size-20 items-center justify-center rounded-full bg-(--banner) text-(--banner-on)">
+                                        <Icon
+                                            className="size-9"
+                                            strokeWidth={1.75}
+                                            aria-hidden
+                                        />
+                                    </span>
+                                </span>
+                            </span>
+
+                            <span className="flex flex-1 flex-col px-6 pt-16 pb-7 sm:px-7">
+                                <span
+                                    className={`block text-center font-public-display text-2xl text-balance text-(--banner-ink)! ${display}`}
+                                >
+                                    {service.title}
+                                </span>
+                                <span
+                                    aria-hidden
+                                    className="mx-auto mt-3 block h-1 w-12 rounded-full bg-(--banner)"
+                                />
+                                <span className="mt-4 block text-center text-sm leading-relaxed text-slate-600">
+                                    {service.body}
+                                </span>
+                                <span className="mt-6 flex flex-col divide-y divide-site-line rounded-xl bg-site-wash/60 px-4 ring-1 ring-site-line">
+                                    {service.points.map((point) => (
+                                        <span
+                                            key={point}
+                                            className="flex items-center gap-3 py-3 text-sm font-medium text-slate-700"
+                                        >
+                                            <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-(--banner) text-(--banner-on) shadow-sm">
+                                                <Check
+                                                    className="size-3.5"
+                                                    strokeWidth={3}
+                                                    aria-hidden
+                                                />
+                                            </span>
+                                            {point}
+                                        </span>
+                                    ))}
+                                </span>
+                            </span>
+
+                            {/* Foot band: the link, with a lighter slanted strip. */}
+                            <span className="relative flex items-center justify-between gap-3 overflow-hidden bg-(--banner) px-6 py-4 text-(--banner-on) sm:px-7">
+                                <span
+                                    aria-hidden
+                                    className="absolute inset-y-0 right-0 w-2/5 bg-white/12 [clip-path:polygon(22%_0,100%_0,100%_100%,0_100%)]"
+                                />
+                                <span className="relative text-sm font-bold">
+                                    Learn more
+                                    <span className="sr-only">
+                                        {' '}
+                                        about {service.title}
+                                    </span>
+                                </span>
+                                <span className="relative inline-flex size-9 items-center justify-center rounded-full bg-white text-(--banner-ink) shadow-md">
+                                    <ArrowRight
+                                        className="size-4 transition-transform group-hover:translate-x-0.5"
                                         aria-hidden
                                     />
-                                    {point}
                                 </span>
-                            ))}
-                        </span>
-                        <span className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-site-accent-ink">
-                            Learn more
-                            <span className="sr-only">
-                                {' '}
-                                about {service.title}
                             </span>
-                            <ArrowRight
-                                className="size-4 transition-transform group-hover:translate-x-1"
-                                aria-hidden
-                            />
-                        </span>
-                    </Link>
-                </li>
-            ))}
+                        </Link>
+
+                        {/* The stand's base and its shadow on the floor. */}
+                        <span
+                            aria-hidden
+                            className="relative z-10 h-4 w-[calc(100%+1.5rem)] rounded-t-md rounded-b-2xl bg-linear-to-b from-slate-400 via-slate-600 to-slate-800 shadow-lg"
+                        />
+                        <span
+                            aria-hidden
+                            className="mt-1 h-3 w-[90%] rounded-[50%] bg-site-night/15 blur-md"
+                        />
+                    </li>
+                );
+            })}
         </ol>
     );
 }

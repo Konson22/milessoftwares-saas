@@ -42,7 +42,7 @@ export function Panel({ title, right, children, className = '' }: { title?: stri
       {title || right ? (
         <View className="min-h-11 flex-row items-center justify-between gap-2 border-b border-slate-100 px-4 py-2">
           {title ? (
-            <Text className="flex-1 text-xs font-bold uppercase tracking-wider text-slate-600" numberOfLines={1}>
+            <Text className="flex-1 text-sm font-semibold text-slate-700" numberOfLines={1}>
               {title}
             </Text>
           ) : (
@@ -77,10 +77,10 @@ export function ListRow({
       accessibilityRole={onPress ? 'button' : undefined}
       onPress={onPress}
       disabled={!onPress}
-      className={`min-h-14 flex-row items-center gap-3 border-b border-slate-100 px-4 py-2.5 ${onPress ? 'active:bg-brand-50' : ''} ${muted ? 'opacity-60' : ''}`}>
+      className={`min-h-14 flex-row items-center gap-3 border-b border-slate-100 px-4 py-2.5 ${onPress ? 'active:bg-brand-50' : ''} ${muted ? 'bg-slate-50' : ''}`}>
       {icon ? <Ionicons name={icon} size={20} color={colors.muted} /> : null}
       <View className="flex-1">
-        <Text className="text-base font-semibold text-slate-900" numberOfLines={1}>
+        <Text className={`text-base font-semibold ${muted ? 'text-slate-500' : 'text-slate-900'}`} numberOfLines={1}>
           {title}
         </Text>
         {subtitle ? (

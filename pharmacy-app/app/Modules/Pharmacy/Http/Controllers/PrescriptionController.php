@@ -207,10 +207,12 @@ class PrescriptionController extends Controller
             'payment_method' => ['required', Rule::enum(PaymentMethod::class)->except(PaymentMethod::Account)],
             'payment_reference' => ['nullable', 'string', 'max:64'],
             'amount_tendered' => ['nullable', 'string', Money::rule()],
+            'amount_tendered_currency' => Money::currencyRule(),
             // Item id => quantity given now; all that is left when omitted.
             'quantities' => ['nullable', 'array', 'max:30'],
             'quantities.*' => ['nullable', 'integer', 'min:0', 'max:100000'],
         ]);
+        $tendered = Money::enteredOptional($validated, 'amount_tendered');
 
         try {
             $sale = $prescriptions->dispense(
@@ -218,11 +220,14 @@ class PrescriptionController extends Controller
                 $this->user($request),
                 PaymentMethod::from($validated['payment_method']),
                 $validated['payment_reference'] ?? null,
-                isset($validated['amount_tendered']) ? Money::toMinor($validated['amount_tendered']) : null,
+                $tendered?->baseMinor,
                 isset($validated['quantities']) ? array_map(fn ($quantity) => (int) $quantity, $validated['quantities']) : null,
             );
         } catch (InsufficientStock $e) {
             throw ValidationException::withMessages(['status' => $e->getMessage()]);
+        }
+        if ($sale->wasRecentlyCreated && $sale->amount_tendered_minor !== null) {
+            Money::remember($sale, 'amount_tendered', $tendered, $this->user($request)->id);
         }
 
         return to_route('sales.show', $sale)->with('success', "Prescription {$prescription->number} dispensed as {$sale->number}.");

@@ -6,7 +6,7 @@ use App\Actions\Bills;
 use App\Http\Controllers\Concerns\WorksInBranch;
 use App\Models\Bill;
 use App\Models\BillLine;
-use Carbon\CarbonImmutable;
+use App\Models\BranchSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -21,7 +21,7 @@ class BillController extends Controller
 
     public function index(Request $request): Response
     {
-        $day = CarbonImmutable::parse(is_string($request->query('day')) ? $request->query('day') : 'today')->startOfDay();
+        $day = $this->day($request);
 
         $bills = Bill::query()
             ->where('branch_id', $this->branchId())
@@ -63,6 +63,12 @@ class BillController extends Controller
                 'order' => ['id' => $bill->order->id, 'number' => $bill->order->number, 'table' => $bill->order->table?->name],
                 'customerName' => $bill->customer_name,
                 'currency' => $bill->currency,
+                'subtotalMinor' => $bill->subtotal_minor,
+                'discountMinor' => $bill->discount_minor,
+                'discountReason' => $bill->discount_reason,
+                // An equal share of the order: share part of parts.
+                'part' => $bill->part,
+                'parts' => $bill->parts,
                 'totalMinor' => $bill->total_minor,
                 'paymentMethod' => $bill->payment_method->label(),
                 'paymentReference' => $bill->payment_reference,
@@ -79,6 +85,12 @@ class BillController extends Controller
                     'totalMinor' => $line->total_minor,
                 ]),
             ],
+            // The branch's own lines on its receipts (its settings).
+            'receipt' => (function () use ($bill) {
+                $settings = BranchSetting::for($bill->branch_id);
+
+                return ['header' => $settings->receipt_header, 'footer' => $settings->receipt_footer, 'phone' => $settings->phone];
+            })(),
             'canVoid' => $this->canHere('restaurant.bills.void'),
         ]);
     }

@@ -55,7 +55,7 @@ class Forms
     }
 
     /**
-     * @param  array{name: string, description?: string|null, purpose: string, programme_id?: string|null, programme_unit_id?: string|null, contains_personal_data?: bool}  $data
+     * @param  array{name: string, description?: string|null, purpose: string, programme_id?: string|null, programme_unit_id?: string|null, contains_personal_data?: bool, linked_milestone_id?: string|null}  $data
      */
     public function update(Form $form, array $data, User $user): void
     {
@@ -70,6 +70,7 @@ class Forms
                 'programme_id' => $data['programme_id'] ?? null,
                 'programme_unit_id' => $data['programme_unit_id'] ?? null,
                 'contains_personal_data' => $data['contains_personal_data'] ?? $form->contains_personal_data,
+                'linked_milestone_id' => array_key_exists('linked_milestone_id', $data) ? $data['linked_milestone_id'] : $form->linked_milestone_id,
             ]);
             $changes = array_keys($form->getDirty());
             $form->save();

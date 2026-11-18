@@ -12,8 +12,8 @@ use Miles\PlatformClient\Tenancy\CurrentTenant;
  * The branch a member is working in. Tables, orders, bills and stock always
  * belong to one branch; a member may work in the active branches where
  * they hold at least one restaurant permission (owners and organization-wide
- * roles: every active branch). The choice is kept in the session, which
- * is already bound to one workspace.
+ * roles: every active branch). A branch page names its branch in its
+ * address (branches/{branch}/...), checked here on every request.
  *
  * Department-scoped roles do not open a branch: the platform does not tell
  * products which branch a department belongs to.
@@ -80,24 +80,23 @@ class Branches
     }
 
     /**
-     * The branch chosen for this session, if it is still available. With
-     * exactly one available branch it is chosen automatically.
+     * The branch this browser last worked in, if still open to the member
+     * (or their only branch). Only a hint, for old links without a branch
+     * and for the branch list: a branch page always takes its branch from
+     * its address, so tabs on different branches never disturb each other.
      */
-    public function current(Request $request): ?Branch
+    public function remembered(Request $request): ?Branch
     {
         $available = $this->available();
-        $chosen = $request->session()->get(self::SESSION_KEY);
-
-        foreach ($available as $branch) {
-            if ($branch->id === $chosen) {
-                return $branch;
-            }
+        if (count($available) === 1) {
+            return $available[0];
         }
 
-        if (count($available) === 1) {
-            $this->choose($request, $available[0]);
-
-            return $available[0];
+        $last = $request->hasSession() ? $request->session()->get(self::SESSION_KEY) : null;
+        foreach ($available as $branch) {
+            if ($branch->id === $last) {
+                return $branch;
+            }
         }
 
         return null;
@@ -129,8 +128,38 @@ class Branches
         return null;
     }
 
-    public function choose(Request $request, Branch $branch): void
+    /** Notes the branch a page was opened in (see remembered()). */
+    public function remember(Request $request, Branch $branch): void
     {
-        $request->session()->put(self::SESSION_KEY, $branch->id);
+        if ($request->hasSession()) {
+            $request->session()->put(self::SESSION_KEY, $branch->id);
+        }
+    }
+
+    /**
+     * Whether the member oversees every branch together (Global Admin, or
+     * the owner): restaurant.branches.overview across the organization. A
+     * role for some branches never opens the all-branches view.
+     */
+    public function overview(): bool
+    {
+        $access = $this->access->get();
+
+        return $access !== null
+            && $access->has('restaurant.branches.overview')
+            && $access->branchesFor('restaurant.branches.overview') === null;
+    }
+
+    /**
+     * Whether the member decides who may sign in (restaurant.access.manage
+     * across the organization).
+     */
+    public function managesAccess(): bool
+    {
+        $access = $this->access->get();
+
+        return $access !== null
+            && $access->has('restaurant.access.manage')
+            && $access->branchesFor('restaurant.access.manage') === null;
     }
 }

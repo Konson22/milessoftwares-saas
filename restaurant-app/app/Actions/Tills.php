@@ -50,12 +50,17 @@ class Tills
         }
     }
 
-    public function openFor(User $user, string $branchId): ?TillShift
+    /**
+     * $lock (inside a transaction): held until it ends, so the till cannot
+     * be closed while a bill goes into it (close() locks it too).
+     */
+    public function openFor(User $user, string $branchId, bool $lock = false): ?TillShift
     {
         return TillShift::query()
             ->where('branch_id', $branchId)
             ->where('opened_by', $user->id)
             ->where('status', TillShift::OPEN)
+            ->when($lock, fn ($query) => $query->lockForUpdate())
             ->first();
     }
 

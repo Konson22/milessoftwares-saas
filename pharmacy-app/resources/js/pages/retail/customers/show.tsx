@@ -7,6 +7,7 @@ import { StatCard } from '@miles/ui/components/stat-card';
 import { StatusBadge } from '@miles/ui/components/status-badge';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
+import { MoneyInput } from '@miles/ui/components/money-input';
 import { Label } from '@miles/ui/components/ui/label';
 import {
     Table,
@@ -169,10 +170,9 @@ export default function CustomerStatement({
                                     />
                                     <div className="grid gap-1.5">
                                         <Label htmlFor="amount">Amount</Label>
-                                        <Input
+                                        <MoneyInput
                                             id="amount"
                                             name="amount"
-                                            inputMode="decimal"
                                             required
                                             className="w-36"
                                             aria-invalid={

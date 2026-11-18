@@ -2,8 +2,10 @@
 
 namespace App\Mel;
 
+use App\Mel\Models\Programme;
 use App\Mel\Models\ProgrammeUnit;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 use Miles\PlatformClient\Integration\IntegrationClient;
 use Miles\PlatformClient\Integration\IntegrationResult;
 use Miles\PlatformClient\Integration\IntegrationStatus;
@@ -148,6 +150,77 @@ final class LinkedProjects
         }
 
         return ['status' => IntegrationStatus::Ok->value, 'message' => null, 'milestones' => $milestones];
+    }
+
+    /**
+     * The milestone a result, form or assignment points to: checked in
+     * Projects when it changes (a milestone of a project linked to one of
+     * the programme's units, that the member may see there). While the
+     * link is off, the reference stays as it was: it is never set or
+     * cleared without Projects.
+     */
+    public static function milestoneReference(Access $access, Programme $programme, ?string $current, ?string $given, string $field = 'linked_milestone_id'): ?string
+    {
+        if (! self::enabled()) {
+            return $current;
+        }
+        $given = $given === null || $given === '' ? null : strtolower($given);
+        if ($given === null || $given === $current) {
+            return $given;
+        }
+
+        $read = self::milestones($access, [$given]);
+        if ($read['status'] !== 'ok') {
+            throw ValidationException::withMessages([$field => $read['message'] ?? 'Projects is not connected.']);
+        }
+        $milestone = $read['milestones'][$given] ?? null;
+        if ($milestone === null || ! in_array((string) ($milestone['projectId'] ?? ''), self::linkedProjectIds($programme), true)) {
+            throw ValidationException::withMessages([$field => 'Choose a milestone of a project linked to one of this programme\'s units.']);
+        }
+
+        return $given;
+    }
+
+    /**
+     * Milestones of the projects linked to the programme's units, and any
+     * milestone already pointed to that Projects did not list now, so
+     * saving never drops a reference unasked.
+     *
+     * @param  list<string>  $kept
+     * @return list<array{value: string, label: string}>
+     */
+    public static function milestoneOptions(Access $access, Programme $programme, array $kept): array
+    {
+        $read = self::enabled() ? self::milestones($access, self::linkedProjectIds($programme), ofProjects: true) : ['milestones' => []];
+
+        $options = array_values(array_map(fn (array $milestone) => ['value' => (string) $milestone['id'], 'label' => (string) $milestone['label']], $read['milestones']));
+        foreach (array_diff($kept, array_keys($read['milestones'])) as $id) {
+            $options[] = ['value' => $id, 'label' => 'Milestone kept from before (not shown by Projects now)'];
+        }
+
+        return $options;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function linkedProjectIds(Programme $programme): array
+    {
+        return array_values($programme->units()->whereNotNull('linked_project_id')->pluck('linked_project_id')->map(fn (mixed $id) => (string) $id)->all());
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $milestone  as Projects answered
+     * @return array{name: string, project: string, dueOn: string|null, reachedOn: string|null}|null
+     */
+    public static function milestoneSummary(?array $milestone): ?array
+    {
+        return $milestone === null ? null : [
+            'name' => (string) $milestone['name'],
+            'project' => (string) $milestone['projectCode'],
+            'dueOn' => is_string($milestone['dueOn'] ?? null) ? $milestone['dueOn'] : null,
+            'reachedOn' => is_string($milestone['reachedOn'] ?? null) ? $milestone['reachedOn'] : null,
+        ];
     }
 
     /**

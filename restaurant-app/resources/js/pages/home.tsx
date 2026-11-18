@@ -72,7 +72,7 @@ export default function Home({ openOrders, takings, lowStock }: Props) {
                         hint="At or below the reorder level"
                         icon={Package}
                         accent="amber"
-                        href={stock({ query: { filter: 'low' } })}
+                        href={stock(undefined, { query: { filter: 'low' } })}
                     />
                 )}
             </div>

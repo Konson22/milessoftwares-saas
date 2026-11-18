@@ -127,7 +127,7 @@ export default function Bills({ day, bills, takings }: Props) {
                                 <TableRow key={bill.id}>
                                     <TableCell>
                                         <Link
-                                            href={show(bill.id)}
+                                            href={show({ bill: bill.id })}
                                             className="font-medium hover:underline"
                                         >
                                             {bill.number}

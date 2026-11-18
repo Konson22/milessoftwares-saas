@@ -97,6 +97,9 @@ class ServeInertiaAsJson
         }
         // An Inertia page's url is the app route's: back to the web path.
         $path = preg_replace('~^'.preg_quote(AppPages::PREFIX, '~').'(/|$)~', '', $path) ?? $path;
+        // A web page of a branch (branches/<id>/orders/...): the app names
+        // the branch in X-Branch-Id, so its path is the page's alone.
+        $path = preg_replace('~^branches/[0-9a-fA-F-]{36}(/|$)~', '', $path) ?? $path;
 
         return $path.(is_string($query) && $query !== '' ? "?{$query}" : '');
     }

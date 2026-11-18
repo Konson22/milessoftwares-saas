@@ -10,6 +10,7 @@ use App\Modules\Authorization\Actions\AssignmentDenied;
 use App\Modules\Authorization\Actions\AssignRole;
 use App\Modules\Authorization\Actions\RevokeRole;
 use App\Modules\Authorization\Actions\SeparationOfDutiesWarning;
+use App\Modules\Authorization\Actions\SetApplicationAccess;
 use App\Modules\Authorization\Models\RoleAssignment;
 use App\Modules\Authorization\Support\AccessResolver;
 use App\Modules\Authorization\Support\Scope;
@@ -32,6 +33,11 @@ use Inertia\Response;
  * Role assignments in the current workspace. Showing the page needs access
  * management somewhere; each assignment and revocation is then checked
  * against its own scope by AssignRole and RevokeRole.
+ *
+ * The owner holds every permission in every application the business has
+ * (Integration\Support\EffectiveAccess), so the page shows that instead of
+ * roles and no role is given to them. Roles they already hold can still be
+ * removed.
  */
 class AccessController extends Controller
 {
@@ -56,6 +62,13 @@ class AccessController extends Controller
             default => "{$assignment->resource_type} {$assignment->resource_id}",
         };
 
+        // Login state per member and application; no row means enabled.
+        $grants = DB::table('application_access_grants')
+            ->join('applications', 'applications.id', '=', 'application_access_grants.application_id')
+            ->whereIn('application_access_grants.status', ['disabled', 'suspended'])
+            ->get(['application_access_grants.membership_id', 'applications.code', 'application_access_grants.status'])
+            ->groupBy('membership_id');
+
         return Inertia::render('central/workspace/manage/access', [
             'members' => OrganizationMembership::query()
                 ->with('user:id,name,email')
@@ -67,15 +80,17 @@ class AccessController extends Controller
                     'name' => $membership->user->name,
                     'email' => $membership->user->signInName(),
                     'isOwner' => $this->access->isOwner($membership),
+                    'applicationAccess' => collect($grants->get($membership->id, []))->pluck('status', 'code')->all(),
                     'assignments' => RoleAssignment::query()
                         ->live()
                         ->where('membership_id', $membership->id)
-                        ->with('role.application:id,name')
+                        ->with('role.application:id,code,name')
                         ->get()
                         ->map(fn (RoleAssignment $assignment) => [
                             'id' => $assignment->id,
                             'role' => $assignment->role->name,
                             'application' => $assignment->role->application->name,
+                            'applicationCode' => $assignment->role->application->code,
                             'scope' => $scopeLabel($assignment),
                             'expiresAt' => $assignment->expires_at?->toDateString(),
                         ])
@@ -83,6 +98,7 @@ class AccessController extends Controller
                 ])
                 ->all(),
             'roles' => $this->assignableRoles(),
+            'applications' => $this->entitledApplications(),
             'branches' => $branches,
             'departments' => $departments,
         ]);
@@ -116,6 +132,10 @@ class AccessController extends Controller
             throw ValidationException::withMessages(['membership_id' => 'Choose a member and a role.']);
         }
 
+        if ($this->access->isOwner($grantee)) {
+            throw ValidationException::withMessages(['membership_id' => 'The owner already has full access to every application.']);
+        }
+
         $scope = Scope::fromInput($validated);
         $expiresAt = isset($validated['expires_at']) ? CarbonImmutable::parse($validated['expires_at'])->endOfDay() : null;
 
@@ -140,6 +160,41 @@ class AccessController extends Controller
         return back();
     }
 
+    /**
+     * Enable, disable or suspend a member's sign-in to one application.
+     */
+    public function application(Request $request, SetApplicationAccess $set): RedirectResponse
+    {
+        $actor = $this->authorizeAccessManagement($request, $this->access);
+
+        $validated = $request->validate([
+            'membership_id' => ['required', 'uuid'],
+            'application' => ['required', 'string', 'max:64'],
+            'status' => ['required', Rule::in(SetApplicationAccess::STATES)],
+            'reason' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $member = OrganizationMembership::query()->whereKey((string) $validated['membership_id'])->first();
+        $application = Application::query()->where('code', $validated['application'])->where('kind', '!=', ApplicationKind::Platform->value)->first();
+        if ($member === null || $application === null) {
+            throw ValidationException::withMessages(['membership_id' => 'Choose a member and an application.']);
+        }
+
+        try {
+            $set->handle($actor, $member, $application, $validated['status'], $validated['reason'] ?? null);
+        } catch (AssignmentDenied $e) {
+            throw ValidationException::withMessages(['status' => $e->getMessage()]);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => match ($validated['status']) {
+            'active' => __(':name can sign in to :app.', ['name' => $member->user->name, 'app' => $application->name]),
+            'disabled' => __(':name can no longer sign in to :app.', ['name' => $member->user->name, 'app' => $application->name]),
+            default => __(':name is suspended from :app.', ['name' => $member->user->name, 'app' => $application->name]),
+        }]);
+
+        return back();
+    }
+
     public function destroy(Request $request, RoleAssignment $assignment, RevokeRole $revoke): RedirectResponse
     {
         $revoker = $this->authorizeAccessManagement($request, $this->access);
@@ -153,6 +208,25 @@ class AccessController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Role removed.')]);
 
         return back();
+    }
+
+    /**
+     * The products the business has now, which the owner has full access to.
+     *
+     * @return list<array{code: string, name: string}>
+     */
+    private function entitledApplications(): array
+    {
+        $entitled = Entitlement::query()->current()->whereNull('feature_key')->pluck('application_id');
+
+        return array_values(Application::query()
+            ->whereIn('id', $entitled)
+            ->where('kind', '!=', ApplicationKind::Platform->value)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['code', 'name'])
+            ->map(fn (Application $application) => ['code' => $application->code, 'name' => $application->name])
+            ->all());
     }
 
     /**
@@ -180,6 +254,7 @@ class AccessController extends Controller
                     'name' => $role->name,
                     'applicationId' => $application->id,
                     'application' => $application->name,
+                    'applicationCode' => $application->code,
                     'scopes' => array_map(fn ($type) => $type->value, $role->allowedScopeTypes()),
                     'sensitivity' => $role->sensitivity,
                     'delegable' => $role->is_delegable,

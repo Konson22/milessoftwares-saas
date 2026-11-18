@@ -16,6 +16,10 @@ import {
 } from '@miles/ui/components/ui/table';
 import { formatMoney } from '@/lib/money';
 import { index, show } from '@/routes/stock';
+import {
+    create as receive,
+    index as deliveries,
+} from '@/routes/stock/deliveries';
 
 type Row = {
     id: string;
@@ -25,11 +29,13 @@ type Row = {
     averageCostMinor: number;
     reorderLevel: number;
     low: boolean;
+    short: boolean;
 };
 
 type Props = {
     rows: Row[];
     filters: { search: string; filter: 'all' | 'low' };
+    canReceive: boolean;
 };
 
 const FILTERS = [
@@ -40,7 +46,7 @@ const FILTERS = [
 /**
  * Drinks on hand at the branch; dishes are made to order and keep none.
  */
-export default function StockIndex({ rows, filters }: Props) {
+export default function StockIndex({ rows, filters, canReceive }: Props) {
     const { branch, currency } = usePage().props;
     const money = (minor: number) => formatMoney(minor, currency ?? 'USD');
 
@@ -50,6 +56,18 @@ export default function StockIndex({ rows, filters }: Props) {
             <PageHeader
                 title="Drinks stock"
                 description={`On hand in ${branch?.name}, at average cost.`}
+                actions={
+                    <div className="flex gap-2">
+                        <Button variant="outline" size="sm" asChild>
+                            <Link href={deliveries()}>Deliveries</Link>
+                        </Button>
+                        {canReceive && (
+                            <Button size="sm" asChild>
+                                <Link href={receive()}>Receive a delivery</Link>
+                            </Button>
+                        )}
+                    </div>
+                }
             />
 
             <Panel>
@@ -70,7 +88,7 @@ export default function StockIndex({ rows, filters }: Props) {
                                 asChild
                             >
                                 <Link
-                                    href={index({
+                                    href={index(undefined, {
                                         query: {
                                             filter: filter.value,
                                             search: filters.search || undefined,
@@ -122,7 +140,7 @@ export default function StockIndex({ rows, filters }: Props) {
                                 <TableRow key={row.id}>
                                     <TableCell>
                                         <Link
-                                            href={show(row.id)}
+                                            href={show({ item: row.id })}
                                             className="font-medium hover:underline"
                                         >
                                             {row.name}
@@ -138,10 +156,16 @@ export default function StockIndex({ rows, filters }: Props) {
                                         {money(row.averageCostMinor)}
                                     </TableCell>
                                     <TableCell>
-                                        {row.low && (
-                                            <StatusBadge tone="warning">
-                                                Running low
+                                        {row.short ? (
+                                            <StatusBadge tone="danger">
+                                                Count needed
                                             </StatusBadge>
+                                        ) : (
+                                            row.low && (
+                                                <StatusBadge tone="warning">
+                                                    Running low
+                                                </StatusBadge>
+                                            )
                                         )}
                                     </TableCell>
                                 </TableRow>

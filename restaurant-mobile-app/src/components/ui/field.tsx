@@ -29,7 +29,7 @@ export const Field = forwardRef<ComponentRef<typeof TextInput>, Props>(function 
   const reveal = useRevealOnFocus();
 
   const box = dark
-    ? `bg-white/10 ${error ? 'border-red-300' : focused ? 'border-white' : 'border-white/20'}`
+    ? `bg-brand-900 ${error ? 'border-red-300' : focused ? 'border-white' : 'border-brand-700'}`
     : `bg-white ${error ? 'border-red-400' : focused ? 'border-brand-500' : 'border-slate-300'}`;
 
   return (
@@ -40,7 +40,7 @@ export const Field = forwardRef<ComponentRef<typeof TextInput>, Props>(function 
         {prefix && <Text className={`mr-2 text-base ${dark ? 'text-brand-100' : 'text-slate-500'}`}>{prefix}</Text>}
         <TextInput
           ref={ref}
-          placeholderTextColor={dark ? 'rgba(217, 233, 255, 0.5)' : colors.faint}
+          placeholderTextColor={dark ? colors.brand[300] : colors.faint}
           selectionColor={dark ? colors.brand[300] : colors.brand[500]}
           className={`min-w-0 flex-1 py-3 text-base ${dark ? 'text-white' : 'text-slate-900'}`}
           accessibilityLabel={label}

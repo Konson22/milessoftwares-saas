@@ -19,27 +19,35 @@ import { logout } from '@/routes/platform';
  * station being worked in, Finance (where bills are booked), and sign-out.
  */
 export default function ProductLayout({ children }: PropsWithChildren) {
-    const { url, props } = usePage();
+    const { url, props, component } = usePage();
     const { product, workspace, user, flash, branch } = props;
     const can = useCan();
     const canHere = useCanHere();
-    const groups = visibleNavigation(can, canHere, branch !== null);
+    // Attendants on the web see only the page sending them to the app.
+    const mobileOnly = component === 'mobile-only';
+    const groups = mobileOnly
+        ? []
+        : visibleNavigation(can, canHere, branch !== null);
     const active = activeItem(groups, url, home());
-    const shared: ShellNavGroup[] = workspace
-        ? [
-              {
-                  title: 'Shared',
-                  items: [
-                      {
-                          title: 'Finance',
-                          href: new URL('finance/', workspace.url).toString(),
-                          icon: Landmark,
-                          external: true,
-                      },
-                  ],
-              },
-          ]
-        : [];
+    const shared: ShellNavGroup[] =
+        workspace && !mobileOnly
+            ? [
+                  {
+                      title: 'Shared',
+                      items: [
+                          {
+                              title: 'Finance',
+                              href: new URL(
+                                  'finance/',
+                                  workspace.url,
+                              ).toString(),
+                              icon: Landmark,
+                              external: true,
+                          },
+                      ],
+                  },
+              ]
+            : [];
 
     const searches = useCallback(() => [], []);
 
@@ -53,7 +61,7 @@ export default function ProductLayout({ children }: PropsWithChildren) {
             )}
             actions={
                 <>
-                    <BranchSwitcher />
+                    {!mobileOnly && <BranchSwitcher />}
                     <QuickSearch
                         groups={groups}
                         searches={searches}

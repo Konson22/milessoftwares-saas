@@ -6,6 +6,7 @@ import { StatusBadge } from '@miles/ui/components/status-badge';
 import { statusTone } from '@/lib/status';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
+import { MoneyInput } from '@miles/ui/components/money-input';
 import { Label } from '@miles/ui/components/ui/label';
 import {
     Table,
@@ -425,10 +426,9 @@ export default function ShowPrescription({
                                             <Label htmlFor="amount_tendered">
                                                 Cash given
                                             </Label>
-                                            <Input
+                                            <MoneyInput
                                                 id="amount_tendered"
                                                 name="amount_tendered"
-                                                inputMode="decimal"
                                                 required
                                             />
                                             {errors.amount_tendered && (

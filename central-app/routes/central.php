@@ -6,9 +6,9 @@ use App\Modules\Identity\Http\Controllers\GoogleSignInController;
 use App\Modules\Identity\Http\Controllers\NativeGoogleSignInController;
 use App\Modules\Identity\Http\Controllers\SignOutController;
 use App\Sites\Central\Http\Controllers\Account\ClaimController;
+use App\Sites\Central\Http\Controllers\Account\GetStartedController;
 use App\Sites\Central\Http\Controllers\Account\JoinController;
 use App\Sites\Central\Http\Controllers\Account\PasswordSetupController;
-use App\Sites\Central\Http\Controllers\Account\GetStartedController;
 use App\Sites\Central\Http\Controllers\Account\WorkspacesController;
 use App\Sites\Central\Http\Controllers\Dashboard\BillingController;
 use App\Sites\Central\Http\Controllers\Dashboard\DashboardController;
@@ -172,6 +172,9 @@ Route::domain('{tenant}.'.PlatformHosts::root())
                 Route::post('members', [MemberAccountController::class, 'store'])->middleware('throttle:30,60')->name('members.store');
                 Route::post('members/{membership}/temporary-password', [MemberAccountController::class, 'reissue'])
                     ->whereUuid('membership')->middleware('throttle:10,60')->name('members.temporary-password');
+                // Deleting a username account this business created (someone who left).
+                Route::delete('members/{membership}/account', [MemberAccountController::class, 'destroy'])
+                    ->whereUuid('membership')->middleware('throttle:30,60')->name('members.account.destroy');
 
                 Route::get('invitations', [InvitationController::class, 'index'])->name('invitations');
                 Route::post('invitations', [InvitationController::class, 'store'])->middleware('throttle:30,60')->name('invitations.store');
@@ -180,6 +183,7 @@ Route::domain('{tenant}.'.PlatformHosts::root())
 
                 Route::get('access', [AccessController::class, 'index'])->name('access');
                 Route::post('access', [AccessController::class, 'store'])->middleware('throttle:30,1')->name('access.store');
+                Route::put('access/application', [AccessController::class, 'application'])->middleware('throttle:30,1')->name('access.application');
                 Route::delete('access/{assignment}', [AccessController::class, 'destroy'])->whereUuid('assignment')->name('access.destroy');
 
                 // The applications this business can add, and free trials of them.

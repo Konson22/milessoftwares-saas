@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Mel;
 
+use App\Collect\Models\CalculationRun;
 use App\Mel\Access;
 use App\Mel\Calculator;
 use App\Mel\Evidence;
@@ -49,7 +50,19 @@ class SubmissionController extends Controller
             ->where('unit_id', $submission->unit_id)->whereNull('superseded_at')->first();
         $open = in_array($submission->status, [Submission::SUBMITTED, Submission::UNDER_REVIEW], true);
 
+        // Calculated from collected data: the run it came from (ADR-0019 §26).
+        $run = $submission->source === 'collect' && $submission->source_reference !== null
+            ? CalculationRun::query()->with('mapping.form')->find($submission->source_reference)
+            : null;
+
         return Inertia::render('mel/submissions/show', [
+            'calculation' => $run === null ? null : [
+                'id' => $run->id,
+                'used' => $run->used,
+                'form' => $run->mapping->form->name,
+                'flag' => $run->flagged_at === null ? null : $run->flag_reason,
+                'canOpen' => $access->can('mel.collect.view'),
+            ],
             'submission' => [
                 'id' => $submission->id,
                 'status' => $submission->status,

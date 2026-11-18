@@ -28,7 +28,7 @@ it('builds absolute URLs on platform hosts', function () {
 });
 
 it('keeps a non-standard port from APP_URL', function () {
-    config(['app.url' => 'http://milesoftwares.localhost:8000', 'platform.root_domain' => 'milesoftwares.localhost']);
+    config(['app.url' => 'http://tatook.localhost:8000', 'platform.root_domain' => 'tatook.localhost']);
 
-    expect(PlatformHosts::url(PlatformHosts::auth(), 'login'))->toBe('http://auth.milesoftwares.localhost:8000/login');
+    expect(PlatformHosts::url(PlatformHosts::auth(), 'login'))->toBe('http://auth.tatook.localhost:8000/login');
 });

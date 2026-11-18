@@ -24,7 +24,10 @@ use Illuminate\Validation\ValidationException;
  */
 class Review
 {
-    public function __construct(private readonly Submissions $submissions) {}
+    public function __construct(
+        private readonly Submissions $submissions,
+        private readonly Calculations $calculations,
+    ) {}
 
     public function start(Submission $submission, User $reviewer): void
     {
@@ -92,6 +95,11 @@ class Review
             $submission->setRawAttributes($locked->getAttributes(), true);
 
             $this->submissions->decide($locked, $action, $reviewer, $comment, $notes);
+
+            // Counted for an indicator: the result it fed is flagged for recalculation.
+            if ($action === 'reopened') {
+                $this->calculations->sourceChanged($locked, 'reopened');
+            }
         });
     }
 

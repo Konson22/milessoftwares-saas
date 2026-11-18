@@ -4,6 +4,7 @@ import { PageHeader } from '@miles/ui/components/page-header';
 import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
+import { MoneyInput } from '@miles/ui/components/money-input';
 import { Label } from '@miles/ui/components/ui/label';
 import { update } from '@/routes/counter-settings';
 
@@ -263,10 +264,9 @@ export default function RetailCounterSettings({
                                     label="Usual starting cash (prefilled when a shift starts)"
                                     error={errors.default_float}
                                 >
-                                    <Input
+                                    <MoneyInput
                                         id="default_float"
                                         name="default_float"
-                                        inputMode="decimal"
                                         defaultValue={settings.defaultFloat}
                                         className="w-44"
                                     />
@@ -314,10 +314,9 @@ export default function RetailCounterSettings({
                                     label="Name the customer on sales over (leave empty for no limit)"
                                     error={errors.require_customer_above}
                                 >
-                                    <Input
+                                    <MoneyInput
                                         id="require_customer_above"
                                         name="require_customer_above"
-                                        inputMode="decimal"
                                         defaultValue={
                                             settings.requireCustomerAbove
                                         }

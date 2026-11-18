@@ -56,15 +56,17 @@ class LoyaltyController extends Controller
         $validated = $request->validate([
             'active' => ['boolean'],
             'spend_per_point' => ['required', 'string', Money::rule()],
+            'spend_per_point_currency' => Money::currencyRule(),
             'point_value' => ['required', 'string', Money::rule()],
+            'point_value_currency' => Money::currencyRule(),
         ]);
         $user = $request->user();
         abort_unless($user instanceof User, 401);
 
         $program = $loyalty->configure(
             active: (bool) ($validated['active'] ?? false),
-            spendPerPointMinor: Money::toMinor($validated['spend_per_point']),
-            pointValueMinor: Money::toMinor($validated['point_value']),
+            spendPerPointMinor: Money::entered($validated, 'spend_per_point')->baseMinor,
+            pointValueMinor: Money::entered($validated, 'point_value')->baseMinor,
             by: $user,
         );
 

@@ -89,11 +89,23 @@ class Order extends Model
     }
 
     /**
+     * The bill paid last (the one that closed a paid order).
+     *
      * @return HasOne<Bill, $this>
      */
     public function bill(): HasOne
     {
-        return $this->hasOne(Bill::class);
+        return $this->hasOne(Bill::class)->latestOfMany('paid_at');
+    }
+
+    /**
+     * Every bill of the order: one, or its parts when it was split.
+     *
+     * @return HasMany<Bill, $this>
+     */
+    public function bills(): HasMany
+    {
+        return $this->hasMany(Bill::class)->orderBy('paid_at')->orderBy('number');
     }
 
     /**

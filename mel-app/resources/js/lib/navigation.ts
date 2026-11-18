@@ -16,6 +16,7 @@ import {
 import type { ShellNavItem } from '@miles/ui/shell/navigation';
 import { home } from '@/routes/mel';
 import { index as audit } from '@/routes/mel/audit';
+import { analytics as collectAnalytics } from '@/routes/mel/collect';
 import { index as collectAssignments } from '@/routes/mel/collect/assignments';
 import { index as collectExports } from '@/routes/mel/collect/exports';
 import { index as collectForms } from '@/routes/mel/collect/forms';
@@ -100,6 +101,12 @@ export const navigation: NavGroup[] = [
     {
         title: 'Data collection',
         items: [
+            {
+                title: 'Collection analytics',
+                href: collectAnalytics(),
+                icon: BarChart3,
+                permission: 'mel.collect.view',
+            },
             {
                 title: 'Forms & surveys',
                 href: collectForms(),

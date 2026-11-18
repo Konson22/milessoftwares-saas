@@ -37,7 +37,7 @@ function suggestSlug(name: string): string {
 }
 
 /**
- * Register, in the app (no browser): first a Miles Softwares account, then
+ * Register, in the app (no browser): first a Tatook account, then
  * the restaurant. They become its owner, with the restaurant's free trial,
  * its Main branch is made for them, and the floor opens in it. Someone
  * signed in with no restaurant yet goes straight to the restaurant.
@@ -63,7 +63,7 @@ export default function CreateBusinessScreen() {
         {keyboard ? <View style={{ height: insets.top + 12 }} /> : <BrandMark compact />}
         <View className="w-full max-w-xl gap-4 self-center px-6" style={{ paddingBottom: (keyboard ? 0 : insets.bottom) + 16 }}>
           {signedIn ? <BusinessStep /> : <AccountStep onRegistered={() => setAccountDone(true)} />}
-          <View className="flex-row justify-center border-t border-white/15 pt-4">
+          <View className="flex-row justify-center border-t border-brand-800 pt-4">
             {signedIn ? (
               <TextLink title="Use another account" onPress={changeAccount} />
             ) : (
@@ -162,7 +162,7 @@ function AccountStep({ onRegistered }: { onRegistered: () => void }) {
 
   return (
     <>
-      <Heading title="Create your restaurant" subtitle="First, your Miles Softwares account." />
+      <Heading title="Create your restaurant" subtitle="First, your Tatook account." />
       {error ? <Banner tone="error">{error}</Banner> : null}
       <Field
         dark
@@ -211,7 +211,7 @@ function AccountStep({ onRegistered }: { onRegistered: () => void }) {
             accessibilityRole="button"
             accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
             onPress={() => setShowPassword(!showPassword)}
-            className="h-11 w-11 items-center justify-center active:bg-white/10">
+            className="h-11 w-11 items-center justify-center active:bg-brand-800">
             <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.brand[200]} />
           </Pressable>
         }
@@ -395,7 +395,7 @@ function BusinessStep() {
         accessibilityRole="button"
         accessibilityState={{ expanded: more }}
         onPress={() => setMore(!more)}
-        className="flex-row items-center justify-between border border-white/20 bg-white/10 px-4 py-3 active:bg-white/15">
+        className="flex-row items-center justify-between border border-brand-700 bg-brand-900 px-4 py-3 active:bg-brand-800">
         <View className="flex-1">
           <Text className="text-sm font-semibold text-white">Legal name, country and currency</Text>
           <Text className="text-xs text-brand-100" numberOfLines={1}>

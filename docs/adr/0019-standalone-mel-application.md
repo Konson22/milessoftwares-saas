@@ -1389,3 +1389,82 @@ submission → publication chain over HTTP. Both are covered by feature tests on
   - `tsc` is clean in mel-app and mel-mobile-app.
   - `vp check` is clean on the changed files, and ESLint is clean in mel-mobile-app.
   - The mel-app production build succeeds.
+
+## 26. As built (2026-11-18, local, uncommitted): collected data → indicators, and project work
+
+ADR-0012 §11 was not built until now. This section records what was built and where it differs.
+
+**Indicator mappings** (`collect_indicator_mappings`, `App\Collect\Calculations`):
+
+- A mapping ties one published form of a programme to one indicator of the same programme. There
+  is at most one active mapping per form and indicator.
+- Calculations: `count`, `sum` (of a number question), `average` (sent as numerator Σx and
+  denominator n, for ratio and rate) and `percentage` (numerator: a second condition).
+  `count_distinct` from ADR-0012 became the general `distinct_by` question: repeat visits with the
+  same identifier count once, by the latest completed one, for every calculation.
+- Conditions are §4 condition trees, evaluated by the form engine's own `Rules::test`. There is no
+  second evaluator. The web editor shows one condition or several joined by "and". It keeps any
+  other tree unchanged.
+- A mapping that a run used is never edited. A change retires it and creates a new one with
+  `supersedes_id`.
+- Permissions: defining a mapping needs `mel.frameworks.manage`. Sending a value needs
+  `mel.data.enter`. So, by default, a manager defines the calculation and an officer reports it.
+
+**Calculation runs** (`collect_calculation_runs`, `collect_calculation_rows`):
+
+- Only accepted submissions count, by their current answers (the latest revision). The run keeps
+  the revision used.
+- Submissions are matched to a period by `completed_at`, and to a unit by `programme_unit_id`.
+- A preview is worked out on request and saves nothing. Send works it out again under a lock on the
+  mapping.
+- Send writes the M&E draft through `App\Mel\Submissions::save()`, with `source = collect` and
+  `source_reference` = run id. M&E's verification then applies unchanged.
+- Send refuses in three cases:
+  - an open result entered by hand or imported;
+  - a result waiting for verification;
+  - nothing to count.
+- A new run for the same indicator, period and unit supersedes the earlier ones. Their rows stop
+  "standing".
+- A partial unique index on `(indicator_id, submission_id) WHERE standing` means a submission
+  counts at most once per indicator.
+- Reopening a counted submission flags its run ("recalculate"). An accepted submission must be
+  reopened before it can be corrected, so this covers corrections too.
+- The mappings page shows how many submissions were accepted since a run.
+- Traceability: M&E result → run (`collect/calculations/{run}`) → rows → each collected submission
+  and revision → form version. The M&E result page links back to its calculation.
+- Amounts read from a personal question are hidden without `mel.collect.personal_data`.
+
+**Not built (Phase 2):**
+
+- breakdowns from a select question into an indicator's dimension;
+- automatic recalculation;
+- calculations for unit roll-ups.
+
+The officer recalculates and sends. For an indicator whose breakdown rule is `must_equal_total`,
+M&E's submit step still asks for the cells, which are entered by hand on the draft.
+
+**Project work:**
+
+- `collect_forms.linked_milestone_id` and `collect_assignments.linked_milestone_id` hold a
+  milestone of a project linked to one of the programme's units. As with results, it is an id
+  only, checked in Projects through the integration API when it changes. It is kept as is while
+  Projects is not connected, and cleared when the form leaves its programme. The checks moved from
+  `FrameworkController` into `LinkedProjects` and are shared.
+- An assignment copies its form's milestone.
+- Completing surveys never marks a milestone reached.
+
+**Assignments:** `expected_submissions` is optional. The assignments page shows:
+
+- collection progress (not started / in progress / collected / overdue), from what was sent and not
+  rejected;
+- review counts apart: to review, to correct.
+
+The phone kit gains `expected` per assignment. It is additive: older apps ignore it.
+
+**Verification:**
+
+- mel-app on SQLite: 156 passed and 2 skipped (143 before; 13 new tests).
+- The Collect tests also pass on PostgreSQL 17: 46 of 46.
+- PHPStan is clean on the app code, `tsc` is clean, and the JS tests pass (42).
+- `vp check` is clean except for three `public/mel` files that were already unformatted.
+- The local dev database is migrated. Nothing is committed or deployed.

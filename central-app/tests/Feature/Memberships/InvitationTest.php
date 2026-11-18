@@ -327,3 +327,24 @@ it('returns 404 for another organization\'s invitation id', function () {
 it('rejects malformed tokens before any lookup', function () {
     $this->actingAs($this->invitee)->get(PlatformHosts::url(PlatformHosts::auth(), 'invitations/short'))->assertNotFound();
 });
+
+it('deletes an invitation from the list, revoking a pending one first, and audits both', function () {
+    invite($this->owner);
+    $id = Invitation::acrossTenants()->sole()->id;
+
+    $this->actingAs($this->owner->user)->delete(workspaceAt('/manage/invitations/'.$id))->assertSessionHasNoErrors();
+
+    expect(Invitation::acrossTenants()->count())->toBe(0)
+        ->and(AuditLog::query()->where('subject_id', $id)->whereIn('action', ['invitation.revoked', 'invitation.deleted'])->pluck('action')->sort()->values()->all())
+        ->toBe(['invitation.deleted', 'invitation.revoked']);
+});
+
+it('deletes an expired invitation too', function () {
+    invite($this->owner);
+    $invitation = Invitation::acrossTenants()->sole();
+    $invitation->forceFill(['status' => 'expired'])->save();
+
+    $this->actingAs($this->owner->user)->delete(workspaceAt('/manage/invitations/'.$invitation->id))->assertSessionHasNoErrors();
+
+    expect(Invitation::acrossTenants()->count())->toBe(0);
+});

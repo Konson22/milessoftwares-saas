@@ -62,6 +62,17 @@ export type CatalogEntry = {
     summary: string;
     /** A fuller description in paragraphs, for the product's own page (optional). */
     overview?: string[];
+    /** How this product works with the other apps, shown as its own section. */
+    connections?: {
+        intro: string;
+        links: {
+            slug: string;
+            name: string;
+            icon: string;
+            url: string;
+            body: string;
+        }[];
+    };
     headline: string;
     subhead: string;
     audience: string;

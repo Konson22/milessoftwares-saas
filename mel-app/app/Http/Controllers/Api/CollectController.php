@@ -11,6 +11,7 @@ use App\Collect\Models\ReviewDecision;
 use App\Collect\Models\Submission;
 use App\Collect\Refused;
 use App\Collect\Submissions;
+use App\Http\Controllers\Mel\Collect\AnalyticsController;
 use App\Mel\Models\Settings;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -47,13 +48,56 @@ class CollectController
             ->get()
             ->filter(fn (Assignment $assignment) => $assignment->acceptsSubmissions());
 
+        // The collector's own records per form, by review state, in one
+        // query: the task's progress, also for records the phone has since
+        // removed after its keep-on-device days.
+        $counts = [];
+        if ($assignments->isNotEmpty()) {
+            Submission::query()
+                ->where('author_id', $user->id)
+                ->whereIn('form_id', $assignments->pluck('form_id')->unique()->values())
+                ->selectRaw('form_id, status, count(*) as n')
+                ->groupBy('form_id', 'status')
+                ->get()
+                ->each(function (Submission $row) use (&$counts) {
+                    $counts[$row->form_id][$row->status] = (int) $row->getAttribute('n');
+                });
+        }
+        $progress = function (string $formId) use ($counts): array {
+            $c = $counts[$formId] ?? [];
+
+            return [
+                'received' => array_sum($c),
+                'pending' => ($c[Submission::RECEIVING] ?? 0) + ($c[Submission::SUBMITTED] ?? 0) + ($c[Submission::UNDER_REVIEW] ?? 0),
+                'accepted' => $c[Submission::ACCEPTED] ?? 0,
+                'correction' => $c[Submission::CORRECTION_REQUESTED] ?? 0,
+                'rejected' => $c[Submission::REJECTED] ?? 0,
+            ];
+        };
+
+        // The collector's own submissions per day over the last 30 days, for
+        // the phone's dashboard (new and optional: older apps ignore it).
+        $since = CarbonImmutable::now()->startOfDay()->subDays(29);
+        $perDay = Submission::query()
+            ->where('author_id', $user->id)
+            ->where('status', '<>', Submission::RECEIVING)
+            ->where('completed_at', '>=', $since)
+            ->selectRaw(AnalyticsController::dayExpression().' AS day, count(*) AS n')
+            ->groupByRaw('1')
+            ->toBase()->pluck('n', 'day');
+        $activity = [];
+        for ($day = $since; $day->lessThanOrEqualTo(now()); $day = $day->addDay()) {
+            $activity[] = ['date' => $day->toDateString(), 'count' => (int) ($perDay[$day->toDateString()] ?? 0)];
+        }
+
         return response()->json([
             'serverTime' => now()->toIso8601String(),
+            'activity' => $activity,
             'settings' => [
                 'photoMaxKb' => $settings->collect_photo_max_kb,
                 'keepOnDeviceDays' => $settings->collect_keep_on_device_days,
             ],
-            'assignments' => $assignments->map(function (Assignment $assignment) {
+            'assignments' => $assignments->map(function (Assignment $assignment) use ($progress) {
                 $form = $assignment->form;
                 $version = $form->currentVersion;
 
@@ -63,6 +107,8 @@ class CollectController
                     'canStart' => $assignment->allowsCollecting() && $version !== null && ! $form->isArchived(),
                     'startsOn' => $assignment->starts_on?->toDateString(),
                     'endsOn' => $assignment->ends_on?->toDateString(),
+                    // Submissions expected from this person (null: not set). New and optional: older apps ignore it.
+                    'expected' => $assignment->expected_submissions,
                     'closesAt' => $assignment->closes_at?->toIso8601String(),
                     'form' => [
                         'id' => $form->id,
@@ -82,7 +128,9 @@ class CollectController
                         'number' => $version->number,
                         'sha256' => $version->sha256,
                         'schemaVersion' => (int) ($version->definition['schema_version'] ?? 1),
+                        'publishedAt' => $version->published_at->toIso8601String(),
                     ],
+                    'progress' => $progress($form->id),
                 ];
             })->values(),
         ]);

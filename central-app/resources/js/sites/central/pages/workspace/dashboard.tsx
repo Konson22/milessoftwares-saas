@@ -1,23 +1,22 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
-    AppWindow,
     ArrowRight,
-    Banknote,
+    ArrowUpRight,
     Building2,
     Clock,
-    CreditCard,
     GitBranch,
     MailPlus,
     Plus,
-    Puzzle,
     ReceiptText,
+    Settings,
+    ShieldCheck,
+    Sparkles,
     Users,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { EmptyState } from '@miles/ui/components/empty-state';
-import { PageHeader } from '@miles/ui/components/page-header';
 import { Panel, PanelHeader } from '@miles/ui/components/panel';
-import { StatCard } from '@miles/ui/components/stat-card';
 import { StatusBadge } from '@miles/ui/components/status-badge';
 import type { Tone } from '@miles/ui/components/status-badge';
 import { Button } from '@/shared/components/ui/button';
@@ -26,14 +25,16 @@ import {
     formatDate,
     formatMoney,
     humanize,
-    intervalLabel,
     invoiceTone,
-    methodLabel,
-    paymentStatusLabel,
-    paymentTone,
-    subscriptionTone,
 } from '@/shared/lib/billing';
 import { workspaceRoutes } from '@/sites/central/lib/workspace-routes';
+
+/*
+ * The workspace home for administrators: the applications first (the reason
+ * people come here), then the team and, for the owner, what is owed, and
+ * what else the business could add. Subscriptions and payments have their
+ * own pages under billing.
+ */
 
 type Organization = {
     id: string;
@@ -58,7 +59,6 @@ type Billing = {
     } | null;
     paymentsAwaitingConfirmation: number;
     pendingRequests: number;
-    liveSubscriptions: number;
     trialEndsAt: string | null;
     recentInvoices: {
         id: string;
@@ -67,28 +67,6 @@ type Billing = {
         currency: string;
         totalMinor: number;
         dueOn: string;
-    }[];
-    subscriptions: {
-        id: string;
-        status: string;
-        trialEndsAt: string | null;
-        renewsAt: string | null;
-        plans: {
-            name: string;
-            priceMinor: number;
-            currency: string;
-            interval: string;
-        }[];
-    }[];
-    recentPayments: {
-        id: string;
-        invoiceId: string;
-        invoiceNumber: string;
-        status: string;
-        method: string;
-        amountMinor: number;
-        currency: string;
-        paidOn: string;
     }[];
     /** Free trials running now, soonest end first. */
     trials: {
@@ -162,6 +140,9 @@ function daysUntil(date: string): number {
     return Math.round((target - today) / 86_400_000);
 }
 
+const plural = (n: number, one: string, many = `${one}s`) =>
+    `${n} ${n === 1 ? one : many}`;
+
 export default function Dashboard({ organizations, current }: Props) {
     const { auth } = usePage().props;
     const firstName = auth.user?.name.split(' ')[0];
@@ -170,79 +151,99 @@ export default function Dashboard({ organizations, current }: Props) {
         <>
             <Head title="Home" />
 
-            <PageHeader
-                title={`${greeting()}${firstName ? `, ${firstName}` : ''}`}
-                description={
-                    current
-                        ? `Here is how ${current.displayName} is doing.`
-                        : 'Your Tatook account.'
-                }
-                actions={
-                    current && (
-                        <>
-                            {current.canManageAccess && (
-                                <Button asChild variant="outline">
-                                    <Link href="/manage/invitations">
-                                        <MailPlus /> Invite people
-                                    </Link>
-                                </Button>
-                            )}
-                        </>
-                    )
-                }
-            />
+            <div className="flex flex-col gap-4">
+                <Welcome
+                    title={`${greeting()}${firstName ? `, ${firstName}` : ''}`}
+                    current={current}
+                />
 
-            <div className="flex flex-col gap-3">
                 {current?.billing && (
                     <BillingAlerts billing={current.billing} />
                 )}
 
-                {current && <Stats current={current} />}
-
                 {current && (
-                    <div className="grid gap-3 lg:grid-cols-3">
-                        <Applications
-                            current={current}
-                            className={
-                                current.billing
-                                    ? 'lg:col-span-2'
-                                    : 'lg:col-span-3'
-                            }
-                        />
-                        {current.billing && (
-                            <BillingPanel billing={current.billing} />
+                    <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+                        <div className="flex min-w-0 flex-col gap-4">
+                            <Applications current={current} />
+                            {current.billing && (
+                                <Recommendations
+                                    modules={current.billing.modules}
+                                />
+                            )}
+                        </div>
+                        <aside className="flex flex-col gap-4">
+                            <Team current={current} />
+                            {current.billing && (
+                                <BillingCard billing={current.billing} />
+                            )}
+                            <Businesses organizations={organizations} />
+                        </aside>
+                    </div>
+                )}
+
+                {!current && <Businesses organizations={organizations} />}
+            </div>
+        </>
+    );
+}
+
+/** The greeting, the business, and the two things an administrator does most. */
+function Welcome({
+    title,
+    current,
+}: {
+    title: string;
+    current: Current | null;
+}) {
+    return (
+        <section className="rounded-xl border bg-card p-5 sm:p-6">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+                <div className="min-w-0">
+                    <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                        {title}
+                    </h1>
+                    <p className="mt-1 text-muted-foreground">
+                        {current ? (
+                            <>
+                                You are in{' '}
+                                <span className="font-medium text-foreground">
+                                    {current.displayName}
+                                </span>
+                                {current.applications.length > 0 &&
+                                    ` · ${plural(current.applications.length, 'application')}`}
+                            </>
+                        ) : (
+                            'Your Tatook account.'
+                        )}
+                    </p>
+                </div>
+                {current && (
+                    <div className="flex flex-wrap gap-2">
+                        {current.canManageAccess && (
+                            <Button asChild>
+                                <Link href="/manage/invitations">
+                                    <MailPlus /> Invite people
+                                </Link>
+                            </Button>
+                        )}
+                        {current.isOwner && (
+                            <Button asChild variant="outline">
+                                <Link href={workspaceRoutes.settings}>
+                                    <Settings /> Settings
+                                </Link>
+                            </Button>
                         )}
                     </div>
                 )}
-
-                {current?.billing && current.billing.trials.length > 0 && (
-                    <TrialsPanel trials={current.billing.trials} />
-                )}
-
-                {current?.billing && (
-                    <RecommendationsPanel
-                        modules={current.billing.modules}
-                        workspace={current.displayName}
-                    />
-                )}
-
-                {current?.billing && (
-                    <div className="grid gap-3 lg:grid-cols-2">
-                        <SubscriptionsPanel billing={current.billing} />
-                        <PaymentsPanel billing={current.billing} />
-                    </div>
-                )}
-
-                <Organizations organizations={organizations} />
             </div>
-        </>
+        </section>
     );
 }
 
 function BillingAlerts({ billing }: { billing: Billing }) {
     const alerts: {
         tone: 'danger' | 'warning' | 'info';
-        icon: typeof AlertTriangle;
+        icon: LucideIcon;
         text: string;
         href: string;
         cta: string;
@@ -271,7 +272,7 @@ function BillingAlerts({ billing }: { billing: Billing }) {
                 text:
                     days <= 0
                         ? 'Your trial ends today. Choose a plan to keep access.'
-                        : `Your trial ends in ${days} day${days === 1 ? '' : 's'} (${formatDate(billing.trialEndsAt)}). Choose a plan to keep access.`,
+                        : `Your trial ends in ${plural(days, 'day')} (${formatDate(billing.trialEndsAt)}). Choose a plan to keep access.`,
                 href: workspaceRoutes.plans,
                 cta: 'See plans',
             });
@@ -293,10 +294,10 @@ function BillingAlerts({ billing }: { billing: Billing }) {
     }
 
     const tones = {
-        danger: 'border-red-200 bg-red-50 text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200',
+        danger: 'border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200',
         warning:
-            'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200',
-        info: 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200',
+            'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200',
+        info: 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200',
     };
 
     return (
@@ -321,188 +322,247 @@ function BillingAlerts({ billing }: { billing: Billing }) {
     );
 }
 
-function Stats({ current }: { current: Current }) {
-    const balance = current.billing?.balances ?? [];
+/** The launcher: one large tile per application, a trial's days on its tile. */
+function Applications({ current }: { current: Current }) {
+    const trials = new Map(
+        (current.billing?.trials ?? []).map((trial) => [trial.code, trial]),
+    );
 
     return (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {current.billing ? (
-                <>
-                    <StatCard
-                        label="Balance due"
-                        icon={ReceiptText}
-                        accent={
-                            current.billing.overdueInvoices > 0
-                                ? 'red'
-                                : 'emerald'
+        <section aria-labelledby="applications">
+            <div className="mb-3 flex items-end justify-between gap-3">
+                <div>
+                    <h2
+                        id="applications"
+                        className="text-lg font-semibold tracking-tight"
+                    >
+                        Your applications
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                        Everything opens in this workspace, with the same
+                        sign-in.
+                    </p>
+                </div>
+            </div>
+
+            {current.applications.length === 0 ? (
+                <Panel>
+                    <EmptyState
+                        icon={Sparkles}
+                        title="No applications yet"
+                        action={
+                            current.isOwner && (
+                                <Button asChild size="sm">
+                                    <Link href={workspaceRoutes.plans}>
+                                        Browse plans
+                                    </Link>
+                                </Button>
+                            )
                         }
-                        value={
-                            balance.length === 0
-                                ? 'Nothing due'
-                                : balance
-                                      .map((entry) =>
-                                          formatMoney(
-                                              entry.amountMinor,
-                                              entry.currency,
-                                          ),
-                                      )
-                                      .join(' · ')
-                        }
-                        hint={
-                            current.billing.nextDue
-                                ? `Next due ${formatDate(current.billing.nextDue.dueOn)}`
-                                : 'All invoices are paid'
-                        }
-                        href={workspaceRoutes.billing}
-                    />
-                    <StatCard
-                        label="Subscriptions"
-                        icon={CreditCard}
-                        accent="violet"
-                        value={current.billing.liveSubscriptions}
-                        hint={
-                            current.billing.pendingRequests > 0
-                                ? `${current.billing.pendingRequests} request${current.billing.pendingRequests === 1 ? '' : 's'} pending`
-                                : `${current.applications.length} application${current.applications.length === 1 ? '' : 's'} in use`
-                        }
-                        href={workspaceRoutes.subscription}
-                    />
-                </>
+                    >
+                        {current.isOwner
+                            ? 'Choose a plan or start a free trial to begin.'
+                            : 'No applications have been given to you yet. Ask an administrator for access.'}
+                    </EmptyState>
+                </Panel>
             ) : (
-                <>
-                    <StatCard
-                        label="Branches"
-                        icon={GitBranch}
-                        accent="violet"
-                        value={current.counts.branches}
-                    />
-                    <StatCard
-                        label="Departments"
-                        icon={Building2}
-                        accent="slate"
-                        value={current.counts.departments}
-                    />
-                </>
+                <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {current.applications.map((application) => {
+                        const Icon = appIcon(application.code);
+                        const trial = trials.get(application.code);
+
+                        return (
+                            <li key={application.code}>
+                                <a
+                                    href={application.href}
+                                    className="group flex h-full flex-col gap-3 rounded-xl border bg-card p-4 transition hover:-translate-y-0.5 hover:border-primary hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                >
+                                    <span className="flex items-start justify-between gap-2">
+                                        <span className="grid size-11 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+                                            <Icon
+                                                className="size-5"
+                                                aria-hidden
+                                            />
+                                        </span>
+                                        <ArrowUpRight
+                                            className="size-4 text-muted-foreground transition group-hover:text-primary"
+                                            aria-hidden
+                                        />
+                                    </span>
+                                    <span className="min-w-0">
+                                        <span className="block font-semibold">
+                                            {application.name}
+                                        </span>
+                                        {application.description && (
+                                            <span className="mt-0.5 line-clamp-2 block text-sm text-muted-foreground">
+                                                {application.description}
+                                            </span>
+                                        )}
+                                    </span>
+                                    {trial && trial.daysLeft !== null && (
+                                        <span className="mt-auto">
+                                            <StatusBadge
+                                                tone={
+                                                    trial.daysLeft <= 7
+                                                        ? 'warning'
+                                                        : 'info'
+                                                }
+                                            >
+                                                {trial.daysLeft === 0
+                                                    ? 'Free trial ends today'
+                                                    : `Free trial · ${plural(trial.daysLeft, 'day')} left`}
+                                            </StatusBadge>
+                                        </span>
+                                    )}
+                                </a>
+                            </li>
+                        );
+                    })}
+                    {current.isOwner && (
+                        <li>
+                            <Link
+                                href={workspaceRoutes.plans}
+                                className="flex h-full min-h-32 flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-4 text-sm text-muted-foreground transition hover:border-primary hover:text-primary"
+                            >
+                                <Plus className="size-5" aria-hidden />
+                                Add an application
+                            </Link>
+                        </li>
+                    )}
+                </ul>
             )}
-            <StatCard
-                label="Members"
-                icon={Users}
-                value={current.counts.members}
-                hint={
-                    current.billing
-                        ? `${current.counts.branches} branch${current.counts.branches === 1 ? '' : 'es'} · ${current.counts.departments} department${current.counts.departments === 1 ? '' : 's'}`
-                        : undefined
-                }
-            />
-            <StatCard
-                label="Pending invitations"
-                icon={MailPlus}
-                accent="amber"
-                value={current.counts.pendingInvitations}
-            />
-        </div>
+        </section>
     );
 }
 
-function Applications({
-    current,
-    className,
-}: {
-    current: Current;
-    className?: string;
-}) {
+/** The people side of the business, each figure leading to its page. */
+function Team({ current }: { current: Current }) {
+    const figures: {
+        label: string;
+        value: number;
+        icon: LucideIcon;
+        href: string;
+    }[] = [
+        {
+            label: 'Members',
+            value: current.counts.members,
+            icon: Users,
+            href: '/members',
+        },
+        {
+            label: 'Invitations waiting',
+            value: current.counts.pendingInvitations,
+            icon: MailPlus,
+            href: '/manage/invitations',
+        },
+        {
+            label: 'Branches',
+            value: current.counts.branches,
+            icon: GitBranch,
+            href: '/manage/structure',
+        },
+        {
+            label: 'Departments',
+            value: current.counts.departments,
+            icon: Building2,
+            href: '/manage/structure',
+        },
+    ];
+
     return (
-        <Panel className={className} aria-labelledby="applications">
-            <PanelHeader
-                title={<span id="applications">Applications</span>}
-                description="Open an application in your workspace."
-                actions={
-                    current.isOwner && (
-                        <Button asChild size="sm" variant="ghost">
-                            <Link href={workspaceRoutes.plans}>
-                                Add applications
-                            </Link>
-                        </Button>
-                    )
-                }
-            />
-            {current.applications.length === 0 ? (
-                <EmptyState
-                    icon={AppWindow}
-                    title="No applications yet"
-                    action={
-                        current.isOwner && (
-                            <Button asChild size="sm">
-                                <Link href={workspaceRoutes.plans}>
-                                    Browse plans
-                                </Link>
-                            </Button>
-                        )
-                    }
-                >
-                    {current.isOwner
-                        ? 'Choose a plan to start using Tatook applications.'
-                        : 'No applications have been given to you yet. Ask an administrator for access.'}
-                </EmptyState>
-            ) : (
-                <ul className="grid gap-3 p-4 sm:grid-cols-2">
-                    {current.applications.map((application) => (
-                        <li key={application.code}>
-                            <a
-                                href={application.href}
-                                className="group flex h-full items-start gap-3 rounded-lg border p-3 transition-colors hover:border-primary/40 hover:bg-muted/40"
-                            >
-                                <span className="grid size-9 shrink-0 place-items-center rounded-md bg-primary/10 text-primary">
-                                    <AppWindow className="size-4" aria-hidden />
-                                </span>
-                                <span className="min-w-0 flex-1">
-                                    <span className="block font-medium">
-                                        {application.name}
-                                    </span>
-                                    {application.description && (
-                                        <span className="line-clamp-2 block text-sm text-muted-foreground">
-                                            {application.description}
-                                        </span>
-                                    )}
-                                </span>
-                                <ArrowRight
-                                    className="mt-1 size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
-                                    aria-hidden
-                                />
-                            </a>
-                        </li>
-                    ))}
-                </ul>
+        <Panel aria-labelledby="team">
+            <PanelHeader title={<span id="team">Your team</span>} />
+            <ul className="grid grid-cols-2 gap-px border-t bg-border">
+                {figures.map((figure) => (
+                    <li key={figure.label} className="bg-card">
+                        <Link
+                            href={figure.href}
+                            className="flex flex-col gap-1 p-4 hover:bg-muted"
+                        >
+                            <figure.icon
+                                className="size-4 text-muted-foreground"
+                                aria-hidden
+                            />
+                            <span className="text-2xl font-semibold tabular-nums">
+                                {figure.value}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                                {figure.label}
+                            </span>
+                        </Link>
+                    </li>
+                ))}
+            </ul>
+            {current.canManageAccess && (
+                <div className="border-t px-4 py-3">
+                    <Link
+                        href="/manage/access"
+                        className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                    >
+                        <ShieldCheck className="size-4" aria-hidden /> Who can
+                        use what
+                    </Link>
+                </div>
             )}
         </Panel>
     );
 }
 
-function BillingPanel({ billing }: { billing: Billing }) {
+/** What is owed, for the owner: the balance, the next due date, the last invoices. */
+function BillingCard({ billing }: { billing: Billing }) {
+    const overdue = billing.overdueInvoices > 0;
+
     return (
         <Panel aria-labelledby="billing">
             <PanelHeader
-                title={<span id="billing">Recent invoices</span>}
+                title={<span id="billing">Billing</span>}
                 actions={
                     <Button asChild size="sm" variant="ghost">
                         <Link href={workspaceRoutes.billing}>View all</Link>
                     </Button>
                 }
             />
-            {billing.recentInvoices.length === 0 ? (
-                <EmptyState icon={ReceiptText} title="No invoices yet">
-                    Invoices from Tatook will appear here.
-                </EmptyState>
-            ) : (
-                <ul className="divide-y">
+            <div className="border-t px-4 py-4">
+                <p className="text-xs text-muted-foreground">Balance due</p>
+                <p
+                    className={`text-2xl font-semibold tabular-nums ${overdue ? 'text-red-700 dark:text-red-300' : ''}`}
+                >
+                    {billing.balances.length === 0
+                        ? 'Nothing due'
+                        : billing.balances
+                              .map((entry) =>
+                                  formatMoney(
+                                      entry.amountMinor,
+                                      entry.currency,
+                                  ),
+                              )
+                              .join(' · ')}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                    {billing.nextDue
+                        ? `${overdue ? 'Overdue since' : 'Next due'} ${formatDate(billing.nextDue.dueOn)}`
+                        : 'All invoices are paid'}
+                </p>
+                {billing.nextDue && (
+                    <Button asChild size="sm" className="mt-3 w-full">
+                        <Link
+                            href={workspaceRoutes.invoice(billing.nextDue.id)}
+                        >
+                            Pay {billing.nextDue.number}
+                        </Link>
+                    </Button>
+                )}
+            </div>
+            {billing.recentInvoices.length > 0 && (
+                <ul className="divide-y border-t">
                     {billing.recentInvoices.map((invoice) => (
                         <li key={invoice.id}>
                             <Link
                                 href={workspaceRoutes.invoice(invoice.id)}
-                                className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted/40"
+                                className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-muted"
                             >
                                 <span className="min-w-0 flex-1">
-                                    <span className="block font-medium">
+                                    <span className="block truncate font-medium">
                                         {invoice.number}
                                     </span>
                                     <span className="text-xs text-muted-foreground">
@@ -510,7 +570,7 @@ function BillingPanel({ billing }: { billing: Billing }) {
                                     </span>
                                 </span>
                                 <span className="text-right">
-                                    <span className="block font-medium tabular-nums">
+                                    <span className="block tabular-nums">
                                         {formatMoney(
                                             invoice.totalMinor,
                                             invoice.currency,
@@ -527,226 +587,6 @@ function BillingPanel({ billing }: { billing: Billing }) {
                     ))}
                 </ul>
             )}
-            <div className="border-t px-4 py-3">
-                <Link
-                    href={workspaceRoutes.settings}
-                    className="text-sm text-muted-foreground hover:text-foreground"
-                >
-                    Business settings →
-                </Link>
-            </div>
-        </Panel>
-    );
-}
-
-function SubscriptionsPanel({ billing }: { billing: Billing }) {
-    return (
-        <Panel aria-labelledby="subscriptions">
-            <PanelHeader
-                title={<span id="subscriptions">Subscriptions</span>}
-                description="Plans you are subscribed to."
-                actions={
-                    <Button asChild size="sm" variant="ghost">
-                        <Link href={workspaceRoutes.subscription}>Manage</Link>
-                    </Button>
-                }
-            />
-            {billing.subscriptions.length === 0 ? (
-                <EmptyState
-                    icon={CreditCard}
-                    title="No subscriptions yet"
-                    action={
-                        <Button asChild size="sm">
-                            <Link href={workspaceRoutes.plans}>
-                                Browse plans
-                            </Link>
-                        </Button>
-                    }
-                >
-                    Choose a plan to start using Tatook applications.
-                </EmptyState>
-            ) : (
-                <ul className="divide-y">
-                    {billing.subscriptions.map((subscription) => (
-                        <li
-                            key={subscription.id}
-                            className="flex items-start gap-3 px-4 py-3 text-sm"
-                        >
-                            <span className="min-w-0 flex-1">
-                                <span className="block font-medium">
-                                    {subscription.plans
-                                        .map((plan) => plan.name)
-                                        .join(', ') || 'Subscription'}
-                                </span>
-                                <span className="text-xs text-muted-foreground">
-                                    {subscription.status === 'trialing' &&
-                                    subscription.trialEndsAt
-                                        ? `Trial ends ${formatDate(subscription.trialEndsAt)}`
-                                        : subscription.renewsAt
-                                          ? `Renews ${formatDate(subscription.renewsAt)}`
-                                          : 'No renewal date'}
-                                </span>
-                            </span>
-                            <span className="text-right">
-                                {subscription.plans.map((plan) => (
-                                    <span
-                                        key={plan.name}
-                                        className="block font-medium tabular-nums"
-                                    >
-                                        {formatMoney(
-                                            plan.priceMinor,
-                                            plan.currency,
-                                        )}{' '}
-                                        <span className="text-xs font-normal text-muted-foreground">
-                                            {intervalLabel[plan.interval] ??
-                                                plan.interval}
-                                        </span>
-                                    </span>
-                                ))}
-                                <StatusBadge
-                                    tone={subscriptionTone[subscription.status]}
-                                >
-                                    {humanize(subscription.status)}
-                                </StatusBadge>
-                            </span>
-                        </li>
-                    ))}
-                </ul>
-            )}
-        </Panel>
-    );
-}
-
-function PaymentsPanel({ billing }: { billing: Billing }) {
-    return (
-        <Panel aria-labelledby="payments">
-            <PanelHeader
-                title={<span id="payments">Payments</span>}
-                description="Payments you reported against invoices."
-                actions={
-                    <Button asChild size="sm" variant="ghost">
-                        <Link href={workspaceRoutes.billing}>View all</Link>
-                    </Button>
-                }
-            />
-            {billing.recentPayments.length === 0 ? (
-                <EmptyState icon={Banknote} title="No payments yet">
-                    {billing.nextDue
-                        ? `Paid invoice ${billing.nextDue.number}? Report the payment from the invoice.`
-                        : 'Payments you report against invoices will appear here.'}
-                </EmptyState>
-            ) : (
-                <ul className="divide-y">
-                    {billing.recentPayments.map((payment) => (
-                        <li key={payment.id}>
-                            <Link
-                                href={workspaceRoutes.invoice(
-                                    payment.invoiceId,
-                                )}
-                                className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted/40"
-                            >
-                                <span className="min-w-0 flex-1">
-                                    <span className="block font-medium">
-                                        {methodLabel[payment.method] ??
-                                            humanize(payment.method)}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                        {payment.invoiceNumber} · Paid{' '}
-                                        {formatDate(payment.paidOn)}
-                                    </span>
-                                </span>
-                                <span className="text-right">
-                                    <span className="block font-medium tabular-nums">
-                                        {formatMoney(
-                                            payment.amountMinor,
-                                            payment.currency,
-                                        )}
-                                    </span>
-                                    <StatusBadge
-                                        tone={paymentTone[payment.status]}
-                                    >
-                                        {paymentStatusLabel[payment.status] ??
-                                            humanize(payment.status)}
-                                    </StatusBadge>
-                                </span>
-                            </Link>
-                        </li>
-                    ))}
-                </ul>
-            )}
-            {billing.nextDue && (
-                <div className="border-t px-4 py-3">
-                    <Link
-                        href={workspaceRoutes.invoice(billing.nextDue.id)}
-                        className="text-sm text-muted-foreground hover:text-foreground"
-                    >
-                        Pay {billing.nextDue.number} (
-                        {formatMoney(
-                            billing.nextDue.balanceMinor,
-                            billing.nextDue.currency,
-                        )}
-                        ) →
-                    </Link>
-                </div>
-            )}
-        </Panel>
-    );
-}
-
-/**
- * Each free trial with the days it has left. A trial ends on its own: when
- * it runs out the application closes until a plan is chosen, and nothing is
- * charged without the owner asking for a plan.
- */
-function TrialsPanel({ trials }: { trials: Billing['trials'] }) {
-    return (
-        <Panel aria-labelledby="trials">
-            <PanelHeader
-                title={<span id="trials">Free trials</span>}
-                description="Choose a plan before a trial ends to keep using the application. Your data stays as it is."
-                actions={
-                    <Button asChild size="sm" variant="outline">
-                        <Link href={workspaceRoutes.plans}>Choose a plan</Link>
-                    </Button>
-                }
-            />
-            <ul className="divide-y">
-                {trials.map((trial) => {
-                    const Icon = appIcon(trial.code);
-
-                    return (
-                        <li
-                            key={trial.code}
-                            className="flex flex-wrap items-center gap-3 px-4 py-3"
-                        >
-                            <span className="grid size-9 shrink-0 place-items-center rounded-md bg-primary/10 text-primary">
-                                <Icon className="size-4" aria-hidden />
-                            </span>
-                            <span className="min-w-0 flex-1">
-                                <span className="block font-medium">
-                                    {trial.name}
-                                </span>
-                                {trial.endsAt && (
-                                    <span className="block text-sm text-muted-foreground">
-                                        Ends {formatDate(trial.endsAt)}
-                                    </span>
-                                )}
-                            </span>
-                            {trial.daysLeft !== null && (
-                                <StatusBadge
-                                    tone={
-                                        trial.daysLeft <= 7 ? 'warning' : 'info'
-                                    }
-                                >
-                                    {trial.daysLeft === 0
-                                        ? 'Ends today'
-                                        : `${trial.daysLeft} day${trial.daysLeft === 1 ? '' : 's'} left`}
-                                </StatusBadge>
-                            )}
-                        </li>
-                    );
-                })}
-            </ul>
         </Panel>
     );
 }
@@ -756,11 +596,7 @@ const moduleStates: Record<
     { label: string; tone: Tone; cta: string | null }
 > = {
     trialing: { label: 'On free trial', tone: 'info', cta: null },
-    trialable: {
-        label: 'Free trial',
-        tone: 'success',
-        cta: 'Start free trial',
-    },
+    trialable: { label: 'Free trial', tone: 'success', cta: 'Try it free' },
     installed: { label: 'Installed', tone: 'success', cta: null },
     requested: { label: 'Requested', tone: 'warning', cta: null },
     available: { label: 'Available', tone: 'info', cta: 'Add' },
@@ -769,17 +605,11 @@ const moduleStates: Record<
 };
 
 /**
- * The rest of the ERP, for the owner to add on: what they can add today
- * first, then what they asked for, then what is coming. Within each group,
- * modules that work with an installed application come first.
+ * What the owner could add next: what can be added today first, those
+ * that work with an installed application ahead. Six at most; the plans
+ * page has the rest.
  */
-function RecommendationsPanel({
-    modules,
-    workspace,
-}: {
-    modules: Module[];
-    workspace: string;
-}) {
+function Recommendations({ modules }: { modules: Module[] }) {
     const order: Module['state'][] = [
         'trialable',
         'available',
@@ -799,140 +629,168 @@ function RecommendationsPanel({
                 (a.module.rank ?? Infinity) - (b.module.rank ?? Infinity) ||
                 a.index - b.index,
         )
-        .map(({ module }) => module);
+        .map(({ module }) => module)
+        .slice(0, 6);
+
+    if (sorted.length === 0) {
+        return null;
+    }
 
     return (
-        <Panel aria-labelledby="recommendations">
-            <PanelHeader
-                title={<span id="recommendations">Recommended for you</span>}
-                description={`More of the Tatook ERP to add to ${workspace}.`}
-                actions={
-                    <Button asChild size="sm" variant="ghost">
-                        <Link href={workspaceRoutes.plans}>See plans</Link>
-                    </Button>
-                }
-            />
-            {sorted.length === 0 ? (
-                <EmptyState icon={Puzzle} title="You have everything">
-                    New modules will appear here as they are released.
-                </EmptyState>
-            ) : (
-                <ul className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
-                    {sorted.map((module) => {
-                        const state = moduleStates[module.state];
-                        const Icon = appIcon(module.code);
-
-                        return (
-                            <li
-                                key={module.code}
-                                className="flex h-full items-start gap-3 rounded-lg border p-3"
-                            >
-                                <span className="grid size-9 shrink-0 place-items-center rounded-md bg-primary/10 text-primary">
+        <section aria-labelledby="recommendations">
+            <div className="mb-3 flex items-end justify-between gap-3">
+                <div>
+                    <h2
+                        id="recommendations"
+                        className="text-lg font-semibold tracking-tight"
+                    >
+                        Grow your workspace
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                        Applications that work with what you already use.
+                    </p>
+                </div>
+                <Link
+                    href={workspaceRoutes.plans}
+                    className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary hover:underline"
+                >
+                    See all <ArrowRight className="size-3.5" aria-hidden />
+                </Link>
+            </div>
+            <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {sorted.map((module) => {
+                    const state = moduleStates[module.state];
+                    const Icon = appIcon(module.code);
+                    const body = (
+                        <>
+                            <span className="flex items-start justify-between gap-2">
+                                <span className="grid size-9 place-items-center rounded-lg bg-muted text-foreground">
                                     <Icon className="size-4" aria-hidden />
                                 </span>
-                                <span className="min-w-0 flex-1">
-                                    <span className="flex flex-wrap items-center gap-1.5">
-                                        <span className="font-medium">
-                                            {module.name}
-                                        </span>
-                                        <StatusBadge tone={state.tone}>
-                                            {state.label}
-                                        </StatusBadge>
-                                    </span>
-                                    {(module.tagline ?? module.description) && (
-                                        <span className="mt-0.5 line-clamp-2 block text-sm text-muted-foreground">
-                                            {module.tagline ??
-                                                module.description}
-                                        </span>
-                                    )}
-                                    {module.pairsWith && (
-                                        <span className="mt-1 block text-xs font-medium text-primary">
-                                            Works with {module.pairsWith}
-                                        </span>
-                                    )}
-                                    {state.cta && (
-                                        <Link
-                                            href={
-                                                module.state === 'trialable'
-                                                    ? workspaceRoutes.trial(
-                                                          module.code,
-                                                      )
-                                                    : workspaceRoutes.plans
-                                            }
-                                            className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-                                        >
-                                            {state.cta}{' '}
-                                            <ArrowRight
-                                                className="size-3.5"
-                                                aria-hidden
-                                            />
-                                        </Link>
-                                    )}
+                                <StatusBadge tone={state.tone}>
+                                    {state.label}
+                                </StatusBadge>
+                            </span>
+                            <span className="min-w-0">
+                                <span className="block font-medium">
+                                    {module.name}
                                 </span>
-                            </li>
-                        );
-                    })}
-                </ul>
-            )}
-        </Panel>
+                                {(module.tagline ?? module.description) && (
+                                    <span className="mt-0.5 line-clamp-2 block text-sm text-muted-foreground">
+                                        {module.tagline ?? module.description}
+                                    </span>
+                                )}
+                            </span>
+                            <span className="mt-auto flex items-center justify-between gap-2 text-xs">
+                                <span className="text-muted-foreground">
+                                    {module.pairsWith &&
+                                        `Works with ${module.pairsWith}`}
+                                </span>
+                                {state.cta && (
+                                    <span className="inline-flex items-center gap-1 font-medium text-primary">
+                                        {state.cta}
+                                        <ArrowRight
+                                            className="size-3.5"
+                                            aria-hidden
+                                        />
+                                    </span>
+                                )}
+                            </span>
+                        </>
+                    );
+                    const className =
+                        'flex h-full flex-col gap-3 rounded-xl border bg-card p-4';
+
+                    return (
+                        <li key={module.code}>
+                            {state.cta ? (
+                                <Link
+                                    href={
+                                        module.state === 'trialable'
+                                            ? workspaceRoutes.trial(module.code)
+                                            : workspaceRoutes.plans
+                                    }
+                                    className={`${className} transition hover:border-primary hover:shadow-sm`}
+                                >
+                                    {body}
+                                </Link>
+                            ) : (
+                                <div className={className}>{body}</div>
+                            )}
+                        </li>
+                    );
+                })}
+            </ul>
+        </section>
     );
 }
 
-function Organizations({ organizations }: { organizations: Organization[] }) {
+/** The member's businesses, to switch between them. */
+function Businesses({ organizations }: { organizations: Organization[] }) {
     const { platform } = usePage().props;
 
     return (
-        <Panel aria-labelledby="organizations">
+        <Panel aria-labelledby="businesses">
             <PanelHeader
-                title={<span id="organizations">Your businesses</span>}
-                description="Each business has its own address. You are in the one marked here."
+                title={<span id="businesses">Your businesses</span>}
                 actions={
-                    <Button asChild size="sm" variant="outline">
+                    <Button asChild size="sm" variant="ghost">
                         <a href={platform.newBusinessUrl}>
-                            <Plus /> New business
+                            <Plus /> New
                         </a>
                     </Button>
                 }
             />
-            <ul className="divide-y">
-                {organizations.map((organization) => (
-                    <li
-                        key={organization.id}
-                        className="flex flex-wrap items-center gap-3 px-4 py-3"
-                    >
-                        <span className="grid size-9 shrink-0 place-items-center rounded-md bg-muted font-semibold text-muted-foreground uppercase">
-                            {organization.displayName.slice(0, 1)}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                            <p className="truncate font-medium">
-                                {organization.displayName}
-                            </p>
-                            <div className="mt-0.5 flex flex-wrap gap-1">
-                                {organization.isCurrent && (
-                                    <StatusBadge tone="info">
-                                        You are here
-                                    </StatusBadge>
-                                )}
-                                {organization.isOwner && (
-                                    <StatusBadge>Owner</StatusBadge>
-                                )}
-                                {organization.status === 'suspended' && (
-                                    <StatusBadge tone="danger">
-                                        Suspended
-                                    </StatusBadge>
-                                )}
-                            </div>
-                        </div>
-                        {!organization.isCurrent &&
-                            organization.workspaceUrl && (
-                                <Button asChild size="sm" variant="ghost">
-                                    <a href={organization.workspaceUrl}>
-                                        Open <ArrowRight />
-                                    </a>
-                                </Button>
+            <ul className="divide-y border-t">
+                {organizations.map((organization) => {
+                    const row = (
+                        <>
+                            <span
+                                className={`grid size-8 shrink-0 place-items-center rounded-md text-sm font-semibold uppercase ${organization.isCurrent ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                            >
+                                {organization.displayName.slice(0, 1)}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                                <span className="block truncate text-sm font-medium">
+                                    {organization.displayName}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                    {[
+                                        organization.isCurrent &&
+                                            'You are here',
+                                        organization.isOwner && 'Owner',
+                                        organization.status === 'suspended' &&
+                                            'Suspended',
+                                    ]
+                                        .filter(Boolean)
+                                        .join(' · ') || 'Member'}
+                                </span>
+                            </span>
+                        </>
+                    );
+
+                    return (
+                        <li key={organization.id}>
+                            {!organization.isCurrent &&
+                            organization.workspaceUrl ? (
+                                <a
+                                    href={organization.workspaceUrl}
+                                    className="group flex items-center gap-3 px-4 py-2.5 hover:bg-muted"
+                                >
+                                    {row}
+                                    <ArrowRight
+                                        className="size-4 text-muted-foreground transition group-hover:text-primary"
+                                        aria-hidden
+                                    />
+                                </a>
+                            ) : (
+                                <div className="flex items-center gap-3 px-4 py-2.5">
+                                    {row}
+                                </div>
                             )}
-                    </li>
-                ))}
+                        </li>
+                    );
+                })}
             </ul>
         </Panel>
     );

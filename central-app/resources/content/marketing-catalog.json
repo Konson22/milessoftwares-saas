@@ -372,17 +372,9 @@
                 "Field data collection"
             ],
             "offering": {
-                "platforms": [
-                    "web",
-                    "android"
-                ],
-                "connectivity": [
-                    "online",
-                    "offline_sync"
-                ],
-                "licensing": [
-                    "subscription"
-                ],
+                "platforms": ["web", "android"],
+                "connectivity": ["online", "offline_sync"],
+                "licensing": ["subscription"],
                 "desktop": [],
                 "mobile": [
                     "Collect survey data in the field with Tatook MDC, including where there is no signal; submissions are sent when the connection is back"
@@ -535,7 +527,43 @@
             "category": "application",
             "name": "Finance & Accounting",
             "icon": "landmark",
-            "registry": { "type": "application", "code": "finance" },
+            "registry": {
+                "type": "application",
+                "code": "finance"
+            },
+            "connections": {
+                "intro": "Finance & Accounting connects to the other Tatook apps in your workspace, with nothing to export or import.",
+                "links": [
+                    {
+                        "slug": "pharmacy",
+                        "body": "Every sale, purchase, return and write-off posts to the ledger, with till overs and shorts at closing."
+                    },
+                    {
+                        "slug": "retail",
+                        "body": "Till sales, credit customers' payments and supplier bills arrive in the books on their own."
+                    },
+                    {
+                        "slug": "restaurant",
+                        "body": "Paid bills post to the ledger, so each day's takings are in the books."
+                    },
+                    {
+                        "slug": "school",
+                        "body": "Fee schedules, invoices and receipts post to Finance, so school fees are in the same books as everything else."
+                    },
+                    {
+                        "slug": "petrol",
+                        "body": "Fuel sales, deliveries and cash differences at the end of a shift post to the ledger."
+                    },
+                    {
+                        "slug": "payroll",
+                        "body": "Each approved payroll posts one journal of totals, without anyone's individual pay, then the payment when it goes out."
+                    },
+                    {
+                        "slug": "projects",
+                        "body": "Actual costs from Finance show against each project's budget."
+                    }
+                ]
+            },
             "highlights": [
                 "Double-entry ledger",
                 "Invoices, bills and payments",
@@ -567,42 +595,82 @@
                 {
                     "icon": "landmark",
                     "title": "The ledger",
-                    "body": "Chart of accounts and journals that always balance; corrections are reversals, so the audit trail stays whole."
+                    "body": "A chart of accounts you can shape to your business, and journals that must balance before they post. A posted entry is never edited or deleted: a mistake is corrected with a reversal, so every change stays visible. The general ledger shows each account's movements and running balance."
                 },
                 {
                     "icon": "receipt",
-                    "title": "Sales and purchases",
-                    "body": "Invoices and receipts, bills and supplier payments, credits and returns."
+                    "title": "Sales and customers",
+                    "body": "Raise invoices with tax, record customer receipts against them, and void an invoice when it was raised in error. Money that comes in without an invoice is recorded too. Aged receivables show who owes what, and for how long."
+                },
+                {
+                    "icon": "truck",
+                    "title": "Purchases and suppliers",
+                    "body": "Keep your suppliers, record their bills, and pay them when they are due. Recording a bill and paying it are separate steps, so different people can do each. Aged payables show what you owe, and to whom."
                 },
                 {
                     "icon": "banknote",
                     "title": "Bank reconciliation",
-                    "body": "Import statements as CSV, accept suggested matches, save rules and reconcile to the statement balance."
+                    "body": "Import a bank statement as a CSV file. Finance suggests matches with your ledger, you accept or change them, and anything missing can be entered straight from the statement line. Save rules for payments that repeat, then reconcile to the statement balance; a reconciliation can be undone if needed."
+                },
+                {
+                    "icon": "clipboard-check",
+                    "title": "Journal approvals",
+                    "body": "Decide which manual journals need a second person. A journal that needs approval waits until someone else approves it; it can be rejected with a reason or withdrawn by whoever entered it. Nobody approves their own entry."
+                },
+                {
+                    "icon": "credit-card",
+                    "title": "Payment requests",
+                    "body": "Money goes out through a request: prepared by one person, reviewed, approved and then disbursed, with each step done by someone with that role. You set when a review is needed, and a request can be rejected or withdrawn along the way."
+                },
+                {
+                    "icon": "hand-coins",
+                    "title": "Petty cash",
+                    "body": "Give each petty cash fund a custodian. They pay small expenses with a voucher and attach the receipt; vouchers are verified or rejected, the fund is counted, and it is topped back up when it runs low. Funds can be handed to another custodian or closed."
+                },
+                {
+                    "icon": "calendar-check",
+                    "title": "Recurring journals",
+                    "body": "Set up entries that repeat, such as rent, accruals or depreciation adjustments, once. They run on schedule, can be paused, and go through approval like any other journal."
+                },
+                {
+                    "icon": "folder-kanban",
+                    "title": "Cost centres and projects",
+                    "body": "Tag income and costs to cost centres and projects as you record them. Profit and loss by cost centre or project shows where money is made and spent."
                 },
                 {
                     "icon": "lock",
                     "title": "Month-end and year-end",
-                    "body": "Lock months in order, close the year into retained earnings and set opening balances."
+                    "body": "Lock each month in order so nothing changes after it is closed, and unlock one when a correction is really needed. At year-end, close the year into retained earnings. Opening balances let you start from where your books are today."
                 },
                 {
                     "icon": "calculator",
                     "title": "Tax",
-                    "body": "Tax codes, a return for any period, filing that locks the period, and the settlement journal."
+                    "body": "Set up tax codes for sales and purchases. Run the tax return for any period from the ledger; filing it locks that period, and settling it records the payment or refund journal."
                 },
                 {
                     "icon": "globe",
                     "title": "Multi-currency",
-                    "body": "Foreign-currency accounts, invoices and payments, daily rates and month-end revaluation."
+                    "body": "Keep accounts, invoices, bills and payments in foreign currencies alongside your own. Enter daily exchange rates, and revalue foreign-currency balances at month-end so gains and losses are recorded."
                 },
                 {
                     "icon": "activity",
-                    "title": "Budgets and fixed assets",
-                    "body": "Budget against actuals, and an asset register with monthly depreciation."
+                    "title": "Budgets",
+                    "body": "Set a budget for each account for the year, then compare it with the actual figures as the months go by. Budget against actuals can be exported to Excel."
+                },
+                {
+                    "icon": "package-search",
+                    "title": "Fixed assets",
+                    "body": "Register equipment, vehicles and buildings by category, and run depreciation every month to post it to the ledger. When an asset is sold or written off, dispose of it and the gain or loss is recorded."
                 },
                 {
                     "icon": "file-spreadsheet",
                     "title": "Reports",
-                    "body": "Trial balance, profit and loss, balance sheet, aged receivables and payables, and cash flow."
+                    "body": "Trial balance, profit and loss, balance sheet, cash flow, general ledger, aged receivables and payables, and financial ratios, for any dates and compared with another period. The main statements export to Excel."
+                },
+                {
+                    "icon": "user-check",
+                    "title": "Roles and audit trail",
+                    "body": "Give each person a ready-made role, from Cashier and Accountant to Finance Manager and a read-only Auditor, so they see and do only their part. The audit trail records who approved, paid, reversed, locked or changed what, and when."
                 }
             ],
             "workflow": [
@@ -720,7 +788,23 @@
             "category": "application",
             "name": "Project Management",
             "icon": "folder-kanban",
-            "registry": { "type": "application", "code": "projects" },
+            "registry": {
+                "type": "application",
+                "code": "projects"
+            },
+            "connections": {
+                "intro": "Project Management works with the other Tatook apps in your workspace, with nothing to export or import.",
+                "links": [
+                    {
+                        "slug": "monitoring-evaluation",
+                        "body": "Programme results and indicators sit alongside the projects that deliver them, using the projects' own progress and budgets."
+                    },
+                    {
+                        "slug": "finance",
+                        "body": "Actual costs from Finance show against each project's budget."
+                    }
+                ]
+            },
             "offering": {
                 "platforms": ["web"],
                 "connectivity": ["online"],
@@ -769,6 +853,10 @@
                 {
                     "question": "Can I use Project Management today?",
                     "answer": "Yes. It is in early access: start a free trial in your Tatook workspace, or ask us for a demo."
+                },
+                {
+                    "question": "Do I need Monitoring & Evaluation too?",
+                    "answer": "No. Project Management is its own app. Add Monitoring & Evaluation when you also report programme results to donors; it links to the same projects."
                 }
             ]
         },
@@ -777,7 +865,23 @@
             "category": "application",
             "name": "Monitoring & Evaluation",
             "icon": "bar-chart",
-            "registry": { "type": "application", "code": "projects" },
+            "registry": {
+                "type": "application",
+                "code": "projects"
+            },
+            "connections": {
+                "intro": "Monitoring & Evaluation works with the other Tatook apps in your workspace, with nothing to export or import.",
+                "links": [
+                    {
+                        "slug": "projects",
+                        "body": "Programme units link to the projects that deliver them, so progress and budgets come straight from Project Management."
+                    },
+                    {
+                        "slug": "finance",
+                        "body": "Spending against each project comes from Finance, so results and costs are reported from the same records."
+                    }
+                ]
+            },
             "offering": {
                 "platforms": ["web"],
                 "connectivity": ["online"],
@@ -792,14 +896,35 @@
             "seoTitle": "Monitoring & Evaluation software",
             "seoDescription": "Monitoring and evaluation in early access: results frameworks, indicators, results with evidence, review and verification, and donor reports from verified results.",
             "features": [
-                { "icon": "activity", "title": "Indicators and targets", "body": "Baselines and targets for every indicator, by period." },
-                { "icon": "file-check", "title": "Evidence and verification", "body": "Results come with evidence and are reviewed before they count." },
-                { "icon": "file-text", "title": "Donor reports", "body": "Reports built only from verified results." }
+                {
+                    "icon": "activity",
+                    "title": "Indicators and targets",
+                    "body": "Baselines and targets for every indicator, by period."
+                },
+                {
+                    "icon": "file-check",
+                    "title": "Evidence and verification",
+                    "body": "Results come with evidence and are reviewed before they count."
+                },
+                {
+                    "icon": "file-text",
+                    "title": "Donor reports",
+                    "body": "Reports built only from verified results."
+                }
             ],
             "workflow": [
-                { "title": "Plan", "body": "Set up the programme, its results framework and indicators." },
-                { "title": "Report", "body": "Sites and partners enter results with evidence." },
-                { "title": "Verify", "body": "Results are reviewed, verified and published to donors." }
+                {
+                    "title": "Plan",
+                    "body": "Set up the programme, its results framework and indicators."
+                },
+                {
+                    "title": "Report",
+                    "body": "Sites and partners enter results with evidence."
+                },
+                {
+                    "title": "Verify",
+                    "body": "Results are reviewed, verified and published to donors."
+                }
             ],
             "faqs": [
                 {
@@ -808,7 +933,7 @@
                 },
                 {
                     "question": "Does it work with Project Management?",
-                    "answer": "It is part of it. Monitoring & Evaluation is in Tatook Projects, so programme units link straight to projects, and their progress and budgets are the projects' own."
+                    "answer": "Yes. Monitoring & Evaluation is its own app, and it works with Project Management in the same workspace: programme units link to projects, so their progress and budgets are the projects' own. Use either one, or both together."
                 }
             ]
         },
@@ -991,15 +1116,9 @@
                 "code": "procurement"
             },
             "offering": {
-                "platforms": [
-                    "web"
-                ],
-                "connectivity": [
-                    "online"
-                ],
-                "licensing": [
-                    "subscription"
-                ],
+                "platforms": ["web"],
+                "connectivity": ["online"],
+                "licensing": ["subscription"],
                 "desktop": [],
                 "mobile": []
             },

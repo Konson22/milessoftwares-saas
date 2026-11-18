@@ -1,19 +1,27 @@
 <?php
 
 use App\Actions\Stock;
+use App\Actions\Tills;
 use App\Models\Bill;
+use App\Models\BranchSetting;
+use App\Models\CashHandover;
 use App\Models\DiningTable;
 use App\Models\KitchenTicket;
 use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\OrderLine;
+use App\Models\StockDelivery;
 use App\Models\StockLevel;
 use App\Models\TillShift;
 use App\Models\User;
+use App\Support\XlsxWorkbook;
 use App\Models\Workspace;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
+use Miles\PlatformClient\Api\PlatformApi;
 use Miles\SharedModuleKit\Envelope;
+use OpenSpout\Reader\XLSX\Reader as XlsxReader;
 
 /*
 | The restaurant (docs/erp/restaurant-roadmap.md): its menu, tables, orders
@@ -51,7 +59,7 @@ function member(array $permissions = ['restaurant.orders.take'], ?User $user = n
     $member = test()->actingAsMember('acme', $permissions, branch: test()->juba, user: $user);
     assert($member instanceof User);
     if (in_array('restaurant.bills.take', $permissions, true) && $user === null) {
-        test()->post(test()->workspaceUrl('acme', 'tills'), ['opening_float' => '10.00'])->assertSessionHasNoErrors();
+        test()->post(at('tills'), ['opening_float' => '10.00'])->assertSessionHasNoErrors();
     }
 
     return $member;
@@ -64,22 +72,29 @@ function member(array $permissions = ['restaurant.orders.take'], ?User $user = n
  */
 function tableOrder(array $lines, bool $send = true): Order
 {
-    test()->post(test()->workspaceUrl('acme', 'orders'), ['service' => 'dine_in', 'dining_table_id' => test()->table->id, 'guests' => 2])->assertSessionHasNoErrors();
+    test()->post(at('orders'), ['service' => 'dine_in', 'dining_table_id' => test()->table->id, 'guests' => 2])->assertSessionHasNoErrors();
     $order = test()->asTenant('acme', fn () => Order::query()->where('dining_table_id', test()->table->id)->where('status', 'open')->sole());
 
-    test()->post(test()->workspaceUrl('acme', "orders/{$order->id}/lines"), [
+    test()->post(at("orders/{$order->id}/lines"), [
         'lines' => array_map(fn (array $line) => ['item_id' => $line[0]->id, 'quantity' => $line[1], 'note' => $line[2] ?? null], $lines),
     ])->assertSessionHasNoErrors();
     if ($send) {
-        test()->post(test()->workspaceUrl('acme', "orders/{$order->id}/send"))->assertSessionHasNoErrors();
+        test()->post(at("orders/{$order->id}/send"))->assertSessionHasNoErrors();
     }
 
     return $order;
 }
 
-function at(string $path = ''): string
+/**
+ * A page's address. Branch pages (the floor, orders, bills...) live under
+ * branches/{branch}: in Juba unless another branch is named.
+ */
+function at(string $path = '', ?string $branch = null): string
 {
-    return test()->workspaceUrl('acme', $path);
+    $section = explode('/', strtok($path, '?') ?: '')[0];
+    $inBranch = $branch !== null || in_array($section, ['floor', 'orders', 'kitchen', 'bills', 'reports', 'tills', 'stock', 'tables', 'settings'], true);
+
+    return test()->workspaceUrl('acme', $inBranch ? rtrim('branches/'.($branch ?? test()->juba).'/'.$path, '/') : $path);
 }
 
 function sodasInJuba(): int
@@ -96,20 +111,56 @@ function financeEvents(): array
 }
 
 describe('branches', function () {
-    it('asks which branch to work in when there are several', function () {
+    it('lists the branches when there are several, each opening its own workspace', function () {
         $this->actingAsMember('acme', ['restaurant.orders.take']);
 
-        $this->get(at('floor'))->assertRedirect(at('branch'));
-        $this->get(at('branch'))->assertInertia(fn (Assert $page) => $page->component('branch')->has('branches', 2));
+        $this->get(at())->assertRedirect(at('branch'));
+        $this->get(at('branch'))->assertInertia(fn (Assert $page) => $page
+            ->component('branch')
+            ->has('branches', 2)
+            ->where('branches.1.url', at('', $this->wau)));
 
-        $this->put(at('branch'), ['branch_id' => $this->wau])->assertRedirect(at('floor'));
-        $this->get(at('floor'))->assertOk()->assertInertia(fn (Assert $page) => $page->where('branch.name', 'Wau')->has('tables', 0));
+        $this->get(at('floor', $this->wau))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('area', 'branch')
+            ->where('branch.name', 'Wau')
+            ->has('tables', 0));
+    });
+
+    it('keeps each tab in the branch its address names', function () {
+        $this->actingAsMember('acme', ['restaurant.orders.take', 'restaurant.tables.manage']);
+
+        // Two tabs, one session: neither moves the other.
+        $this->get(at('floor', $this->wau))->assertInertia(fn (Assert $page) => $page->where('branch.name', 'Wau'));
+        $this->get(at('floor'))->assertInertia(fn (Assert $page) => $page->where('branch.name', 'Juba')->has('tables', 2));
+        $this->post(at('orders'), ['service' => 'takeaway'])->assertSessionHasNoErrors();
+        $this->get(at('floor', $this->wau))->assertInertia(fn (Assert $page) => $page->where('branch.name', 'Wau')->has('takeaways', 0));
+        $this->get(at('floor'))->assertInertia(fn (Assert $page) => $page->has('takeaways', 1));
+
+        // What a page does stays in its branch: Juba's order is not Wau's.
+        $order = $this->asTenant('acme', fn () => Order::query()->sole());
+        $this->get(at("orders/{$order->id}", $this->wau))->assertNotFound();
+        $this->get(at("orders/{$order->id}"))->assertOk();
+    });
+
+    it('opens old addresses in the branch last worked in, or asks which', function () {
+        $this->actingAsMember('acme', ['restaurant.orders.take']);
+
+        $this->get($this->workspaceUrl('acme', 'floor'))->assertRedirect(at('branch').'?page=floor');
+        $this->get(at('branch').'?page=floor')->assertInertia(fn (Assert $page) => $page->where('branches.1.url', at('floor', $this->wau)));
+
+        $this->get(at('orders', $this->wau));
+        $this->get($this->workspaceUrl('acme', 'orders?day=2026-10-25'))->assertRedirect(at('orders?day=2026-10-25', $this->wau));
+        $this->put(at('branch'), ['branch_id' => $this->juba])->assertRedirect(at('', $this->juba));
     });
 
     it('opens only the branches the member has a role in', function () {
         member();
 
         $this->get(at('floor'))->assertOk()->assertInertia(fn (Assert $page) => $page->where('branch.name', 'Juba'));
+        $this->get(at())->assertRedirect(at('', $this->juba));
+        $this->get(at('floor', $this->wau))->assertNotFound();
+        $this->post(at('orders', $this->wau), ['service' => 'takeaway'])->assertNotFound();
+        $this->get(at('floor', (string) Str::uuid()))->assertNotFound();
         $this->put(at('branch'), ['branch_id' => $this->wau])->assertNotFound();
     });
 
@@ -120,7 +171,6 @@ describe('branches', function () {
             ['permissions' => ['restaurant.orders.take'], 'scope' => ['scope_type' => 'branch', 'branch_id' => $this->juba]],
             ['permissions' => ['restaurant.tables.manage'], 'scope' => ['scope_type' => 'branch', 'branch_id' => $this->wau]],
         ]);
-        $this->put(at('branch'), ['branch_id' => $this->juba]);
 
         $this->get(at('floor'))->assertOk();
         $this->get(at('tables'))->assertForbidden();
@@ -343,6 +393,33 @@ describe('the kitchen', function () {
         $this->actingAs($cook);
         $this->get(at('kitchen'))->assertInertia(fn (Assert $page) => $page->has('tickets', 0));
     });
+
+    it('flags the ticket of a cancelled order for the cook to clear, and clears only that', function () {
+        member(['restaurant.orders.take', 'restaurant.orders.void']);
+        $cancelled = tableOrder([[$this->beans, 1]]);
+        $this->post(at("orders/{$cancelled->id}/cancel"), ['reason' => 'Guests left'])->assertSessionHasNoErrors();
+        $this->post(at('orders'), ['service' => 'takeaway'])->assertSessionHasNoErrors();
+        $live = $this->asTenant('acme', fn () => Order::query()->where('service', 'takeaway')->sole());
+        $this->post(at("orders/{$live->id}/lines"), ['lines' => [['item_id' => $this->beans->id, 'quantity' => 1]]])->assertSessionHasNoErrors();
+        $this->post(at("orders/{$live->id}/send"))->assertSessionHasNoErrors();
+        [$gone, $cooking] = $this->asTenant('acme', fn () => [
+            KitchenTicket::query()->where('order_id', $cancelled->id)->sole(),
+            KitchenTicket::query()->where('order_id', $live->id)->sole(),
+        ]);
+
+        member(['restaurant.kitchen.view']);
+        $this->get(at('kitchen'))->assertInertia(fn (Assert $page) => $page
+            ->has('tickets', 2)
+            ->where('tickets.0.cancelled', true)
+            ->where('tickets.1.cancelled', false));
+
+        $this->post(at("kitchen/{$cooking->id}/clear"))->assertSessionHasErrors('ticket');
+        $this->post(at("kitchen/{$gone->id}/clear"))->assertSessionHasNoErrors();
+        $this->post(at("kitchen/{$gone->id}/clear"))->assertSessionHasErrors('ticket');
+
+        expect($this->asTenant('acme', fn () => $gone->fresh()->status))->toBe('cleared');
+        $this->get(at('kitchen'))->assertInertia(fn (Assert $page) => $page->has('tickets', 1)->where('tickets.0.id', $cooking->id));
+    });
 });
 
 describe('the bill', function () {
@@ -418,15 +495,25 @@ describe('the bill', function () {
             ->and(financeEvents())->toBe([]);
     });
 
-    it('refuses a bill for more drinks than the branch holds, and keeps the order open', function () {
-        member(['restaurant.orders.take', 'restaurant.bills.take']);
+    it('bills drinks served beyond what the branch holds, taking stock below zero for a count', function () {
+        member(['restaurant.orders.take', 'restaurant.bills.take', 'restaurant.stock.view']);
         $order = tableOrder([[$this->soda, 25]]);
 
-        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'card'])->assertSessionHasErrors('payment_method');
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'card'])->assertSessionHasNoErrors();
 
-        expect($this->asTenant('acme', fn () => Bill::query()->count()))->toBe(0)
-            ->and($this->asTenant('acme', fn () => $order->fresh()->status))->toBe('open')
-            ->and(sodasInJuba())->toBe(24);
+        expect($this->asTenant('acme', fn () => $order->fresh()->status))->toBe('paid')
+            ->and(sodasInJuba())->toBe(-1);
+        $this->get(at('stock'))->assertInertia(fn (Assert $page) => $page
+            ->where('rows.0.onHand', -1)
+            ->where('rows.0.short', true));
+    });
+
+    it('shows a bad day as a validation error', function () {
+        member(['restaurant.orders.take', 'restaurant.bills.view']);
+
+        $this->get(at('orders?day=not-a-day'))->assertSessionHasErrors('day');
+        $this->get(at('bills?day=2026-13-45'))->assertSessionHasErrors('day');
+        $this->get(at('orders?day=2026-10-30'))->assertOk();
     });
 
     it('voids a paid bill: cash back from the voider\'s till, the drinks back in stock', function () {
@@ -450,6 +537,170 @@ describe('the bill', function () {
             ->component('bills/index')
             ->has('bills', 1)
             ->where('takings.totalMinor', 0));
+    });
+});
+
+describe('split bills and discounts', function () {
+    it('splits by items: each part its own bill, the order closed by the last', function () {
+        member(['restaurant.orders.take', 'restaurant.orders.void', 'restaurant.bills.take']);
+        $order = tableOrder([[$this->beans, 2], [$this->soda, 1]]);
+        [$beans, $soda] = $this->asTenant('acme', fn () => [
+            OrderLine::query()->where('menu_item_id', $this->beans->id)->sole(),
+            OrderLine::query()->where('menu_item_id', $this->soda->id)->sole(),
+        ]);
+
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash', 'line_ids' => [(string) Str::uuid()]])->assertSessionHasErrors('line_ids');
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'card', 'line_ids' => [$soda->id]])->assertSessionHasNoErrors();
+
+        expect($this->asTenant('acme', fn () => $order->fresh()->status))->toBe('open')
+            ->and(sodasInJuba())->toBe(23);
+        $this->get(at("orders/{$order->id}"))->assertInertia(fn (Assert $page) => $page
+            ->where('bill.total_minor', 3000)
+            ->where('bill.paid_minor', 300)
+            ->has('bill.lines_open', 1)
+            ->where('order.bills.0.totalMinor', 300));
+
+        // Paid lines stay paid: no void, no cancel, no paying them again.
+        $this->post(at("orders/{$order->id}/lines/{$soda->id}/void"), ['reason' => 'Spilt'])->assertSessionHasErrors('line');
+        $this->post(at("orders/{$order->id}/cancel"), ['reason' => 'Left'])->assertSessionHasErrors('reason');
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash', 'line_ids' => [$soda->id]])->assertSessionHasErrors('line_ids');
+
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash', 'line_ids' => [$beans->id], 'amount_tendered' => '30.00'])->assertSessionHasNoErrors();
+
+        expect($this->asTenant('acme', fn () => $order->fresh()->status))->toBe('paid')
+            ->and($this->asTenant('acme', fn () => Bill::query()->orderBy('number')->pluck('total_minor')->all()))->toBe([300, 3000])
+            ->and(financeEvents())->toBe(['finance.invoice.issued', 'finance.payment.received', 'finance.invoice.issued', 'finance.payment.received']);
+        $this->get(at('orders'))->assertInertia(fn (Assert $page) => $page
+            ->where('orders.0.bill.number', 'B-000001 +1')
+            ->where('orders.0.bill.totalMinor', 3300));
+    });
+
+    it('splits in equal shares of what is left, the last taking the rest and the drinks', function () {
+        member(['restaurant.orders.take', 'restaurant.bills.take', 'restaurant.bills.void', 'restaurant.bills.view']);
+        // 2 × 15.00 + 3.00 + a 0.01 tea: 33.01, which thirds do not divide.
+        $tea = $this->asTenant('acme', fn () => MenuItem::factory()->create(['name' => 'Tea', 'price_minor' => 1]));
+        $order = tableOrder([[$this->beans, 2], [$this->soda, 1], [$tea, 1]]);
+
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash', 'parts' => 3])->assertSessionHasNoErrors();
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash', 'parts' => 4])->assertSessionHasErrors('parts');
+        $this->get(at("orders/{$order->id}"))->assertInertia(fn (Assert $page) => $page
+            ->where('bill.total_minor', 2201)
+            ->where('bill.shares.paid', 1)
+            ->where('bill.shares.next_minor', 1100));
+        expect(sodasInJuba())->toBe(24);
+
+        // A share given back while the order is open is owed again.
+        $first = $this->asTenant('acme', fn () => Bill::query()->sole());
+        $this->post(at("bills/{$first->id}/void"), ['reason' => 'Paid twice'])->assertSessionHasNoErrors();
+        $this->get(at("orders/{$order->id}"))->assertInertia(fn (Assert $page) => $page->where('bill.total_minor', 3301)->where('bill.shares', null));
+
+        foreach ([1, 2, 3] as $part) {
+            $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'card', 'parts' => 3])->assertSessionHasNoErrors();
+        }
+
+        $shares = $this->asTenant('acme', fn () => Bill::query()->where('status', 'paid')->orderBy('number')->with('lines')->get());
+        expect($shares->pluck('total_minor')->all())->toBe([1100, 1100, 1101])
+            ->and($shares->pluck('part')->all())->toBe([1, 2, 3])
+            ->and($shares->last()->lines->sole()->name)->toBe('Share 3 of 3')
+            ->and($shares->last()->cost_minor)->toBe(150)
+            ->and($shares->first()->cost_minor)->toBe(0)
+            ->and(sodasInJuba())->toBe(23)
+            ->and($this->asTenant('acme', fn () => $order->fresh()->status))->toBe('paid')
+            ->and($this->asTenant('acme', fn () => OrderLine::query()->whereNull('bill_id')->count()))->toBe(0);
+
+        $invoice = collect($this->platform()->moduleEvents['finance'])->map(fn (array $e) => Envelope::fromArray($e))
+            ->filter(fn (Envelope $e) => $e->eventType === 'finance.invoice.issued')->last();
+        expect($invoice->payload['lines'][0]['description'])->toBe("Share 3 of 3, order {$order->fresh()->number}")
+            ->and($invoice->payload['lines'][0]['cost_minor'])->toBe(150);
+    });
+
+    it('takes the rest of the shares at once', function () {
+        member(['restaurant.orders.take', 'restaurant.bills.take', 'restaurant.bills.view']);
+        $order = tableOrder([[$this->beans, 2]]);
+
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash', 'parts' => 3])->assertSessionHasNoErrors();
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash', 'line_ids' => [$this->asTenant('acme', fn () => OrderLine::query()->value('id'))]])
+            ->assertSessionHasErrors('line_ids');
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash'])->assertSessionHasNoErrors();
+
+        $rest = $this->asTenant('acme', fn () => Bill::query()->orderByDesc('number')->with('lines')->first());
+        expect($rest->total_minor)->toBe(2000)
+            ->and($rest->lines->sole()->name)->toBe('Shares 2 to 3 of 3')
+            ->and($this->asTenant('acme', fn () => $order->fresh()->status))->toBe('paid');
+    });
+
+    it('discounts a bill with a reason, only with the right to, and tells Finance', function () {
+        member(['restaurant.orders.take', 'restaurant.bills.take']);
+        $order = tableOrder([[$this->beans, 2], [$this->soda, 1]]);
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash', 'discount' => '10', 'discount_type' => 'percent', 'discount_reason' => 'Regular'])->assertForbidden();
+
+        $cashier = member(['restaurant.orders.take', 'restaurant.bills.take', 'restaurant.bills.discount', 'restaurant.bills.view']);
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash', 'discount' => '10', 'discount_type' => 'percent'])->assertSessionHasErrors('discount_reason');
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash', 'discount' => '40.00', 'discount_reason' => 'Regular'])->assertSessionHasErrors('discount');
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash', 'discount' => '10%', 'discount_type' => 'percent', 'discount_reason' => 'Regular', 'amount_tendered' => '29.70'])
+            ->assertSessionHasNoErrors();
+
+        $bill = $this->asTenant('acme', fn () => Bill::query()->sole());
+        expect($bill->subtotal_minor)->toBe(3300)
+            ->and($bill->discount_minor)->toBe(330)
+            ->and($bill->total_minor)->toBe(2970)
+            ->and($bill->change_minor)->toBe(0)
+            ->and($bill->discount_reason)->toBe('Regular');
+
+        $invoice = Envelope::fromArray($this->platform()->moduleEvents['finance'][0]);
+        expect($invoice->payload['total_minor'])->toBe(2970)
+            ->and(array_sum(array_column($invoice->payload['lines'], 'amount_minor')))->toBe(2970)
+            ->and(collect($invoice->payload['lines'])->last()['description'])->toBe('Discount: Regular');
+
+        $this->get(at("bills/{$bill->id}"))->assertInertia(fn (Assert $page) => $page
+            ->where('bill.subtotalMinor', 3300)
+            ->where('bill.discountMinor', 330));
+        $till = $this->asTenant('acme', fn () => TillShift::query()->where('opened_by', $cashier->id)->sole());
+        expect($this->asTenant('acme', fn () => app(Tills::class)->summary($till)['takenMinor']['cash']))->toBe(2970);
+    });
+});
+
+describe('the day report', function () {
+    it('shows the day: takings by method and person, what sold, discounts, refunds, voids and cancellations', function () {
+        member(['restaurant.orders.take', 'restaurant.bills.take']);
+        $this->get(at('reports'))->assertForbidden();
+
+        member(['restaurant.orders.take', 'restaurant.orders.void', 'restaurant.bills.take', 'restaurant.bills.discount', 'restaurant.bills.void', 'restaurant.reports.view']);
+
+        $first = tableOrder([[$this->beans, 2], [$this->soda, 1]]);
+        $soda = $this->asTenant('acme', fn () => OrderLine::query()->where('menu_item_id', $this->soda->id)->sole());
+        $this->post(at("orders/{$first->id}/lines/{$soda->id}/void"), ['reason' => 'Spilt'])->assertSessionHasNoErrors();
+        $this->post(at("orders/{$first->id}/pay"), ['payment_method' => 'cash', 'discount' => '10', 'discount_type' => 'percent', 'discount_reason' => 'Regular'])->assertSessionHasNoErrors();
+
+        $second = tableOrder([[$this->beans, 1]]);
+        $this->post(at("orders/{$second->id}/pay"), ['payment_method' => 'card'])->assertSessionHasNoErrors();
+        $refunded = $this->asTenant('acme', fn () => Bill::query()->where('order_id', $second->id)->sole());
+        $this->post(at("bills/{$refunded->id}/void"), ['reason' => 'Wrong table'])->assertSessionHasNoErrors();
+
+        $third = tableOrder([[$this->soda, 2]]);
+        $this->post(at("orders/{$third->id}/cancel"), ['reason' => 'Walked out'])->assertSessionHasNoErrors();
+
+        $this->get(at('reports'))->assertInertia(fn (Assert $page) => $page
+            ->component('reports/day')
+            ->where('takings.count', 1)
+            ->where('takings.totalMinor', 2700)
+            ->where('takings.averageMinor', 2700)
+            ->where('takings.discountMinor', 300)
+            ->where('takings.refundedMinor', 1500)
+            ->has('byMethod', 1)
+            ->where('byMethod.0.name', 'Cash')
+            ->where('byMethod.0.totalMinor', 2700)
+            ->has('byCashier', 1)
+            ->has('byWaiter', 1)
+            ->has('bestSellers', 1)
+            ->where('bestSellers.0.quantity', 2)
+            ->where('discounts.0.reason', 'Regular')
+            ->where('voidedBills.0.reason', 'Wrong table')
+            ->where('cancelledOrders.0.reason', 'Walked out')
+            ->has('voidedLines', 1)
+            ->where('voidedLines.0.reason', 'Spilt'));
+
+        $this->get(at('reports?day=2020-01-01'))->assertInertia(fn (Assert $page) => $page->where('takings.count', 0)->has('voidedLines', 0));
     });
 });
 
@@ -528,14 +779,539 @@ describe('stock', function () {
             ->where('movements.0.reason', 'Damaged or spilt'));
     });
 
+    it('receives a supplier delivery: stock up at its cost, Finance told what is owed', function () {
+        $water = $this->asTenant('acme', fn () => MenuItem::factory()->drink()->create(['name' => 'Water', 'price_minor' => 200]));
+        member(['restaurant.stock.view']);
+        $this->get(at('stock/deliveries/create'))->assertForbidden();
+        $this->get(at('stock/deliveries'))->assertOk();
+
+        member(['restaurant.stock.view', 'restaurant.stock.receive']);
+        $this->get(at('stock/deliveries/create'))->assertInertia(fn (Assert $page) => $page
+            ->component('stock/deliveries/create')
+            ->has('drinks', 2)
+            ->where('drinks.0.name', 'Soda')
+            ->where('drinks.0.averageCostMinor', 150));
+
+        // A dish keeps no stock; the same drink twice is one line.
+        $this->post(at('stock/deliveries'), ['supplier_name' => 'Juba Drinks', 'lines' => [['item_id' => $this->beans->id, 'quantity' => 1, 'unit_cost' => '1.00']]])
+            ->assertSessionHasErrors('lines');
+        $this->post(at('stock/deliveries'), ['supplier_name' => 'Juba Drinks', 'lines' => [
+            ['item_id' => $this->soda->id, 'quantity' => 1, 'unit_cost' => '1.00'],
+            ['item_id' => $this->soda->id, 'quantity' => 1, 'unit_cost' => '1.00'],
+        ]])->assertSessionHasErrors('lines.0.item_id');
+
+        // 24 at 1.50 and 8 at 2.30: 32 at 1.70; 12 waters at 1.00.
+        $this->post(at('stock/deliveries'), [
+            'supplier_name' => ' Juba Drinks ',
+            'supplier_reference' => 'INV-77',
+            'lines' => [
+                ['item_id' => $this->soda->id, 'quantity' => 8, 'unit_cost' => '2.30'],
+                ['item_id' => $water->id, 'quantity' => 12, 'unit_cost' => '1.00'],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $delivery = $this->asTenant('acme', fn () => StockDelivery::query()->sole());
+        expect($delivery->number)->toBe('DEL-000001')
+            ->and($delivery->supplier_name)->toBe('Juba Drinks')
+            ->and($delivery->total_minor)->toBe(3040);
+        $level = $this->asTenant('acme', fn () => StockLevel::query()->where('branch_id', $this->juba)->where('menu_item_id', $this->soda->id)->sole());
+        expect($level->quantity)->toBe(32)->and($level->average_cost_minor)->toBe(170);
+
+        $events = array_map(fn (array $event) => Envelope::fromArray($event), $this->platform()->moduleEvents['finance']);
+        expect(array_map(fn (Envelope $e) => $e->eventType, $events))->toBe(['finance.bill.received'])
+            ->and($events[0]->payload['supplier_name'])->toBe('Juba Drinks')
+            ->and($events[0]->payload['supplier_reference'])->toBe('INV-77')
+            ->and($events[0]->payload['total_minor'])->toBe(3040)
+            ->and(array_column($events[0]->payload['lines'], 'amount_minor'))->toBe([1840, 1200]);
+
+        $this->get(at("stock/deliveries/{$delivery->id}"))->assertInertia(fn (Assert $page) => $page
+            ->component('stock/deliveries/show')
+            ->has('delivery.lines', 2)
+            ->where('delivery.lines.0.name', 'Soda'));
+        $this->get(at("stock/{$this->soda->id}"))->assertInertia(fn (Assert $page) => $page->where('movements.0.type', 'delivery'));
+        $this->get(at('stock/deliveries/create'))->assertInertia(fn (Assert $page) => $page->where('suppliers', ['Juba Drinks']));
+
+        // Another branch does not see it.
+        $this->actingAsMember('acme', ['restaurant.stock.view'], branch: $this->wau);
+        $this->get(at("stock/deliveries/{$delivery->id}"))->assertNotFound();
+    });
+
     it('lists drinks running low on the home page', function () {
         $this->asTenant('acme', fn () => $this->soda->forceFill(['reorder_level' => 24])->save());
         member(['restaurant.stock.view', 'restaurant.orders.take']);
 
-        $this->get(at())->assertInertia(fn (Assert $page) => $page
+        $this->get(at('', $this->juba))->assertInertia(fn (Assert $page) => $page
             ->component('home')
             ->where('lowStock', 1)
             ->where('openOrders', 0)
             ->where('takings', null));
+    });
+});
+
+/**
+ * Signs in a Global Admin: every permission of the catalog's Global Admin,
+ * across the organization.
+ */
+function globalAdmin(): User
+{
+    $catalog = json_decode((string) file_get_contents(base_path('platform/catalog.json')), true);
+    $role = collect($catalog['roles'])->firstWhere('key', 'global_admin');
+    $admin = test()->actingAsMember('acme', $role['permissions']);
+    assert($admin instanceof User);
+
+    return $admin;
+}
+
+describe('roles', function () {
+    it('keeps Global Admin organization-wide, Manager to branches, and gives the Store Keeper stock only', function () {
+        $catalog = json_decode((string) file_get_contents(base_path('platform/catalog.json')), true);
+        $roles = collect($catalog['roles'])->keyBy('key');
+        $permissions = collect($catalog['permissions'])->keyBy('key');
+
+        expect($roles->keys()->all())->toBe(['global_admin', 'manager', 'cashier', 'waiter', 'store_keeper', 'kitchen'])
+            ->and($roles['global_admin']['scopes'])->toBe(['organization'])
+            ->and($roles['global_admin']['permissions'])->toEqualCanonicalizing($permissions->keys()->all())
+            ->and($roles['manager']['scopes'])->toBe(['branch'])
+            ->and($roles['manager']['permissions'])->not->toContain('restaurant.branches.overview', 'restaurant.access.manage', 'restaurant.menu.manage')
+            ->and($roles['manager']['sensitivity'])->toBeLessThan($roles['global_admin']['sensitivity'])
+            ->and($roles['store_keeper']['permissions'])->toEqualCanonicalizing(['restaurant.menu.view', 'restaurant.stock.view', 'restaurant.stock.receive', 'restaurant.stock.adjust'])
+            ->and($roles['kitchen']['name'])->toBe('Kitchen Staff')
+            ->and($permissions['restaurant.branches.overview']['scopes'])->toBe(['organization'])
+            ->and($permissions['restaurant.access.manage']['scopes'])->toBe(['organization'])
+            ->and($roles['manager']['permissions'])->toContain('restaurant.branch.configure')
+            ->and($roles['cashier']['permissions'])->not->toContain('restaurant.branch.configure');
+    });
+
+    it('lets the Store Keeper work the stock and nothing of service or money', function () {
+        member(['restaurant.menu.view', 'restaurant.stock.view', 'restaurant.stock.receive', 'restaurant.stock.adjust']);
+
+        $this->get(at('stock'))->assertOk();
+        $this->get(at('stock/deliveries/create'))->assertOk();
+        $this->get(at('floor'))->assertForbidden();
+        $this->get(at('bills'))->assertForbidden();
+        $this->get(at('reports'))->assertForbidden();
+        $this->get(at('management'))->assertForbidden();
+    });
+});
+
+describe('every branch together', function () {
+    it('lands a Global Admin on every branch together, and keeps branch staff to their branch', function () {
+        globalAdmin();
+        $this->get(at())->assertRedirect(at('management'));
+        $this->get(at('management'))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('overview')
+            ->where('overview', true)
+            ->where('branch', null)
+            ->has('performance', 2)
+            ->has('branches', 2));
+
+        // A manager of one branch, even holding the overview there, works in that branch.
+        $manager = $this->actingAsMember('acme', ['restaurant.orders.take', 'restaurant.reports.view', 'restaurant.branches.overview'], branch: $this->juba);
+        $this->get(at())->assertRedirect(at('', $this->juba));
+        $this->get(at('', $this->juba))->assertOk()->assertInertia(fn (Assert $page) => $page->component('home')->where('overview', false)->where('branch.name', 'Juba'));
+        $this->get(at('management'))->assertForbidden();
+        $this->put(at('branch'), ['branch_id' => 'all'])->assertNotFound();
+
+        // Organization-wide without the overview: still one branch at a time.
+        $this->flushSession();
+        $this->actingAsMember('acme', ['restaurant.orders.take']);
+        $this->get(at())->assertRedirect(at('branch'));
+        $this->get(at('management'))->assertForbidden();
+    });
+
+    it('opens every branch in its own workspace beside management, which stays the whole restaurant\'s', function () {
+        globalAdmin();
+
+        $this->get(at('management/branches'))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('management/branches')
+            ->where('area', 'management')
+            ->where('branch', null)
+            ->has('branches', 2)
+            ->where('branches.0.name', 'Juba'));
+
+        // Two branch tabs and the management tab, all in one session.
+        $this->get(at('', $this->wau))->assertInertia(fn (Assert $page) => $page->component('home')->where('area', 'branch')->where('branch.name', 'Wau'));
+        $this->get(at('', $this->juba))->assertInertia(fn (Assert $page) => $page->where('branch.name', 'Juba'));
+        $this->get(at('kitchen', $this->wau))->assertInertia(fn (Assert $page) => $page->where('branch.name', 'Wau'));
+        $this->get(at('management'))->assertInertia(fn (Assert $page) => $page->where('area', 'management')->where('branch', null)->has('performance', 2));
+        $this->get(at())->assertRedirect(at('management'));
+
+        // The old form still works, as a link would.
+        $this->put(at('branch'), ['branch_id' => $this->wau])->assertRedirect(at('', $this->wau));
+        $this->put(at('branch'), ['branch_id' => 'all'])->assertRedirect(at('management'));
+
+        // Old addresses of management pages.
+        $this->get(at('branches/overview'))->assertRedirect(at('management'));
+        $this->get(at('staff'))->assertRedirect(at('management/staff'));
+    });
+
+    it('shows each drink in every branch, and keeps branch staff out of management', function () {
+        $this->asTenant('acme', fn () => $this->soda->forceFill(['reorder_level' => 30])->save());
+
+        globalAdmin();
+        $this->get(at('management/inventory'))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('management/inventory')
+            ->has('branches', 2)
+            ->where('drinks.0.name', 'Soda')
+            ->where("drinks.0.byBranch.{$this->juba}", 24)
+            ->where("drinks.0.byBranch.{$this->wau}", 0)
+            ->where('drinks.0.valueMinor', 24 * 150));
+
+        $this->actingAsMember('acme', ['restaurant.orders.take', 'restaurant.stock.view', 'restaurant.reports.view'], branch: $this->juba);
+        foreach (['management', 'management/branches', 'management/inventory', 'management/staff'] as $page) {
+            $this->get(at($page))->assertForbidden();
+        }
+    });
+
+    it('adds up sales, discounts, refunds and payments the day report\'s way, branch by branch', function () {
+        member(['restaurant.orders.take', 'restaurant.orders.void', 'restaurant.bills.take', 'restaurant.bills.discount', 'restaurant.bills.void']);
+        // 2 beans and a soda, 10% off: 3300 - 330 = 2970, in cash.
+        $first = tableOrder([[$this->beans, 2], [$this->soda, 1]]);
+        $this->post(at("orders/{$first->id}/pay"), ['payment_method' => 'cash', 'discount' => '10', 'discount_type' => 'percent', 'discount_reason' => 'Regular'])->assertSessionHasNoErrors();
+        // Beans by card, then refunded.
+        $second = tableOrder([[$this->beans, 1]]);
+        $this->post(at("orders/{$second->id}/pay"), ['payment_method' => 'card'])->assertSessionHasNoErrors();
+        $refunded = $this->asTenant('acme', fn () => Bill::query()->where('order_id', $second->id)->sole());
+        $this->post(at("bills/{$refunded->id}/void"), ['reason' => 'Wrong table'])->assertSessionHasNoErrors();
+        // And one still open.
+        tableOrder([[$this->beans, 1]]);
+
+        globalAdmin();
+        $this->get(at('management'))->assertInertia(fn (Assert $page) => $page
+            ->where('totals.grossMinor', 4800)
+            ->where('totals.discountMinor', 330)
+            ->where('totals.salesMinor', 4470)
+            ->where('totals.refundedMinor', 1500)
+            ->where('totals.netMinor', 2970)
+            ->where('totals.cashMinor', 2970)
+            ->where('totals.nonCashMinor', 1500)
+            ->where('totals.bills', 1)
+            ->where('totals.averageOrderMinor', 2970)
+            ->where('totals.orders.total', 3)
+            ->where('totals.orders.completed', 2)
+            ->where('totals.orders.pending', 1)
+            ->where('totals.orders.refunded', 1)
+            ->where('performance.0.name', 'Juba')
+            ->where('performance.0.netMinor', 2970)
+            ->where('performance.0.openOrders', 1)
+            ->where('performance.0.status', 'trading')
+            ->where('performance.1.name', 'Wau')
+            ->where('performance.1.netMinor', 0)
+            ->where('performance.1.status', 'quiet')
+            ->has('trend', 1)
+            ->where('trend.0.netMinor', 2970)
+            ->where('orders.total', 3));
+
+        // One branch, one status.
+        $this->get(at("management?branch={$this->wau}"))->assertInertia(fn (Assert $page) => $page
+            ->where('totals.netMinor', 0)->has('performance', 1)->where('orders.total', 0));
+        $this->get(at('management?status=paid'))->assertInertia(fn (Assert $page) => $page->where('orders.total', 2));
+
+        // The period before had nothing; the day before shows nothing.
+        $this->get(at('management?from=2026-10-24&to=2026-10-24'))->assertInertia(fn (Assert $page) => $page
+            ->where('totals.netMinor', 0)->where('totals.orders.total', 0));
+
+        // Hour by hour: 24 hours, adding up to the net sales.
+        $this->get(at('management'))->assertInertia(fn (Assert $page) => $page
+            ->has('hourly', 24)
+            ->where('hourly', fn ($hours) => collect($hours)->sum('netMinor') === 2970 && collect($hours)->sum('bills') === 2));
+
+        // The same as an Excel workbook, every order listed.
+        $response = $this->get(at('management?export=xlsx'));
+        $response->assertOk()->assertHeader('Content-Type', XlsxWorkbook::CONTENT_TYPE);
+        expect($response->headers->get('Content-Disposition'))->toContain('.xlsx');
+        $path = tempnam(sys_get_temp_dir(), 'xlsx');
+        file_put_contents($path, $response->streamedContent());
+        $reader = new XlsxReader;
+        $reader->open($path);
+        $sheets = [];
+        foreach ($reader->getSheetIterator() as $sheet) {
+            $sheets[$sheet->getName()] = collect(iterator_to_array($sheet->getRowIterator(), false))->map(fn ($row) => $row->toArray())->all();
+        }
+        $reader->close();
+        unlink($path);
+        expect(array_keys($sheets))->toBe(['Summary', 'Branches', 'Sales by day', 'Sales by hour', 'Payment methods', 'Orders', 'Needs attention'])
+            ->and(array_slice($sheets['Summary'][4], 0, 2))->toBe(['Net sales', 29.7])
+            ->and($sheets['Orders'])->toHaveCount(4)
+            ->and($sheets['Branches'][1][0])->toBe('Juba');
+
+        $this->get(at('management?export=pdf'))->assertSessionHasErrors('export');
+    });
+
+    it('never adds a bill in another currency into the totals', function () {
+        member(['restaurant.orders.take', 'restaurant.bills.take']);
+        $order = tableOrder([[$this->beans, 1]]);
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash'])->assertSessionHasNoErrors();
+        $this->asTenant('acme', fn () => Bill::query()->sole()->update(['currency' => 'USD']));
+
+        globalAdmin();
+        $this->get(at('management'))->assertInertia(fn (Assert $page) => $page
+            ->where('totals.netMinor', 0)
+            ->where('otherCurrencies.USD', 1));
+    });
+
+    it('refuses a branch that is not the member\'s, another workspace\'s included, and too long a period', function () {
+        $elsewhere = $this->platform()->branch('globex', 'Malakal');
+
+        globalAdmin();
+        $this->get(at("management?branch={$elsewhere}"))->assertSessionHasErrors('branch');
+        $this->get(at('management?branch='.Str::uuid()))->assertSessionHasErrors('branch');
+        $this->put(at('branch'), ['branch_id' => $elsewhere])->assertNotFound();
+        $this->get(at('management?from=2026-01-01&to=2026-10-25'))->assertSessionHasErrors('from');
+        $this->get(at('management?from=2026-10-25&to=2026-10-01'))->assertSessionHasErrors('to');
+    });
+
+    it('shows the kitchens now and what needs attention', function () {
+        member(['restaurant.orders.take', 'restaurant.bills.take']);
+        tableOrder([[$this->beans, 1]]);
+        $this->asTenant('acme', fn () => MenuItem::query()->whereKey($this->soda->id)->update(['reorder_level' => 30]));
+
+        $this->travel(45)->minutes();
+        globalAdmin();
+        $this->get(at('management'))->assertInertia(fn (Assert $page) => $page
+            ->where('kitchen.preparing', 1)
+            ->where('kitchen.slow', 1)
+            ->where('kitchen.oldestMinutes', 45)
+            ->where('performance.0.pendingTickets', 1)
+            ->where('performance.0.lowStock', 1)
+            ->where('performance.1.lowStock', 1)
+            ->where('alerts', fn ($alerts) => collect($alerts)->pluck('kind')->sort()->values()->all() === ['kitchen', 'stock', 'stock']));
+
+        // A till left open overnight.
+        $this->travel(1)->days();
+        $this->get(at('management'))->assertInertia(fn (Assert $page) => $page
+            ->where('alerts', fn ($alerts) => collect($alerts)->contains('kind', 'till')));
+    });
+});
+
+describe('staff and access', function () {
+    it('shows who works where and whether they may sign in, to the restaurant\'s administrators only', function () {
+        $organization = $this->platform()->organization('acme');
+        $this->platform()->applicationMembers['acme'] = [
+            ['membership_id' => (string) Str::uuid(), 'sub' => (string) Str::uuid(), 'name' => 'Achol', 'sign_in_name' => 'achol@example.test', 'membership_status' => 'active', 'is_owner' => false, 'application_access' => 'suspended', 'roles' => [
+                ['role' => 'cashier', 'name' => 'Cashier', 'scope_type' => 'branch', 'branch_id' => $this->wau, 'expires_at' => null],
+            ]],
+            ['membership_id' => (string) Str::uuid(), 'sub' => (string) Str::uuid(), 'name' => 'Deng', 'sign_in_name' => 'deng', 'membership_status' => 'active', 'is_owner' => false, 'application_access' => 'active', 'roles' => [
+                ['role' => 'global_admin', 'name' => 'Global Admin', 'scope_type' => 'organization', 'branch_id' => null, 'expires_at' => null],
+            ]],
+        ];
+        expect($organization['id'])->not->toBe('');
+
+        member(['restaurant.orders.take', 'restaurant.reports.view']);
+        $this->get(at('management/staff'))->assertForbidden();
+        $this->actingAsMember('acme', ['restaurant.access.manage'], branch: $this->juba);
+        $this->get(at('management/staff'))->assertForbidden();
+
+        globalAdmin();
+        $this->get(at('management/staff'))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('staff/index')
+            ->where('manageUrl', '/manage/access')
+            ->has('people', 2)
+            ->where('people.0.signIn', 'suspended')
+            ->where('people.0.roles.0.where', 'Wau')
+            ->where('people.1.roles.0.where', 'All branches'));
+    });
+
+    it('stops a member at once when their sign-in is disabled, mid-session', function () {
+        $user = member();
+        $this->get(at('floor'))->assertOk();
+
+        // The platform answers "not allowed" and tells the restaurant (access.changed).
+        $this->platform()->grant('acme', (string) $user->getAuthIdentifier(), [['permissions' => ['restaurant.orders.take'], 'scope' => ['scope_type' => 'branch', 'branch_id' => $this->juba]]], allowed: false);
+        app(PlatformApi::class)->forget($this->platform()->organization('acme')['id']);
+
+        $this->get(at('floor'))->assertForbidden();
+        $this->post(at('orders'), ['service' => 'takeaway'])->assertForbidden();
+    });
+});
+
+describe('cash handovers', function () {
+    it('hands a closed till\'s cash to a manager, who receives it; a gap needs a note', function () {
+        $cashier = member(['restaurant.orders.take', 'restaurant.bills.take']);
+        $order = tableOrder([[$this->beans, 2]]);
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'cash'])->assertSessionHasNoErrors();
+        $till = $this->asTenant('acme', fn () => TillShift::query()->where('opened_by', $cashier->id)->sole());
+
+        // Not while the till is open.
+        $this->post(at("tills/{$till->id}/handover"), ['amount' => '40.00'])->assertSessionHasErrors('amount');
+        $this->post(at("tills/{$till->id}/close"), ['counted_cash' => '40.00'])->assertSessionHasNoErrors();
+
+        // Less than counted (the float kept back) needs a note.
+        $this->post(at("tills/{$till->id}/handover"), ['amount' => '30.00'])->assertSessionHasErrors('note');
+        $this->post(at("tills/{$till->id}/handover"), ['amount' => '30.00', 'note' => 'Float of 10.00 kept in the drawer'])->assertSessionHasNoErrors();
+        $this->post(at("tills/{$till->id}/handover"), ['amount' => '30.00', 'note' => 'Again'])->assertSessionHasErrors('amount');
+        $handover = $this->asTenant('acme', fn () => CashHandover::query()->sole());
+        expect($handover->status)->toBe('pending')->and($handover->amount_minor)->toBe(3000);
+
+        // The cashier cannot receive it (no tills.manage).
+        $this->post(at("tills/handovers/{$handover->id}/receive"), ['received' => '30.00'])->assertForbidden();
+        $this->get(at('tills/handovers'))->assertInertia(fn (Assert $page) => $page->component('tills/handovers')->has('handovers', 1)->where('handovers.0.canReceive', false));
+
+        // A manager who handled none of it counts and receives it.
+        member(['restaurant.tills.manage']);
+        $this->get(at('tills/handovers'))->assertInertia(fn (Assert $page) => $page->where('handovers.0.canReceive', true));
+        $this->post(at("tills/handovers/{$handover->id}/receive"), ['received' => '29.00'])->assertSessionHasErrors('receiving_note');
+        $this->post(at("tills/handovers/{$handover->id}/receive"), ['received' => '29.00', 'receiving_note' => 'One note torn'])->assertSessionHasNoErrors();
+        $this->post(at("tills/handovers/{$handover->id}/receive"), ['received' => '29.00', 'receiving_note' => 'Again'])->assertSessionHasErrors('received');
+
+        $handover = $this->asTenant('acme', fn () => $handover->fresh());
+        expect($handover->status)->toBe('received')->and($handover->differenceMinor())->toBe(-100);
+        $this->get(at("tills/{$till->id}"))->assertInertia(fn (Assert $page) => $page
+            ->where('handover.status', 'received')
+            ->where('canHandOver', false));
+    });
+
+    it('keeps a manager from receiving cash from a till they handed over themselves', function () {
+        $manager = member(['restaurant.orders.take', 'restaurant.bills.take', 'restaurant.tills.manage']);
+        $till = $this->asTenant('acme', fn () => TillShift::query()->where('opened_by', $manager->id)->sole());
+        $this->post(at("tills/{$till->id}/close"), ['counted_cash' => '10.00'])->assertSessionHasNoErrors();
+        $this->post(at("tills/{$till->id}/handover"), ['amount' => '10.00'])->assertSessionHasNoErrors();
+        $handover = $this->asTenant('acme', fn () => CashHandover::query()->sole());
+
+        $this->post(at("tills/handovers/{$handover->id}/receive"), ['received' => '10.00'])->assertSessionHasErrors('received');
+    });
+});
+
+describe('stock movements', function () {
+    it('lists every drink\'s movements at the branch, filtered by kind and drink', function () {
+        $cola = $this->asTenant('acme', fn () => MenuItem::factory()->drink()->create(['name' => 'Cola', 'price_minor' => 400]));
+        member(['restaurant.stock.view', 'restaurant.stock.adjust']);
+        $this->post(at("stock/{$cola->id}/opening"), ['quantity' => 12, 'unit_cost' => '2.00'])->assertSessionHasNoErrors();
+        $this->post(at("stock/{$this->soda->id}/adjustments"), ['change' => -2, 'reason' => 'damaged'])->assertSessionHasNoErrors();
+
+        $this->get(at('stock/movements'))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('stock/movements')
+            ->has('movements.data', 3)
+            ->where('movements.in', 36)
+            ->where('movements.out', 2)
+            ->where('movements.outCostMinor', 300));
+        $this->get(at('stock/movements?type=write_off'))->assertInertia(fn (Assert $page) => $page->has('movements.data', 1)->where('movements.data.0.reason', 'Damaged or spilt'));
+        $this->get(at("stock/movements?item={$cola->id}"))->assertInertia(fn (Assert $page) => $page->has('movements.data', 1)->where('movements.data.0.item', 'Cola'));
+        $this->get(at('stock/movements?type=nonsense'))->assertSessionHasErrors('type');
+
+        // A branch they do not work in looks unknown.
+        $this->get(at('stock/movements', $this->wau))->assertNotFound();
+    });
+
+    it('shows management the movements of every branch, or of one', function () {
+        $keeper = User::factory()->create();
+        $this->asTenant('acme', fn () => app(Stock::class)->opening($this->soda, $this->wau, 6, 150, $keeper));
+        globalAdmin();
+
+        $this->get(at('management/stock-movements'))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('management/movements')
+            ->has('movements.data', 2)
+            ->where('area', 'management'));
+        $this->get(at("management/stock-movements?branch={$this->wau}"))->assertInertia(fn (Assert $page) => $page
+            ->has('movements.data', 1)
+            ->where('movements.data.0.branch', 'Wau'));
+        $this->get(at('management/stock-movements?branch='.Str::uuid()))->assertSessionHasErrors('branch');
+
+        member(['restaurant.stock.view']);
+        $this->get(at('management/stock-movements'))->assertForbidden();
+    });
+});
+
+describe('consolidated sales and reports', function () {
+    it('adds up sales by branch, method, day and item', function () {
+        member(['restaurant.orders.take', 'restaurant.bills.take']);
+        $order = tableOrder([[$this->beans, 2], [$this->soda, 1]]);
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'card'])->assertSessionHasNoErrors();
+
+        globalAdmin();
+        $this->get(at('management/sales'))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('management/sales')
+            ->has('byBranch', 2)
+            ->where('byBranch.0.name', 'Juba')
+            ->where('byBranch.0.netMinor', 3300)
+            ->where('byBranch.0.orders', 1)
+            ->where('byBranch.1.netMinor', 0)
+            ->where('byMethod.0.method', 'card')
+            ->where('byMethod.0.totalMinor', 3300)
+            ->has('byDay', 7)
+            ->where('byDay.6.netMinor', 3300)
+            ->where('bestSellers.0.name', 'Rice and beans')
+            ->where('bestSellers.0.quantity', 2));
+        $this->get(at("management/sales?branch={$this->wau}"))->assertInertia(fn (Assert $page) => $page->has('byBranch', 1)->where('byBranch.0.netMinor', 0)->has('bestSellers', 0));
+        $this->get(at('management/sales?from=2026-01-01&to=2026-10-25'))->assertSessionHasErrors('from');
+
+        member(['restaurant.reports.view']);
+        $this->get(at('management/sales'))->assertForbidden();
+        $this->get(at('management/reports'))->assertForbidden();
+    });
+
+    it('reports discounts, refunds, tills off, cash waiting and write-offs across branches', function () {
+        $cashier = member(['restaurant.orders.take', 'restaurant.bills.take', 'restaurant.bills.discount', 'restaurant.bills.void', 'restaurant.stock.adjust']);
+        // One bill kept with a discount, one refunded.
+        $order = tableOrder([[$this->beans, 2]]);
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'card', 'discount' => '5.00', 'discount_reason' => 'Regular'])->assertSessionHasNoErrors();
+        $order = tableOrder([[$this->beans, 2]]);
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'card'])->assertSessionHasNoErrors();
+        $bill = $this->asTenant('acme', fn () => Bill::query()->where('order_id', $order->id)->sole());
+        $this->post(at("bills/{$bill->id}/void"), ['reason' => 'Wrong table'])->assertSessionHasNoErrors();
+        $this->post(at("stock/{$this->soda->id}/adjustments"), ['change' => -1, 'reason' => 'expired'])->assertSessionHasNoErrors();
+        $till = $this->asTenant('acme', fn () => TillShift::query()->where('opened_by', $cashier->id)->sole());
+        $this->post(at("tills/{$till->id}/close"), ['counted_cash' => '9.00', 'closing_note' => 'Short'])->assertSessionHasNoErrors();
+        $this->post(at("tills/{$till->id}/handover"), ['amount' => '9.00'])->assertSessionHasNoErrors();
+
+        globalAdmin();
+        $this->get(at('management/reports'))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('management/reports')
+            ->where('byBranch.0.discountMinor', 500)
+            ->where('byBranch.0.refundedMinor', 3000)
+            ->where('byBranch.0.tillDifferenceMinor', -100)
+            ->where('byBranch.0.tillsOff', 1)
+            ->where('byBranch.0.pendingHandovers', 1)
+            ->where('byBranch.0.pendingHandoverMinor', 900)
+            ->where('byBranch.0.writtenOffMinor', 150)
+            ->has('discounts', 1)
+            ->has('refunds', 1)
+            ->has('tills', 1)
+            ->has('handovers', 1)
+            ->where('writeOffs.0.reason', 'Expired'));
+    });
+});
+
+describe('branch settings', function () {
+    it('lets a manager set receipt lines, starting cash and kitchen timing for their branch', function () {
+        member(['restaurant.branch.configure', 'restaurant.bills.view']);
+        $this->get(at('settings'))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('settings/branch')
+            ->where('details.name', 'Juba')
+            ->where('settings.receipt_footer', null)
+            ->where('defaultSlowMinutes', 20));
+
+        $this->put(at('settings'), ['slow_ticket_minutes' => 2])->assertSessionHasErrors('slow_ticket_minutes');
+        $this->put(at('settings'), [
+            'receipt_header' => 'Opposite the market',
+            'receipt_footer' => 'Thank you',
+            'phone' => '+211 900 000 000',
+            'default_float' => '25.00',
+            'slow_ticket_minutes' => 15,
+        ])->assertSessionHasNoErrors()->assertRedirect(at('settings'));
+
+        $settings = $this->asTenant('acme', fn () => BranchSetting::query()->sole());
+        expect($settings->branch_id)->toBe($this->juba)
+            ->and($settings->default_float_minor)->toBe(2500)
+            ->and($settings->slowTicketMinutes())->toBe(15);
+
+        // Another branch is not theirs to set (it looks unknown); without the permission, none.
+        $this->get(at('settings', $this->wau))->assertNotFound();
+        member(['restaurant.bills.view']);
+        $this->get(at('settings'))->assertForbidden();
+    });
+
+    it('prints the branch lines on receipts, offers the starting cash and times the kitchen', function () {
+        $this->asTenant('acme', fn () => BranchSetting::query()->create([
+            'branch_id' => $this->juba, 'receipt_footer' => 'Thank you', 'phone' => '0900', 'default_float_minor' => 2500, 'slow_ticket_minutes' => 15,
+        ]));
+        member(['restaurant.orders.take', 'restaurant.bills.take', 'restaurant.bills.view', 'restaurant.kitchen.view']);
+        $order = tableOrder([[$this->beans, 1]]);
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'card'])->assertSessionHasNoErrors();
+        $bill = $this->asTenant('acme', fn () => Bill::query()->sole());
+
+        $this->get(at("bills/{$bill->id}"))->assertInertia(fn (Assert $page) => $page->where('receipt.footer', 'Thank you')->where('receipt.phone', '0900'));
+        $this->get(at('tills'))->assertInertia(fn (Assert $page) => $page->where('defaultFloat', '25.00'));
+        $this->get(at('kitchen'))->assertInertia(fn (Assert $page) => $page->where('slowMinutes', 15));
     });
 });

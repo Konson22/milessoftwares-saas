@@ -16,7 +16,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -63,7 +62,7 @@ class FrameworkController extends Controller
         // Milestones are Projects' records, read live as this member sees them.
         $linked = array_values(array_unique(array_map(strval(...), array_filter($results->pluck('linked_milestone_id')->all()))));
         $milestones = LinkedProjects::milestones($this->access(), $linked);
-        $choices = $manages ? $this->milestoneOptions($programme, $linked) : null;
+        $choices = $manages ? LinkedProjects::milestoneOptions($this->access(), $programme, $linked) : null;
 
         return Inertia::render('mel/frameworks/show', [
             'programme' => ['id' => $programme->id, 'code' => $programme->code, 'name' => $programme->name, 'archived' => $programme->isArchived()],
@@ -81,7 +80,7 @@ class FrameworkController extends Controller
                 'responsibleId' => $result->responsible_id,
                 'responsible' => $result->responsible?->name,
                 'linkedMilestoneId' => $result->linked_milestone_id,
-                'milestone' => self::milestone($result->linked_milestone_id === null ? null : ($milestones['milestones'][$result->linked_milestone_id] ?? null)),
+                'milestone' => LinkedProjects::milestoneSummary($result->linked_milestone_id === null ? null : ($milestones['milestones'][$result->linked_milestone_id] ?? null)),
                 'archived' => $result->archived_at !== null,
                 'indicators' => $result->indicators->sortBy('code')->map(fn (Indicator $indicator) => [
                     'id' => $indicator->id,
@@ -217,79 +216,8 @@ class FrameworkController extends Controller
             'risks' => $data['risks'] ?? null,
             'means_of_verification' => $data['means_of_verification'] ?? null,
             'responsible_id' => $data['responsible_id'] ?? null,
-            'linked_milestone_id' => $this->milestoneReference($programme, $result, $data['linked_milestone_id'] ?? null),
+            'linked_milestone_id' => LinkedProjects::milestoneReference($this->access(), $programme, $result?->linked_milestone_id, $data['linked_milestone_id'] ?? null),
             'sort_order' => (int) ($data['sort_order'] ?? 0),
-        ];
-    }
-
-    /**
-     * The milestone a result points to: checked in Projects when it changes
-     * (a milestone of a project linked to this programme, that the member
-     * may see there). While the link is off, the reference stays as it was:
-     * it is never set or cleared without Projects.
-     */
-    private function milestoneReference(Programme $programme, ?Result $result, ?string $given): ?string
-    {
-        $current = $result?->linked_milestone_id;
-        if (! LinkedProjects::enabled()) {
-            return $current;
-        }
-        $given = $given === null ? null : strtolower($given);
-        if ($given === null || $given === $current) {
-            return $given;
-        }
-
-        $read = LinkedProjects::milestones($this->access(), [$given]);
-        if ($read['status'] !== 'ok') {
-            throw ValidationException::withMessages(['linked_milestone_id' => $read['message'] ?? 'Projects is not connected.']);
-        }
-        $milestone = $read['milestones'][$given] ?? null;
-        if ($milestone === null || ! in_array((string) ($milestone['projectId'] ?? ''), $this->linkedProjectIds($programme), true)) {
-            throw ValidationException::withMessages(['linked_milestone_id' => 'Choose a milestone of a project linked to one of this programme\'s units.']);
-        }
-
-        return $given;
-    }
-
-    /**
-     * Milestones of the projects linked to the programme's units, and any
-     * milestone a result already points to that Projects did not list now,
-     * so saving a result never drops its reference unasked.
-     *
-     * @param  list<string>  $kept
-     * @return list<array{value: string, label: string}>
-     */
-    private function milestoneOptions(Programme $programme, array $kept): array
-    {
-        $read = LinkedProjects::enabled() ? LinkedProjects::milestones($this->access(), $this->linkedProjectIds($programme), ofProjects: true) : ['milestones' => []];
-
-        $options = array_values(array_map(fn (array $milestone) => ['value' => (string) $milestone['id'], 'label' => (string) $milestone['label']], $read['milestones']));
-        foreach (array_diff($kept, array_keys($read['milestones'])) as $id) {
-            $options[] = ['value' => $id, 'label' => 'Milestone kept from before (not shown by Projects now)'];
-        }
-
-        return $options;
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function linkedProjectIds(Programme $programme): array
-    {
-        return array_values($programme->units()->whereNotNull('linked_project_id')->pluck('linked_project_id')->map(fn (mixed $id) => (string) $id)->all());
-    }
-
-    /**
-     * @param  array<string, mixed>|null  $milestone  as Projects answered
-     * @return array{name: string, project: string, dueOn: string|null, reachedOn: string|null}|null
-     */
-    private static function milestone(?array $milestone): ?array
-    {
-        return $milestone === null ? null : [
-            'name' => (string) $milestone['name'],
-            'project' => (string) $milestone['projectCode'],
-            'dueOn' => is_string($milestone['dueOn'] ?? null) ? $milestone['dueOn'] : null,
-            'reachedOn' => is_string($milestone['reachedOn'] ?? null) ? $milestone['reachedOn'] : null,
         ];
     }
 }

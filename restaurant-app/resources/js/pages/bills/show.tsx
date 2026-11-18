@@ -20,6 +20,12 @@ type Props = {
         order: { id: string; number: string; table: string | null };
         customerName: string | null;
         currency: string;
+        subtotalMinor: number;
+        discountMinor: number;
+        discountReason: string | null;
+        /** An equal share of the order: share part of parts. */
+        part: number | null;
+        parts: number | null;
         totalMinor: number;
         paymentMethod: string;
         paymentReference: string | null;
@@ -37,13 +43,18 @@ type Props = {
             totalMinor: number;
         }[];
     };
+    receipt: {
+        header: string | null;
+        footer: string | null;
+        phone: string | null;
+    };
     canVoid: boolean;
 };
 
 /**
  * A paid bill, printable as the receipt, and for managers voiding it.
  */
-export default function ShowBill({ bill, canVoid }: Props) {
+export default function ShowBill({ bill, receipt, canVoid }: Props) {
     const { workspace, branch } = usePage().props;
     const money = (minor: number) => formatMoney(minor, bill.currency);
 
@@ -63,7 +74,7 @@ export default function ShowBill({ bill, canVoid }: Props) {
                             <Link href={index()}>← Bills paid</Link>
                         </Button>
                         <Button variant="outline" size="sm" asChild>
-                            <Link href={showOrder(bill.order.id)}>
+                            <Link href={showOrder({ order: bill.order.id })}>
                                 Order {bill.order.number}
                             </Link>
                         </Button>
@@ -85,7 +96,13 @@ export default function ShowBill({ bill, canVoid }: Props) {
                         <p className="font-semibold">{workspace?.name}</p>
                         <p className="text-sm text-muted-foreground">
                             {branch?.name}
+                            {receipt.phone && ` · ${receipt.phone}`}
                         </p>
+                        {receipt.header && (
+                            <p className="mt-1 text-sm whitespace-pre-line">
+                                {receipt.header}
+                            </p>
+                        )}
                         <h1 className="mt-3 text-xl font-semibold">
                             Receipt {bill.number}
                         </h1>
@@ -120,6 +137,29 @@ export default function ShowBill({ bill, canVoid }: Props) {
                             ))}
                         </tbody>
                         <tfoot className="border-t">
+                            {bill.discountMinor > 0 && (
+                                <>
+                                    <tr>
+                                        <td className="py-0.5">Subtotal</td>
+                                        <td className="py-0.5 text-right tabular-nums">
+                                            {money(bill.subtotalMinor)}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-0.5">
+                                            Discount
+                                            {bill.discountReason && (
+                                                <span className="block text-xs text-muted-foreground">
+                                                    {bill.discountReason}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="py-0.5 text-right tabular-nums">
+                                            − {money(bill.discountMinor)}
+                                        </td>
+                                    </tr>
+                                </>
+                            )}
                             <tr className="font-semibold">
                                 <td className="py-1.5">Total</td>
                                 <td className="py-1.5 text-right tabular-nums">
@@ -151,6 +191,12 @@ export default function ShowBill({ bill, canVoid }: Props) {
                         </tfoot>
                     </table>
 
+                    {receipt.footer && (
+                        <p className="mt-4 text-center text-sm whitespace-pre-line text-muted-foreground">
+                            {receipt.footer}
+                        </p>
+                    )}
+
                     {bill.status === 'voided' && (
                         <p className="mt-4 text-sm text-destructive">
                             Voided by {bill.voidedBy} on{' '}
@@ -164,7 +210,7 @@ export default function ShowBill({ bill, canVoid }: Props) {
 
             {canVoid && bill.status !== 'voided' && (
                 <Form
-                    {...voidBill.form(bill.id)}
+                    {...voidBill.form({ bill: bill.id })}
                     className="mx-auto mt-4 flex max-w-md flex-wrap items-start gap-2 print:hidden"
                 >
                     {({ errors, processing }) => (

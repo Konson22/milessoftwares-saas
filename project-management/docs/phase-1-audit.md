@@ -39,7 +39,7 @@ read-only row counts of the live database.
 | Database                 | PostgreSQL (`DB_CONNECTION=pgsql`, db `projects`); tests use in-memory SQLite                                |
 | Sessions / cache / queue | `database` drivers; session cookie `miles_projects_session`, path `/projects`, encrypted                     |
 | Tests                    | Pest 5 (feature tests against a faked platform), PHPStan/Larastan, Pint                                      |
-| Hosting model            | Served at `{workspace-slug}.milesoftwares.localhost/projects`; the tenant comes from the **subdomain**       |
+| Hosting model            | Served at `{workspace-slug}.tatook.localhost/projects`; the tenant comes from the **subdomain**       |
 
 **Request pipeline (today):**
 

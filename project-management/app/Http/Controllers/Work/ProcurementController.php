@@ -41,10 +41,18 @@ class ProcurementController extends Controller
         abort_unless($this->can($request, 'procurement.view') || $this->can($request, 'procurement.request'), 403);
         $everyone = $this->can($request, 'procurement.view');
         $status = PurchaseRequestStatus::tryFrom($request->string('status')->toString());
-        $requests = PurchaseRequest::query()->with(['project:id,code,name,currency', 'requester:id,name'])
-            ->when(! $everyone, fn ($query) => $query->where('requested_by', $this->member($request)->id))
+        $search = trim($request->string('q')->toString());
+        $visible = fn () => PurchaseRequest::query()
+            ->when(! $everyone, fn ($query) => $query->where('requested_by', $this->member($request)->id));
+        $requests = $visible()->with(['project:id,code,name,currency', 'requester:id,name'])
             ->when($status !== null, fn ($query) => $query->where('status', $status))
+            ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
+                ->whereRaw('lower(title) like ?', ['%'.mb_strtolower($search).'%'])
+                ->orWhereRaw('lower(number) like ?', ['%'.mb_strtolower($search).'%'])))
             ->latest()->orderByDesc('number')->paginate(30)->withQueryString();
+        // Counts for the tabs and the figures, over everything the member sees.
+        $counts = $visible()->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
+        $open = [PurchaseRequestStatus::Draft, PurchaseRequestStatus::Submitted, PurchaseRequestStatus::Approved];
 
         return Inertia::render('portal/procurement/index', [
             'requests' => $requests->through(fn (PurchaseRequest $purchase) => [
@@ -59,8 +67,12 @@ class ProcurementController extends Controller
                 'currency' => $purchase->project->currency,
                 'neededBy' => $purchase->needed_by?->toDateString(),
             ]),
-            'statuses' => array_map(fn (PurchaseRequestStatus $case) => ['value' => $case->value, 'label' => $case->label()], PurchaseRequestStatus::cases()),
+            'statuses' => array_map(fn (PurchaseRequestStatus $case) => ['value' => $case->value, 'label' => $case->label(), 'count' => (int) ($counts[$case->value] ?? 0)], PurchaseRequestStatus::cases()),
+            'total' => (int) $counts->sum(),
+            // Still to be bought and past the day it was needed by.
+            'overdue' => $visible()->whereIn('status', $open)->whereDate('needed_by', '<', today())->count(),
             'status' => $status?->value,
+            'search' => $search,
             'canRequest' => $this->can($request, 'procurement.request'),
         ]);
     }

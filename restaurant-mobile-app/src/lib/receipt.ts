@@ -93,6 +93,12 @@ export interface PaidBill {
   paidBy: string;
   order: { number: string; table: string | null };
   customerName: string | null;
+  subtotalMinor?: number;
+  discountMinor?: number;
+  discountReason?: string | null;
+  /** An equal share of the order: share part of parts. */
+  part?: number | null;
+  parts?: number | null;
   totalMinor: number;
   paymentMethod: string;
   paymentReference: string | null;
@@ -108,10 +114,16 @@ export function printPaidBill(bill: PaidBill, business: Business): Promise<void>
     business: business.name,
     branch: business.branch,
     title: `Bill ${bill.number}${bill.status === 'voided' ? ' (voided)' : ''}`,
-    details: [`${where} · ${bill.order.number}`, dateTime(bill.paidAt)],
+    details: [`${where} · ${bill.order.number}`, ...(bill.parts ? [`Share ${bill.part} of ${bill.parts}`] : []), dateTime(bill.paidAt)],
     lines: bill.lines,
     totalMinor: bill.totalMinor,
     footer: [
+      ...(bill.discountMinor
+        ? [
+            `Subtotal ${money(bill.subtotalMinor ?? bill.totalMinor + bill.discountMinor)}`,
+            `Discount − ${money(bill.discountMinor)}${bill.discountReason ? ` (${bill.discountReason})` : ''}`,
+          ]
+        : []),
       `Paid by ${bill.paymentMethod}${bill.paymentReference ? ` (${bill.paymentReference})` : ''}`,
       ...(bill.tenderedMinor !== null ? [`Given ${money(bill.tenderedMinor)} · change ${money(bill.changeMinor ?? 0)}`] : []),
       `Served by ${bill.paidBy}.`,

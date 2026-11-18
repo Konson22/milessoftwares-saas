@@ -93,7 +93,7 @@ export default function LoginScreen() {
                 ? recovery
                   ? 'Enter one of your recovery codes.'
                   : 'Enter the code from your authenticator app.'
-                : 'Sign in with your Miles Softwares account.'}
+                : 'Sign in with your Tatook account.'}
             </Text>
           </View>
 
@@ -175,7 +175,7 @@ export default function LoginScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
                     onPress={() => setShowPassword(!showPassword)}
-                    className="h-11 w-11 items-center justify-center active:bg-white/10">
+                    className="h-11 w-11 items-center justify-center active:bg-brand-800">
                     <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.brand[100]} />
                   </Pressable>
                 }

@@ -1,13 +1,14 @@
-import { Form, Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { Building2 } from 'lucide-react';
 import { EmptyState } from '@miles/ui/components/empty-state';
 import { PageHeader } from '@miles/ui/components/page-header';
 import { Panel, PanelBody } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
-import { update } from '@/routes/branch';
 
 type Props = {
-    branches: { id: string; name: string; city: string | null }[];
+    /** url: the branch's workspace (with the page an old link asked for). */
+    branches: { id: string; name: string; city: string | null; url: string }[];
+    /** The branch last worked in, if any. */
     current: string | null;
     /** Why there is nothing to choose, if so. */
     reason: 'no_branches' | 'no_role' | null;
@@ -26,7 +27,7 @@ export default function ChooseBranch({
             <Head title="Choose a branch" />
             <PageHeader
                 title="Where are you working?"
-                description="Tables, orders, bills and stock belong to the branch you choose."
+                description="Tables, orders, bills and stock belong to one branch. Open the one you work in: each branch keeps its own tab."
             />
 
             <Panel className="max-w-2xl">
@@ -59,31 +60,26 @@ export default function ChooseBranch({
                         <ul className="grid gap-3 sm:grid-cols-2">
                             {branches.map((branch) => (
                                 <li key={branch.id}>
-                                    <Form {...update.form()}>
-                                        <input
-                                            type="hidden"
-                                            name="branch_id"
-                                            value={branch.id}
-                                        />
-                                        <Button
-                                            type="submit"
-                                            variant={
-                                                branch.id === current
-                                                    ? 'default'
-                                                    : 'outline'
-                                            }
-                                            className="h-auto w-full flex-col items-start py-3"
-                                        >
+                                    <Button
+                                        asChild
+                                        variant={
+                                            branch.id === current
+                                                ? 'default'
+                                                : 'outline'
+                                        }
+                                        className="h-auto w-full flex-col items-start py-3"
+                                    >
+                                        <Link href={branch.url}>
                                             <span className="font-medium">
                                                 {branch.name}
                                             </span>
                                             {branch.city && (
-                                                <span className="text-xs opacity-80">
+                                                <span className="text-xs font-normal">
                                                     {branch.city}
                                                 </span>
                                             )}
-                                        </Button>
-                                    </Form>
+                                        </Link>
+                                    </Button>
                                 </li>
                             ))}
                         </ul>

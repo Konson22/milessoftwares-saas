@@ -20,7 +20,7 @@ export const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
 
 /**
  * A workspace's address; {workspace} is its slug. Local development points
- * it at the dev PC (http://{workspace}.milesoftwares.localhost does not
+ * it at the dev PC (http://{workspace}.tatook.localhost does not
  * resolve on a phone).
  */
 const WORKSPACE_URL = (process.env.EXPO_PUBLIC_WORKSPACE_URL ?? 'https://{workspace}.tatook.com').replace(/\/$/, '');
@@ -38,12 +38,12 @@ export function webUrl(workspace: string, path = ''): string {
 }
 
 /**
- * Local development on a phone: it cannot resolve *.milesoftwares.localhost,
+ * Local development on a phone: it cannot resolve *.tatook.localhost,
  * so the app's own calls go to this address (e.g. http://127.0.0.1 with
  * `adb reverse tcp:80 tcp:80`) and name the host in the Host header. The
  * sign-in browser needs nothing: it sends *.localhost to loopback itself.
  */
-const DEV_SERVER = (process.env.EXPO_PUBLIC_DEV_SERVER ?? '').replace(/\/$/, '');
+const DEV_SERVER = ((raw) => (raw === '' || /^https?:\/\//.test(raw) ? raw : `http://${raw}`))((process.env.EXPO_PUBLIC_DEV_SERVER ?? '').trim().replace(/\/$/, ''));
 
 /** Where a call to `url` actually goes, and the headers that keep its host. */
 export function reach(url: string): { url: string; headers: Record<string, string> } {

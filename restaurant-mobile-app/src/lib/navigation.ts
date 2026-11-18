@@ -43,6 +43,7 @@ export const navigation: NavGroup[] = [
     items: [
       { title: 'Bills paid', path: 'bills', icon: 'receipt-outline', anyOf: ['restaurant.bills.view'], scope: 'branch', tab: '/bills' },
       { title: 'Shifts', path: 'tills', icon: 'wallet-outline', anyOf: ['restaurant.bills.take', 'restaurant.tills.manage'], scope: 'branch' },
+      { title: 'Day report', path: 'reports', icon: 'bar-chart-outline', anyOf: ['restaurant.reports.view'], scope: 'branch' },
     ],
   },
   {

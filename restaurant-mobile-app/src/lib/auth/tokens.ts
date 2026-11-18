@@ -1,7 +1,7 @@
 import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
-import { Platform } from 'react-native';
+import { NativeModules, Platform, TurboModuleRegistry } from 'react-native';
 
 import { AUTH_URL, CLIENT_ID, GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID, reach } from '../config';
 import { secureStorage } from '../storage';
@@ -223,6 +223,10 @@ function googleSignIn(): GoogleModule | null {
   if (google !== undefined) return google;
   google = null;
   if (Platform.OS === 'web' || !GOOGLE_WEB_CLIENT_ID || (Platform.OS === 'ios' && !GOOGLE_IOS_CLIENT_ID)) return google;
+  // Expo Go and builds made before Google was added lack the native module.
+  // Requiring the library then throws inside React Native's module loader,
+  // which reports it as an error even though it is caught: look first.
+  if (!(TurboModuleRegistry.get('RNGoogleSignin') ?? NativeModules.RNGoogleSignin)) return google;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     google = require('@react-native-google-signin/google-signin') as GoogleModule;
@@ -357,7 +361,7 @@ export async function accessToken(force = false): Promise<string | null> {
  */
 export async function freshIdToken(): Promise<string> {
   const tokens = await refreshed();
-  if (!tokens?.idToken) throw new Error('Cannot reach Miles Softwares. Check the connection, or sign in again.');
+  if (!tokens?.idToken) throw new Error('Cannot reach Tatook. Check the connection, or sign in again.');
   return tokens.idToken;
 }
 
@@ -384,6 +388,13 @@ async function refresh(): Promise<(Tokens & { idToken?: string }) | null> {
 
 class TokenRefused extends Error {}
 
+/** OAuth's answers for details that will never work again (RFC 6749 §5.2). */
+const REFUSED = ['invalid_grant', 'invalid_client', 'unauthorized_client'];
+
+function refused(status: number, error: unknown): boolean {
+  return (status === 400 || status === 401) && (typeof error !== 'string' || REFUSED.includes(error));
+}
+
 interface TokenResponse {
   access_token: string;
   refresh_token?: string;
@@ -399,10 +410,14 @@ async function tokenRequest(body: Record<string, string>): Promise<TokenResponse
     body: query(body),
   });
   const json = await response.json().catch(() => null);
-  if (!response.ok || typeof json?.access_token !== 'string') {
-    throw new TokenRefused(json?.error_description ?? json?.message ?? 'Sign-in failed. Try again.');
-  }
-  return json as TokenResponse;
+  if (response.ok && typeof json?.access_token === 'string') return json as TokenResponse;
+
+  const message = json?.error_description ?? json?.message ?? 'Sign-in failed. Try again.';
+  // Only the platform saying no to these details signs out (a revoked or
+  // expired refresh token, an unknown client). A deploy, an overloaded
+  // server or too many calls is temporary: the tokens are kept.
+  if (refused(response.status, json?.error)) throw new TokenRefused(message);
+  throw new Error(message);
 }
 
 function fromResponse(tokens: TokenResponse): Tokens {

@@ -35,7 +35,22 @@ interface Line {
   ticket: string | null;
   voidReason: string | null;
   voidedBy: string | null;
+  /** The bill that paid it, when the order is paid in parts. */
+  paidOn?: string | null;
 }
+
+interface PaidBill {
+  id: string;
+  number: string;
+  totalMinor: number;
+  discountMinor: number;
+  part: number | null;
+  parts: number | null;
+  paymentMethod: string;
+  status: string;
+}
+
+type PayMode = 'whole' | 'items' | 'shares';
 
 interface MenuItem {
   id: string;
@@ -58,17 +73,22 @@ interface Props {
     openedBy: string;
     cancelReason: string | null;
     bill: { id: string; number: string; totalMinor: number; status: string } | null;
+    bills?: PaidBill[];
     lines: Line[];
   };
   bill: {
     lines: { item_id: string; name: string; quantity: number; unit_price_minor: number; total_minor: number }[];
+    /** What is left to pay now. */
     total_minor: number;
+    lines_open?: { id: string; name: string; quantity: number; note: string | null; total_minor: number }[];
+    paid_minor?: number;
+    shares?: { parts: number; paid: number; paid_minor: number; next_minor: number } | null;
   };
   menu: MenuItem[];
   freeTables: { id: string; name: string }[];
   paymentMethods: { value: string; label: string }[];
   tillOpen: boolean;
-  can: { void: boolean; pay: boolean };
+  can: { void: boolean; pay: boolean; discount?: boolean };
 }
 
 type Draft = { key: number; item: MenuItem; quantity: number; note: string };
@@ -110,6 +130,14 @@ export function OrderScreen({ page, path, reload }: ScreenProps<Props>) {
   const [method, setMethod] = useState(paymentMethods[0]?.value ?? 'cash');
   const [tendered, setTendered] = useState('');
   const [reference, setReference] = useState('');
+  const running = bill.shares ?? null;
+  const [mode, setMode] = useState<PayMode>('whole');
+  const [parts, setParts] = useState(2);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [discounting, setDiscounting] = useState(false);
+  const [discountType, setDiscountType] = useState<'percent' | 'amount'>('percent');
+  const [discount, setDiscount] = useState('');
+  const [discountReason, setDiscountReason] = useState('');
 
   const sections = useMemo(() => [...new Set(menu.map((item) => item.section ?? 'Other'))], [menu]);
   const shown = menu.filter(
@@ -123,8 +151,23 @@ export function OrderScreen({ page, path, reload }: ScreenProps<Props>) {
   const where = order.table ? `Table ${order.table.name}` : `Takeaway${order.customerName ? ` · ${order.customerName}` : ''}`;
   const canSeeBills = (page.props.access?.isOwner ?? false) || (page.props.branchPermissions ?? []).includes('restaurant.bills.view');
   const tickets = [...new Set(order.lines.map((line) => line.ticket).filter((t): t is string => t !== null))].sort();
+  const openLines = bill.lines_open ?? [];
+  const keptBills = (order.bills ?? []).filter((b) => b.status === 'paid');
+  const shareMinor = running ? running.next_minor : Math.floor(bill.total_minor / parts);
+  const partMinor =
+    mode === 'items'
+      ? openLines.filter((line) => picked.includes(line.id)).reduce((sum, line) => sum + line.total_minor, 0)
+      : mode === 'shares'
+        ? shareMinor
+        : bill.total_minor;
+  const discountMinor = !discounting
+    ? 0
+    : discountType === 'percent'
+      ? Math.round((partMinor * Math.min(Number.parseInt(discount, 10) || 0, 100)) / 100)
+      : Math.min(toMinor(discount) ?? 0, partMinor);
+  const dueMinor = Math.max(partMinor - discountMinor, 0);
   const tenderedMinor = tendered.trim() === '' ? null : toMinor(tendered);
-  const change = tenderedMinor !== null ? tenderedMinor - bill.total_minor : null;
+  const change = tenderedMinor !== null ? tenderedMinor - dueMinor : null;
 
   const pick = (item: MenuItem) => {
     const same = drafts.find((draft) => draft.item.id === item.id && draft.note === '');
@@ -192,11 +235,28 @@ export function OrderScreen({ page, path, reload }: ScreenProps<Props>) {
       payment_method: method,
       amount_tendered: method === 'cash' && tendered.trim() !== '' ? amountInput(tendered.trim()) : null,
       payment_reference: method !== 'cash' && reference.trim() !== '' ? reference.trim() : null,
+      // Parts and discounts need the connection: the phone never keeps them offline.
+      ...(mode === 'items' ? { line_ids: picked } : {}),
+      ...(mode === 'shares' ? { parts: running?.parts ?? parts } : {}),
+      ...(discounting && discount.trim() !== ''
+        ? { discount_type: discountType, discount: discountType === 'amount' ? amountInput(discount.trim()) : discount.trim(), discount_reason: discountReason.trim() }
+        : {}),
     });
     if (ok) {
       setPaying(false);
       setJustPaid(true);
+      setPicked([]);
+      setDiscounting(false);
+      setDiscount('');
+      setDiscountReason('');
+      setTendered('');
     }
+  };
+
+  const startPaying = () => {
+    setMode(running ? 'shares' : 'whole');
+    setPicked([]);
+    setPaying(true);
   };
 
   /** The customer's receipt once the order is paid. */
@@ -323,7 +383,7 @@ export function OrderScreen({ page, path, reload }: ScreenProps<Props>) {
               onPress={() => setReviewing(true)}
               className="flex-row items-center gap-3 bg-brand-600 px-4 pt-3 active:bg-brand-700"
               style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
-              <View className="h-8 min-w-8 items-center justify-center bg-white/20 px-1.5">
+              <View className="h-8 min-w-8 items-center justify-center bg-brand-800 px-1.5">
                 <Text className="text-base font-bold text-white">{draftCount}</Text>
               </View>
               <Text className="flex-1 text-base font-semibold text-white">Review and send</Text>
@@ -338,7 +398,9 @@ export function OrderScreen({ page, path, reload }: ScreenProps<Props>) {
           {order.bill ? (
             <Pressable accessibilityRole="button" onPress={() => openPage(`bills/${order.bill!.id}`)}>
               <Banner tone="success">
-                Paid on bill {order.bill.number}, {money(order.bill.totalMinor)}. Tap to open the bill.
+                {isOpen
+                  ? `Part paid on bill ${order.bill.number}, ${money(order.bill.totalMinor)}. Tap to open the bill.`
+                  : `Paid on bill ${order.bill.number}, ${money(order.bill.totalMinor)}. Tap to open the bill.`}
               </Banner>
             </Pressable>
           ) : null}
@@ -349,10 +411,10 @@ export function OrderScreen({ page, path, reload }: ScreenProps<Props>) {
               <Text className="px-4 py-6 text-center text-base text-slate-500">Nothing yet: add from the menu.</Text>
             ) : (
               order.lines.map((line) => (
-                <View key={line.id} className={`flex-row items-start gap-2 border-b border-slate-100 px-4 py-2.5 ${line.status === 'voided' ? 'opacity-60' : ''}`}>
+                <View key={line.id} className={`flex-row items-start gap-2 border-b border-slate-100 px-4 py-2.5 ${line.status === 'voided' ? 'bg-slate-50' : ''}`}>
                   <Text className="w-8 text-base font-bold text-slate-900">{line.quantity}×</Text>
                   <View className="flex-1 gap-1">
-                    <Text className={`text-base font-medium text-slate-900 ${line.status === 'voided' ? 'line-through' : ''}`}>{line.name}</Text>
+                    <Text className={`text-base font-medium ${line.status === 'voided' ? 'text-slate-500 line-through' : 'text-slate-900'}`}>{line.name}</Text>
                     {line.note ? <Text className="text-sm text-amber-800">“{line.note}”</Text> : null}
                     {line.status === 'voided' ? (
                       <Text className="text-sm text-red-700">
@@ -360,14 +422,15 @@ export function OrderScreen({ page, path, reload }: ScreenProps<Props>) {
                         {line.voidedBy ? ` · ${line.voidedBy}` : ''}
                       </Text>
                     ) : null}
-                    <View className="flex-row">
+                    <View className="flex-row gap-1">
                       <Badge label={`${STATUS[line.status].label}${line.ticket ? ` · ${line.ticket}` : ''}`} tone={STATUS[line.status].tone} />
+                      {isOpen && line.paidOn ? <Badge label={`Paid · ${line.paidOn}`} tone="green" /> : null}
                     </View>
                   </View>
                   {isOpen && line.status === 'new' ? (
                     <IconButton icon="trash-outline" label={`Take off ${line.name}`} disabled={busy} onPress={() => void run('DELETE', `orders/${order.id}/lines/${line.id}`)} />
                   ) : null}
-                  {isOpen && can.void && line.status !== 'new' && line.status !== 'voided' ? (
+                  {isOpen && can.void && line.status !== 'new' && line.status !== 'voided' && !line.paidOn ? (
                     <IconButton
                       icon="ban-outline"
                       label={`Void ${line.name}`}
@@ -403,7 +466,7 @@ export function OrderScreen({ page, path, reload }: ScreenProps<Props>) {
           </Panel>
 
           {isOpen ? (
-            <Panel title="Bill" right={<Text className="text-lg font-bold text-brand-900">{money(bill.total_minor)}</Text>}>
+            <Panel title={keptBills.length > 0 ? 'Still to pay' : 'Bill'} right={<Text className="text-lg font-bold text-brand-900">{money(bill.total_minor)}</Text>}>
               {bill.lines.map((line) => (
                 <View key={line.item_id} className="flex-row justify-between gap-2 border-b border-slate-100 px-4 py-2">
                   <Text className="flex-1 text-base text-slate-700">
@@ -411,6 +474,28 @@ export function OrderScreen({ page, path, reload }: ScreenProps<Props>) {
                   </Text>
                   <Text className="text-base text-slate-900">{money(line.total_minor)}</Text>
                 </View>
+              ))}
+              {running ? (
+                <View className="flex-row justify-between gap-2 border-b border-slate-100 px-4 py-2">
+                  <Text className="flex-1 text-base text-slate-500">
+                    {running.paid} of {running.parts} shares paid
+                  </Text>
+                  <Text className="text-base text-slate-500">− {money(running.paid_minor)}</Text>
+                </View>
+              ) : null}
+              {keptBills.map((paid) => (
+                <Pressable
+                  key={paid.id}
+                  accessibilityRole="button"
+                  onPress={() => openPage(`bills/${paid.id}`)}
+                  className="flex-row justify-between gap-2 border-b border-slate-100 bg-slate-50 px-4 py-2"
+                >
+                  <Text className="flex-1 text-sm text-slate-600">
+                    Bill {paid.number}
+                    {paid.parts ? ` · share ${paid.part} of ${paid.parts}` : ''} · {paid.paymentMethod}
+                  </Text>
+                  <Text className="text-sm text-slate-600">{money(paid.totalMinor)}</Text>
+                </Pressable>
               ))}
               {can.pay && !tillOpen && bill.lines.length > 0 ? (
                 <View className="gap-2 p-4">
@@ -431,7 +516,7 @@ export function OrderScreen({ page, path, reload }: ScreenProps<Props>) {
             <>
               <Button title="Print bill" icon="print-outline" variant="outline" size="lg" className={can.pay && tillOpen ? '' : 'flex-1'} onPress={print} />
               {can.pay && tillOpen ? (
-                <Button title={`Take ${money(bill.total_minor)}`} icon="cash-outline" variant="accent" size="lg" className="flex-1" onPress={() => setPaying(true)} />
+                <Button title={`Take ${money(bill.total_minor)}`} icon="cash-outline" variant="accent" size="lg" className="flex-1" onPress={startPaying} />
               ) : null}
             </>
           )}
@@ -463,7 +548,91 @@ export function OrderScreen({ page, path, reload }: ScreenProps<Props>) {
         <Button title="Add to order, send later" variant="outline" disabled={busy} onPress={() => void addDrafts(false)} />
       </Sheet>
 
-      <Sheet visible={paying} onClose={() => setPaying(false)} title={`Take ${money(bill.total_minor)}`}>
+      <Sheet visible={paying} onClose={() => setPaying(false)} title={`Take ${money(dueMinor)}`}>
+        {openLines.length > 0 ? (
+          <Chips
+            options={[
+              { value: 'whole', label: running ? 'The rest' : 'Whole bill' },
+              ...(running ? [] : [{ value: 'items', label: 'By items' }]),
+              { value: 'shares', label: running ? `Share ${running.paid + 1} of ${running.parts}` : 'Equal shares' },
+            ]}
+            value={mode}
+            onChange={(value) => {
+              setMode(value as PayMode);
+              setPicked([]);
+            }}
+          />
+        ) : null}
+        {mode === 'items' ? (
+          <View className="overflow-hidden rounded-xl border border-slate-200">
+            {openLines.map((line) => {
+              const on = picked.includes(line.id);
+              return (
+                <Pressable
+                  key={line.id}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: on }}
+                  onPress={() => setPicked(on ? picked.filter((id) => id !== line.id) : [...picked, line.id])}
+                  className={`flex-row items-center gap-3 border-b border-slate-100 px-3 py-2.5 ${on ? 'bg-brand-50' : 'bg-white'}`}
+                >
+                  <Ionicons name={on ? 'checkbox' : 'square-outline'} size={22} color={on ? colors.brand[700] : colors.muted} />
+                  <Text className="flex-1 text-base text-slate-900">
+                    {line.quantity} × {line.name}
+                    {line.note ? <Text className="text-sm text-slate-500"> · {line.note}</Text> : null}
+                  </Text>
+                  <Text className="text-base text-slate-900">{money(line.total_minor)}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
+        {errors.line_ids ? <Banner tone="error">{errors.line_ids}</Banner> : null}
+        {mode === 'shares' && !running ? (
+          <View className="flex-row items-center gap-3">
+            <Text className="flex-1 text-base text-slate-700">Split between</Text>
+            <IconButton icon="remove-circle-outline" label="One fewer share" disabled={parts <= 2} onPress={() => setParts(Math.max(parts - 1, 2))} />
+            <Text className="w-10 text-center text-lg font-bold text-slate-900">{parts}</Text>
+            <IconButton icon="add-circle-outline" label="One more share" disabled={parts >= 20} onPress={() => setParts(Math.min(parts + 1, 20))} />
+          </View>
+        ) : null}
+        {mode === 'shares' ? (
+          <Text className="text-sm text-slate-500">{running ? 'The last share takes what is left.' : `${money(shareMinor)} each; the last share takes what is left.`}</Text>
+        ) : null}
+        {errors.parts ? <Banner tone="error">{errors.parts}</Banner> : null}
+        {can.discount ? (
+          discounting ? (
+            <View className="gap-2 rounded-xl border border-slate-200 p-3">
+              <Chips
+                options={[
+                  { value: 'percent', label: '% off' },
+                  { value: 'amount', label: 'Amount off' },
+                ]}
+                value={discountType}
+                onChange={(value) => setDiscountType(value as 'percent' | 'amount')}
+              />
+              <Field
+                label="Discount"
+                value={discount}
+                onChangeText={setDiscount}
+                keyboardType="decimal-pad"
+                placeholder={discountType === 'percent' ? '10' : money(0, false)}
+                error={errors.discount}
+                hint={discountMinor > 0 ? `${money(discountMinor)} off ${money(partMinor)}` : undefined}
+              />
+              <Field label="Why" value={discountReason} onChangeText={setDiscountReason} placeholder="Regular, complaint…" maxLength={255} error={errors.discount_reason} />
+              <Button
+                title="No discount"
+                variant="ghost"
+                onPress={() => {
+                  setDiscounting(false);
+                  setDiscount('');
+                }}
+              />
+            </View>
+          ) : (
+            <Button title="Give a discount" icon="pricetag-outline" variant="outline" onPress={() => setDiscounting(true)} />
+          )
+        ) : null}
         <Text className="text-sm font-medium text-slate-700">Paid by</Text>
         <Chips options={paymentMethods} value={method} onChange={setMethod} />
         {errors.payment_method ? <Banner tone="error">{errors.payment_method}</Banner> : null}
@@ -474,7 +643,7 @@ export function OrderScreen({ page, path, reload }: ScreenProps<Props>) {
             value={tendered}
             onChangeText={setTendered}
             keyboardType="decimal-pad"
-            placeholder={money(bill.total_minor, false)}
+            placeholder={money(dueMinor, false)}
             error={errors.amount_tendered}
             hint={change !== null && change >= 0 ? `Change ${money(change)}` : change !== null ? 'Less than the bill' : 'Optional: for the change.'}
           />
@@ -482,12 +651,12 @@ export function OrderScreen({ page, path, reload }: ScreenProps<Props>) {
           <Field label="Reference" hint="Optional: the transaction number." value={reference} onChangeText={setReference} maxLength={64} error={errors.payment_reference} />
         )}
         <Button
-          title={`Take ${money(bill.total_minor)}`}
+          title={`Take ${money(dueMinor)}`}
           icon="checkmark-circle-outline"
           variant="accent"
           size="lg"
           loading={busy}
-          disabled={change !== null && change < 0}
+          disabled={(change !== null && change < 0) || (mode === 'items' && picked.length === 0) || (discounting && discount.trim() !== '' && discountReason.trim() === '')}
           onPress={pay}
         />
       </Sheet>

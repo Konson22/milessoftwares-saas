@@ -38,7 +38,7 @@ export function syncNow(): Promise<void> {
     if (!owner || useAuth.getState().status !== 'ready') return;
     useSync.setState({ running: true });
     try {
-      const result = await useOutbox.getState().flush(owner);
+      const result = await useOutbox.getState().flush(owner, scope);
       if (Object.keys(result.renamed).length > 0) {
         useSync.setState((s) => ({ renamed: { ...s.renamed, ...result.renamed } }));
         for (const from of Object.keys(result.renamed)) {

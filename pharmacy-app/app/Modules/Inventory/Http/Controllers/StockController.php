@@ -209,8 +209,11 @@ class StockController extends Controller
             'expires_on' => [Rule::requiredIf($item->tracks_expiry), 'nullable', 'date', 'after:today'],
             'quantity' => ['required', 'integer', 'min:1', 'max:1000000'],
             'unit_cost' => ['required', 'string', Money::rule()],
+            'unit_cost_currency' => Money::currencyRule(),
             'location_id' => ['nullable', 'uuid'],
         ]);
+        // A cost in another currency is kept in the workspace currency at today's rate.
+        $cost = Money::entered($validated, 'unit_cost');
 
         $stock->add(
             item: $item,
@@ -218,7 +221,7 @@ class StockController extends Controller
             batchNumber: trim($validated['batch_number']),
             expiresOn: isset($validated['expires_on']) ? CarbonImmutable::parse($validated['expires_on']) : null,
             quantity: (int) $validated['quantity'],
-            unitCostMinor: Money::toMinor($validated['unit_cost']),
+            unitCostMinor: $cost->baseMinor,
             user: $this->user($request),
             type: MovementType::Opening,
             location: isset($validated['location_id'])

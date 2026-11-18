@@ -129,7 +129,9 @@ export default function Tables({ tables, areas }: Props) {
                                 <TableRow key={table.id}>
                                     <TableCell colSpan={4}>
                                         <Form
-                                            {...update.form(table.id)}
+                                            {...update.form({
+                                                table: table.id,
+                                            })}
                                             options={{ preserveScroll: true }}
                                             className="flex flex-wrap items-center gap-2"
                                         >

@@ -1,6 +1,7 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { PageHeader } from '@miles/ui/components/page-header';
+import { CurrencyPicker } from '@miles/ui/components/money-input';
 import { Panel, PanelBody, PanelToolbar } from '@miles/ui/components/panel';
 import { SearchField } from '@miles/ui/components/search-field';
 import { Button } from '@miles/ui/components/ui/button';
@@ -127,9 +128,15 @@ export default function ShowPriceList({ priceList, items }: Props) {
                                     aria-label="Find a product"
                                     className="max-w-sm"
                                 />
-                                <Button type="submit" disabled={processing}>
-                                    Save prices
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <CurrencyPicker
+                                        name="currency"
+                                        label="Prices typed in"
+                                    />
+                                    <Button type="submit" disabled={processing}>
+                                        Save prices
+                                    </Button>
+                                </div>
                             </PanelToolbar>
                             {Object.keys(errors).length > 0 && (
                                 <p className="px-4 pt-3 text-sm text-destructive">

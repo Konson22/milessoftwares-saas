@@ -15,15 +15,17 @@ use Miles\PlatformClient\Tenancy\BelongsToTenant;
  * @property string $organization_id
  * @property string $branch_id
  * @property string $menu_item_id
- * @property string $type opening, sale, bill_void, count, write_off
+ * @property string $type opening, delivery, sale, bill_void, count, write_off
  * @property int $quantity
  * @property int $unit_cost_minor
  * @property string|null $reason
  * @property string|null $note
  * @property string|null $bill_id
+ * @property string|null $delivery_id
  * @property string $created_by
  * @property CarbonImmutable $created_at
  * @property-read User $creator
+ * @property-read MenuItem $item
  */
 class StockMovement extends Model
 {
@@ -33,6 +35,9 @@ class StockMovement extends Model
     public const UPDATED_AT = null;
 
     public const OPENING = 'opening';
+
+    /** Delivered by a supplier (StockDelivery). */
+    public const DELIVERY = 'delivery';
 
     public const SALE = 'sale';
 
@@ -47,6 +52,14 @@ class StockMovement extends Model
     protected function casts(): array
     {
         return ['quantity' => 'integer', 'unit_cost_minor' => 'integer'];
+    }
+
+    /**
+     * @return BelongsTo<MenuItem, $this>
+     */
+    public function item(): BelongsTo
+    {
+        return $this->belongsTo(MenuItem::class, 'menu_item_id');
     }
 
     /**

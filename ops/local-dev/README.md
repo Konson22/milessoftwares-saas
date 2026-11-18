@@ -1,19 +1,19 @@
 # Local development (Windows)
 
-`apache-dev.conf` serves `milesoftwares.localhost` and every `*.milesoftwares.localhost` on port 80,
+`apache-dev.conf` serves `tatook.localhost` and every `*.tatook.localhost` on port 80,
 forwarding to `php artisan serve` on :8100 (see `docs/PROGRESS.md`, Decisions).
 
 ## Workspace subdomains resolve by themselves
 
-Each organization gets its own host (`{slug}.milesoftwares.localhost`). The Windows hosts file has no
+Each organization gets its own host (`{slug}.tatook.localhost`). The Windows hosts file has no
 wildcards, so this machine runs [Acrylic DNS Proxy](https://mayakron.altervista.org/) (installed
 2026-10-16 with `winget install Mayakron.AcrylicDNS`) as its DNS server:
 
 - `C:\Program Files (x86)\Acrylic DNS Proxy\AcrylicHosts.txt` ends with
 
     ```
-    127.0.0.1 milesoftwares.localhost
-    127.0.0.1 *.milesoftwares.localhost
+    127.0.0.1 tatook.localhost
+    127.0.0.1 *.tatook.localhost
     ```
 
   Loopback, not the LAN address: Apache listens on every interface, so the entry survives network
@@ -29,7 +29,7 @@ If subdomains stop resolving, check the Wi-Fi DNS first: `Get-DnsClientServerAdd
 must show `127.0.0.1` / `::1`. To restore it (elevated):
 `Set-DnsClientServerAddress -InterfaceAlias Wi-Fi -ServerAddresses 127.0.0.1,::1`.
 
-Check: `Resolve-DnsName anything.milesoftwares.localhost -Server 127.0.0.1`.
+Check: `Resolve-DnsName anything.tatook.localhost -Server 127.0.0.1`.
 
 ### Undo
 
@@ -46,7 +46,7 @@ The old per-subdomain lines in `C:\Windows\System32\drivers\etc\hosts` still wor
 
 `composer run dev` in `central-app` serves both addresses at once, with no extra setup:
 
-- This PC's browser: `http://milesoftwares.localhost` (and `auth.`, `app.`, `{slug}.`).
+- This PC's browser: `http://tatook.localhost` (and `auth.`, `app.`, `{slug}.`).
 - A phone on the same Wi-Fi: this PC's LAN IP on port 80, naming the platform host in the `Host` header.
 
 Use port 80, not :8100. The firewall allows Apache but not `php artisan serve`, and only Apache
@@ -62,7 +62,7 @@ EXPO_PUBLIC_DEV_SERVER=http://192.168.88.30
 Find the current address with `ipconfig`; it changes with the network. Check it from the PC:
 
 ```
-curl -H "Host: auth.milesoftwares.localhost" http://192.168.88.30/.well-known/openid-configuration
+curl -H "Host: auth.tatook.localhost" http://192.168.88.30/.well-known/openid-configuration
 ```
 
 The bare IP does not serve the platform: Apache sends it to the staging site, and routes are matched by

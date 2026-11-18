@@ -21,10 +21,12 @@ import {
     Undo2,
     Users,
     Wallet,
+    Coins,
 } from 'lucide-react';
 import type { NavGroup } from '@/lib/navigation';
 import { home } from '@/routes/retail';
 import { edit as counterSettings } from '@/routes/retail/counter-settings';
+import { index as currencies } from '@/routes/retail/currencies';
 import { index as counts } from '@/routes/retail/counts';
 import { index as customers } from '@/routes/retail/customers';
 import { index as disposals } from '@/routes/retail/disposals';
@@ -105,6 +107,13 @@ export const retailNavigation: NavGroup[] = [
                 icon: Settings2,
                 permission: 'retail.sales.settings',
                 scope: 'branch',
+            },
+            {
+                title: 'Currencies',
+                href: currencies(),
+                icon: Coins,
+                permission: 'retail.sales.settings',
+                scope: 'org',
             },
         ],
     },

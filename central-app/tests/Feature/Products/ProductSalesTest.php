@@ -200,7 +200,7 @@ describe('public site', function () {
 
     it('shows an ERP solution with its applications and plans', function () {
         $this->get(apex('erp/pharmacy'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('public/landing')
+            ->component('public/pharmacy')
             ->where('product.name', 'Pharmacy ERP')
             ->where('product.includes.0.code', 'pharmacy')
             ->where('product.includes.2.requirement', 'optional')

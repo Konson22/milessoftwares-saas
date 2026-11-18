@@ -6,7 +6,7 @@ import { PageHeader } from '@miles/ui/components/page-header';
 import { StatusBadge } from '@miles/ui/components/status-badge';
 import { Button } from '@miles/ui/components/ui/button';
 import { statusTone } from '@/lib/status';
-import { ready, served } from '@/routes/kitchen';
+import { clear, ready, served } from '@/routes/kitchen';
 
 type Ticket = {
     id: string;
@@ -29,9 +29,11 @@ type Ticket = {
         note: string | null;
         voided: boolean;
     }[];
+    /** Every line voided: nothing to make, the cook clears it. */
+    cancelled: boolean;
 };
 
-type Props = { tickets: Ticket[] };
+type Props = { tickets: Ticket[]; slowMinutes: number };
 
 /** How often the screen looks for new tickets. */
 const REFRESH_MS = 15000;
@@ -47,7 +49,7 @@ function minutesSince(iso: string): number {
  * The kitchen's tickets, oldest first: cooking, then ready to go out. The
  * screen refreshes by itself.
  */
-export default function Kitchen({ tickets }: Props) {
+export default function Kitchen({ tickets, slowMinutes }: Props) {
     useEffect(() => {
         const timer = window.setInterval(
             () => router.reload({ only: ['tickets'] }),
@@ -71,11 +73,16 @@ export default function Kitchen({ tickets }: Props) {
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     {tickets.map((ticket) => {
                         const waiting = minutesSince(ticket.sentAt);
+                        const action = ticket.cancelled
+                            ? clear
+                            : ticket.status === 'preparing'
+                              ? ready
+                              : served;
 
                         return (
                             <article
                                 key={ticket.id}
-                                className={`flex flex-col rounded-lg border p-3 ${ticket.status === 'ready' ? 'border-green-500/50 bg-green-500/5' : waiting >= 20 ? 'border-destructive/50' : ''}`}
+                                className={`flex flex-col rounded-lg border p-3 ${ticket.cancelled ? 'border-destructive bg-muted' : ticket.status === 'ready' ? 'border-green-600 bg-green-50 dark:bg-green-950' : waiting >= slowMinutes ? 'border-destructive' : ''}`}
                             >
                                 <header className="flex items-start justify-between gap-2">
                                     <div>
@@ -89,13 +96,19 @@ export default function Kitchen({ tickets }: Props) {
                                             {ticket.sentBy}
                                         </p>
                                     </div>
-                                    <StatusBadge
-                                        tone={statusTone(ticket.status)}
-                                    >
-                                        {ticket.status === 'ready'
-                                            ? 'Ready'
-                                            : `${waiting} min`}
-                                    </StatusBadge>
+                                    {ticket.cancelled ? (
+                                        <StatusBadge tone="danger">
+                                            Cancelled
+                                        </StatusBadge>
+                                    ) : (
+                                        <StatusBadge
+                                            tone={statusTone(ticket.status)}
+                                        >
+                                            {ticket.status === 'ready'
+                                                ? 'Ready'
+                                                : `${waiting} min`}
+                                        </StatusBadge>
+                                    )}
                                 </header>
                                 <ul className="my-3 flex-1 space-y-1.5 text-sm">
                                     {ticket.lines.map((line) => (
@@ -125,9 +138,7 @@ export default function Kitchen({ tickets }: Props) {
                                     ))}
                                 </ul>
                                 <Form
-                                    {...(ticket.status === 'preparing'
-                                        ? ready.form(ticket.id)
-                                        : served.form(ticket.id))}
+                                    {...action.form({ ticket: ticket.id })}
                                     options={{ preserveScroll: true }}
                                 >
                                     {({ processing }) => (
@@ -135,15 +146,18 @@ export default function Kitchen({ tickets }: Props) {
                                             type="submit"
                                             className="w-full"
                                             variant={
-                                                ticket.status === 'preparing'
+                                                ticket.status === 'preparing' &&
+                                                !ticket.cancelled
                                                     ? 'default'
                                                     : 'outline'
                                             }
                                             disabled={processing}
                                         >
-                                            {ticket.status === 'preparing'
-                                                ? 'Ready'
-                                                : 'Served'}
+                                            {ticket.cancelled
+                                                ? 'Stop and clear'
+                                                : ticket.status === 'preparing'
+                                                  ? 'Ready'
+                                                  : 'Served'}
                                         </Button>
                                     )}
                                 </Form>

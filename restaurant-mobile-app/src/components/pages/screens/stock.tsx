@@ -20,19 +20,26 @@ interface Row {
   averageCostMinor: number;
   reorderLevel: number;
   low: boolean;
+  /** Bills sold more than was counted in: below zero. */
+  short?: boolean;
 }
 
 interface ListProps {
   rows: Row[];
   filters: { search: string; filter: 'all' | 'low' };
+  canReceive?: boolean;
 }
 
 /** Drinks in stock at this branch (dishes keep none), those running low first to see. */
 export function StockScreen({ page, reload, go }: ScreenProps<ListProps>) {
-  const { rows, filters } = page.props;
+  const { rows, filters, canReceive } = page.props;
 
   return (
     <Scroll onRefresh={reload}>
+      <View className="flex-row gap-2">
+        {canReceive ? <Button title="Receive a delivery" icon="add" className="flex-1" onPress={() => openPage('stock/deliveries/create')} /> : null}
+        <Button title="Deliveries" icon="cube-outline" variant="outline" className="flex-1" onPress={() => openPage('stock/deliveries')} />
+      </View>
       <Chips
         options={[
           { value: 'all', label: 'Every drink' },
@@ -52,8 +59,8 @@ export function StockScreen({ page, reload, go }: ScreenProps<ListProps>) {
               subtitle={`Reorder at ${row.reorderLevel} · ${money(row.averageCostMinor)} each`}
               right={
                 <View className="items-end">
-                  <Text className={`text-lg font-bold ${row.low ? 'text-amber-700' : 'text-slate-900'}`}>{row.onHand}</Text>
-                  <Text className="text-xs text-slate-500">{row.unit}</Text>
+                  <Text className={`text-lg font-bold ${row.short ? 'text-red-700' : row.low ? 'text-amber-700' : 'text-slate-900'}`}>{row.onHand}</Text>
+                  <Text className={`text-xs ${row.short ? 'font-semibold text-red-700' : 'text-slate-500'}`}>{row.short ? 'Count needed' : row.unit}</Text>
                 </View>
               }
               onPress={() => openPage(`stock/${row.id}`)}
@@ -74,6 +81,7 @@ interface ShowProps {
 
 const TYPES: Record<string, string> = {
   opening: 'Added',
+  delivery: 'Delivered',
   count: 'Counted',
   write_off: 'Written off',
   sale: 'Sold',

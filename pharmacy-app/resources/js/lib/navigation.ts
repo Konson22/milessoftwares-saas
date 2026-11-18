@@ -19,11 +19,13 @@ import {
     Users,
     Wallet,
     ClipboardCheck,
+    Coins,
 } from 'lucide-react';
 import type { ShellNavItem } from '@miles/ui/shell/navigation';
 import { home } from '@/routes';
 import { index as controlled } from '@/routes/controlled';
 import { edit as counterSettings } from '@/routes/counter-settings';
+import { index as currencies } from '@/routes/currencies';
 import { index as counts } from '@/routes/counts';
 import { index as customers } from '@/routes/customers';
 import { index as disposals } from '@/routes/disposals';
@@ -120,6 +122,13 @@ export const navigation: NavGroup[] = [
                 icon: Settings2,
                 permission: 'pharmacy.sales.settings',
                 scope: 'branch',
+            },
+            {
+                title: 'Currencies',
+                href: currencies(),
+                icon: Coins,
+                permission: 'pharmacy.sales.settings',
+                scope: 'org',
             },
         ],
     },

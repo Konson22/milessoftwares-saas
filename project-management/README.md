@@ -191,7 +191,7 @@ settings to `.env` and gives a workspace the product:
 cd ../central-app && php artisan platform:local-product project-management --url=http://127.0.0.1:9300 --entitle=<slug>
 ```
 
-Then open `http://<slug>.milesoftwares.localhost/projects`. For demo data:
+Then open `http://<slug>.tatook.localhost/projects`. For demo data:
 `php artisan projects:demo <slug>`.
 
 The database is PostgreSQL: create a `projects` database and a user for it, and set `DB_*` in

@@ -13,6 +13,7 @@ use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Organizations\Models\Organization;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /**
  * The answer products act on: is this person, in this organization, allowed
@@ -56,8 +57,19 @@ final class EffectiveAccess
         $membership = OrganizationMembership::query()->where('user_id', $subject)->first();
         $memberActive = $membership !== null && $membership->isActive();
         $organizationActive = $organization->status->value === 'active';
+        $isOwner = $membership !== null && $organization->owner_membership_id === $membership->id;
 
-        $roles = ! $memberActive ? [] : RoleAssignment::query()
+        // An administrator may stop someone in this application alone
+        // (Authorization\Actions\SetApplicationAccess). No row means the
+        // roles decide, as before; the owner is never stopped.
+        $grant = $membership === null ? null : DB::table('application_access_grants')
+            ->where('membership_id', $membership->id)
+            ->where('application_id', $application->id)
+            ->value('status');
+        $applicationAccess = $isOwner ? 'active' : (is_string($grant) ? $grant : 'active');
+        $stopped = in_array($applicationAccess, ['disabled', 'suspended'], true);
+
+        $roles = ! $memberActive || $stopped ? [] : RoleAssignment::query()
             ->live()
             ->where('membership_id', $membership->id)
             ->where('application_id', $application->id)
@@ -72,8 +84,6 @@ final class EffectiveAccess
             ])
             ->values()
             ->all();
-
-        $isOwner = $membership !== null && $organization->owner_membership_id === $membership->id;
 
         return [
             'organization' => [
@@ -96,9 +106,11 @@ final class EffectiveAccess
                 'id' => $membership->id,
                 'status' => $membership->status->value,
                 'is_owner' => $isOwner,
+                // active, disabled or suspended in this application.
+                'application_access' => $stopped ? $applicationAccess : 'active',
             ],
             // The single yes/no products should gate on before looking at roles.
-            'allowed' => $entitlement !== null && $memberActive && $organizationActive && ($roles !== [] || $isOwner),
+            'allowed' => $entitlement !== null && $memberActive && $organizationActive && ! $stopped && ($roles !== [] || $isOwner),
             'roles' => $roles,
             'generated_at' => now()->toIso8601String(),
             'max_age' => self::TTL_SECONDS,

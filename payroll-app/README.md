@@ -62,7 +62,7 @@ cd ../payroll-app && composer dev   # :9200, queue, Vite
 composer ci:check                # format, lint, types, Pint, PHPStan, Pest
 ```
 
-Open `http://<workspace-slug>.milesoftwares.localhost/payroll` (proxy entry in
+Open `http://<workspace-slug>.tatook.localhost/payroll` (proxy entry in
 `ops/local-dev/apache-dev.conf`). Set `PLATFORM_FINANCE_EVENTS_URL` here, and
 `PLATFORM_PAYROLL_EVENTS_URL=http://127.0.0.1:9200/payroll/events` in `hr-app/.env` (and any product
 that sends hours), to connect the modules.

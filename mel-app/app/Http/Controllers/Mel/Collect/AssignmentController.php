@@ -43,17 +43,24 @@ class AssignmentController extends Controller
             ->whereIn('form_id', $assignments->pluck('form_id')->unique()->all())
             ->whereIn('author_id', $assignments->pluck('user_id')->unique()->all())
             ->where('status', '<>', Submission::RECEIVING)
-            ->selectRaw('form_id, author_id, count(*) as total, max(received_at) as last_at')
-            ->groupBy('form_id', 'author_id')
+            ->selectRaw('form_id, author_id, status, count(*) as total, max(received_at) as last_at')
+            ->groupBy('form_id', 'author_id', 'status')
             ->get()
-            ->keyBy(fn ($row) => $row->getAttribute('form_id').'|'.$row->getAttribute('author_id'));
+            ->groupBy(fn ($row) => $row->getAttribute('form_id').'|'.$row->getAttribute('author_id'));
+        $today = CarbonImmutable::today();
 
         $assignable = (clone $forms)->where('status', '<>', Form::ARCHIVED)->with(['programme.units', 'unit'])->orderBy('name')->get();
 
         return Inertia::render('mel/collect/assignments/index', [
             'filters' => ['form' => $formId, 'show' => $show],
-            'assignments' => $assignments->map(function (Assignment $assignment) use ($sent) {
-                $row = $sent->get($assignment->form_id.'|'.$assignment->user_id);
+            'assignments' => $assignments->map(function (Assignment $assignment) use ($sent, $today) {
+                $rows = $sent->get($assignment->form_id.'|'.$assignment->user_id) ?? collect();
+                $by = fn (array $statuses) => (int) $rows->filter(fn ($row) => in_array($row->getAttribute('status'), $statuses, true))->sum(fn ($row) => (int) $row->getAttribute('total'));
+                $last = $rows->max(fn ($row) => $row->getAttribute('last_at'));
+                // Done: sent and not rejected. Collection is apart from review.
+                $done = $by([Submission::SUBMITTED, Submission::UNDER_REVIEW, Submission::CORRECTION_REQUESTED, Submission::ACCEPTED]);
+                $expected = $assignment->expected_submissions;
+                $complete = $expected !== null && $done >= $expected;
 
                 return [
                     'id' => $assignment->id,
@@ -66,8 +73,23 @@ class AssignmentController extends Controller
                     'status' => $assignment->status,
                     'closesAt' => $assignment->closes_at?->toIso8601String(),
                     'assignedBy' => $assignment->assigner->name,
-                    'submissions' => (int) ($row?->getAttribute('total') ?? 0),
-                    'lastSubmissionAt' => $row?->getAttribute('last_at') === null ? null : CarbonImmutable::parse((string) $row->getAttribute('last_at'))->toIso8601String(),
+                    'submissions' => (int) $rows->sum(fn ($row) => (int) $row->getAttribute('total')),
+                    'lastSubmissionAt' => $last === null ? null : CarbonImmutable::parse((string) $last)->toIso8601String(),
+                    'expected' => $expected,
+                    'progress' => [
+                        'done' => $done,
+                        'awaitingReview' => $by(Submission::TO_REVIEW),
+                        'correction' => $by([Submission::CORRECTION_REQUESTED]),
+                        'accepted' => $by([Submission::ACCEPTED]),
+                        'rejected' => $by([Submission::REJECTED]),
+                    ],
+                    // Collection only: whether the agreed work was sent, not whether it was accepted.
+                    'collection' => match (true) {
+                        $complete => 'complete',
+                        $assignment->status === Assignment::ACTIVE && $assignment->ends_on !== null && $assignment->ends_on->lessThan($today) => 'overdue',
+                        $done > 0 => 'in_progress',
+                        default => 'not_started',
+                    },
                 ];
             }),
             'forms' => $assignable->map(fn (Form $form) => [
@@ -93,6 +115,7 @@ class AssignmentController extends Controller
             'programme_unit_id' => ['nullable', 'uuid'],
             'starts_on' => ['nullable', 'date'],
             'ends_on' => ['nullable', 'date'],
+            'expected_submissions' => ['nullable', 'integer', 'min:1', 'max:100000'],
         ], ['user_ids.required' => 'Choose who collects with this form.', 'user_ids.*.exists' => 'Choose people of this organization.']);
 
         $created = $this->assignments->assign(
@@ -102,6 +125,7 @@ class AssignmentController extends Controller
             isset($data['starts_on']) ? CarbonImmutable::parse($data['starts_on']) : null,
             isset($data['ends_on']) ? CarbonImmutable::parse($data['ends_on']) : null,
             $this->user(),
+            isset($data['expected_submissions']) ? (int) $data['expected_submissions'] : null,
         );
         $updated = count(array_unique($data['user_ids'])) - $created;
 

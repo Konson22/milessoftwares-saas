@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Orders;
 use App\Http\Controllers\Concerns\WorksInBranch;
+use App\Models\BranchSetting;
 use App\Models\KitchenTicket;
 use App\Models\OrderLine;
 use Illuminate\Http\RedirectResponse;
@@ -30,6 +31,8 @@ class KitchenController extends Controller
             ->get();
 
         return Inertia::render('kitchen', [
+            // Minutes after which a ticket still cooking is flagged (the branch's setting).
+            'slowMinutes' => BranchSetting::for($this->branchId())->slowTicketMinutes(),
             'tickets' => $tickets->map(fn (KitchenTicket $ticket) => [
                 'id' => $ticket->id,
                 'number' => $ticket->number,
@@ -37,6 +40,8 @@ class KitchenController extends Controller
                 'sentAt' => $ticket->sent_at->toIso8601String(),
                 'readyAt' => $ticket->ready_at?->toIso8601String(),
                 'sentBy' => $ticket->sender->name,
+                // Nothing left to make: the cook stops and clears it.
+                'cancelled' => $ticket->lines->every(fn (OrderLine $line) => $line->voided()),
                 'order' => [
                     'id' => $ticket->order->id,
                     'number' => $ticket->order->number,
@@ -69,5 +74,13 @@ class KitchenController extends Controller
         $this->orders->served($ticket);
 
         return back()->with('success', "Ticket {$ticket->number} served.");
+    }
+
+    public function clear(KitchenTicket $ticket): RedirectResponse
+    {
+        $this->ensureHere($ticket->branch_id);
+        $this->orders->clear($ticket);
+
+        return back()->with('success', "Ticket {$ticket->number} cleared.");
     }
 }

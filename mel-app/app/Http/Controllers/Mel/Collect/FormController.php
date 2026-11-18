@@ -10,6 +10,7 @@ use App\Collect\Models\Form;
 use App\Collect\Models\FormVersion;
 use App\Collect\Models\Submission;
 use App\Http\Controllers\Mel\Controller;
+use App\Mel\LinkedProjects;
 use App\Mel\Models\Programme;
 use App\Mel\Models\ProgrammeUnit;
 use Carbon\CarbonImmutable;
@@ -133,6 +134,7 @@ class FormController extends Controller
     public function edit(string $form): Response
     {
         $form = $this->scope()->form($form);
+        $form->load('programme');
 
         return Inertia::render('mel/collect/forms/edit', [
             'form' => [
@@ -143,8 +145,16 @@ class FormController extends Controller
                 'programmeId' => $form->programme_id,
                 'unitId' => $form->programme_unit_id,
                 'containsPersonalData' => $form->contains_personal_data,
+                'linkedMilestoneId' => $form->linked_milestone_id,
             ],
             'defaults' => ['programmeId' => null],
+            // The work in Tatook Projects the form serves: milestones of the
+            // projects linked to the form's programme (ADR-0019 §26).
+            'milestones' => $form->programme === null ? null : LinkedProjects::milestoneOptions(
+                $this->access(),
+                $form->programme,
+                $form->linked_milestone_id === null ? [] : [$form->linked_milestone_id],
+            ),
             ...$this->detailOptions(),
         ]);
     }
@@ -152,7 +162,18 @@ class FormController extends Controller
     public function update(Request $request, string $form): RedirectResponse
     {
         $form = $this->scope()->form($form);
-        $this->forms->update($form, $this->validated($request), $this->user());
+        $data = $this->validated($request);
+        $programmeId = $data['programme_id'] ?? null;
+        // A milestone belongs to the programme's projects: moving the form
+        // to another programme drops it unless it is chosen again there.
+        $current = $programmeId === $form->programme_id ? $form->linked_milestone_id : null;
+        $data['linked_milestone_id'] = $programmeId === null ? null : LinkedProjects::milestoneReference(
+            $this->access(),
+            $this->access()->programme($programmeId),
+            $current,
+            $request->has('linked_milestone_id') ? (is_string($request->input('linked_milestone_id')) ? $request->input('linked_milestone_id') : null) : $current,
+        );
+        $this->forms->update($form, $data, $this->user());
 
         return to_route('mel.collect.forms.show', $form->id)->with('success', 'Form details saved.');
     }

@@ -33,6 +33,7 @@ type Props = {
 
 const TYPE_LABELS: Record<string, string> = {
     opening: 'Added',
+    delivery: 'Delivered',
     sale: 'Billed',
     bill_void: 'Bill voided',
     count: 'Counted',
@@ -80,7 +81,7 @@ export default function StockShow({
                         />
                         <PanelBody>
                             <Form
-                                {...opening.form(item.id)}
+                                {...opening.form({ item: item.id })}
                                 resetOnSuccess
                                 options={{ preserveScroll: true }}
                                 className="grid gap-3 sm:grid-cols-2"
@@ -146,7 +147,7 @@ export default function StockShow({
                         />
                         <PanelBody>
                             <Form
-                                {...adjust.form(item.id)}
+                                {...adjust.form({ item: item.id })}
                                 resetOnSuccess
                                 options={{ preserveScroll: true }}
                                 className="grid gap-3 sm:grid-cols-2"

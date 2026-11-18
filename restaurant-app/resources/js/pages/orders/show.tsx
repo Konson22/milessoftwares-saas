@@ -7,18 +7,20 @@ import { SearchField } from '@miles/ui/components/search-field';
 import { StatusBadge } from '@miles/ui/components/status-badge';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
-import { Label } from '@miles/ui/components/ui/label';
+import {
+    OrderBillPanel,
+    type OrderBill,
+    type PaidBill,
+} from '@/components/order-bill';
 import { formatMoney } from '@/lib/money';
 import { statusTone } from '@/lib/status';
 import { floor } from '@/routes';
-import { cancel, move, pay, send } from '@/routes/orders';
+import { cancel, move, send } from '@/routes/orders';
 import {
     destroy as removeLine,
     store as addLines,
     voidMethod as voidLine,
 } from '@/routes/orders/lines';
-import { show as showBill } from '@/routes/bills';
-import { index as tills } from '@/routes/tills';
 
 type Line = {
     id: string;
@@ -30,6 +32,8 @@ type Line = {
     ticket: string | null;
     voidReason: string | null;
     voidedBy: string | null;
+    /** The bill that paid it. */
+    paidOn: string | null;
 };
 
 type MenuItem = {
@@ -58,23 +62,15 @@ type Props = {
             totalMinor: number;
             status: string;
         } | null;
+        bills: PaidBill[];
         lines: Line[];
     };
-    bill: {
-        lines: {
-            item_id: string;
-            name: string;
-            quantity: number;
-            unit_price_minor: number;
-            total_minor: number;
-        }[];
-        total_minor: number;
-    };
+    bill: OrderBill;
     menu: MenuItem[];
     freeTables: { id: string; name: string }[];
     paymentMethods: { value: string; label: string }[];
     tillOpen: boolean;
-    can: { void: boolean; pay: boolean };
+    can: { void: boolean; pay: boolean; discount: boolean };
 };
 
 type Draft = { key: number; item: MenuItem; quantity: number; note: string };
@@ -110,7 +106,6 @@ export default function ShowOrder({
     const [nextKey, setNextKey] = useState(0);
     const [adding, setAdding] = useState(false);
     const [voiding, setVoiding] = useState<string | null>(null);
-    const [method, setMethod] = useState(paymentMethods[0]?.value ?? 'cash');
 
     const sections = useMemo(
         () => [...new Set(menu.map((item) => item.section ?? 'Other'))],
@@ -158,7 +153,7 @@ export default function ShowOrder({
         );
     const addDrafts = (thenSend: boolean) =>
         router.post(
-            addLines.url(order.id),
+            addLines.url({ order: order.id }),
             {
                 lines: drafts.map((draft) => ({
                     item_id: draft.item.id,
@@ -174,7 +169,7 @@ export default function ShowOrder({
                     setDrafts([]);
                     if (thenSend) {
                         router.post(
-                            send.url(order.id),
+                            send.url({ order: order.id }),
                             {},
                             { preserveScroll: true },
                         );
@@ -396,7 +391,7 @@ export default function ShowOrder({
                             actions={
                                 open && hasNew ? (
                                     <Form
-                                        {...send.form(order.id)}
+                                        {...send.form({ order: order.id })}
                                         options={{ preserveScroll: true }}
                                     >
                                         {({ processing }) => (
@@ -451,12 +446,17 @@ export default function ShowOrder({
                                             >
                                                 {STATUS_LABELS[line.status]}
                                             </StatusBadge>
+                                            {open && line.paidOn && (
+                                                <StatusBadge tone="success">
+                                                    Paid · {line.paidOn}
+                                                </StatusBadge>
+                                            )}
                                             {open && line.status === 'new' && (
                                                 <Form
-                                                    {...removeLine.form([
-                                                        order.id,
-                                                        line.id,
-                                                    ])}
+                                                    {...removeLine.form({
+                                                        order: order.id,
+                                                        line: line.id,
+                                                    })}
                                                     options={{
                                                         preserveScroll: true,
                                                     }}
@@ -483,7 +483,8 @@ export default function ShowOrder({
                                             {open &&
                                                 can.void &&
                                                 line.status !== 'new' &&
-                                                line.status !== 'voided' && (
+                                                line.status !== 'voided' &&
+                                                line.paidOn === null && (
                                                     <Button
                                                         size="icon"
                                                         variant="ghost"
@@ -514,10 +515,10 @@ export default function ShowOrder({
                                             )}
                                         {voiding === line.id && (
                                             <Form
-                                                {...voidLine.form([
-                                                    order.id,
-                                                    line.id,
-                                                ])}
+                                                {...voidLine.form({
+                                                    order: order.id,
+                                                    line: line.id,
+                                                })}
                                                 options={{
                                                     preserveScroll: true,
                                                 }}
@@ -572,160 +573,22 @@ export default function ShowOrder({
                         )}
                     </Panel>
 
-                    <Panel>
-                        <PanelHeader title="Bill" />
-                        <PanelBody>
-                            <table className="w-full text-sm">
-                                <tbody className="divide-y">
-                                    {bill.lines.map((line) => (
-                                        <tr key={line.item_id}>
-                                            <td className="py-1">
-                                                {line.quantity} × {line.name}
-                                            </td>
-                                            <td className="py-1 text-right tabular-nums">
-                                                {money(line.total_minor)}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                                <tfoot className="border-t font-semibold">
-                                    <tr>
-                                        <td className="py-1.5">Total</td>
-                                        <td className="py-1.5 text-right tabular-nums">
-                                            {money(
-                                                order.bill?.totalMinor ??
-                                                    bill.total_minor,
-                                            )}
-                                        </td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-
-                            {order.bill && (
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                    <Button variant="outline" size="sm" asChild>
-                                        <Link href={showBill(order.bill.id)}>
-                                            Bill {order.bill.number}
-                                            {order.bill.status === 'voided' &&
-                                                ' (voided)'}
-                                        </Link>
-                                    </Button>
-                                </div>
-                            )}
-                            {order.status === 'cancelled' && (
-                                <p className="mt-3 text-sm text-muted-foreground">
-                                    Cancelled: {order.cancelReason}
-                                </p>
-                            )}
-
-                            {open && can.pay && bill.lines.length > 0 && (
-                                <Form
-                                    {...pay.form(order.id)}
-                                    className="mt-4 grid gap-3 border-t pt-4"
-                                >
-                                    {({ processing, errors: payErrors }) => (
-                                        <>
-                                            {!tillOpen && (
-                                                <p className="text-xs text-muted-foreground">
-                                                    Your till is not open:{' '}
-                                                    <Link
-                                                        href={tills()}
-                                                        className="underline"
-                                                    >
-                                                        start a shift
-                                                    </Link>{' '}
-                                                    before taking payment.
-                                                </p>
-                                            )}
-                                            <div className="grid gap-1.5">
-                                                <Label htmlFor="payment_method">
-                                                    Paid by
-                                                </Label>
-                                                <select
-                                                    id="payment_method"
-                                                    name="payment_method"
-                                                    value={method}
-                                                    onChange={(event) =>
-                                                        setMethod(
-                                                            event.target.value,
-                                                        )
-                                                    }
-                                                    className="h-9 rounded-md border bg-transparent px-2 text-sm"
-                                                >
-                                                    {paymentMethods.map(
-                                                        (option) => (
-                                                            <option
-                                                                key={
-                                                                    option.value
-                                                                }
-                                                                value={
-                                                                    option.value
-                                                                }
-                                                            >
-                                                                {option.label}
-                                                            </option>
-                                                        ),
-                                                    )}
-                                                </select>
-                                            </div>
-                                            {method === 'cash' ? (
-                                                <div className="grid gap-1.5">
-                                                    <Label htmlFor="amount_tendered">
-                                                        Cash given
-                                                    </Label>
-                                                    <Input
-                                                        id="amount_tendered"
-                                                        name="amount_tendered"
-                                                        inputMode="decimal"
-                                                        placeholder="Exact amount if empty"
-                                                    />
-                                                    {payErrors.amount_tendered && (
-                                                        <p className="text-sm text-destructive">
-                                                            {
-                                                                payErrors.amount_tendered
-                                                            }
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <div className="grid gap-1.5">
-                                                    <Label htmlFor="payment_reference">
-                                                        Reference
-                                                    </Label>
-                                                    <Input
-                                                        id="payment_reference"
-                                                        name="payment_reference"
-                                                        placeholder="Transaction number"
-                                                    />
-                                                </div>
-                                            )}
-                                            {(payErrors.payment_method ||
-                                                payErrors.till) && (
-                                                <p className="text-sm text-destructive">
-                                                    {payErrors.payment_method ??
-                                                        payErrors.till}
-                                                </p>
-                                            )}
-                                            <Button
-                                                type="submit"
-                                                disabled={processing || hasNew}
-                                            >
-                                                Take payment ·{' '}
-                                                {money(bill.total_minor)}
-                                            </Button>
-                                            {hasNew && (
-                                                <p className="text-xs text-muted-foreground">
-                                                    Send the new lines to the
-                                                    kitchen, or take them off,
-                                                    first.
-                                                </p>
-                                            )}
-                                        </>
-                                    )}
-                                </Form>
-                            )}
-                        </PanelBody>
-                    </Panel>
+                    <OrderBillPanel
+                        orderId={order.id}
+                        open={open}
+                        bill={bill}
+                        bills={order.bills}
+                        paymentMethods={paymentMethods}
+                        tillOpen={tillOpen}
+                        canPay={can.pay}
+                        canDiscount={can.discount}
+                        hasNew={hasNew}
+                        cancelReason={
+                            order.status === 'cancelled'
+                                ? order.cancelReason
+                                : null
+                        }
+                    />
 
                     {open && (
                         <Panel>
@@ -733,7 +596,7 @@ export default function ShowOrder({
                                 {order.service === 'dine_in' &&
                                     freeTables.length > 0 && (
                                         <Form
-                                            {...move.form(order.id)}
+                                            {...move.form({ order: order.id })}
                                             options={{ preserveScroll: true }}
                                             className="flex flex-wrap items-center gap-2"
                                         >
@@ -782,7 +645,7 @@ export default function ShowOrder({
                                         </Form>
                                     )}
                                 <Form
-                                    {...cancel.form(order.id)}
+                                    {...cancel.form({ order: order.id })}
                                     className="flex flex-wrap items-center gap-2"
                                 >
                                     {({ processing, errors: cancelErrors }) => (

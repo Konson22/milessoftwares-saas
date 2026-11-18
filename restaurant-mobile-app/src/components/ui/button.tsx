@@ -15,8 +15,12 @@ const container: Record<Variant, string> = {
   danger: 'bg-red-600 active:bg-red-700',
   ghost: 'active:bg-brand-50',
   // For use on the dark artwork / red surfaces.
-  glass: 'border border-white/25 bg-white/10 active:bg-white/20',
+  glass: 'border border-brand-500 bg-brand-800 active:bg-brand-700',
 };
+
+/** Solid greys for a button that cannot be pressed (no see-through dimming). */
+const disabledContainer = (variant: Variant) =>
+  variant === 'glass' ? 'border border-brand-800 bg-brand-900' : variant === 'outline' ? 'border border-slate-200 bg-slate-50' : variant === 'ghost' ? '' : 'bg-slate-200';
 
 const label: Record<Variant, string> = {
   primary: 'text-white',
@@ -66,6 +70,9 @@ export function Button({
   accessibilityLabel,
 }: Props) {
   const inactive = disabled || loading;
+  // Loading keeps its colours (the spinner says it is busy); disabled turns grey.
+  const off = disabled && !loading;
+  const tint = off ? (variant === 'glass' ? colors.brand[300] : colors.faint) : iconColor[variant];
   return (
     <Pressable
       accessibilityRole="button"
@@ -73,13 +80,13 @@ export function Button({
       accessibilityState={{ disabled: !!inactive, busy: !!loading }}
       onPress={onPress}
       disabled={inactive}
-      className={`flex-row items-center justify-center gap-1.5 px-3 ${size === 'lg' ? 'min-h-11' : 'min-h-9'} ${container[variant]} ${inactive ? 'opacity-50' : ''} ${className}`}>
+      className={`flex-row items-center justify-center gap-1.5 px-3 ${size === 'lg' ? 'min-h-11' : 'min-h-9'} ${off ? disabledContainer(variant) : container[variant]} ${className}`}>
       {loading ? (
-        <ActivityIndicator color={iconColor[variant]} />
+        <ActivityIndicator color={tint} />
       ) : (
-        icon && <Ionicons name={icon} size={size === 'lg' ? 18 : 16} color={iconColor[variant]} />
+        icon && <Ionicons name={icon} size={size === 'lg' ? 18 : 16} color={tint} />
       )}
-      <Text className={`font-semibold ${size === 'lg' ? 'text-base' : 'text-sm'} ${label[variant]}`}>{title}</Text>
+      <Text className={`font-semibold ${size === 'lg' ? 'text-base' : 'text-sm'} ${off ? (variant === 'glass' ? 'text-brand-300' : 'text-slate-400') : label[variant]}`}>{title}</Text>
     </Pressable>
   );
 }
@@ -97,7 +104,7 @@ export function IconButton({
   onPress?: () => void;
   label: string;
   color?: string;
-  /** Sits on a red surface: white icon with a translucent press state. */
+  /** Sits on a red surface: white icon, a deeper red when pressed. */
   onDark?: boolean;
   className?: string;
   disabled?: boolean;
@@ -109,10 +116,8 @@ export function IconButton({
       onPress={onPress}
       disabled={disabled}
       hitSlop={6}
-      className={`h-10 w-10 items-center justify-center ${onDark ? 'active:bg-white/15' : 'active:bg-brand-50'} ${
-        disabled ? 'opacity-40' : ''
-      } ${className}`}>
-      <Ionicons name={icon} size={22} color={color ?? (onDark ? colors.white : colors.ink)} />
+      className={`h-10 w-10 items-center justify-center ${onDark ? 'active:bg-brand-800' : 'active:bg-brand-50'} ${className}`}>
+      <Ionicons name={icon} size={22} color={disabled ? (onDark ? colors.brand[300] : colors.line) : (color ?? (onDark ? colors.white : colors.ink))} />
     </Pressable>
   );
 }

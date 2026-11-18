@@ -193,6 +193,7 @@ class SaleController extends Controller
             'payment_method' => ['required', Rule::enum(PaymentMethod::class)],
             'payment_reference' => ['nullable', 'string', 'max:64'],
             'amount_tendered' => ['nullable', 'string', Money::rule()],
+            'amount_tendered_currency' => Money::currencyRule(),
             'customer_name' => ['nullable', 'string', 'max:255'],
             'customer_phone' => ['nullable', 'string', 'max:32'],
             'customer_id' => ['nullable', 'uuid'],
@@ -212,6 +213,9 @@ class SaleController extends Controller
             throw ValidationException::withMessages(['payment_method' => 'You may not sell on account.']);
         }
 
+        // Cash may be handed over in another currency: converted at today's rate.
+        $tendered = $method === PaymentMethod::Cash ? Money::enteredOptional($validated, 'amount_tendered') : null;
+
         try {
             $sale = $sell->handle(
                 by: $this->user($request),
@@ -225,7 +229,7 @@ class SaleController extends Controller
                 ], $validated['items'])),
                 method: $method,
                 paymentReference: $validated['payment_reference'] ?? null,
-                tenderedMinor: isset($validated['amount_tendered']) ? Money::toMinor($validated['amount_tendered']) : null,
+                tenderedMinor: $tendered?->baseMinor,
                 customerName: isset($validated['customer_name']) ? trim($validated['customer_name']) : null,
                 maxDiscountPercent: $this->maxDiscountPercent(),
                 submissionId: $validated['submission_id'] ?? null,
@@ -237,6 +241,10 @@ class SaleController extends Controller
             $index = array_search($e->item->id, array_column($validated['items'], 'item_id'), true);
 
             throw ValidationException::withMessages(['items.'.($index === false ? 0 : $index).'.quantity' => $e->getMessage()]);
+        }
+
+        if ($sale->wasRecentlyCreated) {
+            Money::remember($sale, 'amount_tendered', $tendered, $this->user($request)->id);
         }
 
         // The receipt prints by itself when the branch wants it, once.

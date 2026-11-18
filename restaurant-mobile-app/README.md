@@ -1,4 +1,4 @@
-# Mataem Plus (mobile)
+# Bewe Miles Resto (mobile)
 
 The restaurant on a phone or tablet: floor, orders, kitchen tickets, bills,
 tills, menu, tables and drinks stock. Expo (SDK 57), Expo Router, NativeWind.
@@ -95,7 +95,7 @@ In production the client is added in the admin (Integrations → the restaurant
 → a public client with that redirect URI); its id goes into the restaurant's
 `PLATFORM_MOBILE_CLIENT_ID` and the app's `EXPO_PUBLIC_CLIENT_ID`. See
 `.env.example` for the variables. A phone cannot resolve
-`*.milesoftwares.localhost`: point the URLs at the dev PC's LAN address, or use
+`*.tatook.localhost`: point the URLs at the dev PC's LAN address, or use
 `EXPO_PUBLIC_DEV_SERVER` with `adb reverse`.
 
 ## Limits

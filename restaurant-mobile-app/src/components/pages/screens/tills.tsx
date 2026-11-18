@@ -50,7 +50,7 @@ export function TillsScreen({ page, path, reload, go }: ScreenProps<ListProps>) 
     <Scroll onRefresh={reload}>
       {mine ? (
         <Hero>
-          <Text className="text-xs font-semibold uppercase tracking-wider text-brand-100">Your shift is open</Text>
+          <Text className="text-sm font-semibold text-brand-100">Your shift is open</Text>
           <Text className="mt-1 text-2xl font-bold text-white">{mine.number}</Text>
           <Text className="text-base text-brand-100">
             Since {time(mine.openedAt)} · float {money(mine.openingFloatMinor)}

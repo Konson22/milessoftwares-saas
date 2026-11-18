@@ -418,6 +418,16 @@ it('gives Pharmacy ERP its own page, with its catalog words and plans', function
         ->component('public/landing'));
 });
 
+it('links Finance to the apps it connects with, by their own name, icon and page', function () {
+    $this->get(site('apps/finance'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+        ->component('public/finance')
+        ->where('product.connections.links.0.slug', 'pharmacy')
+        ->where('product.connections.links.0.name', 'Pharmacy ERP')
+        ->where('product.connections.links.0.icon', 'pill')
+        ->where('product.connections.links.0.url', '/erp/pharmacy')
+        ->where('product.connections.links.6.url', '/apps/projects'));
+});
+
 it('gives each catalog product its own page, and 404s anything else', function () {
     $this->get(site('apps/finance'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
         ->component('public/finance')

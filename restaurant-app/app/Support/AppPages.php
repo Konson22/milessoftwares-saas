@@ -21,8 +21,24 @@ final class AppPages
     /** Under the product's path. */
     public const PREFIX = 'api/v1/app';
 
-    /** Web-only: the app chooses its branch itself. */
-    private const SKIP = ['branch.edit', 'branch.update'];
+    /** Where a branch page's web path starts: branches/{branch}/... */
+    public const BRANCH_PREFIX = 'branches/{branch}';
+
+    /**
+     * Web-only: the app chooses its branch itself, and the web's old
+     * addresses (before branches/{branch}) only redirect.
+     */
+    private const SKIP = ['branch.edit', 'branch.update', 'start', 'legacy.branch', 'legacy.overview', 'legacy.staff'];
+
+    /** A web path without its branch: "branches/{branch}/floor" is "floor". */
+    public static function withoutBranch(string $uri): string
+    {
+        if ($uri === self::BRANCH_PREFIX) {
+            return '';
+        }
+
+        return str_starts_with($uri, self::BRANCH_PREFIX.'/') ? substr($uri, strlen(self::BRANCH_PREFIX) + 1) : $uri;
+    }
 
     /** The web's sign-in and branch, swapped for the API's. */
     private const REPLACED = ['web', 'platform', 'branch'];
@@ -38,6 +54,9 @@ final class AppPages
 
             $middleware = $route->middleware();
             $uri = ltrim(substr($route->uri(), strlen($path)), '/');
+            // The app names its branch in X-Branch-Id, not in the path: its
+            // pages stay where they always were ("floor", "orders/<id>").
+            $uri = self::withoutBranch($uri);
             $action = $route->getAction();
             $action['middleware'] = [
                 'api',

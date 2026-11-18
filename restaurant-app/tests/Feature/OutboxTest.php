@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Stock;
+use App\Actions\Tills;
 use App\Models\AppSubmission;
 use App\Models\Bill;
 use App\Models\DiningTable;
@@ -8,10 +9,12 @@ use App\Models\KitchenTicket;
 use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\OrderLine;
+use App\Models\TillShift;
 use App\Models\User;
 use App\Models\Workspace;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 /*
 | What the mobile app did offline, sent when it reaches the restaurant
@@ -69,6 +72,40 @@ it('applies an order taken offline: opened, added, sent and paid, with the phone
 
     expect($this->asTenant('acme', fn () => Order::query()->sole()->status))->toBe(Order::PAID)
         ->and($this->asTenant('acme', fn () => Bill::query()->sole()->total_minor))->toBe(3600);
+});
+
+it('records a payment taken offline that the web would refuse: no till open, cash short of today\'s price', function () {
+    $this->actingAsAppMember('acme', ['restaurant.orders.take', 'restaurant.bills.take'], branch: $this->juba);
+    $orderId = (string) Str::uuid();
+    outbox('order.open', ['order_id' => $orderId, 'service' => 'takeaway'])->assertOk();
+    outbox('order.add', ['order_id' => $orderId, 'lines' => [['id' => (string) Str::uuid(), 'item_id' => $this->beans->id, 'quantity' => 1]]])->assertOk();
+    outbox('order.send', ['order_id' => $orderId])->assertOk();
+    // The price went up after the phone last saw the menu.
+    $this->asTenant('acme', fn () => $this->beans->forceFill(['price_minor' => 1800])->save());
+
+    outbox('order.pay', ['order_id' => $orderId, 'payment_method' => 'cash', 'tendered_minor' => 1500, 'taken_offline' => true])
+        ->assertOk()
+        ->assertJsonPath('result.total_minor', 1800)
+        ->assertJsonPath('result.change_minor', 0);
+
+    $till = $this->asTenant('acme', fn () => TillShift::query()->sole());
+    expect($till->status)->toBe(TillShift::OPEN)
+        ->and($till->opening_float_minor)->toBe(0)
+        ->and($this->asTenant('acme', fn () => Bill::query()->sole()->till_shift_id))->toBe($till->id);
+    // Counting the 15.00 actually taken shows the shortfall, which needs a note.
+    expect(fn () => $this->asTenant('acme', fn () => app(Tills::class)->close($till, User::query()->firstOrFail(), 1500, null)))
+        ->toThrow(ValidationException::class);
+});
+
+it('still refuses a payment taken with the person there when no till is open', function () {
+    $this->actingAsAppMember('acme', ['restaurant.orders.take', 'restaurant.bills.take'], branch: $this->juba);
+    $orderId = (string) Str::uuid();
+    outbox('order.open', ['order_id' => $orderId, 'service' => 'takeaway'])->assertOk();
+    outbox('order.add', ['order_id' => $orderId, 'lines' => [['id' => (string) Str::uuid(), 'item_id' => $this->beans->id, 'quantity' => 1]]])->assertOk();
+    outbox('order.send', ['order_id' => $orderId])->assertOk();
+
+    outbox('order.pay', ['order_id' => $orderId, 'payment_method' => 'cash', 'taken_offline' => false])->assertUnprocessable();
+    expect($this->asTenant('acme', fn () => TillShift::query()->count()))->toBe(0);
 });
 
 it('never applies the same submission twice, and answers it again', function () {

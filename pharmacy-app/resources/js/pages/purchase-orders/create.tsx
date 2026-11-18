@@ -6,6 +6,7 @@ import { Panel, PanelBody } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
 import { Label } from '@miles/ui/components/ui/label';
+import { CurrencyField } from '@miles/ui/components/money-input';
 import { PackSelect } from '@/components/pack-select';
 import type { BuyableItem } from '@/components/pack-select';
 import { CostBreakdown } from '@/components/price-badges';
@@ -20,7 +21,10 @@ type Entered = { pack: string; cost: string; quantity: string };
 
 const selectClass = 'h-9 w-full rounded-md border bg-transparent px-3 text-sm';
 
-export default function CreatePurchaseOrder({ suppliers, items: medicines }: Props) {
+export default function CreatePurchaseOrder({
+    suppliers,
+    items: medicines,
+}: Props) {
     const [lines, setLines] = useState([0]);
     const [nextKey, setNextKey] = useState(1);
     // The medicine chosen on each line (by line key), for its packs.
@@ -89,6 +93,11 @@ export default function CreatePurchaseOrder({ suppliers, items: medicines }: Pro
                                             <Label htmlFor="notes">Notes</Label>
                                             <Input id="notes" name="notes" />
                                         </div>
+                                        <CurrencyField
+                                            name="currency"
+                                            label="Costs in"
+                                            hint="Every cost below is in this currency, kept in the workspace currency at today's rate."
+                                        />
                                     </div>
 
                                     <fieldset className="grid gap-2">

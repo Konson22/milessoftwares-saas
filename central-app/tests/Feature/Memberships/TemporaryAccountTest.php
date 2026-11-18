@@ -286,3 +286,45 @@ it('gives a username account a new password at any time, as it has no email to r
     expect(Hash::check($password, $user->refresh()->password))->toBeTrue()
         ->and($user->mustChangePassword())->toBeTrue();
 });
+
+it('deletes a username account this organization created: removed, signed out, username freed', function () {
+    $this->actingAs($this->owner->user)
+        ->post(membersAt('/manage/members'), ['name' => 'Achol Deng', 'username' => 'achol'])
+        ->assertSessionHasNoErrors();
+    $password = session(SessionKey::FLASH_DATA)['credentials']['password'];
+    $user = User::query()->where('username', 'achol')->sole();
+    $membership = OrganizationMembership::acrossTenants()->where('user_id', $user->id)->sole();
+
+    $this->delete(membersAt("/manage/members/{$membership->id}/account"))->assertSessionHasNoErrors();
+
+    $user->refresh();
+    expect($user->status)->toBe('deactivated')
+        ->and($user->username)->toStartWith('~deleted-')
+        ->and($user->name)->toBe('Achol Deng')
+        ->and($membership->refresh()->status)->toBe(MembershipStatus::Removed)
+        ->and(AuditLog::query()->where('action', 'member.account_deleted')->sole()->context['username'])->toBe('achol');
+
+    // The old password no longer signs in, and the name can be given again.
+    auth()->logout();
+    $this->post(route('login.store'), ['email' => 'achol', 'password' => $password])->assertSessionHasErrors('email');
+    $this->assertGuest();
+
+    $this->actingAs($this->owner->user)
+        ->post(membersAt('/manage/members'), ['name' => 'Someone New', 'username' => 'achol'])
+        ->assertSessionHasNoErrors();
+});
+
+it('deletes only username accounts this organization created, and only for those who may remove members', function () {
+    addMember();
+    $emailMember = OrganizationMembership::acrossTenants()->where('user_id', addedUser()->id)->sole();
+
+    $this->delete(membersAt("/manage/members/{$emailMember->id}/account"))->assertSessionHasErrors('status');
+    expect(addedUser()->status)->toBe('active');
+
+    $this->post(membersAt('/manage/members'), ['name' => 'Achol Deng', 'username' => 'achol'])->assertSessionHasNoErrors();
+    $user = User::query()->where('username', 'achol')->sole();
+    $membership = OrganizationMembership::acrossTenants()->where('user_id', $user->id)->sole();
+
+    $this->actingAs($this->member()->user)->delete(membersAt("/manage/members/{$membership->id}/account"))->assertForbidden();
+    expect($user->refresh()->status)->toBe('active');
+});

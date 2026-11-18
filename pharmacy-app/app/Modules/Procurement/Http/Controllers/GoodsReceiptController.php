@@ -18,6 +18,7 @@ use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -112,7 +113,11 @@ class GoodsReceiptController extends Controller
             'lines.*.expires_on' => ['nullable', 'date', 'after:received_on'],
             'lines.*.quantity' => ['required', 'integer', 'min:1', 'max:1000000'],
             'lines.*.unit_cost' => ['required', 'string', Money::rule()],
+            // The currency every unit cost is typed in; blank: the workspace's.
+            'currency' => Money::currencyRule(),
         ]);
+        $validated['lines'] = array_values($validated['lines']);
+        $costs = Money::enterLines($validated['lines'], 'unit_cost', $validated['currency'] ?? null);
 
         $order = null;
         if (! empty($validated['purchase_order_id'])) {
@@ -123,14 +128,14 @@ class GoodsReceiptController extends Controller
         $user = $request->user();
         abort_unless($user instanceof User, 401);
 
-        $receipt = $receive->handle(
+        $receipt = DB::transaction(fn () => tap($receive->handle(
             by: $user,
             branchId: $this->branch->id(),
             supplier: Supplier::query()->findOrFail((string) $validated['supplier_id']),
             order: $order,
             supplierReference: $validated['supplier_reference'] ?? null,
             receivedOn: CarbonImmutable::parse($validated['received_on']),
-            lines: array_values(array_map(fn (array $line) => [
+            lines: array_values(array_map(fn (array $line, int $index) => [
                 'item_id' => $line['item_id'],
                 'purchase_order_line_id' => $line['purchase_order_line_id'] ?? null,
                 'pack_id' => $line['pack_id'] ?? null,
@@ -138,9 +143,9 @@ class GoodsReceiptController extends Controller
                 'batch_number' => trim($line['batch_number']),
                 'expires_on' => $line['expires_on'] ?? null,
                 'quantity' => (int) $line['quantity'],
-                'unit_cost_minor' => Money::toMinor($line['unit_cost']),
-            ], $validated['lines'])),
-        );
+                'unit_cost_minor' => $costs[$index]->baseMinor,
+            ], $validated['lines'], array_keys($validated['lines']))),
+        ), fn ($receipt) => Money::rememberLines($receipt, 'unit_cost', $costs, $user->id)));
 
         return to_route($this->industry->route('receipts.show'), $receipt)->with('success', "{$receipt->number} received into stock.");
     }

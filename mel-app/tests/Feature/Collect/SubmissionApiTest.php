@@ -57,6 +57,28 @@ it('gives the collector their assignments and the form version', function () {
     $this->getJson(collectApi("form-versions/{$this->version->id}?supports=0"))->assertStatus(426)->assertJsonPath('code', 'app_too_old');
 });
 
+it('tells the collector their progress on each task, by review state, and nobody else\'s', function () {
+    $this->getJson(collectApi('assignments'))->assertOk()
+        ->assertJsonPath('assignments.0.progress', ['received' => 0, 'pending' => 0, 'accepted' => 0, 'correction' => 0, 'rejected' => 0])
+        ->assertJsonPath('assignments.0.version.publishedAt', $this->version->published_at->toIso8601String());
+
+    $this->postJson(collectApi('submissions'), surveyPayload($this->version->id))->assertCreated();
+    $this->postJson(collectApi('submissions'), surveyPayload($this->version->id))->assertCreated();
+
+    $this->getJson(collectApi('assignments'))->assertOk()
+        ->assertJsonPath('assignments.0.progress.received', 2)
+        ->assertJsonPath('assignments.0.progress.pending', 2)
+        // Received is not approved.
+        ->assertJsonPath('assignments.0.progress.accepted', 0);
+
+    // Another collector on the same form starts from zero.
+    $other = actingAsRole('mel_enumerator', name: 'Ola Other');
+    actingAsRole('mel_manager', $this->manager);
+    $this->post(mel("collect/forms/{$this->form->id}/assignments"), ['user_ids' => [$other->id]])->assertSessionHasNoErrors();
+    $this->actingAsAppMember('acme', rolePermissions('mel_enumerator'), user: $other);
+    $this->getJson(collectApi('assignments'))->assertOk()->assertJsonPath('assignments.0.progress.received', 0);
+});
+
 it('takes a submission once, whatever the number of retries', function () {
     $payload = surveyPayload($this->version->id);
 

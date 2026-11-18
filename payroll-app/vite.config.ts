@@ -17,7 +17,7 @@ const path = env.PLATFORM_PATH || env.PLATFORM_APPLICATION || 'payroll';
 // Pages on every workspace host load scripts from the dev server, and
 // module scripts need CORS.
 const rootDomain = (
-    env.PLATFORM_ROOT_DOMAIN || 'milesoftwares.localhost'
+    env.PLATFORM_ROOT_DOMAIN || 'tatook.localhost'
 ).replaceAll('.', '\\.');
 const platformOrigin = new RegExp(
     `^https?://([a-z0-9-]+\\.)?${rootDomain}(:\\d+)?$`,
@@ -52,7 +52,7 @@ export default defineConfig({
     server: {
         // DEV_SERVER_HOST: the address to listen on (0.0.0.0 for every one).
         // DEV_SERVER_PUBLIC_HOST: the name pages load scripts from, e.g.
-        // milesoftwares.localhost. It resolves to the same address as the page
+        // tatook.localhost. It resolves to the same address as the page
         // (browsers block a LAN-address page from loading loopback assets)
         // and follows the hosts file when the machine's IP changes.
         host: env.DEV_SERVER_HOST || undefined,

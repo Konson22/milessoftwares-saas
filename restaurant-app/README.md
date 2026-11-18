@@ -39,7 +39,7 @@ cd ../restaurant-app && composer dev   # :8700, queue, Vite
 composer ci:check                # format, lint, types, Pint, PHPStan, Pest
 ```
 
-Open `http://<workspace-slug>.milesoftwares.localhost/restaurant` (proxy entry in
+Open `http://<workspace-slug>.tatook.localhost/restaurant` (proxy entry in
 `ops/local-dev/apache-dev.conf`). The routes for the front end are generated from the
 configured application, so `.env` (`PLATFORM_APPLICATION=restaurant`) must exist before a build.
 Production: `ops/nginx/products/restaurant.conf`, `ops/php-fpm/restaurant.conf`, and `restaurant`

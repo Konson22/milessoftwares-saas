@@ -47,7 +47,7 @@ if (! app(PlatformConfig::class)->configured()) {
 }
 
 Route::prefix(app(PlatformConfig::class)->path())
-    ->middleware(['web', 'platform'])
+    ->middleware(['web', 'platform', 'web.role'])
     ->group(function () {
         Route::get('branch', [BranchController::class, 'edit'])->name('branch.edit');
         Route::put('branch', [BranchController::class, 'update'])->name('branch.update');

@@ -6,6 +6,11 @@ import { Panel, PanelBody } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
 import { Label } from '@miles/ui/components/ui/label';
+import {
+    MoneyInput,
+    toBaseMinor,
+    useMoney,
+} from '@miles/ui/components/money-input';
 import { StatusBadge } from '@miles/ui/components/status-badge';
 import { PriceBadges } from '@/components/price-badges';
 import { formatMoney, parseMoney } from '@/lib/money';
@@ -138,11 +143,18 @@ export default function MedicineForm({
     const [nextKey, setNextKey] = useState(packs.length);
     // The unit price and unit name as typed, for the price badges.
     const [sellPrice, setSellPrice] = useState(medicine?.sellPrice ?? '');
+    // Prices may be typed in another currency: saved in the workspace's.
+    const [priceCurrency, setPriceCurrency] = useState('');
+    const entry = useMoney();
     const [unit, setUnit] = useState(medicine?.unit ?? 'tablet');
     const { currency } = usePage().props;
     const code = currency ?? 'USD';
     const money = (minor: number) => formatMoney(minor, code);
-    const unitSellMinor = parseMoney(sellPrice, code);
+    const toPrice = (value: string) =>
+        priceCurrency && priceCurrency !== code
+            ? toBaseMinor(entry, value, priceCurrency)
+            : parseMoney(value, code);
+    const unitSellMinor = toPrice(sellPrice);
     const lastCostMinor = medicine?.lastUnitCostMinor ?? null;
     const setPack = (key: number, change: Partial<(typeof packs)[number]>) =>
         setPacks(packs.map((p) => (p.key === key ? { ...p, ...change } : p)));
@@ -304,15 +316,13 @@ export default function MedicineForm({
                                     label="Selling price per unit"
                                     error={errors.sell_price}
                                 >
-                                    <Input
+                                    <MoneyInput
                                         id="sell_price"
                                         name="sell_price"
-                                        inputMode="decimal"
                                         required
                                         defaultValue={medicine?.sellPrice}
-                                        onChange={(e) =>
-                                            setSellPrice(e.target.value)
-                                        }
+                                        onChange={setSellPrice}
+                                        onCurrencyChange={setPriceCurrency}
                                         aria-invalid={
                                             errors.sell_price ? true : undefined
                                         }
@@ -422,7 +432,12 @@ export default function MedicineForm({
                                                     defaultValue={
                                                         pack.sellPrice
                                                     }
-                                                    placeholder="Pack price"
+                                                    placeholder={
+                                                        priceCurrency &&
+                                                        priceCurrency !== code
+                                                            ? `Pack price (${priceCurrency})`
+                                                            : 'Pack price'
+                                                    }
                                                     aria-label={`Selling price of pack ${i + 1}`}
                                                     onChange={(e) =>
                                                         setPack(pack.key, {
@@ -467,9 +482,8 @@ export default function MedicineForm({
                                                 name={pack.name || 'pack'}
                                                 units={pack.units}
                                                 unit={unit || 'unit'}
-                                                packSellMinor={parseMoney(
+                                                packSellMinor={toPrice(
                                                     pack.sellPrice,
-                                                    code,
                                                 )}
                                                 unitSellMinor={unitSellMinor}
                                                 lastCostMinor={lastCostMinor}

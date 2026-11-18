@@ -110,6 +110,8 @@ class ProductController extends Controller
             'tracks_expiry' => ['boolean'],
             'tracks_serials' => ['boolean'],
             'sell_price' => ['required', 'string', Money::rule()],
+            // Prices typed in another currency are kept in the workspace currency at today's rate.
+            'sell_price_currency' => Money::currencyRule(),
             'reorder_level' => ['required', 'integer', 'min:0', 'max:1000000'],
             'active' => ['boolean'],
             'packs' => ['array', 'max:10'],
@@ -135,16 +137,16 @@ class ProductController extends Controller
                 'tracks_expiry' => $tracksExpiry,
                 // Turned on with stock on the shelf: record its serials before selling it.
                 'tracks_serials' => (bool) ($validated['tracks_serials'] ?? false),
-                'sell_price_minor' => Money::toMinor($validated['sell_price']),
+                'sell_price_minor' => Money::entered($validated, 'sell_price')->baseMinor,
                 'reorder_level' => (int) $validated['reorder_level'],
                 'active' => (bool) ($validated['active'] ?? true),
             ])->save();
 
-            $packs->sync($product, array_values(array_map(fn (array $pack) => [
+            $packs->sync($product, array_values(array_map(fn (array $pack, int|string $index) => [
                 'name' => (string) $pack['name'],
                 'units' => (int) $pack['units'],
-                'sell_price_minor' => isset($pack['sell_price']) && $pack['sell_price'] !== '' ? Money::toMinor($pack['sell_price']) : null,
-            ], $validated['packs'] ?? [])));
+                'sell_price_minor' => isset($pack['sell_price']) && $pack['sell_price'] !== '' ? Money::enter($pack['sell_price'], $validated['sell_price_currency'] ?? null, "packs.{$index}.sell_price")->baseMinor : null,
+            ], $validated['packs'] ?? [], array_keys($validated['packs'] ?? []))));
         });
     }
 

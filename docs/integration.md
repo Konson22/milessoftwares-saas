@@ -7,7 +7,7 @@ Finance, HR or Payroll, and health reporting (scopes `events.issue`, `health.wri
 `docs/shared-modules.md`.
 
 All platform endpoints are on the **auth host**, `https://auth.milesoftwares.com`
-(`http://auth.milesoftwares.localhost:8100` locally). Discovery:
+(`http://auth.tatook.localhost:8100` locally). Discovery:
 `/.well-known/openid-configuration`.
 
 ## 0. Registration (done by platform staff)
@@ -272,7 +272,7 @@ sign-in client's tenant callback path is `/pharmacy/auth/callback`.
 php-fpm pool; REQUEST_URI keeps `/pharmacy/...` so it matches the prefixed Laravel routes.
 
 **Local development (XAMPP Apache).** `ops/local-dev/apache-dev.conf` forwards
-`{slug}.milesoftwares.localhost/pharmacy/*` to the product's `php artisan serve` with the path
+`{slug}.tatook.localhost/pharmacy/*` to the product's `php artisan serve` with the path
 preserved (`ProxyPass "/pharmacy/" "http://127.0.0.1:8400/pharmacy/"`). Ports:
 
 | Product   | Folder                  | Dev port |

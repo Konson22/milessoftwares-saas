@@ -1,4 +1,6 @@
 import { BillScreen, BillsScreen } from './screens/bills';
+import { DayReportScreen } from './screens/day-report';
+import { DeliveriesScreen, DeliveryFormScreen, DeliveryScreen } from './screens/deliveries';
 import { FloorScreen } from './screens/floor';
 import { HomeScreen } from './screens/home';
 import { KitchenScreen } from './screens/kitchen';
@@ -24,11 +26,15 @@ export const screens: Record<string, Screen> = {
   'bills/show': BillScreen,
   'tills/index': TillsScreen,
   'tills/show': TillScreen,
+  'reports/day': DayReportScreen,
   'menu/index': MenuScreen,
   'menu/form': MenuFormScreen,
   'tables/index': TablesScreen,
   'stock/index': StockScreen,
   'stock/show': StockItemScreen,
+  'stock/deliveries/index': DeliveriesScreen,
+  'stock/deliveries/create': DeliveryFormScreen,
+  'stock/deliveries/show': DeliveryScreen,
 };
 
 /** Sections others change while they are open here: online, loaded again every so many seconds. */

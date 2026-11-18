@@ -55,6 +55,14 @@ final class ManageMembers
         ]);
     }
 
+    /**
+     * @throws MembershipActionDenied
+     */
+    public function assertMayChange(OrganizationMembership $actor, OrganizationMembership $member): void
+    {
+        $this->assertAllowed($actor, $member);
+    }
+
     private function assertAllowed(OrganizationMembership $actor, OrganizationMembership $member): void
     {
         if ($actor->is($member)) {

@@ -68,7 +68,7 @@ it('fails the release on unsafe settings and names each one', function (string $
 })->with([
     'debug on' => ['app.debug', true, 'APP_DEBUG is off'],
     'plain http' => ['app.url', 'http://milesoftwares.com', 'APP_URL uses HTTPS'],
-    'dev domain' => ['platform.root_domain', 'milesoftwares.localhost', 'Root domain is a public domain'],
+    'dev domain' => ['platform.root_domain', 'tatook.localhost', 'Root domain is a public domain'],
     'insecure cookie' => ['session.secure', null, 'Session cookie is Secure'],
     'shared cookie domain' => ['session.domain', '.milesoftwares.com', 'Session cookie is host-only'],
     'no __Host- prefix' => ['session.cookie', 'miles-session', 'Session cookie uses the __Host- prefix'],

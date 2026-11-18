@@ -4,7 +4,9 @@ namespace App\Sites\Central\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Applications\Models\Application;
+use App\Modules\Authorization\Models\RoleAssignment;
 use App\Modules\Integration\Support\EffectiveAccess;
+use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Organizations\Models\OrganizationSlug;
 use App\Modules\Structure\Models\Branch;
@@ -128,6 +130,56 @@ class IntegrationController extends Controller
 
         return response()->json($access->for($record, $subject, $application))
             ->header('Cache-Control', 'private, max-age='.EffectiveAccess::TTL_SECONDS);
+    }
+
+    /**
+     * The calling application's people in one organization: everyone with a
+     * live role in it or an access state set for it, with their roles, the
+     * scope of each and whether they may sign in. Read-only: access is
+     * changed on the workspace's access page.
+     */
+    public function applicationMembers(Request $request, string $organization, TenantContext $tenant): JsonResponse
+    {
+        $application = $this->application($request);
+        $record = $this->visibleOrganization($application, $organization, allowSlug: false);
+
+        $members = $tenant->run($record, function () use ($application, $record) {
+            $assignments = RoleAssignment::query()
+                ->live()
+                ->where('application_id', $application->id)
+                ->with('role:id,key,name,sensitivity')
+                ->get()
+                ->groupBy('membership_id');
+            $grants = DB::table('application_access_grants')
+                ->where('application_id', $application->id)
+                ->pluck('status', 'membership_id');
+
+            return OrganizationMembership::query()
+                ->whereIn('id', $assignments->keys()->merge($grants->keys())->unique()->all())
+                ->with('user:id,name,email,username')
+                ->get()
+                ->sortBy(fn (OrganizationMembership $membership) => mb_strtolower($membership->user->name))
+                ->map(fn (OrganizationMembership $membership) => [
+                    'membership_id' => $membership->id,
+                    'sub' => $membership->user_id,
+                    'name' => $membership->user->name,
+                    'sign_in_name' => $membership->user->signInName(),
+                    'membership_status' => $membership->status->value,
+                    'is_owner' => $record->owner_membership_id === $membership->id,
+                    'application_access' => in_array($grants->get($membership->id), ['disabled', 'suspended'], true) ? $grants->get($membership->id) : 'active',
+                    'roles' => collect($assignments->get($membership->id, []))->map(fn (RoleAssignment $assignment) => [
+                        'role' => $assignment->role->key,
+                        'name' => $assignment->role->name,
+                        'scope_type' => $assignment->scope_type->value,
+                        'branch_id' => $assignment->branch_id,
+                        'expires_at' => $assignment->expires_at?->toIso8601String(),
+                    ])->values()->all(),
+                ])
+                ->values()
+                ->all();
+        });
+
+        return response()->json(['data' => $members])->header('Cache-Control', 'private, no-store');
     }
 
     private function application(Request $request): Application
