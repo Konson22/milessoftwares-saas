@@ -1,4 +1,4 @@
-import { trial } from '@/routes';
+import { getStarted, trial } from '@/routes';
 
 /**
  * Buttons shared by links across the public site. Links, not <Button>,
@@ -89,9 +89,24 @@ export function trialDuration(days: number): string {
 /**
  * Where "Start free trial" leads: the trial page on the app host, with the
  * application preselected. A visitor who is not signed in is sent to
- * register first (sign-in is a link away) and brought back; someone without a business is
- * sent on to create one with the same trial chosen.
+ * register first (sign-in is a link away) and brought back to it; then they choose the
+ * organization it is for, or create one. An ERP product (NGO) is started as itself.
  */
-export function trialUrl(code?: string): string {
+export function trialUrl(code?: string, product?: string | null): string {
+    if (product) {
+        return trial.url({ query: { product } });
+    }
+
     return trial.url(code ? { query: { app: code } } : undefined);
+}
+
+/**
+ * A plan's own call to action: its free trial, or asking for it (paid plans
+ * are switched on by Tatook once paid). Both keep the plan through signing
+ * up and choosing the organization.
+ */
+export function planUrl(code: string, action: 'trial' | 'subscribe'): string {
+    return getStarted.url({
+        query: action === 'trial' ? { plan: code } : { plan: code, action },
+    });
 }

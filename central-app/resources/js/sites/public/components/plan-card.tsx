@@ -2,7 +2,7 @@ import { Link } from '@inertiajs/react';
 import { ArrowRight, Check } from 'lucide-react';
 import { erpCallToAction } from '@/sites/public/components/erp-product';
 import type { ErpProduct } from '@/sites/public/components/erp-product';
-import { button, card } from '@/sites/public/components/styles';
+import { button, card, planUrl } from '@/sites/public/components/styles';
 
 export type Plan = {
     code: string;
@@ -91,7 +91,22 @@ export default function PlanCard({
                     </span>
                 )}
             </p>
-            {plan.product ? (
+            {(!plan.product || plan.product.status !== 'planned') &&
+            (plan.trialDays > 0 || !plan.product) ? (
+                <a
+                    href={planUrl(
+                        plan.code,
+                        plan.trialDays > 0 ? 'trial' : 'subscribe',
+                    )}
+                    className={`mt-7 ${featured ? button.light : button.outline}`}
+                >
+                    {plan.trialDays > 0 ? 'Start free trial' : 'Choose plan'}
+                    <span className="sr-only">
+                        {plan.trialDays > 0 ? ' of' : ':'} {plan.name}
+                    </span>
+                    <ArrowRight className="size-4" aria-hidden />
+                </a>
+            ) : plan.product ? (
                 <Link
                     href="/contact"
                     className={`mt-7 ${featured ? button.light : button.outline}`}
@@ -100,16 +115,7 @@ export default function PlanCard({
                     <span className="sr-only"> about {plan.name}</span>
                     <ArrowRight className="size-4" aria-hidden />
                 </Link>
-            ) : (
-                <Link
-                    href="/start"
-                    className={`mt-7 ${featured ? button.light : button.outline}`}
-                >
-                    Start free trial
-                    <span className="sr-only"> of {plan.name}</span>
-                    <ArrowRight className="size-4" aria-hidden />
-                </Link>
-            )}
+            ) : null}
             <div className="mt-8 border-t border-site-line pt-7 in-[.site-dark]:border-white/15">
                 <p className="text-sm font-semibold in-[.site-dark]:text-white">
                     Includes

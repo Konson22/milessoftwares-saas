@@ -39,6 +39,13 @@ type Props = {
         applications: { code: string; name: string; tagline: string | null }[];
         selected: string | null;
     };
+    /** What the account chose on the public site; started here once the business exists. */
+    intent: {
+        id: string;
+        name: string;
+        action: 'trial' | 'subscribe';
+        plan: string | null;
+    } | null;
 };
 
 type Availability =
@@ -250,6 +257,7 @@ export default function CreateOrganization({
     rootDomain,
     defaults,
     trial,
+    intent,
 }: Props) {
     const [displayName, setDisplayName] = useState('');
     const [slug, setSlug] = useState('');
@@ -300,9 +308,26 @@ export default function CreateOrganization({
                     description="Your business gets its own workspace address. You become its owner."
                 />
 
+                {intent && (
+                    <p className="rounded-lg border border-primary bg-card p-4 text-sm">
+                        You're getting started with{' '}
+                        <span className="font-semibold">{intent.name}</span>
+                        {intent.action === 'trial'
+                            ? ': its free trial starts in this business as soon as it is created.'
+                            : ': your request for it is sent as soon as this business is created.'}
+                    </p>
+                )}
+
                 <Form {...OrganizationController.store.form()}>
                     {({ processing, errors }) => (
                         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+                            {intent && (
+                                <input
+                                    type="hidden"
+                                    name="intent"
+                                    value={intent.id}
+                                />
+                            )}
                             <div className="space-y-5">
                                 <Section
                                     step={1}

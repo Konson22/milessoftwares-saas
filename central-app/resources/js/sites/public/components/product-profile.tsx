@@ -64,7 +64,7 @@ export default function ProductProfile({
 
     const primary = (style: string) =>
         product.trial ? (
-            <a href={trialUrl(product.trial)} className={style}>
+            <a href={trialUrl(product.trial, product.trialProduct)} className={style}>
                 Start Your {trialDays}-Day Free Trial
                 <ArrowRight className="size-4" aria-hidden />
             </a>

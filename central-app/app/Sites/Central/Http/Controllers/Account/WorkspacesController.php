@@ -4,10 +4,9 @@ namespace App\Sites\Central\Http\Controllers\Account;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Modules\Marketing\Support\MarketingCatalog;
 use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Memberships\Support\MembershipLookup;
-use App\Sites\Central\Http\Middleware\RememberTrialChoice;
+use App\Modules\Subscriptions\Actions\RegistrationIntents;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
@@ -20,7 +19,7 @@ use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
  * host; this page only lists them and starts new ones.
  *
  * continue() is where a sign-in with nowhere else to go lands: on to the
- * trial chosen on the public site, straight into the only business, or to
+ * product chosen on the public site, straight into the only business, or to
  * this list. ?to= carries a page inside the business (old app. links), kept
  * to the workspace's /manage area.
  */
@@ -49,12 +48,13 @@ class WorkspacesController extends Controller
         ]);
     }
 
-    public function continue(Request $request, MembershipLookup $memberships, MarketingCatalog $catalog): SymfonyResponse
+    public function continue(Request $request, MembershipLookup $memberships, RegistrationIntents $intents): SymfonyResponse
     {
-        // Signed up from "Start free trial" on the public site: carry on to it.
-        $chosen = $request->session()->pull(RememberTrialChoice::SESSION_KEY);
-        if (is_string($chosen) && in_array($chosen, array_column($catalog->trialable(), 'code'), true)) {
-            return redirect()->route('trial', ['app' => $chosen]);
+        // Chose a product on the public site (in this browser, or before
+        // verifying the address on another device): carry on with it.
+        $intents->claimRemembered($request->session(), $request->user());
+        if (($intent = $intents->latestOpen($request->user())) !== null) {
+            return redirect()->route('get-started.show', ['intent' => $intent->id]);
         }
 
         $workspaces = $this->workspaces($memberships, $request->user());

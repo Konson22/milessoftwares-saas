@@ -111,7 +111,14 @@ final class MarketingCatalog
                 'url' => self::url($entry['category'], $entry['slug']),
                 'status' => $status,
                 'includes' => $includes,
-                'trial' => $status !== 'coming_soon' && $trialCode !== null && in_array($trialCode, $trialable, true) ? $trialCode : null,
+                'trial' => $trial = $status !== 'coming_soon' && $trialCode !== null && in_array($trialCode, $trialable, true) ? $trialCode : null,
+                // An ERP product is started as itself (the registration
+                // intent names it) when every application it requires is
+                // open to trials; else through its own application.
+                'trialProduct' => $type === 'erp' && $trial !== null && array_diff(
+                    array_column(array_filter($includes, fn (array $application) => $application['requirement'] === 'required'), 'code'),
+                    $trialable,
+                ) === [] ? $code : null,
             ];
         }
 
