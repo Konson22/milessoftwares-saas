@@ -8,6 +8,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\KitchenController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\TillController;
 use Illuminate\Support\Facades\Route;
@@ -100,6 +101,8 @@ Route::prefix(app(PlatformConfig::class)->path())
                 ->whereUuid('bill')
                 ->middleware('branch.can:restaurant.bills.void')
                 ->name('bills.void');
+
+            Route::get('reports', [ReportController::class, 'show'])->middleware('branch.can:restaurant.reports.view')->name('reports.day');
 
             // Tills: cashiers their own, managers everyone's.
             Route::post('tills', [TillController::class, 'store'])->middleware('branch.can:restaurant.bills.take')->name('tills.store');

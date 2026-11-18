@@ -56,6 +56,14 @@ class OrderLine extends Model
     }
 
     /**
+     * @return BelongsTo<Order, $this>
+     */
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    /**
      * @return BelongsTo<MenuItem, $this>
      */
     public function item(): BelongsTo

@@ -1,4 +1,5 @@
 import { BillScreen, BillsScreen } from './screens/bills';
+import { DayReportScreen } from './screens/day-report';
 import { DeliveriesScreen, DeliveryFormScreen, DeliveryScreen } from './screens/deliveries';
 import { FloorScreen } from './screens/floor';
 import { HomeScreen } from './screens/home';
@@ -25,6 +26,7 @@ export const screens: Record<string, Screen> = {
   'bills/show': BillScreen,
   'tills/index': TillsScreen,
   'tills/show': TillScreen,
+  'reports/day': DayReportScreen,
   'menu/index': MenuScreen,
   'menu/form': MenuFormScreen,
   'tables/index': TablesScreen,

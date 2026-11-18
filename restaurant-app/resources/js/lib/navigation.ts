@@ -1,6 +1,7 @@
 import {
     Armchair,
     Boxes,
+    ChartColumn,
     ChefHat,
     ClipboardList,
     LayoutDashboard,
@@ -15,6 +16,7 @@ import { floor, home, kitchen } from '@/routes';
 import { index as bills } from '@/routes/bills';
 import { index as menu } from '@/routes/menu';
 import { index as orders } from '@/routes/orders';
+import { day as dayReport } from '@/routes/reports';
 import { index as stock } from '@/routes/stock';
 import { index as deliveries } from '@/routes/stock/deliveries';
 import { index as tables } from '@/routes/tables';
@@ -92,6 +94,13 @@ export const navigation: NavGroup[] = [
                 icon: Wallet,
                 permission: 'restaurant.bills.take',
                 anyOf: ['restaurant.bills.take', 'restaurant.tills.manage'],
+                scope: 'branch',
+            },
+            {
+                title: 'Day report',
+                href: dayReport(),
+                icon: ChartColumn,
+                permission: 'restaurant.reports.view',
                 scope: 'branch',
             },
         ],

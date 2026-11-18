@@ -613,6 +613,50 @@ describe('split bills and discounts', function () {
     });
 });
 
+describe('the day report', function () {
+    it('shows the day: takings by method and person, what sold, discounts, refunds, voids and cancellations', function () {
+        member(['restaurant.orders.take', 'restaurant.bills.take']);
+        $this->get(at('reports'))->assertForbidden();
+
+        member(['restaurant.orders.take', 'restaurant.orders.void', 'restaurant.bills.take', 'restaurant.bills.discount', 'restaurant.bills.void', 'restaurant.reports.view']);
+
+        $first = tableOrder([[$this->beans, 2], [$this->soda, 1]]);
+        $soda = $this->asTenant('acme', fn () => OrderLine::query()->where('menu_item_id', $this->soda->id)->sole());
+        $this->post(at("orders/{$first->id}/lines/{$soda->id}/void"), ['reason' => 'Spilt'])->assertSessionHasNoErrors();
+        $this->post(at("orders/{$first->id}/pay"), ['payment_method' => 'cash', 'discount' => '10', 'discount_type' => 'percent', 'discount_reason' => 'Regular'])->assertSessionHasNoErrors();
+
+        $second = tableOrder([[$this->beans, 1]]);
+        $this->post(at("orders/{$second->id}/pay"), ['payment_method' => 'card'])->assertSessionHasNoErrors();
+        $refunded = $this->asTenant('acme', fn () => Bill::query()->where('order_id', $second->id)->sole());
+        $this->post(at("bills/{$refunded->id}/void"), ['reason' => 'Wrong table'])->assertSessionHasNoErrors();
+
+        $third = tableOrder([[$this->soda, 2]]);
+        $this->post(at("orders/{$third->id}/cancel"), ['reason' => 'Walked out'])->assertSessionHasNoErrors();
+
+        $this->get(at('reports'))->assertInertia(fn (Assert $page) => $page
+            ->component('reports/day')
+            ->where('takings.count', 1)
+            ->where('takings.totalMinor', 2700)
+            ->where('takings.averageMinor', 2700)
+            ->where('takings.discountMinor', 300)
+            ->where('takings.refundedMinor', 1500)
+            ->has('byMethod', 1)
+            ->where('byMethod.0.name', 'Cash')
+            ->where('byMethod.0.totalMinor', 2700)
+            ->has('byCashier', 1)
+            ->has('byWaiter', 1)
+            ->has('bestSellers', 1)
+            ->where('bestSellers.0.quantity', 2)
+            ->where('discounts.0.reason', 'Regular')
+            ->where('voidedBills.0.reason', 'Wrong table')
+            ->where('cancelledOrders.0.reason', 'Walked out')
+            ->has('voidedLines', 1)
+            ->where('voidedLines.0.reason', 'Spilt'));
+
+        $this->get(at('reports?day=2020-01-01'))->assertInertia(fn (Assert $page) => $page->where('takings.count', 0)->has('voidedLines', 0));
+    });
+});
+
 describe('tills', function () {
     it('closes a shift with a count, telling Finance only of a difference', function () {
         $cashier = member(['restaurant.orders.take', 'restaurant.bills.take']);
