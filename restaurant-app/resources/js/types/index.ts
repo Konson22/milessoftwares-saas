@@ -17,5 +17,7 @@ export type SharedProps = {
     branches: { id: string; name: string }[];
     /** Oversees every branch together (Global Admin, owner). */
     overview: boolean;
+    /** The workspace the page belongs to: one branch, or management. */
+    area: 'branch' | 'management';
     flash: { success: string | null };
 };

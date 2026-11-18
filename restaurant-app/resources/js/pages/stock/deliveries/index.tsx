@@ -82,7 +82,9 @@ export default function DeliveriesIndex({ deliveries, canReceive }: Props) {
                                 <TableRow key={delivery.id}>
                                     <TableCell>
                                         <Link
-                                            href={show(delivery.id)}
+                                            href={show({
+                                                delivery: delivery.id,
+                                            })}
                                             className="font-medium hover:underline"
                                         >
                                             {delivery.number}

@@ -127,7 +127,7 @@ export default function ShowShift({ till, summary, methods }: Props) {
 
                         {till.status === 'open' && (
                             <Form
-                                {...close.form(till.id)}
+                                {...close.form({ till: till.id })}
                                 className="mt-4 grid gap-3 border-t pt-4"
                             >
                                 {({ errors, processing }) => (

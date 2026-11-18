@@ -88,7 +88,7 @@ export default function StockIndex({ rows, filters, canReceive }: Props) {
                                 asChild
                             >
                                 <Link
-                                    href={index({
+                                    href={index(undefined, {
                                         query: {
                                             filter: filter.value,
                                             search: filters.search || undefined,
@@ -140,7 +140,7 @@ export default function StockIndex({ rows, filters, canReceive }: Props) {
                                 <TableRow key={row.id}>
                                     <TableCell>
                                         <Link
-                                            href={show(row.id)}
+                                            href={show({ item: row.id })}
                                             className="font-medium hover:underline"
                                         >
                                             {row.name}

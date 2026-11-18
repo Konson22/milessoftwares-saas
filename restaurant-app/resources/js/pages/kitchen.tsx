@@ -138,7 +138,7 @@ export default function Kitchen({ tickets }: Props) {
                                     ))}
                                 </ul>
                                 <Form
-                                    {...action.form(ticket.id)}
+                                    {...action.form({ ticket: ticket.id })}
                                     options={{ preserveScroll: true }}
                                 >
                                     {({ processing }) => (

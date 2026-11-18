@@ -90,7 +90,7 @@ export default function Orders({ day, orders }: Props) {
                                 <TableRow key={order.id}>
                                     <TableCell>
                                         <Link
-                                            href={show(order.id)}
+                                            href={show({ order: order.id })}
                                             className="font-medium hover:underline"
                                         >
                                             {order.number}

@@ -55,7 +55,7 @@ function member(array $permissions = ['restaurant.orders.take'], ?User $user = n
     $member = test()->actingAsMember('acme', $permissions, branch: test()->juba, user: $user);
     assert($member instanceof User);
     if (in_array('restaurant.bills.take', $permissions, true) && $user === null) {
-        test()->post(test()->workspaceUrl('acme', 'tills'), ['opening_float' => '10.00'])->assertSessionHasNoErrors();
+        test()->post(at('tills'), ['opening_float' => '10.00'])->assertSessionHasNoErrors();
     }
 
     return $member;
@@ -68,22 +68,29 @@ function member(array $permissions = ['restaurant.orders.take'], ?User $user = n
  */
 function tableOrder(array $lines, bool $send = true): Order
 {
-    test()->post(test()->workspaceUrl('acme', 'orders'), ['service' => 'dine_in', 'dining_table_id' => test()->table->id, 'guests' => 2])->assertSessionHasNoErrors();
+    test()->post(at('orders'), ['service' => 'dine_in', 'dining_table_id' => test()->table->id, 'guests' => 2])->assertSessionHasNoErrors();
     $order = test()->asTenant('acme', fn () => Order::query()->where('dining_table_id', test()->table->id)->where('status', 'open')->sole());
 
-    test()->post(test()->workspaceUrl('acme', "orders/{$order->id}/lines"), [
+    test()->post(at("orders/{$order->id}/lines"), [
         'lines' => array_map(fn (array $line) => ['item_id' => $line[0]->id, 'quantity' => $line[1], 'note' => $line[2] ?? null], $lines),
     ])->assertSessionHasNoErrors();
     if ($send) {
-        test()->post(test()->workspaceUrl('acme', "orders/{$order->id}/send"))->assertSessionHasNoErrors();
+        test()->post(at("orders/{$order->id}/send"))->assertSessionHasNoErrors();
     }
 
     return $order;
 }
 
-function at(string $path = ''): string
+/**
+ * A page's address. Branch pages (the floor, orders, bills...) live under
+ * branches/{branch}: in Juba unless another branch is named.
+ */
+function at(string $path = '', ?string $branch = null): string
 {
-    return test()->workspaceUrl('acme', $path);
+    $section = explode('/', strtok($path, '?') ?: '')[0];
+    $inBranch = $branch !== null || in_array($section, ['floor', 'orders', 'kitchen', 'bills', 'reports', 'tills', 'stock', 'tables'], true);
+
+    return test()->workspaceUrl('acme', $inBranch ? rtrim('branches/'.($branch ?? test()->juba).'/'.$path, '/') : $path);
 }
 
 function sodasInJuba(): int
@@ -100,20 +107,56 @@ function financeEvents(): array
 }
 
 describe('branches', function () {
-    it('asks which branch to work in when there are several', function () {
+    it('lists the branches when there are several, each opening its own workspace', function () {
         $this->actingAsMember('acme', ['restaurant.orders.take']);
 
-        $this->get(at('floor'))->assertRedirect(at('branch'));
-        $this->get(at('branch'))->assertInertia(fn (Assert $page) => $page->component('branch')->has('branches', 2));
+        $this->get(at())->assertRedirect(at('branch'));
+        $this->get(at('branch'))->assertInertia(fn (Assert $page) => $page
+            ->component('branch')
+            ->has('branches', 2)
+            ->where('branches.1.url', at('', $this->wau)));
 
-        $this->put(at('branch'), ['branch_id' => $this->wau])->assertRedirect(at('floor'));
-        $this->get(at('floor'))->assertOk()->assertInertia(fn (Assert $page) => $page->where('branch.name', 'Wau')->has('tables', 0));
+        $this->get(at('floor', $this->wau))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('area', 'branch')
+            ->where('branch.name', 'Wau')
+            ->has('tables', 0));
+    });
+
+    it('keeps each tab in the branch its address names', function () {
+        $this->actingAsMember('acme', ['restaurant.orders.take', 'restaurant.tables.manage']);
+
+        // Two tabs, one session: neither moves the other.
+        $this->get(at('floor', $this->wau))->assertInertia(fn (Assert $page) => $page->where('branch.name', 'Wau'));
+        $this->get(at('floor'))->assertInertia(fn (Assert $page) => $page->where('branch.name', 'Juba')->has('tables', 2));
+        $this->post(at('orders'), ['service' => 'takeaway'])->assertSessionHasNoErrors();
+        $this->get(at('floor', $this->wau))->assertInertia(fn (Assert $page) => $page->where('branch.name', 'Wau')->has('takeaways', 0));
+        $this->get(at('floor'))->assertInertia(fn (Assert $page) => $page->has('takeaways', 1));
+
+        // What a page does stays in its branch: Juba's order is not Wau's.
+        $order = $this->asTenant('acme', fn () => Order::query()->sole());
+        $this->get(at("orders/{$order->id}", $this->wau))->assertNotFound();
+        $this->get(at("orders/{$order->id}"))->assertOk();
+    });
+
+    it('opens old addresses in the branch last worked in, or asks which', function () {
+        $this->actingAsMember('acme', ['restaurant.orders.take']);
+
+        $this->get($this->workspaceUrl('acme', 'floor'))->assertRedirect(at('branch').'?page=floor');
+        $this->get(at('branch').'?page=floor')->assertInertia(fn (Assert $page) => $page->where('branches.1.url', at('floor', $this->wau)));
+
+        $this->get(at('orders', $this->wau));
+        $this->get($this->workspaceUrl('acme', 'orders?day=2026-10-25'))->assertRedirect(at('orders?day=2026-10-25', $this->wau));
+        $this->put(at('branch'), ['branch_id' => $this->juba])->assertRedirect(at('', $this->juba));
     });
 
     it('opens only the branches the member has a role in', function () {
         member();
 
         $this->get(at('floor'))->assertOk()->assertInertia(fn (Assert $page) => $page->where('branch.name', 'Juba'));
+        $this->get(at())->assertRedirect(at('', $this->juba));
+        $this->get(at('floor', $this->wau))->assertNotFound();
+        $this->post(at('orders', $this->wau), ['service' => 'takeaway'])->assertNotFound();
+        $this->get(at('floor', (string) Str::uuid()))->assertNotFound();
         $this->put(at('branch'), ['branch_id' => $this->wau])->assertNotFound();
     });
 
@@ -124,7 +167,6 @@ describe('branches', function () {
             ['permissions' => ['restaurant.orders.take'], 'scope' => ['scope_type' => 'branch', 'branch_id' => $this->juba]],
             ['permissions' => ['restaurant.tables.manage'], 'scope' => ['scope_type' => 'branch', 'branch_id' => $this->wau]],
         ]);
-        $this->put(at('branch'), ['branch_id' => $this->juba]);
 
         $this->get(at('floor'))->assertOk();
         $this->get(at('tables'))->assertForbidden();
@@ -794,7 +836,7 @@ describe('stock', function () {
         $this->asTenant('acme', fn () => $this->soda->forceFill(['reorder_level' => 24])->save());
         member(['restaurant.stock.view', 'restaurant.orders.take']);
 
-        $this->get(at())->assertInertia(fn (Assert $page) => $page
+        $this->get(at('', $this->juba))->assertInertia(fn (Assert $page) => $page
             ->component('home')
             ->where('lowStock', 1)
             ->where('openOrders', 0)
@@ -842,15 +884,15 @@ describe('roles', function () {
         $this->get(at('floor'))->assertForbidden();
         $this->get(at('bills'))->assertForbidden();
         $this->get(at('reports'))->assertForbidden();
-        $this->get(at('branches/overview'))->assertForbidden();
+        $this->get(at('management'))->assertForbidden();
     });
 });
 
 describe('every branch together', function () {
     it('lands a Global Admin on every branch together, and keeps branch staff to their branch', function () {
         globalAdmin();
-        $this->get(at())->assertRedirect(at('branches/overview'));
-        $this->get(at('branches/overview'))->assertOk()->assertInertia(fn (Assert $page) => $page
+        $this->get(at())->assertRedirect(at('management'));
+        $this->get(at('management'))->assertOk()->assertInertia(fn (Assert $page) => $page
             ->component('overview')
             ->where('overview', true)
             ->where('branch', null)
@@ -859,25 +901,60 @@ describe('every branch together', function () {
 
         // A manager of one branch, even holding the overview there, works in that branch.
         $manager = $this->actingAsMember('acme', ['restaurant.orders.take', 'restaurant.reports.view', 'restaurant.branches.overview'], branch: $this->juba);
-        $this->get(at())->assertOk()->assertInertia(fn (Assert $page) => $page->component('home')->where('overview', false)->where('branch.name', 'Juba'));
-        $this->get(at('branches/overview'))->assertForbidden();
+        $this->get(at())->assertRedirect(at('', $this->juba));
+        $this->get(at('', $this->juba))->assertOk()->assertInertia(fn (Assert $page) => $page->component('home')->where('overview', false)->where('branch.name', 'Juba'));
+        $this->get(at('management'))->assertForbidden();
         $this->put(at('branch'), ['branch_id' => 'all'])->assertNotFound();
 
         // Organization-wide without the overview: still one branch at a time.
         $this->flushSession();
         $this->actingAsMember('acme', ['restaurant.orders.take']);
         $this->get(at())->assertRedirect(at('branch'));
-        $this->get(at('branches/overview'))->assertForbidden();
+        $this->get(at('management'))->assertForbidden();
     });
 
-    it('switches into a branch and back to all branches', function () {
+    it('opens every branch in its own workspace beside management, which stays the whole restaurant\'s', function () {
         globalAdmin();
 
-        $this->put(at('branch'), ['branch_id' => $this->wau])->assertRedirect(at());
-        $this->get(at())->assertInertia(fn (Assert $page) => $page->component('home')->where('branch.name', 'Wau')->where('overview', true));
+        $this->get(at('management/branches'))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('management/branches')
+            ->where('area', 'management')
+            ->where('branch', null)
+            ->has('branches', 2)
+            ->where('branches.0.name', 'Juba'));
 
-        $this->put(at('branch'), ['branch_id' => 'all'])->assertRedirect(at('branches/overview'));
-        $this->get(at())->assertRedirect(at('branches/overview'));
+        // Two branch tabs and the management tab, all in one session.
+        $this->get(at('', $this->wau))->assertInertia(fn (Assert $page) => $page->component('home')->where('area', 'branch')->where('branch.name', 'Wau'));
+        $this->get(at('', $this->juba))->assertInertia(fn (Assert $page) => $page->where('branch.name', 'Juba'));
+        $this->get(at('kitchen', $this->wau))->assertInertia(fn (Assert $page) => $page->where('branch.name', 'Wau'));
+        $this->get(at('management'))->assertInertia(fn (Assert $page) => $page->where('area', 'management')->where('branch', null)->has('performance', 2));
+        $this->get(at())->assertRedirect(at('management'));
+
+        // The old form still works, as a link would.
+        $this->put(at('branch'), ['branch_id' => $this->wau])->assertRedirect(at('', $this->wau));
+        $this->put(at('branch'), ['branch_id' => 'all'])->assertRedirect(at('management'));
+
+        // Old addresses of management pages.
+        $this->get(at('branches/overview'))->assertRedirect(at('management'));
+        $this->get(at('staff'))->assertRedirect(at('management/staff'));
+    });
+
+    it('shows each drink in every branch, and keeps branch staff out of management', function () {
+        $this->asTenant('acme', fn () => $this->soda->forceFill(['reorder_level' => 30])->save());
+
+        globalAdmin();
+        $this->get(at('management/inventory'))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('management/inventory')
+            ->has('branches', 2)
+            ->where('drinks.0.name', 'Soda')
+            ->where("drinks.0.byBranch.{$this->juba}", 24)
+            ->where("drinks.0.byBranch.{$this->wau}", 0)
+            ->where('drinks.0.valueMinor', 24 * 150));
+
+        $this->actingAsMember('acme', ['restaurant.orders.take', 'restaurant.stock.view', 'restaurant.reports.view'], branch: $this->juba);
+        foreach (['management', 'management/branches', 'management/inventory', 'management/staff'] as $page) {
+            $this->get(at($page))->assertForbidden();
+        }
     });
 
     it('adds up sales, discounts, refunds and payments the day report\'s way, branch by branch', function () {
@@ -894,7 +971,7 @@ describe('every branch together', function () {
         tableOrder([[$this->beans, 1]]);
 
         globalAdmin();
-        $this->get(at('branches/overview'))->assertInertia(fn (Assert $page) => $page
+        $this->get(at('management'))->assertInertia(fn (Assert $page) => $page
             ->where('totals.grossMinor', 4800)
             ->where('totals.discountMinor', 330)
             ->where('totals.salesMinor', 4470)
@@ -920,12 +997,12 @@ describe('every branch together', function () {
             ->where('orders.total', 3));
 
         // One branch, one status.
-        $this->get(at("branches/overview?branch={$this->wau}"))->assertInertia(fn (Assert $page) => $page
+        $this->get(at("management?branch={$this->wau}"))->assertInertia(fn (Assert $page) => $page
             ->where('totals.netMinor', 0)->has('performance', 1)->where('orders.total', 0));
-        $this->get(at('branches/overview?status=paid'))->assertInertia(fn (Assert $page) => $page->where('orders.total', 2));
+        $this->get(at('management?status=paid'))->assertInertia(fn (Assert $page) => $page->where('orders.total', 2));
 
         // The period before had nothing; the day before shows nothing.
-        $this->get(at('branches/overview?from=2026-10-24&to=2026-10-24'))->assertInertia(fn (Assert $page) => $page
+        $this->get(at('management?from=2026-10-24&to=2026-10-24'))->assertInertia(fn (Assert $page) => $page
             ->where('totals.netMinor', 0)->where('totals.orders.total', 0));
     });
 
@@ -936,7 +1013,7 @@ describe('every branch together', function () {
         $this->asTenant('acme', fn () => Bill::query()->sole()->update(['currency' => 'USD']));
 
         globalAdmin();
-        $this->get(at('branches/overview'))->assertInertia(fn (Assert $page) => $page
+        $this->get(at('management'))->assertInertia(fn (Assert $page) => $page
             ->where('totals.netMinor', 0)
             ->where('otherCurrencies.USD', 1));
     });
@@ -945,11 +1022,11 @@ describe('every branch together', function () {
         $elsewhere = $this->platform()->branch('globex', 'Malakal');
 
         globalAdmin();
-        $this->get(at("branches/overview?branch={$elsewhere}"))->assertSessionHasErrors('branch');
-        $this->get(at('branches/overview?branch='.Str::uuid()))->assertSessionHasErrors('branch');
+        $this->get(at("management?branch={$elsewhere}"))->assertSessionHasErrors('branch');
+        $this->get(at('management?branch='.Str::uuid()))->assertSessionHasErrors('branch');
         $this->put(at('branch'), ['branch_id' => $elsewhere])->assertNotFound();
-        $this->get(at('branches/overview?from=2026-01-01&to=2026-10-25'))->assertSessionHasErrors('from');
-        $this->get(at('branches/overview?from=2026-10-25&to=2026-10-01'))->assertSessionHasErrors('to');
+        $this->get(at('management?from=2026-01-01&to=2026-10-25'))->assertSessionHasErrors('from');
+        $this->get(at('management?from=2026-10-25&to=2026-10-01'))->assertSessionHasErrors('to');
     });
 
     it('shows the kitchens now and what needs attention', function () {
@@ -959,7 +1036,7 @@ describe('every branch together', function () {
 
         $this->travel(45)->minutes();
         globalAdmin();
-        $this->get(at('branches/overview'))->assertInertia(fn (Assert $page) => $page
+        $this->get(at('management'))->assertInertia(fn (Assert $page) => $page
             ->where('kitchen.preparing', 1)
             ->where('kitchen.slow', 1)
             ->where('kitchen.oldestMinutes', 45)
@@ -970,7 +1047,7 @@ describe('every branch together', function () {
 
         // A till left open overnight.
         $this->travel(1)->days();
-        $this->get(at('branches/overview'))->assertInertia(fn (Assert $page) => $page
+        $this->get(at('management'))->assertInertia(fn (Assert $page) => $page
             ->where('alerts', fn ($alerts) => collect($alerts)->contains('kind', 'till')));
     });
 });
@@ -989,12 +1066,12 @@ describe('staff and access', function () {
         expect($organization['id'])->not->toBe('');
 
         member(['restaurant.orders.take', 'restaurant.reports.view']);
-        $this->get(at('staff'))->assertForbidden();
+        $this->get(at('management/staff'))->assertForbidden();
         $this->actingAsMember('acme', ['restaurant.access.manage'], branch: $this->juba);
-        $this->get(at('staff'))->assertForbidden();
+        $this->get(at('management/staff'))->assertForbidden();
 
         globalAdmin();
-        $this->get(at('staff'))->assertOk()->assertInertia(fn (Assert $page) => $page
+        $this->get(at('management/staff'))->assertOk()->assertInertia(fn (Assert $page) => $page
             ->component('staff/index')
             ->where('manageUrl', '/manage/access')
             ->has('people', 2)

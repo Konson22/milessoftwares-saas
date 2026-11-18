@@ -82,7 +82,7 @@ export default function DeliveryShow({ delivery }: Props) {
                             <TableRow key={line.id}>
                                 <TableCell>
                                     <Link
-                                        href={drink(line.itemId)}
+                                        href={drink({ item: line.itemId })}
                                         className="font-medium hover:underline"
                                     >
                                         {line.name}

@@ -20,10 +20,9 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        // The branch being worked in: set on branch pages, and the one chosen
-        // earlier on the others (the menu), so the sections stay the same.
-        $branch = fn (): ?Branch => app(CurrentBranch::class)->get()
-            ?? (app(CurrentAccess::class)->get() === null ? null : app(Branches::class)->current($request));
+        // The branch this page works in: the one in its address (branch
+        // pages only). Management pages have none: they are the workspace's.
+        $branch = fn (): ?Branch => app(CurrentBranch::class)->get();
 
         // Closures run when the page is rendered — after platform.tenant /
         // platform.access have bound the workspace and access for this request.
@@ -79,8 +78,10 @@ class HandleInertiaRequests extends Middleware
                 fn (Branch $branch) => ['id' => $branch->id, 'name' => $branch->name],
                 app(Branches::class)->available(),
             ),
-            // Oversees every branch together: the switcher offers "All branches".
+            // Oversees every branch together: may use the management workspace.
             'overview' => fn () => app(CurrentAccess::class)->get() !== null && app(Branches::class)->overview(),
+            // Which workspace the page belongs to, for its layout and sidebar.
+            'area' => fn () => app(CurrentBranch::class)->get() !== null ? 'branch' : 'management',
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
             ],

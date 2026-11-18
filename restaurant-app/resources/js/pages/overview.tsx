@@ -1,4 +1,4 @@
-import { Form, Head, Link, router } from '@inertiajs/react';
+import { Form, Head, Link } from '@inertiajs/react';
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { PageHeader } from '@miles/ui/components/page-header';
@@ -10,9 +10,9 @@ import {
 } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
+import { OpenBranch } from '@/components/open-branch';
 import { formatMoney } from '@/lib/money';
 import { overview } from '@/routes';
-import { update as chooseBranch } from '@/routes/branch';
 
 type Props = {
     filters: {
@@ -159,8 +159,6 @@ export default function Overview(props: Props) {
               );
     const peak = Math.max(1, ...props.trend.map((day) => day.netMinor));
     const others = Object.entries(props.otherCurrencies);
-    const workIn = (branchId: string) =>
-        router.put(chooseBranch.url(), { branch_id: branchId });
     const kitchenNote = [
         `${kitchen.ready} ready to serve`,
         kitchen.slow > 0 ? `${kitchen.slow} waiting too long` : null,
@@ -408,9 +406,10 @@ export default function Overview(props: Props) {
                             {props.performance.map((row) => (
                                 <tr key={row.id}>
                                     <td className="py-2">
-                                        <span className="font-medium">
-                                            {row.name}
-                                        </span>
+                                        <OpenBranch
+                                            branchId={row.id}
+                                            name={row.name}
+                                        />
                                         {row.city && (
                                             <span className="block text-xs text-muted-foreground">
                                                 {row.city}
@@ -445,13 +444,13 @@ export default function Overview(props: Props) {
                                             : 'No till open'}
                                     </td>
                                     <td className="py-2 text-right">
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => workIn(row.id)}
+                                        <OpenBranch
+                                            branchId={row.id}
+                                            name={row.name}
+                                            button
                                         >
                                             Open branch
-                                        </Button>
+                                        </OpenBranch>
                                     </td>
                                 </tr>
                             ))}

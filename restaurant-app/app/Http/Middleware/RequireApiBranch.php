@@ -6,6 +6,7 @@ use App\Support\Branches;
 use App\Support\CurrentBranch;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -35,6 +36,8 @@ class RequireApiBranch
         }
 
         $this->current->set($branch);
+        // Redirects to web pages (branches/{branch}/...) name this branch.
+        URL::defaults(['branch' => $branch->id]);
 
         return $next($request);
     }

@@ -11,10 +11,11 @@ it('sends guests to sign in through the platform', function () {
 
 it('shows the product to a member with access, inside their workspace', function () {
     // One branch: the member works in it without choosing.
-    $this->platform()->branch('acme', 'Juba');
+    $juba = $this->platform()->branch('acme', 'Juba');
     $this->actingAsMember('acme', ['restaurant.menu.view']);
 
-    $this->get($this->workspaceUrl('acme'))
+    $this->get($this->workspaceUrl('acme'))->assertRedirect($this->workspaceUrl('acme', "branches/{$juba}"));
+    $this->get($this->workspaceUrl('acme', "branches/{$juba}"))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('home')

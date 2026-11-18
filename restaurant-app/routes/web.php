@@ -6,6 +6,7 @@ use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\DiningTableController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\KitchenController;
+use App\Http\Controllers\ManagementController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OverviewController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\TillController;
+use App\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
 use Miles\PlatformClient\PlatformConfig;
 
@@ -24,9 +26,13 @@ use Miles\PlatformClient\PlatformConfig;
 | Served at {workspace}/<path>: every route here (and every platform-client
 | route) carries the path prefix. The proxy must not strip it. The
 | "platform" middleware resolves the workspace from the host and requires a
-| signed-in member whose platform access allows this product. Pages behind
-| "branch" work in the branch the member chose; "branch.can" checks a
-| permission there (a role for another branch does not count).
+| signed-in member whose platform access allows this product.
+|
+| Two workspaces: management/... (the whole restaurant, for those who
+| oversee every branch) and branches/{branch}/... (one branch's service).
+| "branch" takes the branch from the address and checks it is open to the
+| member, so every tab keeps its own; "branch.can" checks a permission
+| there (a role for another branch does not count).
 |
 */
 
@@ -38,12 +44,26 @@ if (! app(PlatformConfig::class)->configured()) {
 Route::prefix(app(PlatformConfig::class)->path())
     ->middleware(['web', 'platform'])
     ->group(function () {
+        // Where to start: management, the member's branch, or their branches.
+        Route::get('/', [WorkspaceController::class, 'start'])->name('start');
         Route::get('branch', [BranchController::class, 'edit'])->name('branch.edit');
         Route::put('branch', [BranchController::class, 'update'])->name('branch.update');
 
-        // Every branch together, and who may sign in: organization-wide only.
-        Route::get('branches/overview', OverviewController::class)->name('overview');
-        Route::get('staff', StaffController::class)->name('staff.index');
+        // Management: the whole restaurant (each page checks it is overseen).
+        Route::prefix('management')->group(function () {
+            Route::get('/', OverviewController::class)->name('overview');
+            Route::get('branches', [ManagementController::class, 'branches'])->name('management.branches');
+            Route::get('inventory', [ManagementController::class, 'inventory'])->name('management.inventory');
+            Route::get('staff', StaffController::class)->name('staff.index');
+        });
+
+        // Old addresses: to where those pages are now.
+        Route::redirect('branches/overview', '/'.trim(app(PlatformConfig::class)->path().'/management', '/'), 301)->name('legacy.overview');
+        Route::redirect('staff', '/'.trim(app(PlatformConfig::class)->path().'/management/staff', '/'), 301)->name('legacy.staff');
+        Route::get('{section}/{rest?}', [WorkspaceController::class, 'legacyBranchPage'])
+            ->where('section', 'floor|orders|kitchen|bills|reports|tills|stock|tables')
+            ->where('rest', '.*')
+            ->name('legacy.branch');
 
         // The menu is the organization's, not a branch's.
         Route::get('menu', [MenuController::class, 'index'])->can('restaurant.menu.view')->name('menu.index');
@@ -54,7 +74,8 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::put('menu/{item}', [MenuController::class, 'update'])->whereUuid('item')->name('menu.update');
         });
 
-        Route::middleware('branch')->group(function () {
+        // One branch's workspace: every page names its branch.
+        Route::prefix('branches/{branch}')->whereUuid('branch')->middleware('branch')->group(function () {
             Route::get('/', HomeController::class)->name('home');
 
             // The branch's tables.

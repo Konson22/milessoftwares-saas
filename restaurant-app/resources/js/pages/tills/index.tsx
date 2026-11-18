@@ -96,7 +96,7 @@ export default function Shifts({ day, managing, mine, tills }: Props) {
                                     drawer.
                                 </span>
                                 <Button asChild size="sm">
-                                    <Link href={show(mine.id)}>
+                                    <Link href={show({ till: mine.id })}>
                                         Count and close
                                     </Link>
                                 </Button>
@@ -187,7 +187,7 @@ export default function Shifts({ day, managing, mine, tills }: Props) {
                                 <TableRow key={till.id}>
                                     <TableCell>
                                         <Link
-                                            href={show(till.id)}
+                                            href={show({ till: till.id })}
                                             className="font-medium hover:underline"
                                         >
                                             {till.number}

@@ -179,7 +179,7 @@ export function OrderBillPanel({
                                 className="flex items-center justify-between gap-2"
                             >
                                 <Link
-                                    href={showBill(paid.id)}
+                                    href={showBill({ bill: paid.id })}
                                     className={`hover:underline ${paid.status === 'voided' ? 'text-muted-foreground line-through' : 'font-medium'}`}
                                 >
                                     Bill {paid.number}
@@ -203,7 +203,7 @@ export function OrderBillPanel({
 
                 {open && canPay && bill.lines.length > 0 && (
                     <Form
-                        {...pay.form(orderId)}
+                        {...pay.form({ order: orderId })}
                         options={{ preserveScroll: true }}
                         onSuccess={() => {
                             setPicked([]);

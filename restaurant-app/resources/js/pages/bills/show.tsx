@@ -69,7 +69,7 @@ export default function ShowBill({ bill, canVoid }: Props) {
                             <Link href={index()}>← Bills paid</Link>
                         </Button>
                         <Button variant="outline" size="sm" asChild>
-                            <Link href={showOrder(bill.order.id)}>
+                            <Link href={showOrder({ order: bill.order.id })}>
                                 Order {bill.order.number}
                             </Link>
                         </Button>
@@ -193,7 +193,7 @@ export default function ShowBill({ bill, canVoid }: Props) {
 
             {canVoid && bill.status !== 'voided' && (
                 <Form
-                    {...voidBill.form(bill.id)}
+                    {...voidBill.form({ bill: bill.id })}
                     className="mx-auto mt-4 flex max-w-md flex-wrap items-start gap-2 print:hidden"
                 >
                     {({ errors, processing }) => (

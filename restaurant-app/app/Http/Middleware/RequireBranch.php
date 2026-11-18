@@ -6,13 +6,19 @@ use App\Support\Branches;
 use App\Support\CurrentBranch;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Route;
+use Illuminate\Support\Facades\URL;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Pages that work in one branch (its floor, kitchen, bills and stock):
- * without a chosen branch, the member picks one first. When none is open to
- * them, the same page says why (no branch yet, or no restaurant role in
- * one) instead of a bare error.
+ * Pages of one branch (its floor, kitchen, bills and stock), at
+ * branches/{branch}/...: the branch is the one in the address, checked
+ * against those open to the member on every request; any other is unknown
+ * (404). Nothing shared decides it, so each browser tab keeps its own
+ * branch, through refreshes too.
+ *
+ * Links and redirects made while serving the page stay in that branch
+ * (URL::defaults); the controllers never see the parameter.
  */
 class RequireBranch
 {
@@ -26,18 +32,15 @@ class RequireBranch
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $branch = $this->branches->current($request);
-
-        if ($branch === null) {
-            // Overseers without a branch chosen land on every branch together.
-            if ($request->routeIs('home') && $this->branches->overview()) {
-                return redirect()->route('overview');
-            }
-
-            return redirect()->guest(route('branch.edit'));
-        }
+        $route = $request->route();
+        $id = $route instanceof Route ? $route->parameter('branch') : null;
+        $branch = is_string($id) && $id !== '' ? $this->branches->find($id) : null;
+        abort_if($branch === null || ! $route instanceof Route, 404);
 
         $this->current->set($branch);
+        URL::defaults(['branch' => $branch->id]);
+        $route->forgetParameter('branch');
+        $this->branches->remember($request, $branch);
 
         return $next($request);
     }

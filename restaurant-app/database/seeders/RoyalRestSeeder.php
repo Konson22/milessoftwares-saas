@@ -137,7 +137,7 @@ class RoyalRestSeeder extends Seeder
 
             try {
                 foreach ($data['users'] as $key => $user) {
-                    $member = User::query()->find($user['id']) ?? new User;
+                    $member = User::query()->whereKey($user['id'])->first() ?? new User;
                     $member->forceFill($user)->save();
                     $this->team[$key] = $member;
                 }
@@ -380,7 +380,7 @@ class RoyalRestSeeder extends Seeder
             }
             $quantity = (int) (ceil(($target - $level) / 24) * 24);
             if ($quantity > 0) {
-                $cost = collect(self::DRINKS)->firstWhere(6, $drink->barcode)[3];
+                $cost = (int) collect(self::DRINKS)->first(fn (array $row) => $row[6] === $drink->barcode)[3];
                 $lines[] = ['item' => $drink, 'quantity' => $quantity, 'unit_cost_minor' => $cost * 100];
             }
         }

@@ -153,7 +153,7 @@ export default function ShowOrder({
         );
     const addDrafts = (thenSend: boolean) =>
         router.post(
-            addLines.url(order.id),
+            addLines.url({ order: order.id }),
             {
                 lines: drafts.map((draft) => ({
                     item_id: draft.item.id,
@@ -169,7 +169,7 @@ export default function ShowOrder({
                     setDrafts([]);
                     if (thenSend) {
                         router.post(
-                            send.url(order.id),
+                            send.url({ order: order.id }),
                             {},
                             { preserveScroll: true },
                         );
@@ -391,7 +391,7 @@ export default function ShowOrder({
                             actions={
                                 open && hasNew ? (
                                     <Form
-                                        {...send.form(order.id)}
+                                        {...send.form({ order: order.id })}
                                         options={{ preserveScroll: true }}
                                     >
                                         {({ processing }) => (
@@ -453,10 +453,10 @@ export default function ShowOrder({
                                             )}
                                             {open && line.status === 'new' && (
                                                 <Form
-                                                    {...removeLine.form([
-                                                        order.id,
-                                                        line.id,
-                                                    ])}
+                                                    {...removeLine.form({
+                                                        order: order.id,
+                                                        line: line.id,
+                                                    })}
                                                     options={{
                                                         preserveScroll: true,
                                                     }}
@@ -515,10 +515,10 @@ export default function ShowOrder({
                                             )}
                                         {voiding === line.id && (
                                             <Form
-                                                {...voidLine.form([
-                                                    order.id,
-                                                    line.id,
-                                                ])}
+                                                {...voidLine.form({
+                                                    order: order.id,
+                                                    line: line.id,
+                                                })}
                                                 options={{
                                                     preserveScroll: true,
                                                 }}
@@ -596,7 +596,7 @@ export default function ShowOrder({
                                 {order.service === 'dine_in' &&
                                     freeTables.length > 0 && (
                                         <Form
-                                            {...move.form(order.id)}
+                                            {...move.form({ order: order.id })}
                                             options={{ preserveScroll: true }}
                                             className="flex flex-wrap items-center gap-2"
                                         >
@@ -645,7 +645,7 @@ export default function ShowOrder({
                                         </Form>
                                     )}
                                 <Form
-                                    {...cancel.form(order.id)}
+                                    {...cancel.form({ order: order.id })}
                                     className="flex flex-wrap items-center gap-2"
                                 >
                                     {({ processing, errors: cancelErrors }) => (

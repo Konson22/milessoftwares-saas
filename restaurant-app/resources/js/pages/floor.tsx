@@ -120,7 +120,7 @@ export default function Floor({ tables, takeaways }: Props) {
                                 table.order ? (
                                     <Link
                                         key={table.id}
-                                        href={show(table.order.id)}
+                                        href={show({ order: table.order.id })}
                                         className="rounded-lg border border-primary bg-muted p-3 transition hover:bg-accent"
                                     >
                                         <div className="flex items-center justify-between">
@@ -211,7 +211,7 @@ export default function Floor({ tables, takeaways }: Props) {
                         {takeaways.map((order) => (
                             <Link
                                 key={order.id}
-                                href={show(order.id)}
+                                href={show({ order: order.id })}
                                 className="rounded-lg border p-3 transition hover:bg-muted"
                             >
                                 <div className="flex items-center justify-between">

@@ -216,7 +216,7 @@ export default function DayReport(props: Props) {
                             left={
                                 <>
                                     <Link
-                                        href={showBill(bill.id)}
+                                        href={showBill({ bill: bill.id })}
                                         className="font-medium hover:underline"
                                     >
                                         Bill {bill.number}
@@ -240,7 +240,7 @@ export default function DayReport(props: Props) {
                             left={
                                 <>
                                     <Link
-                                        href={showBill(bill.id)}
+                                        href={showBill({ bill: bill.id })}
                                         className="font-medium hover:underline"
                                     >
                                         Bill {bill.number}
@@ -273,7 +273,7 @@ export default function DayReport(props: Props) {
                             }
                             right={
                                 <Link
-                                    href={showOrder(line.orderId)}
+                                    href={showOrder({ order: line.orderId })}
                                     className="hover:underline"
                                 >
                                     {line.order}
@@ -291,7 +291,7 @@ export default function DayReport(props: Props) {
                             key={order.id}
                             left={
                                 <Link
-                                    href={showOrder(order.id)}
+                                    href={showOrder({ order: order.id })}
                                     className="font-medium hover:underline"
                                 >
                                     {order.number}
