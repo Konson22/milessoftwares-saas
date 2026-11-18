@@ -6,6 +6,7 @@ import {
     LayoutDashboard,
     LayoutGrid,
     ReceiptText,
+    Truck,
     UtensilsCrossed,
     Wallet,
 } from 'lucide-react';
@@ -15,6 +16,7 @@ import { index as bills } from '@/routes/bills';
 import { index as menu } from '@/routes/menu';
 import { index as orders } from '@/routes/orders';
 import { index as stock } from '@/routes/stock';
+import { index as deliveries } from '@/routes/stock/deliveries';
 import { index as tables } from '@/routes/tables';
 import { index as tills } from '@/routes/tills';
 
@@ -116,6 +118,14 @@ export const navigation: NavGroup[] = [
                 href: stock(),
                 icon: Boxes,
                 permission: 'restaurant.stock.view',
+                scope: 'branch',
+            },
+            {
+                title: 'Deliveries',
+                href: deliveries(),
+                icon: Truck,
+                permission: 'restaurant.stock.view',
+                anyOf: ['restaurant.stock.view', 'restaurant.stock.receive'],
                 scope: 'branch',
             },
         ],

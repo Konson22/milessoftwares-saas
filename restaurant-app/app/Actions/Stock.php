@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Models\Bill;
 use App\Models\MenuItem;
+use App\Models\StockDelivery;
 use App\Models\StockLevel;
 use App\Models\StockMovement;
 use App\Models\User;
@@ -24,6 +25,9 @@ use Miles\PlatformClient\Events\Outbox;
  * bill is never refused for stock: one selling more than the branch holds
  * takes it below zero, and the stock pages ask for a count. Counts and
  * write-offs never take it below zero.
+ *
+ * A supplier's delivery adds drinks at what they cost and tells Finance
+ * what is owed to the supplier (finance.bill.received), not an adjustment.
  */
 class Stock
 {
@@ -61,6 +65,70 @@ class Stock
             $this->toFinance($item, $branchId, $quantity, $unitCostMinor, 'opening', 'Opening stock'.($note ? ": {$note}" : ''));
 
             return $movement;
+        });
+    }
+
+    /**
+     * Drinks a supplier delivered, each at what one cost. The average cost
+     * moves towards it; Finance hears of the supplier's bill.
+     *
+     * @param  list<array{item: MenuItem, quantity: int, unit_cost_minor: int}>  $lines
+     *
+     * @throws ValidationException
+     */
+    public function deliver(string $branchId, string $supplierName, ?string $supplierReference, array $lines, User $by, ?string $note = null): StockDelivery
+    {
+        if ($lines === []) {
+            throw ValidationException::withMessages(['lines' => 'Add at least one drink.']);
+        }
+        foreach ($lines as $line) {
+            $this->ensureStocked($line['item'], 'lines');
+            if ($line['quantity'] < 1) {
+                throw ValidationException::withMessages(['lines' => "Add at least one {$line['item']->unit} of {$line['item']->name}."]);
+            }
+        }
+
+        return DB::transaction(function () use ($branchId, $supplierName, $supplierReference, $lines, $by, $note) {
+            $total = array_sum(array_map(fn (array $line) => $line['quantity'] * $line['unit_cost_minor'], $lines));
+            $delivery = StockDelivery::query()->create([
+                'branch_id' => $branchId,
+                'number' => $this->numbers->next('stock_delivery', 'DEL', 6),
+                'supplier_name' => trim($supplierName),
+                'supplier_reference' => blank($supplierReference) ? null : trim((string) $supplierReference),
+                'received_on' => now()->toDateString(),
+                'total_minor' => $total,
+                'note' => blank($note) ? null : trim((string) $note),
+                'received_by' => $by->id,
+            ]);
+
+            foreach ($lines as $line) {
+                $level = $this->lock($line['item'], $branchId);
+                $this->receive($level, $line['quantity'], $line['unit_cost_minor']);
+                $this->record($level, StockMovement::DELIVERY, $line['quantity'], $line['unit_cost_minor'], $by, note: $delivery->supplier_name, delivery: $delivery);
+            }
+
+            if ($total > 0) {
+                $this->outbox->record('finance', 'finance.bill.received', 1, "stock_delivery:{$delivery->id}", [
+                    'bill_number' => $delivery->number,
+                    'supplier_reference' => $delivery->supplier_reference,
+                    'supplier_name' => mb_substr($delivery->supplier_name, 0, 255),
+                    'supplier_id' => null,
+                    'branch_id' => $branchId,
+                    'currency' => Money::currency(),
+                    'total_minor' => $total,
+                    'tax_minor' => 0,
+                    'received_on' => $delivery->received_on->toDateString(),
+                    'due_on' => null,
+                    'lines' => array_map(fn (array $line) => [
+                        'description' => mb_substr($line['item']->name, 0, 255),
+                        'quantity' => $line['quantity'],
+                        'amount_minor' => $line['quantity'] * $line['unit_cost_minor'],
+                        'expense_account' => null,
+                    ], $lines),
+                ], now());
+            }
+
+            return $delivery;
         });
     }
 
@@ -154,7 +222,7 @@ class Stock
         ])->save();
     }
 
-    private function record(StockLevel $level, string $type, int $quantity, int $unitCostMinor, User $by, ?string $reason = null, ?string $note = null, ?Bill $bill = null): StockMovement
+    private function record(StockLevel $level, string $type, int $quantity, int $unitCostMinor, User $by, ?string $reason = null, ?string $note = null, ?Bill $bill = null, ?StockDelivery $delivery = null): StockMovement
     {
         return StockMovement::query()->create([
             'branch_id' => $level->branch_id,
@@ -165,6 +233,7 @@ class Stock
             'reason' => $reason,
             'note' => blank($note) ? null : trim((string) $note),
             'bill_id' => $bill?->id,
+            'delivery_id' => $delivery?->id,
             'created_by' => $by->id,
         ]);
     }

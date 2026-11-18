@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\BranchController;
+use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\DiningTableController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\KitchenController;
@@ -109,6 +110,15 @@ Route::prefix(app(PlatformConfig::class)->path())
             });
 
             // Drinks in stock at the branch (dishes keep none).
+            // Deliveries from suppliers (declared before stock/{item}).
+            Route::middleware('branch.can:restaurant.stock.receive')->group(function () {
+                Route::get('stock/deliveries/create', [DeliveryController::class, 'create'])->name('stock.deliveries.create');
+                Route::post('stock/deliveries', [DeliveryController::class, 'store'])->name('stock.deliveries.store');
+            });
+            Route::middleware('branch.can:restaurant.stock.view,restaurant.stock.receive')->group(function () {
+                Route::get('stock/deliveries', [DeliveryController::class, 'index'])->name('stock.deliveries.index');
+                Route::get('stock/deliveries/{delivery}', [DeliveryController::class, 'show'])->whereUuid('delivery')->name('stock.deliveries.show');
+            });
             Route::middleware('branch.can:restaurant.stock.view')->group(function () {
                 Route::get('stock', [StockController::class, 'index'])->name('stock.index');
                 Route::get('stock/{item}', [StockController::class, 'show'])->whereUuid('item')->name('stock.show');

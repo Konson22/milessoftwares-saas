@@ -27,14 +27,19 @@ interface Row {
 interface ListProps {
   rows: Row[];
   filters: { search: string; filter: 'all' | 'low' };
+  canReceive?: boolean;
 }
 
 /** Drinks in stock at this branch (dishes keep none), those running low first to see. */
 export function StockScreen({ page, reload, go }: ScreenProps<ListProps>) {
-  const { rows, filters } = page.props;
+  const { rows, filters, canReceive } = page.props;
 
   return (
     <Scroll onRefresh={reload}>
+      <View className="flex-row gap-2">
+        {canReceive ? <Button title="Receive a delivery" icon="add" className="flex-1" onPress={() => openPage('stock/deliveries/create')} /> : null}
+        <Button title="Deliveries" icon="cube-outline" variant="outline" className="flex-1" onPress={() => openPage('stock/deliveries')} />
+      </View>
       <Chips
         options={[
           { value: 'all', label: 'Every drink' },
@@ -76,6 +81,7 @@ interface ShowProps {
 
 const TYPES: Record<string, string> = {
   opening: 'Added',
+  delivery: 'Delivered',
   count: 'Counted',
   write_off: 'Written off',
   sale: 'Sold',

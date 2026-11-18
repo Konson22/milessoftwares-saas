@@ -260,7 +260,7 @@ class OrderController extends Controller
             'openedAt' => $order->opened_at->toIso8601String(),
             'openedBy' => $order->opener->name,
             // As Orders::bill() prices it (today's menu prices), from the lines loaded with the floor.
-            'totalMinor' => (int) $order->lines->sum(fn (OrderLine $line) => $line->item === null ? 0 : $line->quantity * $line->item->price_minor),
+            'totalMinor' => (int) $order->lines->sum(fn (OrderLine $line) => $line->quantity * $line->item->price_minor),
             'hasReady' => (bool) $order->getAttribute('has_ready'),
         ];
     }

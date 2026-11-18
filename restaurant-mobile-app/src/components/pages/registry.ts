@@ -1,4 +1,5 @@
 import { BillScreen, BillsScreen } from './screens/bills';
+import { DeliveriesScreen, DeliveryFormScreen, DeliveryScreen } from './screens/deliveries';
 import { FloorScreen } from './screens/floor';
 import { HomeScreen } from './screens/home';
 import { KitchenScreen } from './screens/kitchen';
@@ -29,6 +30,9 @@ export const screens: Record<string, Screen> = {
   'tables/index': TablesScreen,
   'stock/index': StockScreen,
   'stock/show': StockItemScreen,
+  'stock/deliveries/index': DeliveriesScreen,
+  'stock/deliveries/create': DeliveryFormScreen,
+  'stock/deliveries/show': DeliveryScreen,
 };
 
 /** Sections others change while they are open here: online, loaded again every so many seconds. */

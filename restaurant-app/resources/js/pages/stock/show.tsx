@@ -33,6 +33,7 @@ type Props = {
 
 const TYPE_LABELS: Record<string, string> = {
     opening: 'Added',
+    delivery: 'Delivered',
     sale: 'Billed',
     bill_void: 'Bill voided',
     count: 'Counted',

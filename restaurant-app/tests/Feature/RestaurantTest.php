@@ -7,6 +7,7 @@ use App\Models\KitchenTicket;
 use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\OrderLine;
+use App\Models\StockDelivery;
 use App\Models\StockLevel;
 use App\Models\TillShift;
 use App\Models\User;
@@ -563,6 +564,63 @@ describe('stock', function () {
             ->where('item.onHand', 30)
             ->has('movements', 3)
             ->where('movements.0.reason', 'Damaged or spilt'));
+    });
+
+    it('receives a supplier delivery: stock up at its cost, Finance told what is owed', function () {
+        $water = $this->asTenant('acme', fn () => MenuItem::factory()->drink()->create(['name' => 'Water', 'price_minor' => 200]));
+        member(['restaurant.stock.view']);
+        $this->get(at('stock/deliveries/create'))->assertForbidden();
+        $this->get(at('stock/deliveries'))->assertOk();
+
+        member(['restaurant.stock.view', 'restaurant.stock.receive']);
+        $this->get(at('stock/deliveries/create'))->assertInertia(fn (Assert $page) => $page
+            ->component('stock/deliveries/create')
+            ->has('drinks', 2)
+            ->where('drinks.0.name', 'Soda')
+            ->where('drinks.0.averageCostMinor', 150));
+
+        // A dish keeps no stock; the same drink twice is one line.
+        $this->post(at('stock/deliveries'), ['supplier_name' => 'Juba Drinks', 'lines' => [['item_id' => $this->beans->id, 'quantity' => 1, 'unit_cost' => '1.00']]])
+            ->assertSessionHasErrors('lines');
+        $this->post(at('stock/deliveries'), ['supplier_name' => 'Juba Drinks', 'lines' => [
+            ['item_id' => $this->soda->id, 'quantity' => 1, 'unit_cost' => '1.00'],
+            ['item_id' => $this->soda->id, 'quantity' => 1, 'unit_cost' => '1.00'],
+        ]])->assertSessionHasErrors('lines.0.item_id');
+
+        // 24 at 1.50 and 8 at 2.30: 32 at 1.70; 12 waters at 1.00.
+        $this->post(at('stock/deliveries'), [
+            'supplier_name' => ' Juba Drinks ',
+            'supplier_reference' => 'INV-77',
+            'lines' => [
+                ['item_id' => $this->soda->id, 'quantity' => 8, 'unit_cost' => '2.30'],
+                ['item_id' => $water->id, 'quantity' => 12, 'unit_cost' => '1.00'],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $delivery = $this->asTenant('acme', fn () => StockDelivery::query()->sole());
+        expect($delivery->number)->toBe('DEL-000001')
+            ->and($delivery->supplier_name)->toBe('Juba Drinks')
+            ->and($delivery->total_minor)->toBe(3040);
+        $level = $this->asTenant('acme', fn () => StockLevel::query()->where('branch_id', $this->juba)->where('menu_item_id', $this->soda->id)->sole());
+        expect($level->quantity)->toBe(32)->and($level->average_cost_minor)->toBe(170);
+
+        $events = array_map(fn (array $event) => Envelope::fromArray($event), $this->platform()->moduleEvents['finance']);
+        expect(array_map(fn (Envelope $e) => $e->eventType, $events))->toBe(['finance.bill.received'])
+            ->and($events[0]->payload['supplier_name'])->toBe('Juba Drinks')
+            ->and($events[0]->payload['supplier_reference'])->toBe('INV-77')
+            ->and($events[0]->payload['total_minor'])->toBe(3040)
+            ->and(array_column($events[0]->payload['lines'], 'amount_minor'))->toBe([1840, 1200]);
+
+        $this->get(at("stock/deliveries/{$delivery->id}"))->assertInertia(fn (Assert $page) => $page
+            ->component('stock/deliveries/show')
+            ->has('delivery.lines', 2)
+            ->where('delivery.lines.0.name', 'Soda'));
+        $this->get(at("stock/{$this->soda->id}"))->assertInertia(fn (Assert $page) => $page->where('movements.0.type', 'delivery'));
+        $this->get(at('stock/deliveries/create'))->assertInertia(fn (Assert $page) => $page->where('suppliers', ['Juba Drinks']));
+
+        // Another branch does not see it.
+        $this->actingAsMember('acme', ['restaurant.stock.view'], branch: $this->wau);
+        $this->get(at("stock/deliveries/{$delivery->id}"))->assertNotFound();
     });
 
     it('lists drinks running low on the home page', function () {

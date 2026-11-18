@@ -53,6 +53,7 @@ class StockController extends Controller
         return Inertia::render('stock/index', [
             'rows' => $rows->when($filter === 'low', fn ($rows) => $rows->where('low', true))->values(),
             'filters' => ['search' => $search, 'filter' => $filter],
+            'canReceive' => $this->canHere('restaurant.stock.receive'),
         ]);
     }
 
