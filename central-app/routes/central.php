@@ -6,9 +6,9 @@ use App\Modules\Identity\Http\Controllers\GoogleSignInController;
 use App\Modules\Identity\Http\Controllers\NativeGoogleSignInController;
 use App\Modules\Identity\Http\Controllers\SignOutController;
 use App\Sites\Central\Http\Controllers\Account\ClaimController;
+use App\Sites\Central\Http\Controllers\Account\GetStartedController;
 use App\Sites\Central\Http\Controllers\Account\JoinController;
 use App\Sites\Central\Http\Controllers\Account\PasswordSetupController;
-use App\Sites\Central\Http\Controllers\Account\TrialController as AccountTrialController;
 use App\Sites\Central\Http\Controllers\Account\WorkspacesController;
 use App\Sites\Central\Http\Controllers\Dashboard\BillingController;
 use App\Sites\Central\Http\Controllers\Dashboard\DashboardController;
@@ -24,7 +24,6 @@ use App\Sites\Central\Http\Controllers\Workspace\InvitationController;
 use App\Sites\Central\Http\Controllers\Workspace\MemberAccountController;
 use App\Sites\Central\Http\Controllers\Workspace\MemberController;
 use App\Sites\Central\Http\Controllers\Workspace\StructureController;
-use App\Sites\Central\Http\Middleware\RememberTrialChoice;
 use App\Sites\Public\Http\Controllers\SeoController;
 use App\Support\Hosts\PlatformHosts;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -79,6 +78,15 @@ Route::domain(PlatformHosts::auth())->group(function () {
     Route::get('join/{token}/google', [JoinController::class, 'google'])
         ->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:10,1')->name('join.google');
 
+    // "Start free trial", "Get started", "Choose plan" from the public site,
+    // for guests too: the choice becomes a registration intent carried by an
+    // opaque token through registering, verifying and signing in. Creating
+    // one grants nothing, so a GET is fine; it is rate limited.
+    Route::get('trial', [GetStartedController::class, 'start'])->middleware('throttle:20,1')->name('trial');
+    Route::get('get-started', [GetStartedController::class, 'start'])->middleware('throttle:20,1')->name('get-started');
+    Route::get('get-started/{token}', [GetStartedController::class, 'open'])
+        ->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:30,1')->name('get-started.open');
+
     // The account's businesses. Everything about one business lives on its
     // own host; here they are listed, created, joined and tried.
     Route::middleware(['auth', 'verified'])->group(function () {
@@ -94,9 +102,11 @@ Route::domain(PlatformHosts::auth())->group(function () {
             ->middleware('throttle:30,1')
             ->name('organizations.slug-availability');
 
-        // "Start free trial" from the public site: choose the business (or a
-        // new one); the trial is confirmed on that business's host.
-        Route::get('trial', [AccountTrialController::class, 'show'])->middleware(RememberTrialChoice::class)->name('trial');
+        // A registration intent of this account: choose the organization and confirm.
+        Route::get('get-started/selection/{intent}', [GetStartedController::class, 'show'])->whereUuid('intent')->name('get-started.show');
+        Route::post('get-started/selection/{intent}', [GetStartedController::class, 'store'])->whereUuid('intent')
+            ->middleware('throttle:20,10')->name('get-started.store');
+        Route::post('get-started/selection/{intent}/cancel', [GetStartedController::class, 'cancel'])->whereUuid('intent')->name('get-started.cancel');
 
         // A workspace a donor created for this person: the token is the credential.
         Route::get('workspaces/claim/{token}', [ClaimController::class, 'show'])
@@ -162,6 +172,9 @@ Route::domain('{tenant}.'.PlatformHosts::root())
                 Route::post('members', [MemberAccountController::class, 'store'])->middleware('throttle:30,60')->name('members.store');
                 Route::post('members/{membership}/temporary-password', [MemberAccountController::class, 'reissue'])
                     ->whereUuid('membership')->middleware('throttle:10,60')->name('members.temporary-password');
+                // Deleting a username account this business created (someone who left).
+                Route::delete('members/{membership}/account', [MemberAccountController::class, 'destroy'])
+                    ->whereUuid('membership')->middleware('throttle:30,60')->name('members.account.destroy');
 
                 Route::get('invitations', [InvitationController::class, 'index'])->name('invitations');
                 Route::post('invitations', [InvitationController::class, 'store'])->middleware('throttle:30,60')->name('invitations.store');
@@ -170,6 +183,7 @@ Route::domain('{tenant}.'.PlatformHosts::root())
 
                 Route::get('access', [AccessController::class, 'index'])->name('access');
                 Route::post('access', [AccessController::class, 'store'])->middleware('throttle:30,1')->name('access.store');
+                Route::put('access/application', [AccessController::class, 'application'])->middleware('throttle:30,1')->name('access.application');
                 Route::delete('access/{assignment}', [AccessController::class, 'destroy'])->whereUuid('assignment')->name('access.destroy');
 
                 // The applications this business can add, and free trials of them.

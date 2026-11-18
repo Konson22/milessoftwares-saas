@@ -366,7 +366,7 @@ it('lists every product of the brief on the products page', function () {
         ->where('catalog', function ($catalog) {
             $slugs = fn (string $category) => collect($catalog)->where('category', $category)->pluck('slug')->values()->all();
 
-            return $slugs('erp') === ['pharmacy', 'retail', 'restaurant', 'school', 'logistics']
+            return $slugs('erp') === ['pharmacy', 'retail', 'restaurant', 'school', 'ngo', 'logistics']
                 && $slugs('application') === ['finance', 'petrol', 'projects', 'monitoring-evaluation', 'hr', 'payroll', 'procurement', 'inventory', 'crm', 'assets'];
         }));
 });
@@ -416,6 +416,16 @@ it('gives Pharmacy ERP its own page, with its catalog words and plans', function
     // The other ERPs keep the shared page.
     $this->get(site('erp/retail'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
         ->component('public/landing'));
+});
+
+it('links Finance to the apps it connects with, by their own name, icon and page', function () {
+    $this->get(site('apps/finance'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+        ->component('public/finance')
+        ->where('product.connections.links.0.slug', 'pharmacy')
+        ->where('product.connections.links.0.name', 'Pharmacy ERP')
+        ->where('product.connections.links.0.icon', 'pill')
+        ->where('product.connections.links.0.url', '/erp/pharmacy')
+        ->where('product.connections.links.6.url', '/apps/projects'));
 });
 
 it('gives each catalog product its own page, and 404s anything else', function () {

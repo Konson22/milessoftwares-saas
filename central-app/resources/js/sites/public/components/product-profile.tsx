@@ -16,6 +16,7 @@ import type { Plan } from '@/sites/public/components/plan-card';
 import Seo, { organization } from '@/sites/public/components/seo';
 import {
     button,
+    card,
     container,
     panel,
     trialUrl,
@@ -64,7 +65,7 @@ export default function ProductProfile({
 
     const primary = (style: string) =>
         product.trial ? (
-            <a href={trialUrl(product.trial)} className={style}>
+            <a href={trialUrl(product.trial, product.trialProduct)} className={style}>
                 Start Your {trialDays}-Day Free Trial
                 <ArrowRight className="size-4" aria-hidden />
             </a>
@@ -246,6 +247,51 @@ export default function ProductProfile({
                                         </p>
                                     </li>
                                 ))}
+                            </ul>
+                        </section>
+                    )}
+
+                    {product.connections && (
+                        <section aria-labelledby="connections-heading">
+                            <h2 id="connections-heading" className={heading}>
+                                Linked to your other apps
+                            </h2>
+                            <p className="mt-3 leading-relaxed text-slate-700">
+                                {product.connections.intro}
+                            </p>
+                            <ul className="mt-5 grid gap-4 sm:grid-cols-2">
+                                {product.connections.links.map((link) => {
+                                    const Icon = catalogIcon(link.icon);
+
+                                    return (
+                                        <li key={link.slug}>
+                                            <Link
+                                                href={link.url}
+                                                className={`${card} group flex h-full flex-col p-5`}
+                                            >
+                                                <span className="inline-flex size-10 items-center justify-center rounded-lg bg-site-accent/10 text-site-accent-ink">
+                                                    <Icon
+                                                        className="size-5"
+                                                        aria-hidden
+                                                    />
+                                                </span>
+                                                <h3 className="mt-4 font-semibold text-slate-900">
+                                                    {link.name}
+                                                </h3>
+                                                <p className="mt-1 flex-1 text-sm leading-relaxed text-slate-600">
+                                                    {link.body}
+                                                </p>
+                                                <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-slate-900">
+                                                    View {link.name}
+                                                    <ArrowRight
+                                                        className="size-4 transition-transform group-hover:translate-x-0.5"
+                                                        aria-hidden
+                                                    />
+                                                </span>
+                                            </Link>
+                                        </li>
+                                    );
+                                })}
                             </ul>
                         </section>
                     )}

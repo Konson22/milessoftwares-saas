@@ -5,6 +5,7 @@ namespace App\Sites\Central\Http\Controllers\Workspace;
 use App\Http\Controllers\Controller;
 use App\Modules\Authorization\Actions\SeparationOfDutiesWarning;
 use App\Modules\Authorization\Support\AccessResolver;
+use App\Modules\Memberships\Actions\DeleteUsernameAccount;
 use App\Modules\Memberships\Actions\MembershipActionDenied;
 use App\Modules\Memberships\Actions\TemporaryAccounts;
 use App\Modules\Memberships\Models\OrganizationMembership;
@@ -76,6 +77,24 @@ class MemberAccountController extends Controller
         }
 
         $this->showOnce($membership, $result['password'], $result['expiresAt'], null);
+
+        return back();
+    }
+
+    /**
+     * Deletes a username account this organization created (DeleteUsernameAccount).
+     */
+    public function destroy(Request $request, OrganizationMembership $membership, DeleteUsernameAccount $accounts): RedirectResponse
+    {
+        $actor = $this->authorizeAccessManagement($request, $this->access);
+
+        try {
+            $accounts->handle($actor, $membership);
+        } catch (MembershipActionDenied $e) {
+            throw ValidationException::withMessages(['status' => $e->getMessage()]);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Account deleted.')]);
 
         return back();
     }

@@ -111,7 +111,14 @@ final class MarketingCatalog
                 'url' => self::url($entry['category'], $entry['slug']),
                 'status' => $status,
                 'includes' => $includes,
-                'trial' => $status !== 'coming_soon' && $trialCode !== null && in_array($trialCode, $trialable, true) ? $trialCode : null,
+                'trial' => $trial = $status !== 'coming_soon' && $trialCode !== null && in_array($trialCode, $trialable, true) ? $trialCode : null,
+                // An ERP product is started as itself (the registration
+                // intent names it) when every application it requires is
+                // open to trials; else through its own application.
+                'trialProduct' => $type === 'erp' && $trial !== null && array_diff(
+                    array_column(array_filter($includes, fn (array $application) => $application['requirement'] === 'required'), 'code'),
+                    $trialable,
+                ) === [] ? $code : null,
             ];
         }
 
@@ -123,6 +130,26 @@ final class MarketingCatalog
             foreach ($entry['includes'] as $j => $application) {
                 $this->catalog[$i]['includes'][$j]['url'] = '/'.($this->pageForProduct($application['code']) ?? 'products/'.$application['code']);
             }
+        }
+
+        // Each linked app is named by its slug in the copy; it takes its
+        // name, icon and page from its own entry, and is left out when
+        // that entry is not shown.
+        $bySlug = array_column($this->catalog, null, 'slug');
+        foreach ($this->catalog as $i => $entry) {
+            if (! isset($entry['connections']['links'])) {
+                continue;
+            }
+
+            $this->catalog[$i]['connections']['links'] = array_values(array_filter(array_map(
+                fn (array $link): ?array => isset($bySlug[$link['slug']]) ? [
+                    ...$link,
+                    'name' => $bySlug[$link['slug']]['name'],
+                    'icon' => $bySlug[$link['slug']]['icon'],
+                    'url' => '/'.$bySlug[$link['slug']]['url'],
+                ] : null,
+                $entry['connections']['links'],
+            )));
         }
 
         return $this->catalog;

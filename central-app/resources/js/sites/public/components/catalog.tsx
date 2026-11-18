@@ -62,6 +62,17 @@ export type CatalogEntry = {
     summary: string;
     /** A fuller description in paragraphs, for the product's own page (optional). */
     overview?: string[];
+    /** How this product works with the other apps, shown as its own section. */
+    connections?: {
+        intro: string;
+        links: {
+            slug: string;
+            name: string;
+            icon: string;
+            url: string;
+            body: string;
+        }[];
+    };
     headline: string;
     subhead: string;
     audience: string;
@@ -84,6 +95,8 @@ export type CatalogEntry = {
     }[];
     /** Application code whose free trial this product starts; null: no trial today. */
     trial: string | null;
+    /** ERP product code started as itself (NGO), when all it requires is open to trials. */
+    trialProduct?: string | null;
     /** Short points for the home page's featured products. */
     highlights?: string[];
     /** How the product runs today; only what is built is listed. */
@@ -428,7 +441,7 @@ export function ProductCard({
                 <div className="mt-5 flex items-center gap-3">
                     {product.trial ? (
                         <a
-                            href={trialUrl(product.trial)}
+                            href={trialUrl(product.trial, product.trialProduct)}
                             className={`${action} bg-site-accent-ink text-white shadow-sm shadow-site-accent-ink/25 hover:bg-site-accent-deep`}
                         >
                             Start {trialDays}-day free trial

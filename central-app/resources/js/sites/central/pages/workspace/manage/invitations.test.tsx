@@ -6,7 +6,11 @@ import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import Invitations from './invitations';
 
 const page = vi.hoisted(() => ({ flash: {} as Record<string, unknown> }));
-const router = vi.hoisted(() => ({ post: vi.fn(), delete: vi.fn() }));
+const router = vi.hoisted(() => ({
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+}));
 
 // Inertia's components need a running app; for checking markup they are
 // replaced with their plain HTML equivalents.
@@ -78,6 +82,8 @@ afterEach(() => {
     cleanup();
     page.flash = {};
     router.post.mockClear();
+    router.put.mockClear();
+    router.delete.mockClear();
 });
 
 describe('manage invitations', () => {
@@ -241,5 +247,103 @@ describe('manage invitations', () => {
             rules: { 'color-contrast': { enabled: false } },
         });
         expect(results.violations.map((violation) => violation.id)).toEqual([]);
+    });
+});
+
+describe('deleting and removing', () => {
+    const invitation = {
+        id: 'invitation-1',
+        email: 'akol@example.test',
+        status: 'pending' as const,
+        invitedBy: 'Kon',
+        expiresAt: '2026-11-21',
+        proposedRoles: 0,
+    };
+
+    it('deletes an invitation only after confirming', () => {
+        render(<Invitations {...props} invitations={[invitation]} />);
+
+        fireEvent.click(
+            screen.getByRole('button', {
+                name: 'Delete the invitation to akol@example.test',
+            }),
+        );
+        expect(router.delete).not.toHaveBeenCalled();
+        expect(screen.getByText('Delete this invitation?')).toBeTruthy();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+        expect(router.delete).toHaveBeenCalledWith(
+            '/manage/invitations/invitation-1',
+            { preserveScroll: true },
+        );
+    });
+
+    it('removes someone added directly after confirming', () => {
+        render(<Invitations {...props} />);
+
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Remove Deng Garang' }),
+        );
+        fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+
+        expect(router.put).toHaveBeenCalledWith(
+            '/manage/members/membership-1/status',
+            { status: 'removed' },
+            { preserveScroll: true },
+        );
+    });
+
+    it('filters invitations by status', () => {
+        render(
+            <Invitations
+                {...props}
+                invitations={[
+                    invitation,
+                    {
+                        ...invitation,
+                        id: 'invitation-2',
+                        email: 'old@example.test',
+                        status: 'expired',
+                    },
+                ]}
+            />,
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: 'expired' }));
+        expect(screen.queryByText('akol@example.test')).toBeNull();
+        expect(screen.getByText('old@example.test')).toBeTruthy();
+    });
+});
+
+describe('deleting a username account', () => {
+    it('deletes a username account after confirming, instead of removing', () => {
+        render(
+            <Invitations
+                {...props}
+                awaiting={[
+                    {
+                        id: 'membership-2',
+                        name: 'Achol Deng',
+                        login: 'achol',
+                        loginKind: 'username',
+                        pending: false,
+                        expiresAt: null,
+                        expired: false,
+                    },
+                ]}
+            />,
+        );
+
+        fireEvent.click(
+            screen.getByRole('button', { name: "Delete Achol Deng's account" }),
+        );
+        expect(screen.getByText(/cannot be undone/)).toBeTruthy();
+        fireEvent.click(screen.getByRole('button', { name: 'Delete account' }));
+
+        expect(router.delete).toHaveBeenCalledWith(
+            '/manage/members/membership-2/account',
+            { preserveScroll: true },
+        );
+        expect(router.put).not.toHaveBeenCalled();
     });
 });

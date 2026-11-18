@@ -204,3 +204,22 @@ it('gives none of the roles when one pair is blocked', function () {
 
     expect(RoleAssignment::acrossTenants()->where('membership_id', $this->grantee->id)->count())->toBe(0);
 });
+
+it('shows the owner with full access to the apps the business has, and gives the owner no roles', function () {
+    $this->actingAs($this->owner->user)
+        ->get(workspacePath('/manage/access'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('applications', [['code' => 'retail', 'name' => 'Retail']])
+            ->where('members', fn ($members) => collect($members)->firstWhere('id', $this->owner->id)['isOwner'] === true)
+            ->where('roles', fn ($roles) => collect($roles)->every(fn ($role) => isset($role['applicationCode']))));
+
+    assign([
+        'membership_id' => $this->owner->id,
+        'role_id' => $this->cashierRole->id,
+        'scope_type' => 'branch',
+        'branch_id' => $this->juba->id,
+    ])->assertSessionHasErrors('membership_id');
+
+    expect(RoleAssignment::acrossTenants()->where('membership_id', $this->owner->id)->count())->toBe(0);
+});

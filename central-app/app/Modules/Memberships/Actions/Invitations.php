@@ -157,6 +157,28 @@ final class Invitations
     }
 
     /**
+     * Removes an invitation from the list, whatever its state. A pending one
+     * is revoked first, so its link stops working; the audit log keeps both
+     * steps.
+     *
+     * @throws MembershipActionDenied
+     */
+    public function delete(OrganizationMembership $actor, Invitation $invitation): void
+    {
+        $this->assertMayInvite($actor);
+
+        DB::transaction(function () use ($actor, $invitation): void {
+            $this->revoke($actor, $invitation);
+
+            $this->record('invitation.deleted', $invitation, $actor->user, [
+                'email' => $invitation->email,
+                'status' => $invitation->effectiveStatus(),
+            ]);
+            $invitation->delete();
+        });
+    }
+
+    /**
      * Looks up an invitation by its plain token, across organizations: the
      * token is the only thing the invitee has.
      */

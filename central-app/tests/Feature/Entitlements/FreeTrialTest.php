@@ -12,6 +12,7 @@ use App\Modules\Marketing\Support\MarketingCatalog;
 use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Subscriptions\Models\Plan;
+use App\Modules\Subscriptions\Models\RegistrationIntent;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
@@ -75,31 +76,25 @@ function trialIsCurrent(Organization $organization, Application $application): b
 }
 
 describe('the trial page', function () {
-    it('sends guests to sign up', function () {
-        $this->get($this->authUrl('trial?app=retail'))->assertRedirect(route('register'));
+    // The choice itself is a registration intent: tests/Feature/Onboarding.
+    it('keeps the choice of a guest as a registration intent, starting nothing', function () {
+        $this->get($this->authUrl('trial?app=retail'))->assertRedirectContains('/get-started/');
 
-        expect(trialRows($this->organization, $this->retail))->toHaveCount(0);
+        expect(RegistrationIntent::query()->sole()->target_code)->toBe('retail')
+            ->and(trialRows($this->organization, $this->retail))->toHaveCount(0);
     });
 
-    it('remembers the product chosen as a guest until the businesses list, after signing up', function () {
-        $this->get($this->authUrl('trial?app=retail'))->assertRedirect();
-
-        // Verifying the email address ends on the businesses list, not the trial.
-        $user = OrganizationMembership::factory()->make()->user;
-        $this->actingAs($user)->get(route('workspaces.continue'))
-            ->assertRedirect(route('trial', ['app' => 'retail']));
-
-        // Once only, and not for products that cannot be tried.
-        $this->get(route('workspaces.continue'))->assertRedirect(route('organizations.create'));
-        $this->get($this->authUrl('trial?app=nothing_here'));
-        $this->get(route('workspaces.continue'))->assertRedirect(route('organizations.create'));
-    });
-
-    it('sends someone without a business to create one, keeping the product', function () {
+    it('offers someone without a business to create one for it', function () {
         $user = OrganizationMembership::factory()->make()->user;
 
-        $this->actingAs($user)->get($this->authUrl('trial?app=retail'))
-            ->assertRedirect(route('organizations.create', ['app' => 'retail']));
+        $location = $this->actingAs($user)->get($this->authUrl('trial?app=retail'))->headers->get('Location');
+        $this->get((string) $location)->assertRedirectContains('/get-started/selection/');
+        $intent = RegistrationIntent::query()->sole();
+
+        $this->get(route('get-started.show', ['intent' => $intent->id]))->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('central/get-started')
+            ->has('organizations', 0)
+            ->where('createUrl', fn ($url) => str_contains((string) $url, 'intent='.$intent->id)));
     });
 
     it('lets anyone start a new business for it', function () {
@@ -125,17 +120,14 @@ describe('the trial page', function () {
         $otherOwner->forceFill(['user_id' => $this->owner->user_id])->save();
         trialWorkAs($this->owner);
 
-        $this->get($this->authUrl('trial?app=retail'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('central/trial-workspace')
-            ->where('application', 'Retail')
-            ->where('selected', 'retail')
-            ->has('workspaces', 2)
-            ->where('workspaces', fn ($workspaces) => collect($workspaces)->pluck('trialUrl')->sort()->values()->all() === collect([
-                test()->businessUrl('/manage/trial?app=retail', $this->organization),
-                test()->businessUrl('/manage/trial?app=retail', $other),
-            ])->sort()->values()->all()));
+        $location = $this->get($this->authUrl('trial?app=retail'))->headers->get('Location');
+        $this->get((string) $location);
+        $this->get(route('get-started.show', ['intent' => RegistrationIntent::query()->sole()->id]))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('central/get-started')
+            ->where('selection.name', 'Retail')
+            ->has('organizations', 2));
 
-        // An existing one: its own trial page.
+        // An existing one: its own trial page still works.
         $this->get(trialAppUrl('manage/trial?app=retail', $other))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
             ->component('central/workspace/manage/trial')
             ->where('organization.displayName', $other->display_name));

@@ -8,12 +8,12 @@ return [
     |--------------------------------------------------------------------------
     |
     | The registrable domain every platform host hangs off. Production uses
-    | milesoftwares.com; local development uses milesoftwares.localhost,
+    | milesoftwares.com; local development uses tatook.localhost,
     | which browsers resolve to 127.0.0.1 without hosts-file entries.
     |
     */
 
-    'root_domain' => env('PLATFORM_ROOT_DOMAIN', 'milesoftwares.localhost'),
+    'root_domain' => env('PLATFORM_ROOT_DOMAIN', 'tatook.localhost'),
 
     /*
     |--------------------------------------------------------------------------

@@ -369,7 +369,7 @@ it('lets the owner set who invoices are addressed to', function () {
         ->has('timezones'));
 });
 
-it('shows the owner subscriptions, payments and the modules they can add', function () {
+it('shows the owner what is owed and the modules they can add, not subscriptions or payments', function () {
     // HR is announced; CRM is released and on a public plan.
     Application::query()->create(['code' => 'hr', 'name' => 'HR', 'category' => 'products', 'kind' => 'standalone', 'status' => 'planned']);
     $crm = Application::query()->create(['code' => 'crm', 'name' => 'CRM', 'category' => 'products', 'kind' => 'standalone', 'status' => 'available']);
@@ -387,12 +387,9 @@ it('shows the owner subscriptions, payments and the modules they can add', funct
     ])->assertSessionHasNoErrors();
 
     $this->get(billingAppUrl('/'))->assertInertia(fn (AssertableInertia $page) => $page
-        ->has('current.billing.subscriptions', 1)
-        ->where('current.billing.subscriptions.0.plans.0.name', 'Retail Standard')
-        ->has('current.billing.recentPayments', 1)
-        ->where('current.billing.recentPayments.0.amountMinor', 1000)
-        ->where('current.billing.recentPayments.0.status', 'reported')
-        ->where('current.billing.recentPayments.0.invoiceNumber', $invoice->number)
+        ->missing('current.billing.subscriptions')
+        ->missing('current.billing.recentPayments')
+        ->where('current.billing.recentInvoices.0.number', $invoice->number)
         ->where('current.billing.modules', fn ($modules) => collect($modules)->pluck('state', 'code')->only(['retail', 'crm', 'hr'])->sortKeys()->all()
             // CRM is released and never tried: offered as a free trial.
             === ['crm' => 'trialable', 'hr' => 'coming_soon', 'retail' => 'installed'])

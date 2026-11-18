@@ -7,7 +7,6 @@ use App\Modules\Applications\Support\Launcher;
 use App\Modules\Authorization\Support\AccessResolver;
 use App\Modules\Authorization\Support\WorkspaceAbilities;
 use App\Modules\Billing\Models\Invoice;
-use App\Modules\Billing\Models\Payment;
 use App\Modules\Billing\Support\AccountStanding;
 use App\Modules\Entitlements\Models\Entitlement;
 use App\Modules\Identity\Http\Controllers\FirstPartySignInController;
@@ -17,11 +16,8 @@ use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Memberships\Support\MembershipLookup;
 use App\Modules\Structure\Models\Branch;
 use App\Modules\Structure\Models\Department;
-use App\Modules\Subscriptions\Actions\PlanRequests;
 use App\Modules\Subscriptions\Models\Plan;
 use App\Modules\Subscriptions\Models\PlanRequest;
-use App\Modules\Subscriptions\Models\Subscription;
-use App\Modules\Subscriptions\Models\SubscriptionItem;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,7 +27,7 @@ use Inertia\Response;
 /**
  * The workspace home ({business}.<root>/). Administrators get the dashboard:
  * the business at a glance, its applications and, for the owner, what it
- * owes. Everyone else gets a page to pick one of their applications, and
+ * owes (subscriptions and payments live on the billing pages). Everyone else gets a page to pick one of their applications, and
  * right after signing in goes straight into it when they have only one;
  * coming back later shows the picker.
  */
@@ -90,7 +86,7 @@ class DashboardController extends Controller
                     ...$standing->summary(),
                     'recentInvoices' => Invoice::query()
                         ->latest('issued_at')
-                        ->limit(4)
+                        ->limit(3)
                         ->get()
                         ->map(fn (Invoice $invoice) => [
                             'id' => $invoice->id,
@@ -101,59 +97,11 @@ class DashboardController extends Controller
                             'dueOn' => $invoice->due_on->toDateString(),
                         ])
                         ->all(),
-                    'subscriptions' => $this->subscriptions(),
                     'trials' => $this->trials(),
-                    'recentPayments' => Payment::query()
-                        ->with('invoice:id,number')
-                        ->latest('paid_on')
-                        ->latest()
-                        ->limit(5)
-                        ->get()
-                        ->map(fn (Payment $payment) => [
-                            'id' => $payment->id,
-                            'invoiceId' => $payment->invoice_id,
-                            'invoiceNumber' => $payment->invoice->number,
-                            'status' => $payment->status,
-                            'method' => $payment->method,
-                            'amountMinor' => $payment->amount_minor,
-                            'currency' => $payment->currency,
-                            'paidOn' => $payment->paid_on->toDateString(),
-                        ])
-                        ->all(),
                     'modules' => $this->modules($catalog),
                 ] : null,
             ],
         ]);
-    }
-
-    /**
-     * Live subscriptions and the plans on them, soonest renewal first.
-     *
-     * @return list<array{id: string, status: string, trialEndsAt: string|null, renewsAt: string|null, plans: list<array{name: string, priceMinor: int, currency: string, interval: string}>}>
-     */
-    private function subscriptions(): array
-    {
-        return array_values(Subscription::query()
-            ->whereIn('status', PlanRequests::LIVE_STATUSES)
-            ->with('items.plan:id,name,billing_interval,price_minor,currency')
-            ->orderBy('renews_at')
-            ->get()
-            ->map(fn (Subscription $subscription) => [
-                'id' => $subscription->id,
-                'status' => $subscription->status,
-                'trialEndsAt' => $subscription->trial_ends_at?->toDateString(),
-                'renewsAt' => $subscription->renews_at?->toDateString(),
-                'plans' => array_values($subscription->items
-                    ->where('status', 'active')
-                    ->map(fn (SubscriptionItem $item) => [
-                        'name' => $item->plan->name,
-                        'priceMinor' => $item->plan->price_minor * $item->quantity,
-                        'currency' => $item->plan->currency,
-                        'interval' => $item->plan->billing_interval,
-                    ])
-                    ->all()),
-            ])
-            ->all());
     }
 
     /**

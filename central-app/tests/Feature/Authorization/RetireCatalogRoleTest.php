@@ -135,3 +135,31 @@ it('refuses a role the current catalog still has, a map target it lacks, and an 
     'map not in catalog' => [['application' => 'retail', 'role' => 'payments_clerk', '--map' => 'payments_clerk']],
     'unknown application' => [['application' => 'nothing', 'role' => 'payments_clerk']],
 ]);
+
+it('retires a role only at a scope the current catalog no longer allows it', function () {
+    $member = $this->member();
+    $wide = $this->grant($member, 'retail', 'payments_clerk');
+    $branch = $this->grant($this->member(), 'retail', 'payments_clerk', Scope::branch($this->juba->id));
+
+    $catalog = json_decode((string) file_get_contents(base_path('tests/Fixtures/catalogs/retail.json')), true);
+    $catalog['version'] = '99.0.0';
+    foreach ($catalog['roles'] as &$role) {
+        if ($role['key'] === 'payments_clerk') {
+            $role['scopes'] = ['branch'];
+        }
+    }
+    unset($role);
+    app(CatalogImporter::class)->import($catalog);
+
+    $this->artisan('platform:catalog-retire-role', ['application' => 'retail', 'role' => 'payments_clerk', '--scope' => 'branch'])->assertFailed();
+    $this->artisan('platform:catalog-retire-role', ['application' => 'retail', 'role' => 'payments_clerk', '--scope' => 'nowhere'])->assertFailed();
+
+    $this->artisan('platform:catalog-retire-role', ['application' => 'retail', 'role' => 'payments_clerk', '--scope' => 'organization', '--map' => 'retail_owner'])
+        ->expectsOutputToContain('Revoked 1 assignment(s); gave 1')
+        ->assertSuccessful();
+
+    expect($wide->refresh()->revoked_at)->not->toBeNull()
+        ->and($branch->refresh()->revoked_at)->toBeNull()
+        ->and(RoleAssignment::query()->live()->where('membership_id', $member->id)->sole()->application_role_id)
+        ->toBe($this->role('retail', 'retail_owner')->id);
+});

@@ -132,9 +132,10 @@ class InvitationController extends Controller
     public function destroy(Request $request, Invitation $invitation): RedirectResponse
     {
         $actor = $this->authorizeAccessManagement($request, $this->access);
-        $this->attempt(fn () => $this->invitations->revoke($actor, $invitation), 'invitation');
+        // Deleting a pending invitation revokes its link first.
+        $this->attempt(fn () => $this->invitations->delete($actor, $invitation), 'invitation');
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Invitation revoked.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Invitation deleted.')]);
 
         return back();
     }

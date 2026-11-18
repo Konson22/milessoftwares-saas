@@ -261,9 +261,12 @@ final class AssignRole
             ->exists();
 
         if ($exists) {
+            // A role brings back access ended with the membership, never
+            // access an administrator disabled or suspended on purpose.
             DB::table('application_access_grants')
                 ->where('membership_id', $grantee->getKey())
                 ->where('application_id', $applicationId)
+                ->where('status', 'revoked')
                 ->update(['status' => 'active', 'revoked_at' => null, 'updated_at' => now()]);
 
             return;

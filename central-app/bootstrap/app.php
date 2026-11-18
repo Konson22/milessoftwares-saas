@@ -12,7 +12,6 @@ use App\Sites\Admin\Http\Middleware\AdminIdleTimeout;
 use App\Sites\Admin\Http\Middleware\EnsurePlatformStaff;
 use App\Sites\Admin\Http\Middleware\RequirePlatformPermission;
 use App\Sites\Central\Http\Middleware\EnsureWorkspaceAccess;
-use App\Sites\Central\Http\Middleware\RememberTrialChoice;
 use App\Sites\Central\Http\Middleware\ResolveTenant;
 use App\Support\Hosts\HostType;
 use App\Support\Hosts\PlatformHosts;
@@ -47,18 +46,14 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Unknown tenants must 404 before auth can redirect to sign-in.
         $middleware->prependToPriorityList(before: AuthenticatesRequests::class, prepend: ResolveTenant::class);
-        // A trial chosen on the public site is remembered before sign-in.
-        $middleware->prependToPriorityList(before: AuthenticatesRequests::class, prepend: RememberTrialChoice::class);
-
         // Guests on workspaces start an OIDC sign-in on their own host, admin.
         // has its own sign-in page; elsewhere they go straight to the auth
-        // host sign-in page. "Start free trial" is for new customers, so a
-        // guest there signs up instead, as with prompt=create on an
-        // authorization.
+        // host sign-in page. A prompt=create authorization is for new
+        // customers, so a guest there signs up instead.
         $middleware->redirectGuestsTo(fn (Request $request) => match (PlatformHosts::classify($request->getHost())['type']) {
             HostType::Admin => PlatformHosts::url(PlatformHosts::admin(), 'login'),
             HostType::Workspace => PlatformHosts::url($request->getHost(), 'auth/login'),
-            default => $request->routeIs('trial') || in_array('create', explode(' ', (string) $request->query('prompt')), true) ? route('register') : route('login'),
+            default => in_array('create', explode(' ', (string) $request->query('prompt')), true) ? route('register') : route('login'),
         });
 
         $middleware->alias([

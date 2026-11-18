@@ -55,17 +55,18 @@
         },
         {
             "code": "ngo",
-            "name": "NGO ERP",
-            "tagline": "Programs, grants and donor reporting.",
-            "description": "For NGOs and development organizations: programs and projects, donors and grants, budgets, expenses, procurement, and staff. Finance & Accounting can be added for fund accounting, and Monitoring & Evaluation for results, data collection and donor reporting.",
-            "status": "planned",
+            "name": "NGO Suite",
+            "tagline": "Projects, grants, finance, procurement and results in one package.",
+            "description": "For NGOs, implementing partners and donor-funded organizations: projects and programmes with partners and donors, grant agreements and disbursement requests, Finance & Accounting for the books, Procurement from requisition to supplier invoice, and Monitoring & Evaluation with field data collection for verified results. One subscription, one sign-in.",
+            "status": "pilot",
             "sort_order": 40,
             "applications": [
                 { "code": "projects", "requirement": "required" },
-                { "code": "finance", "requirement": "optional" },
-                { "code": "hr", "requirement": "optional" },
+                { "code": "finance", "requirement": "required" },
+                { "code": "mel", "requirement": "required" },
+                { "code": "procurement", "requirement": "required" },
                 { "code": "payroll", "requirement": "optional" },
-                { "code": "mel", "requirement": "optional" }
+                { "code": "hr", "requirement": "optional" }
             ]
         },
         {
@@ -78,6 +79,24 @@
             "applications": [
                 { "code": "mel", "requirement": "required" },
                 { "code": "projects", "requirement": "optional" }
+            ]
+        },
+        {
+            "code": "procurement",
+            "name": "Procurement & Purchasing",
+            "tagline": "From purchase request to delivery. All connected.",
+            "description": "For any organization that buys: procurement plans, purchase requisitions with configurable approvals, suppliers, RFQs, proposals and tenders with evaluation and award approval, purchase orders with amendments, receiving and supplier invoice matching. Tatook Procurement is its own application (ADR-0023); it works alone, and sends matched invoices to Finance & Accounting when the organization has it.",
+            "status": "pilot",
+            "sort_order": 47,
+            "applications": [
+                {
+                    "code": "procurement",
+                    "requirement": "required"
+                },
+                {
+                    "code": "finance",
+                    "requirement": "optional"
+                }
             ]
         },
         {

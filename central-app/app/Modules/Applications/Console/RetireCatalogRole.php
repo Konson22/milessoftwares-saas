@@ -8,6 +8,7 @@ use App\Modules\Applications\Models\ApplicationRole;
 use App\Modules\Audit\AuditLogger;
 use App\Modules\Authorization\Actions\AssignmentDenied;
 use App\Modules\Authorization\Actions\AssignRole;
+use App\Modules\Authorization\Enums\ScopeType;
 use App\Modules\Authorization\Models\RoleAssignment;
 use App\Modules\Authorization\Support\Scope;
 use App\Modules\Integration\Support\IntegrationEvents;
@@ -31,6 +32,11 @@ use Illuminate\Support\Facades\DB;
  * (access.changed), which drops their cached access for that member. It can
  * be run again: what it already did is not done twice.
  *
+ * --scope retires a role only at one scope type: for a role the current
+ * catalog keeps but no longer allows there (Petrol's Station manager became
+ * a branch-only Branch manager in 1.6.0; its organization-wide holders move
+ * to Global admin with --scope=organization --map=admin).
+ *
  * To undo a run, the audit log holds each revoked assignment
  * (role.retired: from_assignment_id, scope, expiry, grantor).
  */
@@ -40,6 +46,7 @@ class RetireCatalogRole extends Command
         {application : The application code}
         {role : The key of the retired role}
         {--map= : A role of the current catalog to give each holder instead (default: none)}
+        {--scope= : Only assignments at this scope type (organization, branch, department, resource)}
         {--dry-run : Report what would happen and change nothing}';
 
     protected $description = 'Revoke assignments of a role the current catalog no longer has, optionally giving another role instead';
@@ -55,8 +62,22 @@ class RetireCatalogRole extends Command
 
         $key = (string) $this->argument('role');
         $current = ApplicationRole::query()->where('catalog_version_id', $application->current_catalog_version_id)->get()->keyBy('key');
-        if ($current->has($key)) {
-            $this->components->error("{$key} is still in the current catalog: use platform:catalog-reassign.");
+
+        $scopeType = null;
+        $scopeOption = $this->option('scope');
+        if (is_string($scopeOption) && $scopeOption !== '') {
+            $scopeType = ScopeType::tryFrom($scopeOption);
+            if ($scopeType === null) {
+                $this->components->error("{$scopeOption} is not a scope type.");
+
+                return self::FAILURE;
+            }
+        }
+
+        if ($current->has($key) && ($scopeType === null || $current->get($key)->allowsScope($scopeType))) {
+            $this->components->error($scopeType === null
+                ? "{$key} is still in the current catalog: use platform:catalog-reassign."
+                : "{$key} is still allowed at {$scopeType->value} scope: use platform:catalog-reassign.");
 
             return self::FAILURE;
         }
@@ -78,10 +99,11 @@ class RetireCatalogRole extends Command
         $refused = 0;
 
         foreach (Organization::query()->orderBy('id')->get() as $organization) {
-            $tenant->run($organization, function () use ($application, $key, $replacement, $dryRun, $assignments, $audit, $events, $organization, &$revoked, &$given, &$refused) {
+            $tenant->run($organization, function () use ($application, $key, $scopeType, $replacement, $dryRun, $assignments, $audit, $events, $organization, &$revoked, &$given, &$refused) {
                 $held = RoleAssignment::query()->live()
                     ->where('application_id', $application->id)
                     ->whereHas('role', fn ($query) => $query->where('key', $key))
+                    ->when($scopeType !== null, fn ($query) => $query->where('scope_type', $scopeType))
                     ->with(['role.permissions', 'membership'])
                     ->get();
 
@@ -116,6 +138,7 @@ class RetireCatalogRole extends Command
         $left = $dryRun ? null : RoleAssignment::query()->withoutGlobalScopes()->live()
             ->where('application_id', $application->id)
             ->whereHas('role', fn ($query) => $query->where('key', $key))
+            ->when($scopeType !== null, fn ($query) => $query->where('scope_type', $scopeType))
             ->count();
 
         $this->components->info(($dryRun ? 'Would revoke' : 'Revoked')." {$revoked} assignment(s); ".($dryRun ? 'would give' : 'gave')." {$given} replacement(s); {$refused} refused by separation of duties.");
