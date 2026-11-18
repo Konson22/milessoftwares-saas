@@ -29,6 +29,11 @@ class RequireBranch
         $branch = $this->branches->current($request);
 
         if ($branch === null) {
+            // Overseers without a branch chosen land on every branch together.
+            if ($request->routeIs('home') && $this->branches->overview()) {
+                return redirect()->route('overview');
+            }
+
             return redirect()->guest(route('branch.edit'));
         }
 

@@ -39,6 +39,14 @@ class BranchController extends Controller
 
     public function update(Request $request, Branches $branches): RedirectResponse
     {
+        // "all": back to every branch together, for those who oversee them.
+        if ($request->input('branch_id') === 'all') {
+            abort_unless($branches->overview(), 404);
+            $branches->forget($request);
+
+            return redirect()->route('overview')->with('success', 'Viewing all branches.');
+        }
+
         $validated = $request->validate(['branch_id' => ['required', 'uuid']]);
         $branch = $branches->find($validated['branch_id']);
 

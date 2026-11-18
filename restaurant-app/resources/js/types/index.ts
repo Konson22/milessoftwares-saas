@@ -15,5 +15,7 @@ export type SharedProps = {
     branchPermissions: string[];
     /** The branches open to the member, for the branch switcher. */
     branches: { id: string; name: string }[];
+    /** Oversees every branch together (Global Admin, owner). */
+    overview: boolean;
     flash: { success: string | null };
 };

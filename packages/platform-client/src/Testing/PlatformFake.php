@@ -38,6 +38,9 @@ final class PlatformFake
     /** @var array<string, list<array<string, mixed>>> keyed by slug */
     public array $departments = [];
 
+    /** @var array<string, list<array<string, mixed>>> the application's people (applicationMembers), keyed by slug */
+    public array $applicationMembers = [];
+
     /** @var array<string, list<array<string, mixed>>> keyed by slug */
     public array $positions = [];
 
@@ -91,6 +94,16 @@ final class PlatformFake
                 return isset($this->access[$this->caller($request).':'.$m[1].':'.$m[2]])
                     ? Http::response($this->access[$this->caller($request).':'.$m[1].':'.$m[2]])
                     : Http::response(['message' => 'Not Found'], 404);
+            }
+
+            if (preg_match('#^/api/v1/organizations/([^/]+)/application-members$#', $path, $m) === 1) {
+                foreach ($this->organizations as $slug => $organization) {
+                    if ($organization['id'] === $m[1] && $this->visible($request, $slug)) {
+                        return Http::response(['data' => $this->applicationMembers[$slug] ?? []]);
+                    }
+                }
+
+                return Http::response(['message' => 'Not Found'], 404);
             }
 
             if (preg_match('#^/api/v1/organizations/([^/]+)/(branches|departments|positions)$#', $path, $m) === 1) {

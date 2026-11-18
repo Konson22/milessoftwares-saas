@@ -133,4 +133,41 @@ class Branches
     {
         $request->session()->put(self::SESSION_KEY, $branch->id);
     }
+
+    /**
+     * Back to all branches: no branch chosen. Only meaningful for members
+     * who oversee every branch (overview()); for others the next branch page
+     * asks again, or picks their only branch.
+     */
+    public function forget(Request $request): void
+    {
+        $request->session()->forget(self::SESSION_KEY);
+    }
+
+    /**
+     * Whether the member oversees every branch together (Global Admin, or
+     * the owner): restaurant.branches.overview across the organization. A
+     * role for some branches never opens the all-branches view.
+     */
+    public function overview(): bool
+    {
+        $access = $this->access->get();
+
+        return $access !== null
+            && $access->has('restaurant.branches.overview')
+            && $access->branchesFor('restaurant.branches.overview') === null;
+    }
+
+    /**
+     * Whether the member decides who may sign in (restaurant.access.manage
+     * across the organization).
+     */
+    public function managesAccess(): bool
+    {
+        $access = $this->access->get();
+
+        return $access !== null
+            && $access->has('restaurant.access.manage')
+            && $access->branchesFor('restaurant.access.manage') === null;
+    }
 }

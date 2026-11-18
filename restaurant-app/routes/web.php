@@ -8,7 +8,9 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\KitchenController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\OverviewController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\StaffController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\TillController;
 use Illuminate\Support\Facades\Route;
@@ -38,6 +40,10 @@ Route::prefix(app(PlatformConfig::class)->path())
     ->group(function () {
         Route::get('branch', [BranchController::class, 'edit'])->name('branch.edit');
         Route::put('branch', [BranchController::class, 'update'])->name('branch.update');
+
+        // Every branch together, and who may sign in: organization-wide only.
+        Route::get('branches/overview', OverviewController::class)->name('overview');
+        Route::get('staff', StaffController::class)->name('staff.index');
 
         // The menu is the organization's, not a branch's.
         Route::get('menu', [MenuController::class, 'index'])->can('restaurant.menu.view')->name('menu.index');

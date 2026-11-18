@@ -12,17 +12,17 @@ const PILL =
  * The branch being worked in; a menu to switch when more are open.
  */
 export function BranchSwitcher() {
-    const { branch, branches } = usePage().props;
+    const { branch, branches, overview } = usePage().props;
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
     const close = useCallback(() => setOpen(false), []);
     useDismiss(ref, open, close);
 
-    if (!branch) {
+    if (!branch && !overview) {
         return null;
     }
 
-    if (branches.length < 2) {
+    if (branch && branches.length < 2 && !overview) {
         return (
             <span className={PILL}>
                 <Building2 className="size-4 shrink-0" aria-hidden />
@@ -44,7 +44,9 @@ export function BranchSwitcher() {
                 )}
             >
                 <Building2 className="size-4 shrink-0" aria-hidden />
-                <span className="truncate">{branch.name}</span>
+                <span className="truncate">
+                    {branch ? branch.name : 'All branches'}
+                </span>
                 <ChevronDown className="size-4 shrink-0" aria-hidden />
             </button>
             {open && (
@@ -55,6 +57,25 @@ export function BranchSwitcher() {
                     <p className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
                         Work in branch
                     </p>
+                    {overview && (
+                        <Form {...update.form()} onSuccess={close}>
+                            <input type="hidden" name="branch_id" value="all" />
+                            <button
+                                type="submit"
+                                role="menuitemradio"
+                                aria-checked={!branch}
+                                className="flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-left text-sm font-medium hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+                            >
+                                <span className="truncate">All branches</span>
+                                {!branch && (
+                                    <Check
+                                        className="size-4 text-primary"
+                                        aria-hidden
+                                    />
+                                )}
+                            </button>
+                        </Form>
+                    )}
                     {branches.map((option) => (
                         <Form
                             key={option.id}
@@ -69,11 +90,11 @@ export function BranchSwitcher() {
                             <button
                                 type="submit"
                                 role="menuitemradio"
-                                aria-checked={option.id === branch.id}
+                                aria-checked={option.id === branch?.id}
                                 className="flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
                             >
                                 <span className="truncate">{option.name}</span>
-                                {option.id === branch.id && (
+                                {option.id === branch?.id && (
                                     <Check
                                         className="size-4 text-primary"
                                         aria-hidden

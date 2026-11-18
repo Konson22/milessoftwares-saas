@@ -79,6 +79,8 @@ class HandleInertiaRequests extends Middleware
                 fn (Branch $branch) => ['id' => $branch->id, 'name' => $branch->name],
                 app(Branches::class)->available(),
             ),
+            // Oversees every branch together: the switcher offers "All branches".
+            'overview' => fn () => app(CurrentAccess::class)->get() !== null && app(Branches::class)->overview(),
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
             ],

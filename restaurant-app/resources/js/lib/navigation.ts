@@ -6,17 +6,20 @@ import {
     ClipboardList,
     LayoutDashboard,
     LayoutGrid,
+    Network,
     ReceiptText,
     Truck,
+    UserCog,
     UtensilsCrossed,
     Wallet,
 } from 'lucide-react';
 import type { ShellNavItem } from '@miles/ui/shell/navigation';
-import { floor, home, kitchen } from '@/routes';
+import { floor, home, kitchen, overview } from '@/routes';
 import { index as bills } from '@/routes/bills';
 import { index as menu } from '@/routes/menu';
 import { index as orders } from '@/routes/orders';
 import { day as dayReport } from '@/routes/reports';
+import { index as staff } from '@/routes/staff';
 import { index as stock } from '@/routes/stock';
 import { index as deliveries } from '@/routes/stock/deliveries';
 import { index as tables } from '@/routes/tables';
@@ -48,6 +51,20 @@ export const navigation: NavGroup[] = [
                 href: home(),
                 icon: LayoutDashboard,
                 permission: null,
+                scope: 'org',
+            },
+            {
+                title: 'All branches',
+                href: overview(),
+                icon: Network,
+                permission: 'restaurant.branches.overview',
+                scope: 'org',
+            },
+            {
+                title: 'Staff & access',
+                href: staff(),
+                icon: UserCog,
+                permission: 'restaurant.access.manage',
                 scope: 'org',
             },
         ],

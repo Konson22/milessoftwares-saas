@@ -101,6 +101,26 @@ final class PlatformApi
     }
 
     /**
+     * This application's people in the organization: everyone with a live
+     * role here or a sign-in state set for it, with their roles (and each
+     * role's scope) and whether they may sign in (application_access:
+     * active, disabled or suspended). Not cached: it is for the screens
+     * where administrators review access, which change it in the workspace.
+     *
+     * @return list<array{membership_id: string, sub: string, name: string, sign_in_name: string, membership_status: string, is_owner: bool, application_access: string, roles: list<array{role: string, name: string, scope_type: string, branch_id: string|null, expires_at: string|null}>}>
+     *
+     * @throws NotVisible
+     * @throws PlatformUnavailable
+     */
+    public function applicationMembers(string $organizationId): array
+    {
+        $data = $this->get('/api/v1/organizations/'.rawurlencode($organizationId).'/application-members', 'access.read');
+
+        /** @var list<array{membership_id: string, sub: string, name: string, sign_in_name: string, membership_status: string, is_owner: bool, application_access: string, roles: list<array{role: string, name: string, scope_type: string, branch_id: string|null, expires_at: string|null}>}> */
+        return array_values(array_filter(is_array($data['data'] ?? null) ? $data['data'] : [], 'is_array'));
+    }
+
+    /**
      * The organization's departments, by name. Cached like branches.
      *
      * @return list<Department>
