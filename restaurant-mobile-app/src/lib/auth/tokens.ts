@@ -384,6 +384,13 @@ async function refresh(): Promise<(Tokens & { idToken?: string }) | null> {
 
 class TokenRefused extends Error {}
 
+/** OAuth's answers for details that will never work again (RFC 6749 §5.2). */
+const REFUSED = ['invalid_grant', 'invalid_client', 'unauthorized_client'];
+
+function refused(status: number, error: unknown): boolean {
+  return (status === 400 || status === 401) && (typeof error !== 'string' || REFUSED.includes(error));
+}
+
 interface TokenResponse {
   access_token: string;
   refresh_token?: string;
@@ -399,10 +406,14 @@ async function tokenRequest(body: Record<string, string>): Promise<TokenResponse
     body: query(body),
   });
   const json = await response.json().catch(() => null);
-  if (!response.ok || typeof json?.access_token !== 'string') {
-    throw new TokenRefused(json?.error_description ?? json?.message ?? 'Sign-in failed. Try again.');
-  }
-  return json as TokenResponse;
+  if (response.ok && typeof json?.access_token === 'string') return json as TokenResponse;
+
+  const message = json?.error_description ?? json?.message ?? 'Sign-in failed. Try again.';
+  // Only the platform saying no to these details signs out (a revoked or
+  // expired refresh token, an unknown client). A deploy, an overloaded
+  // server or too many calls is temporary: the tokens are kept.
+  if (refused(response.status, json?.error)) throw new TokenRefused(message);
+  throw new Error(message);
 }
 
 function fromResponse(tokens: TokenResponse): Tokens {

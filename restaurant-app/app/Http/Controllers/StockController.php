@@ -45,6 +45,8 @@ class StockController extends Controller
                 'averageCostMinor' => $levels->get($item->id)->average_cost_minor ?? 0,
                 'reorderLevel' => $item->reorder_level,
                 'low' => $onHand <= $item->reorder_level,
+                // Bills sold more than was counted in: count the drinks.
+                'short' => $onHand < 0,
             ];
         });
 

@@ -85,7 +85,8 @@ export async function request<T>(
   };
   const token = await context.token(retried);
   if (token) headers.Authorization = `Bearer ${token}`;
-  if (context.branchId) headers['X-Branch-Id'] = context.branchId;
+  // A branch given by the caller wins (the outbox sends at the branch an entry was made in).
+  if (context.branchId && !headers['X-Branch-Id']) headers['X-Branch-Id'] = context.branchId;
 
   const target = reach(`${workspaceUrl(context.workspace)}/${PRODUCT_PATH}/api/${path.replace(/^\//, '')}`);
 

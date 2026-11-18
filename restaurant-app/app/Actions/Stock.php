@@ -20,8 +20,10 @@ use Miles\PlatformClient\Events\Outbox;
  * is told to it as finance.stock.adjusted at the average cost.
  *
  * A bill takes its drinks and a voided bill puts them back, inside the
- * bill's transaction (Bills). Stock never goes below zero: a bill selling
- * more than the branch holds is refused until the drinks are counted in.
+ * bill's transaction (Bills). The drinks were served before the bill, so a
+ * bill is never refused for stock: one selling more than the branch holds
+ * takes it below zero, and the stock pages ask for a count. Counts and
+ * write-offs never take it below zero.
  */
 class Stock
 {
@@ -98,19 +100,12 @@ class Stock
 
     /**
      * Takes a bill's drinks; call inside the bill's transaction. Returns
-     * what they cost.
-     *
-     * @throws ValidationException when the branch holds fewer
+     * what they cost. More than the branch holds takes it below zero (a
+     * count is due), never refused: the drinks have been served.
      */
     public function take(Bill $bill, MenuItem $item, int $quantity, User $by): int
     {
         $level = $this->lock($item, $bill->branch_id);
-        if ($level->quantity < $quantity) {
-            throw ValidationException::withMessages([
-                'payment_method' => "Only {$level->quantity} {$item->unit} of {$item->name} in stock here: count the drinks in before the bill.",
-            ]);
-        }
-
         $level->forceFill(['quantity' => $level->quantity - $quantity])->save();
         $this->record($level, StockMovement::SALE, -$quantity, $level->average_cost_minor, $by, bill: $bill);
 

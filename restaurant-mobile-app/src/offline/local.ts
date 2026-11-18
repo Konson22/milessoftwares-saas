@@ -116,7 +116,7 @@ export async function floorAction(method: Method, path: string, data: Record<str
   const waiting = entries.some((e) => e.owner === owner && e.error === null);
   if (useAuth.getState().reachable && !waiting) {
     try {
-      const { result } = await send({ ...entry, queued_at: new Date().toISOString() });
+      const { result } = await send({ ...entry, owner, queued_at: new Date().toISOString() });
       return answered(entry.kind, entry.data, result);
     } catch (e) {
       // Refused (a till not open, an item gone): the person is right here.
@@ -131,7 +131,11 @@ export async function floorAction(method: Method, path: string, data: Record<str
   }
   // Checked and shown on the phone first: what it refuses is never queued.
   const { result, queue } = await applyHere(entry, order);
-  if (queue) useOutbox.getState().enqueue({ ...entry, owner });
+  if (queue) {
+    // A bill taken here has been paid: the restaurant records it rather than refusing it later.
+    const data = entry.kind === 'order.pay' ? { ...entry.data, taken_offline: true } : entry.data;
+    useOutbox.getState().enqueue({ ...entry, data, owner });
+  }
   return result;
 }
 

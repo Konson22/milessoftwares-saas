@@ -418,15 +418,25 @@ describe('the bill', function () {
             ->and(financeEvents())->toBe([]);
     });
 
-    it('refuses a bill for more drinks than the branch holds, and keeps the order open', function () {
-        member(['restaurant.orders.take', 'restaurant.bills.take']);
+    it('bills drinks served beyond what the branch holds, taking stock below zero for a count', function () {
+        member(['restaurant.orders.take', 'restaurant.bills.take', 'restaurant.stock.view']);
         $order = tableOrder([[$this->soda, 25]]);
 
-        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'card'])->assertSessionHasErrors('payment_method');
+        $this->post(at("orders/{$order->id}/pay"), ['payment_method' => 'card'])->assertSessionHasNoErrors();
 
-        expect($this->asTenant('acme', fn () => Bill::query()->count()))->toBe(0)
-            ->and($this->asTenant('acme', fn () => $order->fresh()->status))->toBe('open')
-            ->and(sodasInJuba())->toBe(24);
+        expect($this->asTenant('acme', fn () => $order->fresh()->status))->toBe('paid')
+            ->and(sodasInJuba())->toBe(-1);
+        $this->get(at('stock'))->assertInertia(fn (Assert $page) => $page
+            ->where('rows.0.onHand', -1)
+            ->where('rows.0.short', true));
+    });
+
+    it('shows a bad day as a validation error', function () {
+        member(['restaurant.orders.take', 'restaurant.bills.view']);
+
+        $this->get(at('orders?day=not-a-day'))->assertSessionHasErrors('day');
+        $this->get(at('bills?day=2026-13-45'))->assertSessionHasErrors('day');
+        $this->get(at('orders?day=2026-10-30'))->assertOk();
     });
 
     it('voids a paid bill: cash back from the voider\'s till, the drinks back in stock', function () {

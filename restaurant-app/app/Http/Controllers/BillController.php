@@ -6,7 +6,6 @@ use App\Actions\Bills;
 use App\Http\Controllers\Concerns\WorksInBranch;
 use App\Models\Bill;
 use App\Models\BillLine;
-use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -21,7 +20,7 @@ class BillController extends Controller
 
     public function index(Request $request): Response
     {
-        $day = CarbonImmutable::parse(is_string($request->query('day')) ? $request->query('day') : 'today')->startOfDay();
+        $day = $this->day($request);
 
         $bills = Bill::query()
             ->where('branch_id', $this->branchId())

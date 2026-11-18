@@ -25,6 +25,7 @@ type Row = {
     averageCostMinor: number;
     reorderLevel: number;
     low: boolean;
+    short: boolean;
 };
 
 type Props = {
@@ -138,10 +139,16 @@ export default function StockIndex({ rows, filters }: Props) {
                                         {money(row.averageCostMinor)}
                                     </TableCell>
                                     <TableCell>
-                                        {row.low && (
-                                            <StatusBadge tone="warning">
-                                                Running low
+                                        {row.short ? (
+                                            <StatusBadge tone="danger">
+                                                Count needed
                                             </StatusBadge>
+                                        ) : (
+                                            row.low && (
+                                                <StatusBadge tone="warning">
+                                                    Running low
+                                                </StatusBadge>
+                                            )
                                         )}
                                     </TableCell>
                                 </TableRow>

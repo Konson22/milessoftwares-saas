@@ -12,7 +12,6 @@ use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\OrderLine;
 use App\Support\Money;
-use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -68,7 +67,7 @@ class OrderController extends Controller
      */
     public function index(Request $request): Response
     {
-        $day = CarbonImmutable::parse(is_string($request->query('day')) ? $request->query('day') : 'today')->startOfDay();
+        $day = $this->day($request);
 
         $orders = Order::query()
             ->where('branch_id', $this->branchId())

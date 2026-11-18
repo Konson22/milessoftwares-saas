@@ -63,23 +63,35 @@ class Bills
      * Pays an order's bill; call inside the order's transaction, with the
      * order locked.
      *
+     * $takenOffline: the money was taken on a phone without a connection
+     * and is only being recorded now, so nothing may refuse it. Without an
+     * open till the cashier gets one (no float) to close with a count; cash
+     * short of today's price (the menu changed meanwhile) is not refused
+     * but shows as a shortfall when that till is counted.
+     *
      * @param  array<string, int>  $quantities  menu item id => quantity
      *
      * @throws ValidationException
      */
-    public function pay(Order $order, array $quantities, User $by, PaymentMethod $method, ?int $tenderedMinor, ?string $paymentReference): Bill
+    public function pay(Order $order, array $quantities, User $by, PaymentMethod $method, ?int $tenderedMinor, ?string $paymentReference, bool $takenOffline = false): Bill
     {
-        $till = $this->tills->openFor($by, $order->branch_id)
-            ?? throw ValidationException::withMessages(['payment_method' => 'Open your till at this branch before taking a bill.']);
+        $till = $this->tills->openFor($by, $order->branch_id, lock: true);
+        if ($till === null && $takenOffline) {
+            $this->tills->open($by, $order->branch_id, 0);
+            $till = $this->tills->openFor($by, $order->branch_id, lock: true);
+        }
+        if ($till === null) {
+            throw ValidationException::withMessages(['payment_method' => 'Open your till at this branch before taking a bill.']);
+        }
 
         ['lines' => $lines, 'total_minor' => $total] = $this->price($quantities);
 
         $change = 0;
         if ($method === PaymentMethod::Cash && $tenderedMinor !== null) {
-            if ($tenderedMinor < $total) {
+            if ($tenderedMinor < $total && ! $takenOffline) {
                 throw ValidationException::withMessages(['amount_tendered' => 'Less than the bill: '.Money::format($total).'.']);
             }
-            $change = $tenderedMinor - $total;
+            $change = max($tenderedMinor - $total, 0);
         }
 
         $bill = Bill::query()->create([

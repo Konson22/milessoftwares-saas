@@ -107,12 +107,14 @@ class Orders
         }
 
         $given = array_values(array_filter(array_column($lines, 'id')));
-        if ($given !== [] && OrderLine::query()->whereKey($given)->exists()) {
-            throw ValidationException::withMessages(['lines' => 'These lines are already on an order.']);
-        }
 
-        return DB::transaction(function () use ($order, $by, $lines) {
+        return DB::transaction(function () use ($order, $by, $lines, $given) {
             $locked = $this->lockOpen($order, 'lines');
+
+            // Checked under the order's lock: the same lines sent twice at once wait here.
+            if ($given !== [] && OrderLine::query()->whereKey($given)->exists()) {
+                throw ValidationException::withMessages(['lines' => 'These lines are already on an order.']);
+            }
 
             foreach ($lines as $line) {
                 $locked->lines()->create([
@@ -259,13 +261,13 @@ class Orders
     /**
      * Pays the bill of every line not voided, into the cashier's till, and
      * closes the order with it. Everything on the bill has gone to the
-     * kitchen first.
+     * kitchen first. $takenOffline: see Bills::pay().
      *
      * @throws ValidationException
      */
-    public function pay(Order $order, User $by, PaymentMethod $method, ?int $tenderedMinor = null, ?string $paymentReference = null): Order
+    public function pay(Order $order, User $by, PaymentMethod $method, ?int $tenderedMinor = null, ?string $paymentReference = null, bool $takenOffline = false): Order
     {
-        return DB::transaction(function () use ($order, $by, $method, $tenderedMinor, $paymentReference) {
+        return DB::transaction(function () use ($order, $by, $method, $tenderedMinor, $paymentReference, $takenOffline) {
             $locked = $this->lockOpen($order, 'payment_method');
 
             if ($locked->lines()->whereNull('kitchen_ticket_id')->whereNull('voided_at')->exists()) {
@@ -276,7 +278,7 @@ class Orders
                 throw ValidationException::withMessages(['payment_method' => 'Nothing to bill: cancel the order instead.']);
             }
 
-            $this->bills->pay($locked, $this->quantities($billable), $by, $method, $tenderedMinor, $paymentReference);
+            $this->bills->pay($locked, $this->quantities($billable), $by, $method, $tenderedMinor, $paymentReference, $takenOffline);
 
             $locked->forceFill([
                 'status' => Order::PAID,

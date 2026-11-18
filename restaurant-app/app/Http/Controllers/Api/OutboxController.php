@@ -73,8 +73,9 @@ class OutboxController extends Controller
 
                 return $result;
             });
-        } catch (UniqueConstraintViolationException $e) {
-            // The same submission, applied by a request running alongside.
+        } catch (UniqueConstraintViolationException|ValidationException $e) {
+            // The same submission, applied by a request running alongside
+            // (its lines or its record already there): the first answer.
             $done = $this->applied($id) ?? throw $e;
 
             return $this->answer($done);
@@ -249,14 +250,18 @@ class OutboxController extends Controller
             'payment_method' => ['required', Rule::enum(PaymentMethod::class)],
             'payment_reference' => ['nullable', 'string', 'max:64'],
             'tendered_minor' => ['nullable', 'integer', 'min:0'],
+            'taken_offline' => ['sometimes', 'boolean'],
         ])->validate();
 
+        // Taken on the phone without a connection: the customer has paid,
+        // so it is recorded (Bills::pay) rather than refused.
         $paid = $this->orders->pay(
             $order,
             $by,
             PaymentMethod::from($pay['payment_method']),
             isset($pay['tendered_minor']) ? (int) $pay['tendered_minor'] : null,
             $pay['payment_reference'] ?? null,
+            (bool) ($pay['taken_offline'] ?? false),
         );
         $bill = $paid->bill()->firstOrFail();
 

@@ -49,8 +49,12 @@ interface OutboxState {
   remove(id: string): void;
   /** Refused: try it again (after opening the till, say). */
   retry(id: string): void;
-  /** Sends this owner's entries, oldest first, until the connection fails. */
-  flush(owner: string): Promise<FlushResult>;
+  /**
+   * Sends this owner's entries, oldest first, until the connection fails,
+   * or until whoever works on the phone (current()) is no longer the owner:
+   * another branch or person must never send them as theirs.
+   */
+  flush(owner: string, current: () => string | null): Promise<FlushResult>;
   /** The workspace changed its address: what waits there goes with it. */
   moveWorkspace(from: string, to: string): void;
 }
@@ -73,14 +77,17 @@ let flushing: Promise<FlushResult> | null = null;
 const tryLater = (e: unknown) =>
   !(e instanceof ApiError) || e.offline || e.status === 401 || e.status === 409 || e.status === 429 || e.status >= 500;
 
-/** Sends one entry; the restaurant's answer. */
-export function send(entry: Pick<Entry, 'id' | 'kind' | 'data' | 'queued_at'>) {
-  return request<{ result: Record<string, unknown>; replayed: boolean }>('POST', 'v1/outbox', {
-    id: entry.id,
-    kind: entry.kind,
-    data: entry.data,
-    queued_at: entry.queued_at,
-  });
+/** The branch in an owner (workspace|branch|user). */
+const branchOf = (owner: string) => owner.split('|')[1] ?? '';
+
+/** Sends one entry, at the owner's branch; the restaurant's answer. */
+export function send(entry: Pick<Entry, 'id' | 'kind' | 'data' | 'queued_at' | 'owner'>) {
+  return request<{ result: Record<string, unknown>; replayed: boolean }>(
+    'POST',
+    'v1/outbox',
+    { id: entry.id, kind: entry.kind, data: entry.data, queued_at: entry.queued_at },
+    { 'X-Branch-Id': branchOf(entry.owner) },
+  );
 }
 
 export const useOutbox = create<OutboxState>()(
@@ -110,7 +117,7 @@ export const useOutbox = create<OutboxState>()(
         }));
       },
 
-      flush(owner) {
+      flush(owner, current) {
         // Cleared in a .finally, which runs after the assignment even when there is nothing to send.
         flushing ??= (async (): Promise<FlushResult> => {
           const out: FlushResult = { sent: 0, refused: 0, renamed: {}, touched: [], stopped: false };
@@ -121,6 +128,11 @@ export const useOutbox = create<OutboxState>()(
             // Re-read: an earlier entry may have renamed its order.
             const entry = get().entries.find((e) => e.id === queued.id);
             if (!entry || held.has(entry.data.order_id)) continue;
+            // Signed out, another person, branch or workspace since the run began: stop.
+            if (current() !== owner || entry.owner !== owner) {
+              out.stopped = true;
+              break;
+            }
 
             set((s) => ({ entries: s.entries.map((e) => (e.id === entry.id ? { ...e, attempts: e.attempts + 1 } : e)) }));
             try {

@@ -7,7 +7,6 @@ use App\Enums\PaymentMethod;
 use App\Http\Controllers\Concerns\WorksInBranch;
 use App\Models\TillShift;
 use App\Support\Money;
-use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -25,7 +24,7 @@ class TillController extends Controller
 
     public function index(Request $request): Response
     {
-        $day = CarbonImmutable::parse(is_string($request->query('day')) ? $request->query('day') : 'today')->startOfDay();
+        $day = $this->day($request);
         $member = $this->member($request);
         $managing = $this->canHere('restaurant.tills.manage');
 
