@@ -30,9 +30,10 @@ class Assignments
      * Assigns people (or updates their live assignment) to collect with a form.
      *
      * @param  list<string>  $userIds
+     * @param  int|null  $expected  submissions expected from each person (null: not set)
      * @return int how many were newly assigned
      */
-    public function assign(Form $form, array $userIds, ?string $unitId, ?CarbonImmutable $startsOn, ?CarbonImmutable $endsOn, User $assigner): int
+    public function assign(Form $form, array $userIds, ?string $unitId, ?CarbonImmutable $startsOn, ?CarbonImmutable $endsOn, User $assigner, ?int $expected = null): int
     {
         if ($form->isArchived()) {
             throw ValidationException::withMessages(['form' => 'This form is archived.']);
@@ -47,7 +48,11 @@ class Assignments
             throw ValidationException::withMessages(['ends_on' => 'The last day is before the first.']);
         }
 
-        return DB::transaction(function () use ($form, $userIds, $unitId, $startsOn, $endsOn, $assigner) {
+        if ($expected !== null && ($expected < 1 || $expected > 100000)) {
+            throw ValidationException::withMessages(['expected_submissions' => 'Expect between 1 and 100,000 submissions, or leave it empty.']);
+        }
+
+        return DB::transaction(function () use ($form, $userIds, $unitId, $startsOn, $endsOn, $assigner, $expected) {
             $created = 0;
 
             foreach (array_values(array_unique($userIds)) as $userId) {
@@ -58,6 +63,9 @@ class Assignments
                     'ends_on' => $endsOn,
                     'status' => Assignment::ACTIVE,
                     'closes_at' => null,
+                    'expected_submissions' => $expected,
+                    // The project milestone the form serves, as it was when assigned.
+                    'linked_milestone_id' => $form->linked_milestone_id,
                 ];
 
                 if ($assignment === null) {

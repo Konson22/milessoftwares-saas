@@ -20,6 +20,19 @@ import { formatDateTime } from '@/mel/lib/mel';
 import { close, index, revoke, store } from '@/routes/mel/collect/assignments';
 import { show as formPage } from '@/routes/mel/collect/forms';
 
+/** Whether the agreed collection was sent: apart from review. */
+type Collection = 'not_started' | 'in_progress' | 'complete' | 'overdue';
+
+const COLLECTION: Record<
+    Collection,
+    { label: string; tone: 'neutral' | 'info' | 'success' | 'danger' }
+> = {
+    not_started: { label: 'Not started', tone: 'neutral' },
+    in_progress: { label: 'In progress', tone: 'info' },
+    complete: { label: 'Collected', tone: 'success' },
+    overdue: { label: 'Overdue', tone: 'danger' },
+};
+
 type Props = {
     filters: { form: string | null; show: 'live' | 'ended' };
     assignments: {
@@ -35,6 +48,15 @@ type Props = {
         assignedBy: string;
         submissions: number;
         lastSubmissionAt: string | null;
+        expected: number | null;
+        progress: {
+            done: number;
+            awaitingReview: number;
+            correction: number;
+            accepted: number;
+            rejected: number;
+        };
+        collection: Collection;
     }[];
     forms: {
         value: string;
@@ -61,13 +83,42 @@ export default function Assignments({
         programme_unit_id: string;
         starts_on: string;
         ends_on: string;
+        expected_submissions: string;
     }>({
         form: filters.form ?? forms[0]?.value ?? '',
         user_ids: [],
         programme_unit_id: '',
         starts_on: '',
         ends_on: '',
+        expected_submissions: '',
     });
+    const live = assignments.filter((row) => row.status !== 'revoked');
+    const tally = (pick: (row: (typeof assignments)[number]) => number) =>
+        live.reduce((total, row) => total + pick(row), 0);
+    const tiles = [
+        { label: 'Assigned', value: live.length },
+        {
+            label: 'In progress',
+            value: live.filter((row) => row.collection === 'in_progress')
+                .length,
+        },
+        {
+            label: 'Collected',
+            value: live.filter((row) => row.collection === 'complete').length,
+        },
+        {
+            label: 'Overdue',
+            value: live.filter((row) => row.collection === 'overdue').length,
+        },
+        {
+            label: 'Submissions awaiting review',
+            value: tally((row) => row.progress.awaitingReview),
+        },
+        {
+            label: 'Corrections asked for',
+            value: tally((row) => row.progress.correction),
+        },
+    ];
     const chosen = forms.find((form) => form.value === assign.data.form);
     const go = (next: Partial<Props['filters']>) =>
         router.get(
@@ -98,6 +149,8 @@ export default function Assignments({
                                             data.programme_unit_id || null,
                                         starts_on: data.starts_on || null,
                                         ends_on: data.ends_on || null,
+                                        expected_submissions:
+                                            data.expected_submissions || null,
                                     }),
                                 );
                                 assign.submit(store(assign.data.form), {
@@ -243,6 +296,26 @@ export default function Assignments({
                                     }
                                 />
                             </label>
+                            <label className="grid gap-1 text-sm">
+                                <span>Submissions expected (optional)</span>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    className={selectClass}
+                                    value={assign.data.expected_submissions}
+                                    onChange={(e) =>
+                                        assign.setData(
+                                            'expected_submissions',
+                                            e.target.value,
+                                        )
+                                    }
+                                />
+                                <span className="text-xs text-muted-foreground">
+                                    From each person, such as 10 water points to
+                                    inspect. Progress counts what was sent;
+                                    review is shown apart.
+                                </span>
+                            </label>
                             {Object.values(assign.errors).map((message) => (
                                 <p
                                     key={message}
@@ -295,6 +368,20 @@ export default function Assignments({
                     ))}
                 </select>
             </div>
+            {filters.show === 'live' && live.length > 0 && (
+                <dl className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                    {tiles.map((tile) => (
+                        <div key={tile.label} className="rounded-md border p-3">
+                            <dt className="text-xs text-muted-foreground">
+                                {tile.label}
+                            </dt>
+                            <dd className="text-xl font-semibold tabular-nums">
+                                {tile.value}
+                            </dd>
+                        </div>
+                    ))}
+                </dl>
+            )}
             <Panel>
                 {assignments.length === 0 ? (
                     <PanelBody className="text-sm text-muted-foreground">
@@ -342,7 +429,24 @@ export default function Assignments({
                                             : 'Open-ended'}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
-                                        {row.submissions}
+                                        {row.expected === null
+                                            ? row.progress.done
+                                            : `${row.progress.done} of ${row.expected}`}
+                                        {(row.progress.awaitingReview > 0 ||
+                                            row.progress.correction > 0) && (
+                                            <div className="text-xs text-muted-foreground">
+                                                {[
+                                                    row.progress
+                                                        .awaitingReview > 0 &&
+                                                        `${row.progress.awaitingReview} to review`,
+                                                    row.progress.correction >
+                                                        0 &&
+                                                        `${row.progress.correction} to correct`,
+                                                ]
+                                                    .filter(Boolean)
+                                                    .join(' · ')}
+                                            </div>
+                                        )}
                                         {row.lastSubmissionAt && (
                                             <div className="text-xs text-muted-foreground">
                                                 last{' '}
@@ -353,11 +457,30 @@ export default function Assignments({
                                         )}
                                     </TableCell>
                                     <TableCell>
-                                        <StatusBadge
-                                            tone={ASSIGNMENT[row.status].tone}
-                                        >
-                                            {ASSIGNMENT[row.status].label}
-                                        </StatusBadge>
+                                        <div className="flex flex-wrap gap-1">
+                                            <StatusBadge
+                                                tone={
+                                                    ASSIGNMENT[row.status].tone
+                                                }
+                                            >
+                                                {ASSIGNMENT[row.status].label}
+                                            </StatusBadge>
+                                            {row.status !== 'revoked' && (
+                                                <StatusBadge
+                                                    tone={
+                                                        COLLECTION[
+                                                            row.collection
+                                                        ].tone
+                                                    }
+                                                >
+                                                    {
+                                                        COLLECTION[
+                                                            row.collection
+                                                        ].label
+                                                    }
+                                                </StatusBadge>
+                                            )}
+                                        </div>
                                         {row.status === 'closing' &&
                                             row.closesAt && (
                                                 <div className="text-xs text-muted-foreground">

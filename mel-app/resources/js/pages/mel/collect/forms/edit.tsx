@@ -23,8 +23,11 @@ type Props = {
         programmeId: string | null;
         unitId: string | null;
         containsPersonalData: boolean;
+        linkedMilestoneId: string | null;
     } | null;
     defaults: { programmeId: string | null };
+    /** Milestones of the projects linked to the form's programme (null: no programme yet). */
+    milestones?: Option[] | null;
     programmes: (Option & { units: Option[] })[];
     purposes: Option[];
     programmeRequired: boolean;
@@ -33,6 +36,7 @@ type Props = {
 export default function FormDetails({
     form,
     defaults,
+    milestones,
     programmes,
     purposes,
     programmeRequired,
@@ -125,6 +129,23 @@ export default function FormDetails({
                                         ))}
                                     </select>
                                 </Field>
+                                {form !== null &&
+                                    programmeId === form.programmeId &&
+                                    milestones &&
+                                    milestones.length > 0 && (
+                                        <SelectField
+                                            name="linked_milestone_id"
+                                            label="Project milestone"
+                                            options={milestones}
+                                            empty="Not tied to a milestone"
+                                            hint="The work in Tatook Projects this form monitors, such as rehabilitating water points. Completing surveys never marks the milestone reached."
+                                            defaultValue={
+                                                form.linkedMilestoneId
+                                            }
+                                            error={errors.linked_milestone_id}
+                                            className="sm:col-span-2"
+                                        />
+                                    )}
                                 {units.length > 0 && (
                                     <SelectField
                                         key={programmeId}

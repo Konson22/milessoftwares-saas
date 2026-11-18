@@ -21,6 +21,7 @@ import {
     build,
     duplicate,
     edit,
+    indicators as indicatorsPage,
     restore,
     summary,
     version as versionPage,
@@ -192,6 +193,20 @@ export default function FormPage({
                                         Export
                                     </Link>
                                 )}
+                            </p>
+                        )}
+                        {form.programme !== null && form.version !== null && (
+                            <p>
+                                <Link
+                                    href={indicatorsPage(form.id)}
+                                    className="underline"
+                                >
+                                    Indicators this form feeds
+                                </Link>
+                                <span className="block text-muted-foreground">
+                                    Turn accepted submissions into results of{' '}
+                                    {form.programme.label} for M&E to verify.
+                                </span>
                             </p>
                         )}
                         {form.version === null && !archived && (

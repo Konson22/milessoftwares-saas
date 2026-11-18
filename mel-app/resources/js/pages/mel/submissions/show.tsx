@@ -27,6 +27,7 @@ import type {
     SubmissionStatus,
     Target,
 } from '@/mel/lib/mel';
+import { show as calculationPage } from '@/routes/mel/collect/calculations';
 import { entry } from '@/routes/mel/data';
 import { download } from '@/routes/mel/evidence';
 import { show as indicatorPage } from '@/routes/mel/indicators';
@@ -41,6 +42,14 @@ import {
 } from '@/routes/mel/submissions';
 
 type Props = {
+    /** Calculated from collected data: the calculation it came from. */
+    calculation: {
+        id: string;
+        used: number;
+        form: string;
+        flag: string | null;
+        canOpen: boolean;
+    } | null;
     submission: {
         id: string;
         status: SubmissionStatus;
@@ -110,6 +119,7 @@ const ACTIONS: Record<string, string> = {
 };
 
 export default function SubmissionShow({
+    calculation,
     submission,
     version,
     target,
@@ -163,6 +173,28 @@ export default function SubmissionShow({
             />
 
             <div className="grid max-w-4xl gap-3">
+                {calculation && (
+                    <div
+                        className={`rounded-md border p-3 text-sm ${calculation.flag ? 'border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-100' : ''}`}
+                    >
+                        Calculated from {calculation.used} accepted submission
+                        {calculation.used === 1 ? '' : 's'} of "
+                        {calculation.form}".{' '}
+                        {calculation.canOpen && (
+                            <Link
+                                href={calculationPage(calculation.id)}
+                                className="underline"
+                            >
+                                See what was counted
+                            </Link>
+                        )}
+                        {calculation.flag && (
+                            <span className="mt-1 block">
+                                {calculation.flag}
+                            </span>
+                        )}
+                    </div>
+                )}
                 <Panel>
                     <PanelBody className="grid gap-4 text-sm sm:grid-cols-4">
                         <Fact label="Programme">

@@ -21,6 +21,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $form_id
  * @property string $user_id
  * @property string|null $programme_unit_id
+ * @property string|null $linked_milestone_id
+ * @property int|null $expected_submissions
  * @property CarbonImmutable|null $starts_on
  * @property CarbonImmutable|null $ends_on
  * @property string $status
@@ -54,6 +56,7 @@ class Assignment extends Model
     protected function casts(): array
     {
         return [
+            'expected_submissions' => 'integer',
             'starts_on' => 'immutable_date',
             'ends_on' => 'immutable_date',
             'closes_at' => 'immutable_datetime',

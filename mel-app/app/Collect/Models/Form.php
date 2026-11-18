@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $organization_id
  * @property string|null $programme_id
  * @property string|null $programme_unit_id
+ * @property string|null $linked_milestone_id
  * @property string $name
  * @property string|null $description
  * @property string $purpose

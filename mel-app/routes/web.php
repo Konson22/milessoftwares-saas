@@ -2,9 +2,11 @@
 
 use App\Http\Controllers\Mel\AuditController;
 use App\Http\Controllers\Mel\Collect\AssignmentController;
+use App\Http\Controllers\Mel\Collect\AnalyticsController;
 use App\Http\Controllers\Mel\Collect\CollectedController;
 use App\Http\Controllers\Mel\Collect\ExportController;
 use App\Http\Controllers\Mel\Collect\FormController;
+use App\Http\Controllers\Mel\Collect\IndicatorMappingController;
 use App\Http\Controllers\Mel\DataController;
 use App\Http\Controllers\Mel\FrameworkController;
 use App\Http\Controllers\Mel\HomeController;
@@ -176,6 +178,7 @@ Route::prefix(app(PlatformConfig::class)->path())
 
             // Collected submissions and their review (ADR-0019 §21)
             Route::middleware('can:mel.collect.view')->group(function () {
+                Route::get('analytics', [AnalyticsController::class, 'index'])->name('analytics');
                 Route::get('submissions', [CollectedController::class, 'index'])->name('submissions.index');
                 Route::get('submissions/{submission}', [CollectedController::class, 'show'])->name('submissions.show');
                 Route::get('submissions/{submission}/photos/{attachment}', [CollectedController::class, 'photo'])->name('submissions.photo');
@@ -195,6 +198,18 @@ Route::prefix(app(PlatformConfig::class)->path())
                 Route::get('exports', [ExportController::class, 'index'])->name('exports.index');
                 Route::post('forms/{form}/exports', [ExportController::class, 'store'])->middleware('throttle:20,1')->name('exports.store');
                 Route::get('exports/{export}/download', [ExportController::class, 'download'])->name('exports.download');
+            });
+
+            // Indicators fed by a form's accepted submissions (ADR-0019 §26)
+            Route::middleware('can:mel.collect.view')->group(function () {
+                Route::get('forms/{form}/indicators', [IndicatorMappingController::class, 'index'])->name('forms.indicators');
+                Route::get('calculations/{run}', [IndicatorMappingController::class, 'show'])->name('calculations.show');
+                Route::middleware('can:mel.frameworks.manage')->group(function () {
+                    Route::post('forms/{form}/indicators', [IndicatorMappingController::class, 'store'])->name('mappings.store');
+                    Route::put('indicator-mappings/{mapping}', [IndicatorMappingController::class, 'update'])->name('mappings.update');
+                    Route::post('indicator-mappings/{mapping}/retire', [IndicatorMappingController::class, 'retire'])->name('mappings.retire');
+                });
+                Route::post('indicator-mappings/{mapping}/send', [IndicatorMappingController::class, 'send'])->middleware('can:mel.data.enter')->name('mappings.send');
             });
 
             // Field assignments
