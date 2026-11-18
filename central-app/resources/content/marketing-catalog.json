@@ -354,6 +354,115 @@
             ]
         },
         {
+            "slug": "ngo",
+            "category": "erp",
+            "name": "NGO Suite",
+            "icon": "handshake",
+            "registry": {
+                "type": "erp",
+                "code": "ngo"
+            },
+            "highlights": [
+                "Projects and programmes",
+                "Grant agreements",
+                "Disbursement requests",
+                "Fund accounting",
+                "Procurement",
+                "Monitoring & Evaluation",
+                "Field data collection"
+            ],
+            "offering": {
+                "platforms": [
+                    "web",
+                    "android"
+                ],
+                "connectivity": [
+                    "online",
+                    "offline_sync"
+                ],
+                "licensing": [
+                    "subscription"
+                ],
+                "desktop": [],
+                "mobile": [
+                    "Collect survey data in the field with Tatook MDC, including where there is no signal; submissions are sent when the connection is back"
+                ]
+            },
+            "summary": "Projects, grants, finance, procurement and verified results for NGOs, in one package with one sign-in.",
+            "overview": [
+                "NGO Suite brings together the Tatook applications an NGO runs on: Projects for programmes, partners and donors; Finance & Accounting for the books; Procurement for purchasing; and Monitoring & Evaluation, with field data collection, for results. One subscription switches them all on for your organization, and your team signs in once.",
+                "Projects can be your own or run for a donor. Donors and implementing partners work on the same project from their own organizations, each seeing only what is shared with them. Grant agreements record what is approved, and disbursement requests move through approval between the parties.",
+                "Each application keeps its own records and rules. Payments and expenditure are recorded in Finance, purchases go through Procurement's approvals, and results count only once they are verified in Monitoring & Evaluation.",
+                "Applications you already subscribe to stay as they are: the suite adds what is missing and never removes what you have."
+            ],
+            "headline": "Run your programmes, grants and results in one place.",
+            "subhead": "Projects with partners and donors, grant agreements, Finance & Accounting, Procurement and Monitoring & Evaluation, switched on together with one subscription.",
+            "audience": "NGOs, implementing partners, community organizations and donor-funded institutions.",
+            "seoTitle": "NGO software: projects, grants, finance and M&E",
+            "seoDescription": "NGO software with projects, grant agreements, disbursement requests, fund accounting, procurement and M&E with field data collection, in one package.",
+            "features": [
+                {
+                    "icon": "folder-kanban",
+                    "title": "Projects and programmes",
+                    "body": "Activities, milestones, budgets and documents, for your own projects and those you run for a donor."
+                },
+                {
+                    "icon": "handshake",
+                    "title": "Partners and donors",
+                    "body": "Invite donors and implementing partners to a project; each organization keeps its own data and sees only what is shared."
+                },
+                {
+                    "icon": "hand-coins",
+                    "title": "Grants and disbursements",
+                    "body": "Grant agreements with approved amounts and periods, and disbursement requests approved between the parties."
+                },
+                {
+                    "icon": "landmark",
+                    "title": "Finance & Accounting",
+                    "body": "The ledger, payments and expenditure. Project payments are recorded in Finance, not twice."
+                },
+                {
+                    "icon": "shopping-cart",
+                    "title": "Procurement",
+                    "body": "Requisitions, quotations, purchase orders, receiving and supplier invoices, with separation of duties."
+                },
+                {
+                    "icon": "activity",
+                    "title": "Monitoring & Evaluation",
+                    "body": "Results frameworks, indicators and targets; only verified results reach donor reports."
+                },
+                {
+                    "icon": "map-pin",
+                    "title": "Field data collection",
+                    "body": "Survey forms on Android phones that work offline, included with Monitoring & Evaluation."
+                }
+            ],
+            "workflow": [
+                {
+                    "title": "Subscribe once",
+                    "body": "One subscription switches on Projects, Finance, Procurement and Monitoring & Evaluation for your organization."
+                },
+                {
+                    "title": "Plan and fund",
+                    "body": "Create projects, agree grants with donors and partners, and approve budgets."
+                },
+                {
+                    "title": "Deliver and report",
+                    "body": "Buy through Procurement, pay through Finance, collect data in the field, and report verified results."
+                }
+            ],
+            "faqs": [
+                {
+                    "question": "What happens to applications we already subscribe to?",
+                    "answer": "They stay as they are. The suite adds the applications you do not have yet and never removes access you already hold."
+                },
+                {
+                    "question": "Is payroll included?",
+                    "answer": "Not yet. Payroll is planned as an optional part of the suite."
+                }
+            ]
+        },
+        {
             "slug": "logistics",
             "category": "erp",
             "name": "Logistics ERP",
@@ -877,20 +986,29 @@
             "category": "application",
             "name": "Procurement",
             "icon": "clipboard-list",
-            "registry": null,
+            "registry": {
+                "type": "application",
+                "code": "procurement"
+            },
             "offering": {
-                "platforms": ["web"],
-                "connectivity": ["online"],
-                "licensing": ["subscription"],
+                "platforms": [
+                    "web"
+                ],
+                "connectivity": [
+                    "online"
+                ],
+                "licensing": [
+                    "subscription"
+                ],
                 "desktop": [],
                 "mobile": []
             },
-            "summary": "Purchase requests, approvals and orders that flow into stock and the books.",
+            "summary": "From purchase request to delivery. All connected.",
             "headline": "Buy right, with approvals.",
-            "subhead": "Procurement is planned for organizations that need requests, approvals and supplier quotes before they buy.",
+            "subhead": "Tatook Procurement is being built for organizations that need plans, requests, approvals and supplier quotes before they buy, and proof of what arrived after.",
             "audience": "Organizations with purchasing approvals: NGOs, schools, companies with several departments.",
             "seoTitle": "Procurement software",
-            "seoDescription": "Procurement software on the way: purchase requests, approvals, supplier quotes and purchase orders that flow into stock and Finance & Accounting.",
+            "seoDescription": "Procurement software on the way: purchase requests with approvals, RFQs and tenders, purchase orders, receiving and supplier invoices that can flow into Finance.",
             "features": [
                 {
                     "icon": "clipboard-list",
@@ -905,7 +1023,12 @@
                 {
                     "icon": "file-text",
                     "title": "Quotes and orders",
-                    "body": "Compare supplier quotes and raise the purchase order."
+                    "body": "Compare supplier quotes, in any currency, and raise the purchase order."
+                },
+                {
+                    "icon": "package",
+                    "title": "Receiving and invoices",
+                    "body": "Record what arrived and match the supplier's invoice against it."
                 }
             ],
             "workflow": [
@@ -913,16 +1036,23 @@
                     "title": "Request",
                     "body": "A department raises a purchase request."
                 },
-                { "title": "Approve", "body": "Approvers sign off, in order." },
+                {
+                    "title": "Approve",
+                    "body": "Approvers sign off, in order."
+                },
                 {
                     "title": "Order",
-                    "body": "The order goes out and the bill lands in Finance."
+                    "body": "The order goes out; receipts and the supplier's invoice are matched against it."
                 }
             ],
             "faqs": [
                 {
                     "question": "When will Procurement be available?",
-                    "answer": "It is planned. Join the waitlist and we will tell you first."
+                    "answer": "It is being built. Join the waitlist and we will tell you first."
+                },
+                {
+                    "question": "Do I need Finance & Accounting?",
+                    "answer": "No. Procurement works on its own. With Finance & Accounting, matched supplier invoices can be sent there as bills."
                 }
             ]
         },

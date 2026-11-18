@@ -195,6 +195,8 @@ describe('catalog', function () {
             'education' => 'planned',
             'ngo' => 'planned',
             'monitoring_evaluation' => 'planned',
+            // Procurement is not registered in this test: kept planned.
+            'procurement' => 'planned',
             'finance_accounting' => 'pilot',
             // Payroll is not registered in this test: kept planned.
             'payroll' => 'planned',
