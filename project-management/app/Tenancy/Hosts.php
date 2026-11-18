@@ -10,7 +10,7 @@ use Miles\PlatformClient\PlatformConfig;
  * platform: {slug}.<root domain>/projects (miles/platform-client resolves the
  * organization from the host). The root domain itself is the Miles Softwares
  * website. Scheme and port follow APP_URL, so the same works on
- * http://acme.milesoftwares.localhost/projects in development.
+ * http://acme.tatook.localhost/projects in development.
  */
 final class Hosts
 {

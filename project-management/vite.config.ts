@@ -19,7 +19,7 @@ const path = env.PLATFORM_PATH || env.PLATFORM_APPLICATION || 'projects';
 // Pages on every workspace host load scripts from the dev server, and
 // module scripts need CORS.
 const rootDomain = (
-    env.PLATFORM_ROOT_DOMAIN || 'milesoftwares.localhost'
+    env.PLATFORM_ROOT_DOMAIN || 'tatook.localhost'
 ).replaceAll('.', '\\.');
 const platformOrigin = new RegExp(
     `^https?://([a-z0-9-]+\\.)?${rootDomain}(:\\d+)?$`,
