@@ -1,7 +1,6 @@
 import { cachedPage, scope, storePage } from '@/offline/cache';
 import { floorAction } from '@/offline/local';
 import { localIds, pendingOrders, useOutbox } from '@/offline/outbox';
-import { useSync } from '@/offline/sync';
 
 import { isOffline, request } from './api/client';
 
@@ -47,6 +46,9 @@ const base = (path: string) => `v1/app/${path.replace(/^\//, '')}`;
 /** A record made on the phone that the restaurant knows by another id now. */
 function renamed(path: string): string {
   const [section, id, ...rest] = path.split('/');
+  // Sync loads pages through this module: it is required when first needed, not imported (no cycle).
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useSync } = require('@/offline/sync') as typeof import('@/offline/sync');
   const to = id ? useSync.getState().renamed[id.split('?')[0]] : undefined;
   return to ? [section, to, ...rest].join('/') : path;
 }

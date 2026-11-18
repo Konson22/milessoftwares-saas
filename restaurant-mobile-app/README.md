@@ -1,4 +1,4 @@
-# Mataem Plus (mobile)
+# Bewe Miles Resto (mobile)
 
 The restaurant on a phone or tablet: floor, orders, kitchen tickets, bills,
 tills, menu, tables and drinks stock. Expo (SDK 57), Expo Router, NativeWind.

@@ -43,7 +43,7 @@ export function webUrl(workspace: string, path = ''): string {
  * `adb reverse tcp:80 tcp:80`) and name the host in the Host header. The
  * sign-in browser needs nothing: it sends *.localhost to loopback itself.
  */
-const DEV_SERVER = (process.env.EXPO_PUBLIC_DEV_SERVER ?? '').replace(/\/$/, '');
+const DEV_SERVER = ((raw) => (raw === '' || /^https?:\/\//.test(raw) ? raw : `http://${raw}`))((process.env.EXPO_PUBLIC_DEV_SERVER ?? '').trim().replace(/\/$/, ''));
 
 /** Where a call to `url` actually goes, and the headers that keep its host. */
 export function reach(url: string): { url: string; headers: Record<string, string> } {

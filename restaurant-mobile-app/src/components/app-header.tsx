@@ -20,7 +20,7 @@ export function AppHeader({ onMenu }: { onMenu?: () => void }) {
         <Image source={require('../../assets/images/logo-light.png')} contentFit="contain" style={{ width: 32, height: 32 }} accessible={false} />
         <View className="flex-1">
           <Text className="text-base font-bold text-white" numberOfLines={1}>
-            {organization ?? 'Mataem Plus'}
+            {organization ?? 'Bewe Miles Resto'}
           </Text>
           <View className="flex-row items-center gap-1">
             <Ionicons name={lost ? 'cloud-offline-outline' : 'cloud-done-outline'} size={12} color={colors.brand[100]} />

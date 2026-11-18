@@ -6,7 +6,6 @@ import { platform, type RestaurantChoice } from '@/lib/api/platform';
 import { accessToken, freshIdToken, loadTokens, saveTokens, signInOnPlatform, signInWithCode, signInWithGoogle, signInWithPassword } from '@/lib/auth/tokens';
 import { setCurrency } from '@/lib/format';
 import type { Branch, Me, User } from '@/lib/types';
-import { forgetPages } from '@/offline/cache';
 import { useOutbox } from '@/offline/outbox';
 
 const SESSION_KEY = 'miles-restaurant.session';
@@ -82,7 +81,7 @@ export const useAuth = create<AuthState>((set, get) => {
     setRequestContext({ workspace: null, branchId: null });
     pendingIdToken = null;
     // Their pages leave the phone; what waits to be sent stays, for when they sign in again.
-    await forgetPages();
+    await forgetCachedPages();
     set({ status: 'signedOut', me: null, branchId: null, choices: [] });
   };
 
@@ -100,7 +99,7 @@ export const useAuth = create<AuthState>((set, get) => {
       const { workspace, me, branchId } = get();
       if (workspace === from && me) {
         await saveSession({ workspace: to, me, branchId });
-        await forgetPages();
+        await forgetCachedPages();
         set({ workspace: to });
       }
     },
@@ -245,4 +244,14 @@ export function useBranches(): Branch[] {
 
 export function useUser(): User | null {
   return useAuth((s) => s.me?.user ?? null);
+}
+
+/**
+ * The page cache reads who is signed in from this store, so it is loaded
+ * when first needed rather than imported (no require cycle).
+ */
+function forgetCachedPages(): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { forgetPages } = require('@/offline/cache') as typeof import('@/offline/cache');
+  return forgetPages();
 }

@@ -5,7 +5,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Mataem Plus palette, sampled from the app icon: its red (600) is the main hue, 500 its bright
+        // Bewe Miles Resto palette, sampled from the app icon: its red (600) is the main hue, 500 its bright
         // highlight, 700-800 the maroon shadows, 900-950 the same red deepened for the dark backdrops.
         // Keep src/lib/theme.ts in sync — it carries the same values for icons and navigation.
         brand: {

@@ -25,7 +25,7 @@ export function LoadingScreen() {
 
   return (
     <ArtBackground>
-      <View className="flex-1 items-center justify-center gap-8" accessible accessibilityRole="progressbar" accessibilityLabel="Mataem Plus is opening">
+      <View className="flex-1 items-center justify-center gap-8" accessible accessibilityRole="progressbar" accessibilityLabel="Bewe Miles Resto is opening">
         <View className="items-center justify-center">
           <Animated.View style={[{ position: 'absolute', width: 150, height: 150, borderRadius: 75, backgroundColor: colors.brand[900] }, halo]} />
           <Animated.View style={logo}>
@@ -33,7 +33,7 @@ export function LoadingScreen() {
           </Animated.View>
         </View>
         <View className="items-center gap-3">
-          <Text className="text-2xl font-bold text-white">Mataem Plus</Text>
+          <Text className="text-2xl font-bold text-white">Bewe Miles Resto</Text>
           <View className="h-1 overflow-hidden bg-brand-800" style={{ width: BAR }}>
             <Animated.View className="h-1 bg-accent" style={[{ width: BAR / 2 }, bar]} />
           </View>

@@ -1,7 +1,7 @@
 import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
-import { Platform } from 'react-native';
+import { NativeModules, Platform, TurboModuleRegistry } from 'react-native';
 
 import { AUTH_URL, CLIENT_ID, GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID, reach } from '../config';
 import { secureStorage } from '../storage';
@@ -223,6 +223,10 @@ function googleSignIn(): GoogleModule | null {
   if (google !== undefined) return google;
   google = null;
   if (Platform.OS === 'web' || !GOOGLE_WEB_CLIENT_ID || (Platform.OS === 'ios' && !GOOGLE_IOS_CLIENT_ID)) return google;
+  // Expo Go and builds made before Google was added lack the native module.
+  // Requiring the library then throws inside React Native's module loader,
+  // which reports it as an error even though it is caught: look first.
+  if (!(TurboModuleRegistry.get('RNGoogleSignin') ?? NativeModules.RNGoogleSignin)) return google;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     google = require('@react-native-google-signin/google-signin') as GoogleModule;

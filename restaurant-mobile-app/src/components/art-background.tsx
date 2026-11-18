@@ -25,10 +25,10 @@ export function BrandMark({ compact }: { compact?: boolean }) {
       style={{ paddingTop: insets.top + (compact ? 16 : 36) }}
       accessible
       accessibilityRole="header"
-      accessibilityLabel="Mataem Plus, by Tatook">
+      accessibilityLabel="Bewe Miles Resto, by Tatook">
       <Image source={require('../../assets/images/logo-light.png')} contentFit="contain" style={{ width: size, height: size }} accessibilityIgnoresInvertColors />
       <View className="items-center">
-        <Text className={`font-bold text-white ${compact ? 'text-2xl' : 'text-3xl'}`}>Mataem Plus</Text>
+        <Text className={`font-bold text-white ${compact ? 'text-2xl' : 'text-3xl'}`}>Bewe Miles Resto</Text>
         <Text className="text-sm text-brand-200">Tables, kitchen and bills</Text>
       </View>
     </View>
