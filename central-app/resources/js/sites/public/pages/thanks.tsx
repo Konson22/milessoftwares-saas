@@ -12,7 +12,7 @@ export default function Thanks() {
 
             <PageHero
                 above={
-                    <span className="inline-flex size-12 items-center justify-center rounded-full bg-site-accent/10 text-site-accent-ink">
+                    <span className="inline-flex size-12 items-center justify-center rounded-full bg-site-tint text-site-accent-ink">
                         <Check className="size-6" aria-hidden />
                     </span>
                 }

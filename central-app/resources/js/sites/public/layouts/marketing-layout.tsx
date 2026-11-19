@@ -35,7 +35,7 @@ type NavEntry =
 
 const nav: NavEntry[] = [
     { title: 'Home', href: '/' },
-    { title: 'Tatook Workspace', href: '/platform' },
+    { title: 'Miles Workspace', href: '/platform' },
     {
         title: 'Products',
         href: '/products',
@@ -74,7 +74,7 @@ function Brand({ light = false }: { light?: boolean }) {
     return (
         <Link
             href="/"
-            aria-label="Tatook home"
+            aria-label="Miles Softwares home"
             className="flex shrink-0 items-center"
         >
             <img
@@ -83,8 +83,8 @@ function Brand({ light = false }: { light?: boolean }) {
                         ? '/images/logo-site-light.webp'
                         : '/images/logo-site.webp'
                 }
-                alt="Tatook"
-                width={508}
+                alt="Miles Softwares"
+                width={429}
                 height={128}
                 className="h-10 w-auto sm:h-11"
             />
@@ -176,9 +176,9 @@ function NavMenu({
                                 aria-current={
                                     path === item.href ? 'page' : undefined
                                 }
-                                className={`flex gap-3 rounded-xl whitespace-normal transition-colors hover:bg-slate-50 aria-[current=page]:bg-site-accent/10 ${item.body ? 'items-start p-3' : 'items-center px-3 py-2'}`}
+                                className={`flex gap-3 rounded-xl whitespace-normal transition-colors hover:bg-slate-50 aria-[current=page]:bg-site-tint ${item.body ? 'items-start p-3' : 'items-center px-3 py-2'}`}
                             >
-                                <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-site-accent/10 text-site-accent-ink">
+                                <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-site-tint text-site-accent-ink">
                                     <Icon className="size-4" aria-hidden />
                                 </span>
                                 <span>
@@ -389,9 +389,9 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                     <div className="col-span-2 md:col-span-3 lg:col-span-1">
                         <Brand light />
                         <p className="mt-5 max-w-xs leading-relaxed">
-                            Bring it all together: Tatook products in one
-                            workspace, and custom software for web, desktop and
-                            mobile.
+                            Bring it all together: Miles Softwares products in
+                            one workspace, and custom software for web, desktop
+                            and mobile.
                         </p>
                         <Link
                             href="/contact"
@@ -405,7 +405,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                                 <SocialIcon
                                     key={link.name}
                                     link={link}
-                                    className="bg-white/10 text-white ring-1 ring-white/20 hover:bg-white/20 hover:ring-white/40"
+                                    className="bg-site-navy-light text-white ring-1 ring-site-navy-line hover:bg-site-navy-line hover:ring-slate-400"
                                 />
                             ))}
                         </div>
@@ -432,7 +432,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                         title="Company"
                         links={[
                             { title: 'About Us', href: '/about' },
-                            { title: 'Tatook Workspace', href: '/platform' },
+                            { title: 'Miles Workspace', href: '/platform' },
                             { title: 'Custom Solutions', href: '/services' },
                             { title: 'Pricing', href: '/pricing' },
                             { title: 'Contact', href: '/contact' },
@@ -466,7 +466,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                   (seo.tsx organization()). rel="me" on the Facebook link tells
                   search engines the page is ours.
                 */}
-                <div className="border-t border-white/15">
+                <div className="border-t border-site-navy-line">
                     <address
                         className={`${container} flex flex-wrap gap-x-6 gap-y-2 py-5 text-slate-300 not-italic`}
                     >
@@ -493,13 +493,13 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                         </a>
                     </address>
                 </div>
-                <div className="border-t border-white/15">
+                <div className="border-t border-site-navy-line">
                     <div
                         className={`${container} flex flex-wrap items-center justify-between gap-x-6 gap-y-3 py-6`}
                     >
                         <p className="text-slate-400">
-                            Tatook is a product of Miles Global Link Co. Ltd · ©{' '}
-                            {new Date().getFullYear()}
+                            Miles Softwares is a product of Miles Global Link
+                            Co. Ltd · © {new Date().getFullYear()}
                         </p>
                         <div className="flex flex-wrap gap-x-6 gap-y-2">
                             <Link
@@ -570,7 +570,7 @@ function MobileLink({
             href={href}
             aria-current={currentOf({ href, section }, path)}
             onClick={onClick}
-            className="block rounded-lg px-3 py-2.5 font-semibold text-slate-700 hover:bg-slate-50 aria-[current=page]:bg-site-accent/10 aria-[current=page]:text-site-accent-ink aria-[current=true]:bg-site-accent/10 aria-[current=true]:text-site-accent-ink"
+            className="block rounded-lg px-3 py-2.5 font-semibold text-slate-700 hover:bg-slate-50 aria-[current=page]:bg-site-tint aria-[current=page]:text-site-accent-ink aria-[current=true]:bg-site-tint aria-[current=true]:text-site-accent-ink"
         >
             {children}
         </Link>

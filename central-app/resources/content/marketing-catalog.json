@@ -1,5 +1,5 @@
 {
-    "$comment": "Public-site wording for every Tatook product. What is sold, its release status and whether it can be trialed come from the application registry and database/erp-products.json (registry.type + registry.code); an entry without a registry record is shown as coming soon. Features of a product that is not released describe what it is being built to do. offering says how each product runs today: platforms (web, desktop, android, ios), connectivity (online, offline_sync, offline), licensing (subscription, one_time, quotation), and what its desktop and mobile apps do; list only what is built. highlights are the short points on the home page.",
+    "$comment": "Public-site wording for every Miles Softwares product. What is sold, its release status and whether it can be trialed come from the application registry and database/erp-products.json (registry.type + registry.code); an entry without a registry record is shown as coming soon. Features of a product that is not released describe what it is being built to do. offering says how each product runs today: platforms (web, desktop, android, ios), connectivity (online, offline_sync, offline), licensing (subscription, one_time, quotation), and what its desktop and mobile apps do; list only what is built. highlights are the short points on the home page.",
     "products": [
         {
             "slug": "pharmacy",
@@ -44,7 +44,7 @@
             "headline": "Every medicine accounted for, from delivery to dispensing.",
             "subhead": "Batch and expiry tracking, a fast counter, prescriptions and a controlled-drugs register. Add Finance & Accounting and sales, stock and cash post to your books on their own.",
             "audience": "Retail pharmacies, medical stores and pharmaceutical wholesalers, from one branch to many.",
-            "seoTitle": "Pharmacy ERP with batch and expiry tracking",
+            "seoTitle": "Pharmacy ERP with batch & expiry tracking",
             "seoDescription": "Pharmacy software with batch and expiry tracking, expiry-first selling, prescriptions, a controlled-drugs register and tills, with optional accounting.",
             "features": [
                 {
@@ -287,7 +287,7 @@
                 },
                 {
                     "question": "Will it include accounting?",
-                    "answer": "Finance & Accounting is an optional add-on, as with every Tatook ERP. Add it and paid bills post to your books."
+                    "answer": "Finance & Accounting is an optional add-on, as with every Miles ERP. Add it and paid bills post to your books."
                 }
             ]
         },
@@ -308,7 +308,7 @@
             "headline": "Run the school, from admissions to fees.",
             "subhead": "School ERP for primary schools, institutes, colleges and universities, each run its own way, with optional Finance & Accounting for the books.",
             "audience": "Primary schools, technical and vocational institutes, colleges and universities.",
-            "seoTitle": "School ERP: admissions, attendance and fees",
+            "seoTitle": "School ERP: admissions, attendance, fees",
             "seoDescription": "School management software: admissions, classes, attendance, examinations and student fees, with optional Finance & Accounting.",
             "features": [
                 {
@@ -377,12 +377,12 @@
                 "licensing": ["subscription"],
                 "desktop": [],
                 "mobile": [
-                    "Collect survey data in the field with Tatook MDC, including where there is no signal; submissions are sent when the connection is back"
+                    "Collect survey data in the field with Miles MDC, including where there is no signal; submissions are sent when the connection is back"
                 ]
             },
             "summary": "Projects, grants, finance, procurement and verified results for NGOs, in one package with one sign-in.",
             "overview": [
-                "NGO Suite brings together the Tatook applications an NGO runs on: Projects for programmes, partners and donors; Finance & Accounting for the books; Procurement for purchasing; and Monitoring & Evaluation, with field data collection, for results. One subscription switches them all on for your organization, and your team signs in once.",
+                "NGO Suite brings together the Miles Softwares applications an NGO runs on: Projects for programmes, partners and donors; Finance & Accounting for the books; Procurement for purchasing; and Monitoring & Evaluation, with field data collection, for results. One subscription switches them all on for your organization, and your team signs in once.",
                 "Projects can be your own or run for a donor. Donors and implementing partners work on the same project from their own organizations, each seeing only what is shared with them. Grant agreements record what is approved, and disbursement requests move through approval between the parties.",
                 "Each application keeps its own records and rules. Payments and expenditure are recorded in Finance, purchases go through Procurement's approvals, and results count only once they are verified in Monitoring & Evaluation.",
                 "Applications you already subscribe to stay as they are: the suite adds what is missing and never removes what you have."
@@ -390,7 +390,7 @@
             "headline": "Run your programmes, grants and results in one place.",
             "subhead": "Projects with partners and donors, grant agreements, Finance & Accounting, Procurement and Monitoring & Evaluation, switched on together with one subscription.",
             "audience": "NGOs, implementing partners, community organizations and donor-funded institutions.",
-            "seoTitle": "NGO software: projects, grants, finance and M&E",
+            "seoTitle": "NGO software: grants, finance and M&E",
             "seoDescription": "NGO software with projects, grant agreements, disbursement requests, fund accounting, procurement and M&E with field data collection, in one package.",
             "features": [
                 {
@@ -532,7 +532,7 @@
                 "code": "finance"
             },
             "connections": {
-                "intro": "Finance & Accounting connects to the other Tatook apps in your workspace, with nothing to export or import.",
+                "intro": "Finance & Accounting connects to the other Miles Softwares apps in your workspace, with nothing to export or import.",
                 "links": [
                     {
                         "slug": "pharmacy",
@@ -589,7 +589,7 @@
             "headline": "Accounting your accountant will trust.",
             "subhead": "A double-entry ledger with periods, bank reconciliation, tax, budgets and fixed assets, fed automatically by our ERPs or used on its own.",
             "audience": "Businesses that want proper books, the accountants who serve them, and every customer of our ERPs.",
-            "seoTitle": "Accounting software with bank reconciliation",
+            "seoTitle": "Accounting with bank reconciliation",
             "seoDescription": "Accounting software with a double-entry ledger, bank reconciliation, tax returns, budgets, fixed assets and multi-currency.",
             "features": [
                 {
@@ -724,7 +724,7 @@
             "headline": "Every litre, from the tank to the receipt.",
             "subhead": "Pumps and nozzles, attendant shifts, meter readings and fuel sales, with credit, deliveries and a cash count at closing. Add Finance & Accounting and sales, deliveries and shortages post to your books.",
             "audience": "Petrol stations, from one station to several.",
-            "seoTitle": "Petrol station software: tanks, shifts, fuel sales",
+            "seoTitle": "Petrol station software: tanks and shifts",
             "seoDescription": "Petrol station software for tanks, pumps, shifts, meter readings, fuel sales, credit and deliveries, with optional Finance & Accounting.",
             "features": [
                 {
@@ -793,7 +793,7 @@
                 "code": "projects"
             },
             "connections": {
-                "intro": "Project Management works with the other Tatook apps in your workspace, with nothing to export or import.",
+                "intro": "Project Management works with the other Miles Softwares apps in your workspace, with nothing to export or import.",
                 "links": [
                     {
                         "slug": "monitoring-evaluation",
@@ -852,7 +852,7 @@
             "faqs": [
                 {
                     "question": "Can I use Project Management today?",
-                    "answer": "Yes. It is in early access: start a free trial in your Tatook workspace, or ask us for a demo."
+                    "answer": "Yes. It is in early access: start a free trial in your Miles Softwares workspace, or ask us for a demo."
                 },
                 {
                     "question": "Do I need Monitoring & Evaluation too?",
@@ -870,7 +870,7 @@
                 "code": "projects"
             },
             "connections": {
-                "intro": "Monitoring & Evaluation works with the other Tatook apps in your workspace, with nothing to export or import.",
+                "intro": "Monitoring & Evaluation works with the other Miles Softwares apps in your workspace, with nothing to export or import.",
                 "links": [
                     {
                         "slug": "projects",
@@ -929,7 +929,7 @@
             "faqs": [
                 {
                     "question": "Can I use Monitoring & Evaluation today?",
-                    "answer": "Yes. It is in early access: start a free trial in your Tatook workspace, or ask us for a demo."
+                    "answer": "Yes. It is in early access: start a free trial in your Miles Softwares workspace, or ask us for a demo."
                 },
                 {
                     "question": "Does it work with Project Management?",
@@ -960,7 +960,7 @@
             "headline": "Your people, on record and in order.",
             "subhead": "Staff profiles, employment history, contracts and documents with expiry reminders. Add Payroll and the people you hire and let go are kept in step there. Leave and attendance are being built.",
             "audience": "Any organization with staff to keep records for.",
-            "seoTitle": "HR software: staff records, contracts and documents",
+            "seoTitle": "HR software: staff records and contracts",
             "seoDescription": "HR software for staff profiles, employment history, contracts and documents with expiry reminders, kept in step with Payroll.",
             "features": [
                 {
@@ -1025,17 +1025,17 @@
                 "desktop": [],
                 "mobile": []
             },
-            "summary": "Monthly payroll and payslips, with any Tatook ERP or on its own.",
+            "summary": "Monthly payroll and payslips, with any Miles ERP or on its own.",
             "headline": "Payday, worked out and signed off.",
             "subhead": "Basic pay, allowances and deductions, income tax and social security, a monthly payroll approved by a second person, and payslips. Takes staff from HR and posts one journal to Finance & Accounting.",
-            "audience": "Any organization that pays staff, with or without Tatook HR: restaurants, pharmacies, shops, schools and offices.",
-            "seoTitle": "Payroll software: payslips, tax and social security",
+            "audience": "Any organization that pays staff, with or without Miles HR: restaurants, pharmacies, shops, schools and offices.",
+            "seoTitle": "Payroll software: payslips and tax",
             "seoDescription": "Payroll software for monthly and hourly pay, allowances, deductions, income tax and social security, approved pay runs and payslips, with optional HR.",
             "features": [
                 {
                     "icon": "users",
                     "title": "People on the payroll",
-                    "body": "Add them in Payroll, or add Tatook HR and hires, transfers and leavers arrive on their own."
+                    "body": "Add them in Payroll, or add Miles HR and hires, transfers and leavers arrive on their own."
                 },
                 {
                     "icon": "wallet",
@@ -1089,12 +1089,12 @@
             ],
             "faqs": [
                 {
-                    "question": "Do I need Tatook HR?",
+                    "question": "Do I need Miles HR?",
                     "answer": "No. Add people in Payroll yourself. With HR, they arrive from HR and only their pay is entered in Payroll."
                 },
                 {
                     "question": "Can I add it to my restaurant, pharmacy or shop?",
-                    "answer": "Yes. Payroll works next to any Tatook ERP, or on its own."
+                    "answer": "Yes. Payroll works next to any Miles ERP, or on its own."
                 },
                 {
                     "question": "Are tax rates set for my country?",
@@ -1124,7 +1124,7 @@
             },
             "summary": "From purchase request to delivery. All connected.",
             "headline": "Buy right, with approvals.",
-            "subhead": "Tatook Procurement is being built for organizations that need plans, requests, approvals and supplier quotes before they buy, and proof of what arrived after.",
+            "subhead": "Miles Procurement is being built for organizations that need plans, requests, approvals and supplier quotes before they buy, and proof of what arrived after.",
             "audience": "Organizations with purchasing approvals: NGOs, schools, companies with several departments.",
             "seoTitle": "Procurement software",
             "seoDescription": "Procurement software on the way: purchase requests with approvals, RFQs and tenders, purchase orders, receiving and supplier invoices that can flow into Finance.",
@@ -1172,6 +1172,75 @@
                 {
                     "question": "Do I need Finance & Accounting?",
                     "answer": "No. Procurement works on its own. With Finance & Accounting, matched supplier invoices can be sent there as bills."
+                }
+            ]
+        },
+        {
+            "slug": "logbook",
+            "category": "application",
+            "name": "Logbook",
+            "icon": "book-open-check",
+            "registry": {
+                "type": "application",
+                "code": "logbook"
+            },
+            "offering": {
+                "platforms": ["web"],
+                "connectivity": ["online"],
+                "licensing": ["subscription"],
+                "desktop": [],
+                "mobile": []
+            },
+            "summary": "Structured operational records, reviewed and traceable.",
+            "headline": "Every shift, on the record.",
+            "subhead": "Miles Logbook replaces paper log books: daily activity, generator, vehicle and maintenance logs built from your own forms, numbered, reviewed by a supervisor and kept with a permanent history.",
+            "audience": "Organizations that keep operational logs: facilities, IT, fleet, security and field offices.",
+            "seoTitle": "Digital logbook software",
+            "seoDescription": "Digital logbook software: build your own log sheets, record numbered entries with attachments, have supervisors review them, and export reports to CSV and PDF.",
+            "features": [
+                {
+                    "icon": "clipboard-list",
+                    "title": "Your own log sheets",
+                    "body": "Build the form once from twelve field types, or start from a ready-made generator, vehicle, activity or IT log."
+                },
+                {
+                    "icon": "clipboard-check",
+                    "title": "Supervisor review",
+                    "body": "Entries are checked by someone else, returned for correction when needed, and marked reviewed."
+                },
+                {
+                    "icon": "file-spreadsheet",
+                    "title": "Reports and exports",
+                    "body": "Filter by date, person or status, see totals such as fuel used or kilometres driven, and export to CSV or PDF."
+                },
+                {
+                    "icon": "history",
+                    "title": "A history nobody edits",
+                    "body": "Every entry gets its own number, every change is kept, and the audit trail cannot be altered."
+                }
+            ],
+            "workflow": [
+                {
+                    "title": "Record",
+                    "body": "Staff fill in the log sheet and attach photos or documents."
+                },
+                {
+                    "title": "Review",
+                    "body": "A supervisor marks the entry reviewed, or returns it with a comment."
+                },
+                {
+                    "title": "Report",
+                    "body": "Managers see totals and export the records they need."
+                }
+            ],
+            "faqs": [
+                {
+                    "question": "Can we change a log sheet after people use it?",
+                    "answer": "Yes. Each change is published as a new version; entries already written keep the version they were written on."
+                },
+                {
+                    "question": "Does Logbook work offline or on phones?",
+                    "answer": "Logbook works in the browser today, on phones as well as computers. A mobile app with offline entry is planned."
                 }
             ]
         },

@@ -9,6 +9,7 @@ use App\Modules\Audit\AuditLogger;
 use App\Modules\Authorization\Enums\ScopeType;
 use App\Modules\Authorization\Models\RoleAssignment;
 use App\Modules\Authorization\Support\AccessResolver;
+use App\Modules\Authorization\Support\ApplicationPeopleManagers;
 use App\Modules\Authorization\Support\Scope;
 use App\Modules\Entitlements\Models\Entitlement;
 use App\Modules\Integration\Support\IntegrationEvents;
@@ -23,7 +24,9 @@ use Illuminate\Support\Str;
 /**
  * Grants a role at one scope, enforcing the delegation rules:
  *
- *  (a) the grantor holds platform.access.manage at a scope containing the target;
+ *  (a) the grantor holds platform.access.manage at a scope containing the target,
+ *      or manages the people of the role's application there
+ *      (ApplicationPeopleManagers);
  *  (b) the role is delegable and no more sensitive than the grantor's highest
  *      role in that application;
  *  (c) the organization is entitled to the application;
@@ -47,6 +50,7 @@ final class AssignRole
         private readonly AccessResolver $access,
         private readonly AuditLogger $audit,
         private readonly IntegrationEvents $events,
+        private readonly ApplicationPeopleManagers $peopleManagers,
     ) {}
 
     /**
@@ -161,7 +165,8 @@ final class AssignRole
 
     private function assertDelegationAllowed(OrganizationMembership $grantor, OrganizationMembership $grantee, ApplicationRole $role, Scope $scope): void
     {
-        if (! $this->access->holds($grantor, 'platform.access.manage', $scope)) {
+        if (! $this->access->holds($grantor, 'platform.access.manage', $scope)
+            && ! $this->peopleManagers->manages($grantor, $role->application_id, $scope)) {
             throw new AssignmentDenied('no_access_manage', 'You cannot manage access at that scope.');
         }
 

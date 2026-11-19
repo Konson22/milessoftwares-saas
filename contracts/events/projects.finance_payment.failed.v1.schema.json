@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milesoftwares.com/contracts/events/projects.finance_payment.failed.v1.schema.json",
+    "$id": "https://milessoftwares.com/contracts/events/projects.finance_payment.failed.v1.schema.json",
     "title": "projects.finance_payment.failed, schema_version 1",
     "description": "A payment attempt failed (bank refusal, transfer returned before settlement). Finance may try again: a later payment.completed follows. Contract: docs/finance/finance-projects-contract.md.",
     "type": "object",

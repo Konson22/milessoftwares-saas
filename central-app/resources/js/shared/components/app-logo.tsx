@@ -1,11 +1,11 @@
 /**
- * The full Tatook logo: the mark and the name. `inverted`
+ * The full Miles Softwares logo: the mark and the name. `inverted`
  * is the version with light lettering, for dark backgrounds.
  */
 export default function AppLogo({
     inverted = false,
     className = 'h-10 w-auto',
-    alt = 'Tatook',
+    alt = 'Miles Softwares',
 }: {
     inverted?: boolean;
     className?: string;
@@ -19,7 +19,7 @@ export default function AppLogo({
                     : '/images/logo-with-text.png'
             }
             alt={alt}
-            width={913}
+            width={771}
             height={230}
             className={className}
         />

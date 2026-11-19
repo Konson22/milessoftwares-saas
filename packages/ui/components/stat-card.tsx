@@ -42,6 +42,8 @@ export function StatCard({
                 </p>
                 {Icon && (
                     <span
+                        data-slot="stat-icon"
+                        data-accent={accent}
                         className={cn(
                             'grid size-7 shrink-0 place-items-center',
                             ACCENTS[accent],
@@ -59,12 +61,12 @@ export function StatCard({
             )}
         </>
     );
-    const className =
-        'block border bg-card p-3 transition-colors';
+    const className = 'block border bg-card p-3 transition-colors';
 
     return href ? (
         <Link
             href={href}
+            data-slot="stat-card"
             className={cn(
                 className,
                 'hover:border-primary/40 hover:bg-blue-50/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
@@ -73,6 +75,8 @@ export function StatCard({
             {body}
         </Link>
     ) : (
-        <div className={className}>{body}</div>
+        <div data-slot="stat-card" className={className}>
+            {body}
+        </div>
     );
 }

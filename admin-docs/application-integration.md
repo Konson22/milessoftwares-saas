@@ -1,6 +1,6 @@
 # Admin → Applications → Integration
 
-`https://admin.milesoftwares.com/applications/<application id>/integration`
+`https://admin.milessoftwares.com/applications/<application id>/integration`
 
 This page connects one **product** (Finance, Pharmacy, Retail & POS, …) to the platform. Until
 it is filled in, the product cannot sign people in, cannot ask the platform who may do what,
@@ -50,7 +50,7 @@ Buttons on each active client:
 | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Name                         | Free text, e.g. `Finance web`.                                                                                                                                                                 |
 | Type                         | **Confidential (server-side web app)** for our products.                                                                                                                                       |
-| Per-tenant callback path     | Where each workspace's sign-in returns: `/<workspace path>/auth/callback`, e.g. `/finance/auth/callback`. The platform registers `https://<slug>.milesoftwares.com/finance/auth/callback` for every organization that may use the product, and shows the count. |
+| Per-tenant callback path     | Where each workspace's sign-in returns: `/<workspace path>/auth/callback`, e.g. `/finance/auth/callback`. The platform registers `https://<slug>.milessoftwares.com/finance/auth/callback` for every organization that may use the product, and shows the count. |
 | Fixed callback URLs          | Leave empty for our products. Only for an app on one fixed address.                                                                                                                           |
 
 **New service client (API)**: just a name, e.g. `Finance backend`, then Register.
@@ -60,8 +60,8 @@ Buttons on each active client:
 Where the platform sends **events** to the product: entitlement changes, role changes, members
 suspended, organizations suspended. The product uses them to drop cached access immediately.
 
-- **Endpoint URL**: `https://milesoftwares.com/<workspace path>/platform/webhooks`, e.g.
-  `https://milesoftwares.com/finance/platform/webhooks`.
+- **Endpoint URL**: `https://milessoftwares.com/<workspace path>/platform/webhooks`, e.g.
+  `https://milessoftwares.com/finance/platform/webhooks`.
 - **Create endpoint** (first time) issues the **signing secret** (`whsec_…`), shown once in the
   yellow box. The product uses it to verify that events really come from the platform.
 - **Issue a new signing secret**: tick it and Save to rotate. Update the product `.env` at once.
@@ -90,8 +90,8 @@ organization up (database rows, defaults) before the first person arrives.
 | **API, synchronous**            | The platform calls `POST <base URL>/tenants` and waits for the answer. **Use this for our products.**                    |
 | API, asynchronous (callback)    | The product answers "accepted" and reports back later.                                                                  |
 
-- **Base URL**: `https://milesoftwares.com/<workspace path>/platform`, e.g.
-  `https://milesoftwares.com/finance/platform`. Calls are signed with the webhook secret, so
+- **Base URL**: `https://milessoftwares.com/<workspace path>/platform`, e.g.
+  `https://milessoftwares.com/finance/platform`. Calls are signed with the webhook secret, so
   create the webhook first.
 
 Below the form, the **last 30 provisioning attempts**, one per organization: `succeeded`,
@@ -105,29 +105,29 @@ example after fixing its `.env`).
 Do these in order. Example values are for Finance; the table further down has every product.
 
 1. **Workspace path** (admin → **Applications**, the product's row): set it to `finance`. The
-   product then lives at `https://<slug>.milesoftwares.com/finance`. It must be lowercase,
+   product then lives at `https://<slug>.milessoftwares.com/finance`. It must be lowercase,
    unique, and not a path the workspace already uses.
 2. Open **Integration** for the product.
 3. **New sign-in client**: Name `Finance web`, Type *Confidential*, Per-tenant callback path
    `/finance/auth/callback`, then Register. Copy the Client ID and Secret from the yellow box.
 4. **New service client**: Name `Finance backend`, then Register. Copy the Client ID and Secret.
-5. **Webhooks**: Endpoint URL `https://milesoftwares.com/finance/platform/webhooks`, then
+5. **Webhooks**: Endpoint URL `https://milessoftwares.com/finance/platform/webhooks`, then
    Create endpoint. Copy the signing secret.
 6. **Provisioning**: Method *API, synchronous*, Base URL
-   `https://milesoftwares.com/finance/platform`, then Save.
+   `https://milessoftwares.com/finance/platform`, then Save.
 7. Put the five values into the product's `.env` on the server (next section) and reload it.
 8. Back on this page, **Retry** any failed provisioning steps for organizations that already
    had the product.
-9. Check: open `https://<slug>.milesoftwares.com/finance` for an organization that has
+9. Check: open `https://<slug>.milessoftwares.com/finance` for an organization that has
    Finance. You should be sent to sign in and land on the product.
 
 ### Values per product
 
 | Product       | Workspace path | Per-tenant callback path  | Webhook endpoint URL                                    | Provisioning base URL                        |
 | ------------- | -------------- | ------------------------- | ------------------------------------------------------- | -------------------------------------------- |
-| Finance       | `finance`      | `/finance/auth/callback`  | `https://milesoftwares.com/finance/platform/webhooks`   | `https://milesoftwares.com/finance/platform` |
-| Pharmacy      | `pharmacy`     | `/pharmacy/auth/callback` | `https://milesoftwares.com/pharmacy/platform/webhooks`  | `https://milesoftwares.com/pharmacy/platform`|
-| Retail & POS  | `retail`       | `/retail/auth/callback`   | `https://milesoftwares.com/retail/platform/webhooks`    | `https://milesoftwares.com/retail/platform`  |
+| Finance       | `finance`      | `/finance/auth/callback`  | `https://milessoftwares.com/finance/platform/webhooks`   | `https://milessoftwares.com/finance/platform` |
+| Pharmacy      | `pharmacy`     | `/pharmacy/auth/callback` | `https://milessoftwares.com/pharmacy/platform/webhooks`  | `https://milessoftwares.com/pharmacy/platform`|
+| Retail & POS  | `retail`       | `/retail/auth/callback`   | `https://milessoftwares.com/retail/platform/webhooks`    | `https://milessoftwares.com/retail/platform`  |
 
 Retail & POS has no server folder of its own: pharmacy-app serves it at `/retail`, so its
 values go into **Pharmacy's** `.env` under `PLATFORM_RETAIL_…` names.

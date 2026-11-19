@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milesoftwares.com/contracts/events/finance.payroll.paid.v1.schema.json",
+    "$id": "https://milessoftwares.com/contracts/events/finance.payroll.paid.v1.schema.json",
     "title": "finance.payroll.paid, schema_version 1",
     "description": "Net pay that went out for a payroll run, all at once or in batches: Dr Salaries payable, Cr the account the method names, dated occurred_at. Each batch carries its own payment_reference; without one the run is taken as paid in a single payment.",
     "type": "object",

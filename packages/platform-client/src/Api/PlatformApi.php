@@ -313,6 +313,116 @@ final class PlatformApi
     }
 
     /**
+     * The workspace's active members, to give one of this application's
+     * roles to someone already in it. Only applications whose managers look
+     * after their people (platform.application_people_managers). Not cached.
+     *
+     * @return list<array{membership_id: string, sub: string, name: string, sign_in_name: string, is_owner: bool}>
+     *
+     * @throws NotVisible
+     * @throws PlatformUnavailable
+     */
+    public function workspaceMembers(string $organizationId): array
+    {
+        $data = $this->get('/api/v1/people/members?organization_id='.rawurlencode($organizationId), 'access.read');
+
+        /** @var list<array{membership_id: string, sub: string, name: string, sign_in_name: string, is_owner: bool}> */
+        return array_values(array_filter(is_array($data['data'] ?? null) ? $data['data'] : [], 'is_array'));
+    }
+
+    /**
+     * Open invitations proposing one of this application's roles.
+     *
+     * @return list<array{id: string, email: string, invited_by: string, expires_at: string, roles: list<string>}>
+     *
+     * @throws NotVisible
+     * @throws PlatformUnavailable
+     */
+    public function pendingInvitations(string $organizationId): array
+    {
+        $data = $this->get('/api/v1/people/invitations?organization_id='.rawurlencode($organizationId), 'access.read');
+
+        /** @var list<array{id: string, email: string, invited_by: string, expires_at: string, roles: list<string>}> */
+        return array_values(array_filter(is_array($data['data'] ?? null) ? $data['data'] : [], 'is_array'));
+    }
+
+    /**
+     * Invites someone by email with one of this application's roles, as the
+     * acting member (an access administrator or this application's people
+     * manager). The platform emails the link.
+     *
+     * @return array{id: string, email: string, expires_at: string}
+     *
+     * @throws PlatformRefused with the errors by field (already a member, already invited, not allowed...)
+     * @throws NotVisible
+     * @throws PlatformUnavailable
+     */
+    public function invitePerson(string $organizationId, string $actorUserId, string $email, string $role, bool $acknowledgeSeparationOfDuties = false): array
+    {
+        $data = $this->send('post', '/api/v1/people/invitations', 'members.write', [
+            'organization_id' => $organizationId,
+            'actor_user_id' => $actorUserId,
+            'email' => $email,
+            'role' => $role,
+            'acknowledge_sod' => $acknowledgeSeparationOfDuties,
+        ]);
+
+        return [
+            'id' => (string) ($data['id'] ?? ''),
+            'email' => (string) ($data['email'] ?? $email),
+            'expires_at' => (string) ($data['expires_at'] ?? ''),
+        ];
+    }
+
+    /**
+     * @throws PlatformRefused
+     * @throws NotVisible when the invitation proposes none of this application's roles
+     * @throws PlatformUnavailable
+     */
+    public function cancelInvitation(string $organizationId, string $actorUserId, string $invitationId): void
+    {
+        $this->send('post', '/api/v1/people/invitations/'.rawurlencode($invitationId).'/cancel', 'members.write', [
+            'organization_id' => $organizationId,
+            'actor_user_id' => $actorUserId,
+        ]);
+    }
+
+    /**
+     * Gives a member one of this application's roles at organization scope.
+     *
+     * @throws PlatformRefused with the errors by field (role: not allowed, already held...; acknowledge_sod: warnings)
+     * @throws NotVisible
+     * @throws PlatformUnavailable
+     */
+    public function giveRole(string $organizationId, string $actorUserId, string $membershipId, string $role, bool $acknowledgeSeparationOfDuties = false): void
+    {
+        $this->send('post', '/api/v1/people/roles', 'members.write', [
+            'organization_id' => $organizationId,
+            'actor_user_id' => $actorUserId,
+            'membership_id' => $membershipId,
+            'role' => $role,
+            'acknowledge_sod' => $acknowledgeSeparationOfDuties,
+        ]);
+    }
+
+    /**
+     * Takes one of this application's roles back from a member.
+     *
+     * @throws PlatformRefused
+     * @throws NotVisible
+     * @throws PlatformUnavailable
+     */
+    public function takeBackRole(string $organizationId, string $actorUserId, string $membershipId, string $role): void
+    {
+        $this->send('post', '/api/v1/people/roles/revoke', 'members.write', [
+            'organization_id' => $organizationId,
+            'actor_user_id' => $actorUserId,
+            'membership_id' => $membershipId,
+            'role' => $role,
+        ]);
+    }
+
+    /**
      * Drops every cached organization lookup and access answer for the
      * organization (called for each webhook about it).
      */
@@ -381,7 +491,7 @@ final class PlatformApi
         $data = $response->json();
 
         // Only these calls answer with a reason to show; the others keep failing as unavailable.
-        if ((str_starts_with($path, '/api/v1/sponsored-organizations') || $path === '/api/v1/member-accounts') && in_array($response->status(), [409, 422], true)) {
+        if ((str_starts_with($path, '/api/v1/sponsored-organizations') || str_starts_with($path, '/api/v1/people/') || $path === '/api/v1/member-accounts') && in_array($response->status(), [409, 422], true)) {
             $errors = is_array($data) && is_array($data['errors'] ?? null) ? $data['errors'] : [];
             $message = is_array($data) && is_string($data['message'] ?? null) ? $data['message'] : 'Refused.';
 

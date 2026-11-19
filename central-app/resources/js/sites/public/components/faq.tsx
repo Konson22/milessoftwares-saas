@@ -2,7 +2,7 @@ import { Plus } from 'lucide-react';
 
 export type Question = { question: string; answer: string };
 
-/** What people ask before choosing Tatook, on the home page. */
+/** What people ask before choosing Miles Softwares, on the home page. */
 export function faq(trialDays: number): Question[] {
     return [
         {
@@ -90,11 +90,11 @@ export default function FaqList({ items }: { items: Question[] }) {
                 <details
                     key={question}
                     name="faq"
-                    className="group rounded-lg border border-site-line bg-white px-5 transition-colors duration-200 open:border-site-accent/40 sm:px-6"
+                    className="group rounded-lg border border-site-line bg-white px-5 transition-colors duration-200 open:border-site-accent sm:px-6"
                 >
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 font-semibold sm:gap-6 sm:py-5 [&::-webkit-details-marker]:hidden">
                         {question}
-                        <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-site-accent/10 text-site-accent-ink transition-colors group-open:bg-site-accent-ink group-open:text-white">
+                        <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-site-tint text-site-accent-ink transition-colors group-open:bg-site-accent-ink group-open:text-white">
                             <Plus
                                 className="size-4 transition-transform duration-200 group-open:rotate-45"
                                 aria-hidden

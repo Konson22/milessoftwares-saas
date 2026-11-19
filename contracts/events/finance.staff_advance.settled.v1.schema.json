@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milesoftwares.com/contracts/events/finance.staff_advance.settled.v1.schema.json",
+    "$id": "https://milessoftwares.com/contracts/events/finance.staff_advance.settled.v1.schema.json",
     "title": "finance.staff_advance.settled, schema_version 1",
     "description": "What is left of an advance, settled without receipts: cash handed back (Dr bank, cash or mobile money, Cr Employee advances) or written off (Dr Staff advances written off, Cr Employee advances). Amounts are integers in the currency's minor unit.",
     "type": "object",

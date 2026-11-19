@@ -200,6 +200,8 @@ describe('catalog', function () {
             'finance_accounting' => 'pilot',
             // Payroll is not registered in this test: kept planned.
             'payroll' => 'planned',
+            // Logbook is not registered in this test: kept planned.
+            'logbook' => 'planned',
         ]);
     });
 

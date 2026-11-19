@@ -98,7 +98,10 @@ export function AppShell({
             </div>
 
             <div className="flex min-w-0 flex-1 flex-col">
-                <header className="sticky top-0 z-20 flex h-13 shrink-0 items-center gap-3 border-b bg-white px-3 dark:bg-card print:hidden">
+                <header
+                    data-slot="shell-header"
+                    className="sticky top-0 z-20 flex h-13 shrink-0 items-center gap-3 border-b bg-white px-3 dark:bg-card print:hidden"
+                >
                     <button
                         type="button"
                         onClick={() => setSidebarOpen(true)}
@@ -116,7 +119,11 @@ export function AppShell({
                         </div>
                     )}
                 </header>
-                <main id="main" className="flex-1 p-3 print:p-0">
+                <main
+                    id="main"
+                    data-slot="shell-main"
+                    className="flex-1 p-3 print:p-0"
+                >
                     {flash && (
                         <p
                             role="status"

@@ -48,7 +48,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// auth.milesoftwares.com — identity: sign-in flows (Fortify) and account security
+// auth.milessoftwares.com — identity: sign-in flows (Fortify) and account security
 Route::domain(PlatformHosts::auth())->group(function () {
     // GET-only redirects: Route::redirect() also registers QUERY, which
     // Wayfinder's generated TypeScript does not support yet.
@@ -135,7 +135,7 @@ Route::domain(PlatformHosts::app())->group(function () {
 // which crawlers must be allowed to fetch to see (SeoController).
 Route::domain(PlatformHosts::auth())->get('robots.txt', [SeoController::class, 'crawlButNoindex']);
 
-// {business}.milesoftwares.com — tenant workspace shell. Signs in through
+// {business}.milessoftwares.com — tenant workspace shell. Signs in through
 // the auth host with the shared workspace client and keeps a host-only session.
 Route::domain('{tenant}.'.PlatformHosts::root())
     ->where(['tenant' => '[a-z0-9-]+'])

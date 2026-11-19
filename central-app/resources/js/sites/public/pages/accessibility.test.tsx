@@ -18,6 +18,7 @@ import Platform from './platform';
 import Pricing from './pricing';
 import Privacy from './privacy';
 import PrivacyMataemPlus from './privacy-mataem-plus';
+import PrivacyMilesLogbook from './privacy-miles-logbook';
 import PrivacyMilesPharmacy from './privacy-miles-pharmacy';
 import Services from './services';
 import ProductPage from './product';
@@ -128,7 +129,7 @@ const entry = {
     subhead: 'Expiry-first selling and books that keep themselves.',
     audience: 'Pharmacies and wholesalers',
     seoTitle: 'Pharmacy ERP',
-    seoDescription: 'Pharmacy ERP by Tatook.',
+    seoDescription: 'Pharmacy ERP by Miles Softwares.',
     features: [{ icon: 'pill', title: 'Expiry first', body: 'Sells oldest.' }],
     workflow: [{ title: 'Receive', body: 'Batches in.' }],
     faqs: [{ question: 'Is there a trial?', answer: 'Yes.' }],
@@ -356,10 +357,17 @@ const pages: [string, ReactNode][] = [
         />,
     ],
     [
-        'Tatook Pharmacy privacy',
+        'Miles Pharmacy privacy',
         <PrivacyMilesPharmacy
             key="privacy-miles-pharmacy"
             canonical="https://example.test/privacy/miles-pharmacy"
+        />,
+    ],
+    [
+        'Miles Logbook privacy',
+        <PrivacyMilesLogbook
+            key="privacy-miles-logbook"
+            canonical="https://example.test/privacy/miles-logbook"
         />,
     ],
     [
@@ -379,7 +387,7 @@ const pages: [string, ReactNode][] = [
                 {
                     code: 'pharmacy',
                     platform: 'windows',
-                    name: 'Tatook Pharmacy',
+                    name: 'Miles Pharmacy',
                     summary: 'The pharmacy on a PC.',
                     needs: 'Nothing to start',
                     version: '1.1.0',
@@ -405,9 +413,9 @@ const pages: [string, ReactNode][] = [
                 {
                     code: 'retail-android',
                     platform: 'android',
-                    name: 'Tatook Retail',
+                    name: 'Miles Retail',
                     summary: 'The shop counter on a phone.',
-                    needs: 'A Tatook workspace',
+                    needs: 'A Miles Softwares workspace',
                     version: '1.0.0',
                     product: 'erp/retail',
                     url: null,
@@ -492,10 +500,10 @@ describe('search metadata', () => {
             const description = typeof content === 'string' ? content : '';
             const canonical = tags.find((tag) => tag.rel === 'canonical')?.href;
 
-            // Google shows about 60 characters of a title, " - Tatook" included;
+            // Google shows about 60 characters of a title, " - Miles Softwares" included;
             // the home page leads with the brand and may run a few over.
             expect(fullTitle(title).length).toBeLessThanOrEqual(
-                title.startsWith('Tatook |') ? 70 : 65,
+                title.startsWith('Miles Softwares |') ? 70 : 65,
             );
             expect(title.length).toBeGreaterThan(3);
             // And up to about 160 of a description.
@@ -523,13 +531,13 @@ describe('search metadata', () => {
 });
 
 describe('brand entity', () => {
-    it('ties Tatook to Miles Global Link and business software on the home page', () => {
+    it('ties Miles Softwares to Miles Global Link and business software on the home page', () => {
         heads.length = 0;
         render(pages.find(([name]) => name === 'home')![1]);
 
         const title = heads.find((head) => head.title)?.title ?? '';
         expect(fullTitle(title)).toBe(
-            'Tatook | ERP & Business Software for Pharmacy, Retail, Finance & HR',
+            'Miles Softwares | ERP Software for Pharmacy, Retail, Finance & HR',
         );
 
         const jsonLd = headTags().find(
@@ -539,14 +547,13 @@ describe('brand entity', () => {
             JSON.parse(
                 (
                     jsonLd?.dangerouslySetInnerHTML as
-                        | { __html: string }
-                        | undefined
+                        { __html: string } | undefined
                 )?.__html ?? '{}',
             ) as { '@graph': Record<string, unknown>[] }
         )['@graph'];
         const org = graph.find((node) => node['@type'] === 'Organization')!;
         expect(org).toMatchObject({
-            name: 'Tatook',
+            name: 'Miles Softwares',
             legalName: 'Miles Global Link Co. Ltd',
             email: 'info@tatook.com',
             telephone: '+211920079070',
@@ -581,7 +588,7 @@ describe('brand entity', () => {
             'https://www.facebook.com/profile.php?id=61596215291990',
         );
         expect(container.textContent).toContain(
-            'Tatook is a product of Miles Global Link Co. Ltd',
+            'Miles Softwares is a product of Miles Global Link Co. Ltd',
         );
     });
 });

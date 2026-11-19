@@ -13,13 +13,13 @@ use Illuminate\Support\Facades\Route;
 | Public site
 |--------------------------------------------------------------------------
 |
-| milesoftwares.com and www. Pages live in resources/js/sites/public.
+| milessoftwares.com and www. Pages live in resources/js/sites/public.
 | Route files load in the order public, admin, central (bootstrap/app.php):
 | central ends with the {tenant} wildcard, which must come last.
 |
 */
 
-// milesoftwares.com — public marketing site
+// milessoftwares.com — public marketing site
 Route::domain(PlatformHosts::root())->group(function () {
     Route::get('/', [PageController::class, 'home'])->name('home');
 
@@ -45,6 +45,7 @@ Route::domain(PlatformHosts::root())->group(function () {
         // An app's own policy, for its store listing (Play Store).
         Route::get('privacy/mataem-plus', [PageController::class, 'privacyMataemPlus'])->name('privacy.mataem-plus');
         Route::get('privacy/miles-pharmacy', [PageController::class, 'privacyMilesPharmacy'])->name('privacy.miles-pharmacy');
+        Route::get('privacy/miles-logbook', [PageController::class, 'privacyMilesLogbook'])->name('privacy.miles-logbook');
         Route::get('terms', [PageController::class, 'terms'])->name('terms');
 
         // Windows and Android installers (an older one by its version); a file not on the server yet is a 404.
@@ -72,7 +73,7 @@ Route::domain(PlatformHosts::root())->group(function () {
     });
 });
 
-// www.milesoftwares.com — permanent redirect to the apex, path preserved
+// www.milessoftwares.com — permanent redirect to the apex, path preserved
 Route::domain(PlatformHosts::www())->group(function () {
     Route::get('{path?}', WwwRedirectController::class)->where('path', '.*');
 });

@@ -208,11 +208,11 @@ export const statusLabels: Record<CatalogEntry['status'], string | null> = {
 export function CatalogStatus({ status }: { status: CatalogEntry['status'] }) {
     const tone = {
         available:
-            'bg-site-navy/10 text-site-navy in-[.site-dark]:bg-white/15 in-[.site-dark]:text-white',
+            'bg-site-tint text-site-navy in-[.site-dark]:bg-site-navy-light in-[.site-dark]:text-white',
         early_access:
-            'bg-site-accent/10 text-site-accent-ink in-[.site-dark]:bg-white/15 in-[.site-dark]:text-white',
+            'bg-site-tint text-site-accent-ink in-[.site-dark]:bg-site-navy-light in-[.site-dark]:text-white',
         coming_soon:
-            'bg-site-soft text-slate-700 ring-1 ring-site-line in-[.site-dark]:bg-white/15 in-[.site-dark]:text-white in-[.site-dark]:ring-white/20',
+            'bg-site-soft text-slate-700 ring-1 ring-site-line in-[.site-dark]:bg-site-navy-light in-[.site-dark]:text-white in-[.site-dark]:ring-site-navy-line',
     }[status];
 
     return (
@@ -242,7 +242,7 @@ export function CatalogTile({
 
     return (
         <span
-            className={`inline-flex shrink-0 items-center justify-center bg-site-accent/10 text-site-accent-ink in-[.site-dark]:bg-white/10 in-[.site-dark]:text-white ${box}`}
+            className={`inline-flex shrink-0 items-center justify-center bg-site-tint text-site-accent-ink in-[.site-dark]:bg-site-navy-light in-[.site-dark]:text-white ${box}`}
         >
             <Icon className={glyph} aria-hidden />
         </span>
@@ -286,7 +286,7 @@ export function StatusBadge({
                 <svg
                     aria-hidden
                     viewBox="0 0 100 100"
-                    className="absolute inset-0 size-full drop-shadow-[0_6px_10px_rgb(1_27_14/0.35)]"
+                    className="absolute inset-0 size-full drop-shadow-[0_6px_10px_rgb(0_12_34/0.35)]"
                 >
                     <polygon points={burst} className="fill-site-highlight" />
                     <circle
@@ -296,7 +296,7 @@ export function StatusBadge({
                         fill="none"
                         strokeWidth="1.5"
                         strokeDasharray="3 3"
-                        className="stroke-site-night/50"
+                        className="stroke-slate-400"
                     />
                 </svg>
                 <span className="absolute inset-0 flex flex-col items-center justify-center text-center leading-none font-extrabold text-site-night uppercase">
@@ -312,7 +312,7 @@ export function StatusBadge({
     if (status === 'early_access') {
         return (
             <span className="absolute top-0 right-0 z-10 size-28 overflow-hidden rounded-tr-xl">
-                <span className="absolute top-[1.6rem] -right-[2.6rem] w-44 rotate-45 bg-site-highlight py-1.5 text-center text-[0.6875rem] font-extrabold tracking-[0.14em] text-site-night uppercase shadow-[0_4px_10px_rgb(1_27_14/0.3)] ring-1 ring-site-night/10">
+                <span className="absolute top-[1.6rem] -right-[2.6rem] w-44 rotate-45 bg-site-highlight py-1.5 text-center text-[0.6875rem] font-extrabold tracking-[0.14em] text-site-night uppercase shadow-[0_4px_10px_rgb(0_12_34/0.3)] ring-1 ring-site-night/10">
                     Early access
                 </span>
             </span>
@@ -323,11 +323,11 @@ export function StatusBadge({
         return (
             <span className="absolute -top-1 right-6 z-10 flex flex-col items-center group-hover:rotate-[6deg] motion-safe:origin-top motion-safe:transition-transform motion-safe:duration-500">
                 {/* The string. */}
-                <span aria-hidden className="h-5 w-px bg-white/60" />
-                <span className="relative flex flex-col items-center rounded-b-lg bg-site-highlight px-3 pt-4 pb-2 leading-none font-extrabold text-site-night uppercase shadow-[0_8px_16px_rgb(1_27_14/0.35)] [clip-path:polygon(50%_0,100%_14%,100%_100%,0_100%,0_14%)]">
+                <span aria-hidden className="h-5 w-px bg-slate-300" />
+                <span className="relative flex flex-col items-center rounded-b-lg bg-site-highlight px-3 pt-4 pb-2 leading-none font-extrabold text-site-night uppercase shadow-[0_8px_16px_rgb(0_12_34/0.35)] [clip-path:polygon(50%_0,100%_14%,100%_100%,0_100%,0_14%)]">
                     <span
                         aria-hidden
-                        className="absolute top-1.5 left-1/2 size-2 -translate-x-1/2 rounded-full bg-site-night/70"
+                        className="absolute top-1.5 left-1/2 size-2 -translate-x-1/2 rounded-full bg-site-night"
                     />
                     <span className="text-xl tracking-tight">{trialDays}</span>
                     <span className="mt-0.5 text-[0.625rem] tracking-[0.14em]">
@@ -339,19 +339,19 @@ export function StatusBadge({
     }
 
     return (
-        <span className="absolute top-4 right-0 z-10 bg-site-highlight py-1.5 pr-4 pl-5 text-[0.6875rem] font-extrabold tracking-[0.14em] text-site-night uppercase shadow-[0_4px_10px_rgb(1_27_14/0.3)] [clip-path:polygon(0_0,100%_0,100%_100%,0_100%,0.6rem_50%)]">
+        <span className="absolute top-4 right-0 z-10 bg-site-highlight py-1.5 pr-4 pl-5 text-[0.6875rem] font-extrabold tracking-[0.14em] text-site-night uppercase shadow-[0_4px_10px_rgb(0_12_34/0.3)] [clip-path:polygon(0_0,100%_0,100%_100%,0_100%,0.6rem_50%)]">
             {statusLabels[status]}
         </span>
     );
 }
 
 /**
- * A product card: what it is, where it stands, and the next step. A green
+ * A product card: what it is, where it stands, and the next step. A navy
  * header carries the product's name and its promotion badge (StatusBadge).
  * Only a product open for trials offers one; the others lead to their
  * page or the waitlist. `highlights` adds the product's main points under
- * its summary (the home page's Tatook Products); `title` is the name to
- * show (Tatook Pharmacy) when it is not the catalog's.
+ * its summary (the home page's Miles Products); `title` is the name to
+ * show (Miles Pharmacy) when it is not the catalog's.
  */
 export function ProductCard({
     product,
@@ -377,16 +377,12 @@ export function ProductCard({
         'inline-flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold whitespace-nowrap transition-[background-color,color,border-color,transform] hover:-translate-y-0.5';
 
     return (
-        <article className="group relative flex h-full flex-col rounded-xl bg-white shadow-[0_1px_2px_rgb(5_69_27/0.06),0_10px_30px_-12px_rgb(5_69_27/0.18)] ring-1 ring-site-line transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgb(5_69_27/0.08),0_24px_48px_-16px_rgb(5_69_27/0.32)] hover:ring-site-accent/40">
-            {/* The header: the product's name on a green panel. */}
-            <div className="site-dark relative flex min-h-32 items-end overflow-hidden rounded-t-xl bg-linear-160 from-[#0a5a26] via-[#063519] to-[#032a16] px-6 pt-12 pr-28 pb-5 sm:px-7 sm:pr-28">
+        <article className="group relative flex h-full flex-col rounded-xl bg-white shadow-[0_1px_2px_rgb(0_27_72/0.06),0_10px_30px_-12px_rgb(0_27_72/0.18)] ring-1 ring-site-line transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgb(0_27_72/0.08),0_24px_48px_-16px_rgb(0_27_72/0.32)] hover:ring-site-accent">
+            {/* The header: the product's name on a solid navy panel. */}
+            <div className="site-dark relative flex min-h-32 items-end overflow-hidden rounded-t-xl bg-site-navy px-6 pt-12 pr-28 pb-5 sm:px-7 sm:pr-28">
                 <span
                     aria-hidden
-                    className="absolute inset-0 bg-[radial-gradient(rgb(255_255_255/0.14)_1px,transparent_1.5px)] [mask-image:linear-gradient(to_bottom,black,transparent)] [background-size:14px_14px]"
-                />
-                <span
-                    aria-hidden
-                    className="absolute -bottom-12 -left-10 size-44 rounded-full bg-site-accent/25 blur-2xl group-hover:translate-x-6 motion-safe:transition-transform motion-safe:duration-500"
+                    className="absolute -right-10 -bottom-14 size-40 rounded-full border-[14px] border-site-navy-light group-hover:-translate-x-4 motion-safe:transition-transform motion-safe:duration-500"
                 />
                 <span
                     aria-hidden

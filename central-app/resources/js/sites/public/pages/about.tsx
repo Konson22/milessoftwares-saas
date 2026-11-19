@@ -47,7 +47,7 @@ export default function About({ canonical }: Props) {
         <>
             <Seo
                 title="About us"
-                description="Tatook develops ERP solutions, business applications and custom software for pharmacies, shops, restaurants and growing organizations."
+                description="Miles Softwares develops ERP solutions, business applications and custom software for pharmacies, shops, restaurants and growing organizations."
                 canonical={canonical}
                 jsonLd={{
                     '@context': 'https://schema.org',
@@ -64,14 +64,14 @@ export default function About({ canonical }: Props) {
                         <Accent>keep things running</Accent>
                     </>
                 }
-                intro="Tatook is a product of Miles Global Link Co. Ltd."
+                intro="Miles Softwares is a product of Miles Global Link Co. Ltd."
                 asideClassName=""
                 aside={
                     <ul className="grid gap-3 sm:grid-cols-2">
                         {facts.map(({ icon: Icon, title, body }, i) => (
                             <li
                                 key={title}
-                                className={`rounded-xl bg-white/[0.07] p-5 ring-1 ring-white/10 backdrop-blur-sm transition-colors hover:bg-white/[0.1] ${i % 2 === 1 ? 'sm:translate-y-6' : ''}`}
+                                className={`rounded-xl bg-site-navy-light p-5 ring-1 ring-site-navy-line transition-colors hover:bg-site-navy-line ${i % 2 === 1 ? 'sm:translate-y-6' : ''}`}
                             >
                                 <span className="inline-flex size-10 items-center justify-center rounded-xl bg-site-highlight text-site-night">
                                     <Icon className="size-5" aria-hidden />
@@ -98,14 +98,10 @@ export default function About({ canonical }: Props) {
 
             <section aria-labelledby="story-heading" className="bg-white">
                 <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:px-8">
-                    <div className="site-dark relative overflow-hidden rounded-xl bg-linear-160 from-[#0a5a26] via-[#063519] to-[#032a16] p-8 shadow-xl shadow-site-night/20 sm:p-10">
-                        <span
-                            aria-hidden
-                            className="absolute inset-0 bg-[radial-gradient(rgb(255_255_255/0.12)_1px,transparent_1.5px)] [background-size:16px_16px] [mask-image:linear-gradient(to_top_left,black,transparent_60%)]"
-                        />
+                    <div className="site-dark relative overflow-hidden rounded-xl bg-site-navy p-8 shadow-xl shadow-site-night/20 sm:p-10">
                         <Quote
                             aria-hidden
-                            className="absolute -top-2 right-6 size-28 rotate-180 text-white/[0.07]"
+                            className="absolute -top-2 right-6 size-28 rotate-180 text-site-navy-light"
                         />
                         <div className="relative">
                             <SectionHeading
@@ -143,9 +139,9 @@ export default function About({ canonical }: Props) {
                             a single branch with no internet at all.
                         </p>
                         <p className="border-l-4 border-site-accent-ink pl-5">
-                            Every Tatook product shares one platform, so a
-                            business can begin with one application and add the
-                            next when it is ready, without starting again.
+                            Every Miles Softwares product shares one platform,
+                            so a business can begin with one application and add
+                            the next when it is ready, without starting again.
                         </p>
                     </div>
                 </div>
@@ -175,7 +171,7 @@ export default function About({ canonical }: Props) {
                             Let's <Accent>talk</Accent>
                         </>
                     }
-                    body="Tell us about your business: what you sell, how many branches you run and where the work slows down today. We will suggest the Tatook product that fits, show you how it works, or scope a custom system with you. There is no cost and no obligation, and we reply within one working day by email or WhatsApp."
+                    body="Tell us about your business: what you sell, how many branches you run and where the work slows down today. We will suggest the Miles Softwares product that fits, show you how it works, or scope a custom system with you. There is no cost and no obligation, and we reply within one working day by email or WhatsApp."
                 >
                     <Link href="/contact" className={button.light}>
                         Contact us

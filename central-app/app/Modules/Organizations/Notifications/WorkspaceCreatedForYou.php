@@ -48,7 +48,7 @@ class WorkspaceCreatedForYou extends Notification implements ShouldQueue
         return (new MailMessage)
             ->subject("{$this->sponsorName} set up a workspace for {$this->organizationName}")
             ->greeting("Hello {$this->name},")
-            ->line("{$this->creatorName} of {$this->sponsorName} created a workspace for {$this->organizationName} on Tatook, so you can run the projects they fund and report to them.")
+            ->line("{$this->creatorName} of {$this->sponsorName} created a workspace for {$this->organizationName} on Miles Softwares, so you can run the projects they fund and report to them.")
             ->line("Claim it to become its owner. It is yours: {$this->sponsorName} has no access to it, and sees only what you choose to share, grant by grant.")
             ->action('Claim the workspace', $this->claimUrl())
             ->line('The link can be used once and expires on '.$this->expiresAt->utc()->toFormattedDayDateString().'.')

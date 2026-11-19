@@ -20,7 +20,7 @@ Payroll is `payroll-app` at `{workspace}/payroll` (ADR-0010). It deploys like an
 3. Storage: `/srv/miles/shared/products/payroll/storage/{app,framework/{cache,sessions,views},logs}`.
 4. Register the application in admin → Applications (code `payroll`) for its sign-in and service
    clients and webhook secret, then copy those values into its `.env`.
-5. HR and every product that sends hours: `PLATFORM_PAYROLL_EVENTS_URL=https://tatook.com/payroll/events`
+5. HR and every product that sends hours: `PLATFORM_PAYROLL_EVENTS_URL=https://milessoftwares.com/payroll/events`
    in their `.env`, then `artisan optimize` and a php-fpm reload.
 6. nginx: `ops/nginx/products/payroll.conf` into `/etc/nginx/miles-products/`, `nginx -t`, reload.
    php-fpm: `ops/php-fpm/payroll.conf` into the pool directory, reload.

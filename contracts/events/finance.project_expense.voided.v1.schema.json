@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milesoftwares.com/contracts/events/finance.project_expense.voided.v1.schema.json",
+    "$id": "https://milessoftwares.com/contracts/events/finance.project_expense.voided.v1.schema.json",
     "title": "finance.project_expense.voided, schema_version 1",
     "description": "A paid expense taken back: the mirror image of its journal. Arriving before its payment, it waits for it. Amounts are integers in the currency's minor unit.",
     "type": "object",

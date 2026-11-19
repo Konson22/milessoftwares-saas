@@ -1,6 +1,6 @@
 # Admin guides
 
-Guides for staff using `https://admin.milesoftwares.com`.
+Guides for staff using `https://admin.milessoftwares.com`.
 
 - [Applications → Integration](application-integration.md): connecting a product (Finance,
   Pharmacy, Retail & POS) to the platform: sign-in and service clients, webhooks,

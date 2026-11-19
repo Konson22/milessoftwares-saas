@@ -22,17 +22,18 @@ const sections: LegalSection[] = [
             <>
                 <p>
                     Miles Pharma POS is a pharmacy counter app for phones and
-                    tablets, part of Tatook, a product of
-                    Miles Global Link Co. Ltd ("Miles Global Link", "we", "us").
-                    It handles a pharmacy's sales, prescriptions, stock checks,
-                    shifts and receipts.
+                    tablets, part of Miles Softwares, a product of Miles Global
+                    Link Co. Ltd ("Miles Global Link", "we", "us"). It handles a
+                    pharmacy's sales, prescriptions, stock checks, shifts and
+                    receipts.
                 </p>
                 <p>
                     This policy explains what the app collects, where it keeps
                     it and who can see it. It adds to our main{' '}
                     <Link href="/privacy">privacy policy</Link>, which covers
-                    Tatook accounts and workspaces. For anything in it, write to{' '}
-                    {email} or message us on WhatsApp at {whatsappNumber}.
+                    Miles Softwares accounts and workspaces. For anything in it,
+                    write to {email} or message us on WhatsApp at{' '}
+                    {whatsappNumber}.
                 </p>
             </>
         ),
@@ -80,15 +81,15 @@ const sections: LegalSection[] = [
     },
     {
         id: 'workspace',
-        title: 'Where it is kept: your Tatook workspace',
+        title: 'Where it is kept: your Miles Softwares workspace',
         body: (
             <>
                 <p>
-                    You sign in with your Tatook account (email and password,
-                    two-step sign-in, or Google). What you record is sent over
-                    encrypted connections to your pharmacy's Tatook workspace,
-                    and shared there with the pharmacy's other devices and the
-                    staff whose roles allow it.
+                    You sign in with your Miles Softwares account (email and
+                    password, two-step sign-in, or Google). What you record is
+                    sent over encrypted connections to your pharmacy's Miles
+                    Softwares workspace, and shared there with the pharmacy's
+                    other devices and the staff whose roles allow it.
                 </p>
                 <p>
                     The workspace belongs to your organization, which decides
@@ -149,7 +150,8 @@ const sections: LegalSection[] = [
                     pharmacy uses one.
                 </li>
                 <li>
-                    <strong>Internet:</strong> to reach your Tatook workspace.
+                    <strong>Internet:</strong> to reach your Miles Softwares
+                    workspace.
                 </li>
             </ul>
         ),
@@ -186,11 +188,11 @@ const sections: LegalSection[] = [
         title: 'Security',
         body: (
             <p>
-                Connections to Tatook are encrypted, sign-in tokens are kept in
-                the device's secure storage, and each person sees only what
-                their role allows. No system is perfectly secure, so tell us at{' '}
-                {email} straight away if you think an account or device has been
-                compromised.
+                Connections to Miles Softwares are encrypted, sign-in tokens are
+                kept in the device's secure storage, and each person sees only
+                what their role allows. No system is perfectly secure, so tell
+                us at {email} straight away if you think an account or device
+                has been compromised.
             </p>
         ),
     },
@@ -229,8 +231,8 @@ const sections: LegalSection[] = [
         title: 'Children',
         body: (
             <p>
-                Miles Pharma POS is business software for pharmacy staff. It
-                is not meant for children, and we do not knowingly collect their
+                Miles Pharma POS is business software for pharmacy staff. It is
+                not meant for children, and we do not knowingly collect their
                 accounts. A pharmacy may record a child's name and age on a
                 prescription, as part of its own records.
             </p>
@@ -243,8 +245,8 @@ const sections: LegalSection[] = [
             <p>
                 When we change this policy we update the date at the top of this
                 page, and for important changes we tell users in the app or by
-                email before they take effect. Using Tatook is also covered by
-                our <Link href="/terms">terms of service</Link>.
+                email before they take effect. Using Miles Softwares is also
+                covered by our <Link href="/terms">terms of service</Link>.
             </p>
         ),
     },
@@ -256,7 +258,7 @@ export default function PrivacyMilesPharmacy({ canonical }: Props) {
         <>
             <Seo
                 title="Miles Pharma POS privacy policy"
-                description="What the Miles Pharma POS app collects, where it keeps it and who can see it, on the device and in a Tatook workspace."
+                description="What the Miles Pharma POS app collects, where it keeps it and who can see it, on the device and in a Miles Softwares workspace."
                 canonical={canonical}
             />
 

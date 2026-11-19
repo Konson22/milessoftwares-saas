@@ -15,7 +15,7 @@ function BrandLink({
     return (
         <Link
             href={home()}
-            aria-label="Tatook home"
+            aria-label="Miles Softwares home"
             className={`flex items-center ${className ?? ''}`}
         >
             <AppLogo inverted={inverted} className="h-11 w-auto sm:h-12" />
@@ -45,12 +45,13 @@ export default function AuthSplitLayout({
                     </h2>
                     <p className="text-base text-pretty text-slate-300 xl:text-lg">
                         Pharmacy, retail, finance and HR, connected under one
-                        Tatook account.
+                        Miles Softwares account.
                     </p>
                 </div>
 
                 <p className="relative z-10 text-sm text-slate-500">
-                    Tatook is a product of Miles Global Link Co. Ltd · © {year}
+                    Miles Softwares is a product of Miles Global Link Co. Ltd ·
+                    © {year}
                 </p>
             </aside>
 

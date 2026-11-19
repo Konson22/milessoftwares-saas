@@ -26,9 +26,9 @@ function sections(trialDays: number): LegalSection[] {
                     <p>
                         These terms are an agreement between you and Miles
                         Global Link Co. Ltd ("Miles Global Link", "we", "us"),
-                        the company behind Tatook. They cover tatook.com,
-                        the Tatook applications and our desktop and mobile apps
-                        (together, "the service").
+                        the company behind Miles Softwares. They cover
+                        milesoftwares.com, the Miles Softwares applications and our
+                        desktop and mobile apps (together, "the service").
                     </p>
                     <p>
                         If you use the service for an organization, you accept
@@ -176,8 +176,8 @@ function sections(trialDays: number): LegalSection[] {
             body: (
                 <p>
                     Miles Global Link owns the service, its software and the
-                    Tatook brand. Your subscription or licence lets your
-                    organization use it; it does not transfer ownership.
+                    Miles Softwares brand. Your subscription or licence lets
+                    your organization use it; it does not transfer ownership.
                     Software we build for you as a custom project is owned as
                     set out in that project's contract.
                 </p>
@@ -227,13 +227,13 @@ function sections(trialDays: number): LegalSection[] {
     ];
 }
 
-/** /terms: the agreement for using Tatook. */
+/** /terms: the agreement for using Miles Softwares. */
 export default function Terms({ trialDays, canonical }: Props) {
     return (
         <>
             <Seo
                 title="Terms of service"
-                description="The terms for using Tatook: accounts, free trials, plans and payment, your data and acceptable use."
+                description="The terms for using Miles Softwares: accounts, free trials, plans and payment, your data and acceptable use."
                 canonical={canonical}
             />
 
@@ -243,7 +243,7 @@ export default function Terms({ trialDays, canonical }: Props) {
                         Terms of <Accent>service</Accent>
                     </>
                 }
-                intro="The agreement for using Tatook applications, written to be read."
+                intro="The agreement for using Miles Softwares applications, written to be read."
                 updated={updated}
                 sections={sections(trialDays)}
             />

@@ -777,7 +777,7 @@ function Summary({
             aria-label="Summary"
             className="overflow-hidden rounded-xl border bg-card shadow-sm lg:sticky lg:top-6"
         >
-            <div className="relative overflow-hidden bg-linear-160 from-[#0a5a26] via-[#063519] to-[#032a16] p-5 text-white">
+            <div className="relative overflow-hidden bg-linear-160 from-[#0a2d66] via-[#001538] to-[#000f28] p-5 text-white">
                 <span
                     aria-hidden
                     className="absolute inset-0 bg-[radial-gradient(rgb(255_255_255/0.12)_1px,transparent_1.5px)] [background-size:14px_14px] [mask-image:linear-gradient(to_left,black,transparent_70%)]"
@@ -785,7 +785,7 @@ function Summary({
                 <p className="relative truncate text-lg font-semibold">
                     {name || 'Your new business'}
                 </p>
-                <p className="relative mt-3 flex items-center gap-2 truncate rounded-md bg-white/10 px-3 py-2 font-mono text-xs text-[#c7f36b] ring-1 ring-white/15">
+                <p className="relative mt-3 flex items-center gap-2 truncate rounded-md bg-white/10 px-3 py-2 font-mono text-xs text-[#9ae8ff] ring-1 ring-white/15">
                     <Globe className="size-3.5 shrink-0" aria-hidden />
                     <span className="truncate">{host}</span>
                 </p>

@@ -67,10 +67,10 @@ const steps = [
     },
 ];
 
-/** Changing a Tatook product versus building something new. */
+/** Changing a Miles Softwares product versus building something new. */
 const choices = [
     {
-        title: 'Customize a Tatook product',
+        title: 'Customize a Miles Softwares product',
         body: 'You run one of our ready-made ERPs, adapted to you: fields, documents, reports, print layouts and approval steps.',
         points: [
             'Product licence: subscription, or one-time where offered',
@@ -95,7 +95,7 @@ const choices = [
 
 /**
  * Custom development: new systems built for one customer, and changes to a
- * Tatook product. The ready-made products are in the catalog.
+ * Miles Softwares product. The ready-made products are in the catalog.
  */
 export default function Services({ canonical }: Props) {
     const origin = new URL(canonical).origin;
@@ -104,7 +104,7 @@ export default function Services({ canonical }: Props) {
     return (
         <>
             <Seo
-                title="Custom ERP, web, desktop and mobile app development"
+                title="Custom ERP, web, desktop and mobile apps"
                 description="Custom software development: ERP systems, web, desktop and mobile applications, system integration and ERP customization. Request a quotation."
                 canonical={canonical}
                 jsonLd={{
@@ -126,10 +126,10 @@ export default function Services({ canonical }: Props) {
                         <Accent>built around your business</Accent>
                     </>
                 }
-                intro="We adapt a Tatook product or build a new system around how you work."
+                intro="We adapt a Miles Softwares product or build a new system around how you work."
                 asideClassName=""
                 aside={
-                    <ul className="grid gap-4 rounded-xl bg-white/[0.06] p-5 ring-1 ring-white/10 backdrop-blur-sm sm:grid-cols-2 sm:p-6">
+                    <ul className="grid gap-4 rounded-xl bg-site-navy-light p-5 ring-1 ring-site-navy-line sm:grid-cols-2 sm:p-6">
                         {heroFacts.map(({ icon: Icon, title, body }) => (
                             <li key={title} className="flex items-start gap-3">
                                 <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-site-highlight text-site-night">
@@ -190,7 +190,7 @@ export default function Services({ canonical }: Props) {
                                     className="group flex scroll-mt-28 flex-col rounded-xl bg-white p-6 ring-1 ring-site-line transition-[box-shadow,transform] duration-300 target:ring-2 target:ring-site-accent hover:-translate-y-1 hover:shadow-xl hover:shadow-site-night/5 sm:p-7"
                                 >
                                     <div className="flex items-center justify-between">
-                                        <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-linear-160 from-[#0a5a26] to-[#032a16] text-site-highlight">
+                                        <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-site-navy text-site-highlight">
                                             <Icon
                                                 className="size-6"
                                                 aria-hidden
@@ -198,7 +198,7 @@ export default function Services({ canonical }: Props) {
                                         </span>
                                         <span
                                             aria-hidden
-                                            className="font-public-display text-3xl font-semibold text-site-accent/20 tabular-nums"
+                                            className="font-public-display text-3xl font-semibold text-site-tint-strong tabular-nums"
                                         >
                                             {String(i + 1).padStart(2, '0')}
                                         </span>
@@ -270,11 +270,11 @@ export default function Services({ canonical }: Props) {
                                 className={`${cardSurface} flex flex-col overflow-hidden`}
                             >
                                 <div
-                                    className={`site-dark relative px-7 pt-8 pb-7 sm:px-9 ${i === 0 ? 'bg-linear-160 from-[#0a5a26] via-[#063519] to-[#032a16]' : 'bg-linear-160 from-[#0e7a3a] via-[#0a5a26] to-[#063519]'}`}
+                                    className={`site-dark relative px-7 pt-8 pb-7 sm:px-9 ${i === 0 ? 'bg-site-navy' : 'bg-site-accent-deep'}`}
                                 >
                                     <span
                                         aria-hidden
-                                        className="font-public-display text-5xl font-bold text-white/15"
+                                        className="font-public-display text-5xl font-bold text-site-navy-line"
                                     >
                                         {String(i + 1).padStart(2, '0')}
                                     </span>

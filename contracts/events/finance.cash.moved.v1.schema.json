@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milesoftwares.com/contracts/events/finance.cash.moved.v1.schema.json",
+    "$id": "https://milessoftwares.com/contracts/events/finance.cash.moved.v1.schema.json",
     "title": "finance.cash.moved, schema_version 1",
     "description": "Cash went into or out of a cash drawer (a till) to or from somewhere other than the business's cash: banked (Dr bank / Cr cash), taken from the bank (Dr cash / Cr bank), or paid out for an expense (Dr the expense / Cr cash). Moves between a drawer and the safe stay within cash and are not sent. Amounts are integers in the currency's minor unit.",
     "type": "object",

@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milesoftwares.com/contracts/events/finance.staff_advance.issued.v1.schema.json",
+    "$id": "https://milessoftwares.com/contracts/events/finance.staff_advance.issued.v1.schema.json",
     "title": "finance.staff_advance.issued, schema_version 1",
     "description": "An advance paid out to a member of staff, an asset until they account for it: Dr Employee advances, Cr bank, cash or mobile money. Receipts come as finance.project_expense.paid with method staff_advance. Amounts are integers in the currency's minor unit.",
     "type": "object",

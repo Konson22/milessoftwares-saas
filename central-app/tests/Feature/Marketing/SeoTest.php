@@ -135,7 +135,7 @@ it('gives every product page a search title and description of the right length'
     foreach ($entries as $entry) {
         // Up to about 60 characters before the release status, which Google
         // may cut short on a narrow screen without losing the product.
-        $title = preg_replace('/ \((coming soon|early access)\)$/', '', $entry['seoTitle']).' - Tatook';
+        $title = preg_replace('/ \((coming soon|early access)\)$/', '', $entry['seoTitle']).' - Miles Softwares';
         $description = $entry['seoDescription'];
 
         expect(mb_strlen($title))->toBeLessThanOrEqual(60, $title)

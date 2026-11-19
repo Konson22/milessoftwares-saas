@@ -1,0 +1,10 @@
+@import 'tailwindcss';
+
+@import 'tw-animate-css';
+@import '../../node_modules/@miles/ui/theme.css';
+/* Logbook wears the Microsoft 365 (Fluent) look; the other apps keep the shared one. */
+@import '../../node_modules/@miles/ui/themes/fluent.css';
+
+@source '../views';
+@source '../../node_modules/@miles/ui';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';

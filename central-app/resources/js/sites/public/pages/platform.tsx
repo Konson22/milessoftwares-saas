@@ -21,15 +21,15 @@ type Props = {
 };
 
 /**
- * Tatook Workspace: what every Tatook product shares (sign-in, the
+ * Miles Workspace: what every Miles Softwares product shares (sign-in, the
  * organization, application access, subscriptions, roles), then its security.
  */
 export default function Platform({ canonical }: Props) {
     return (
         <>
             <Seo
-                title="Tatook Workspace: one place for every application"
-                description="One Tatook account for every application: subscribe only to the apps you need, with roles per branch and an audit log across your organization."
+                title="Miles Workspace: one place for every app"
+                description="One Miles Softwares account for every application: subscribe only to the apps you need, with roles per branch and an audit log across your organization."
                 canonical={canonical}
             />
 
@@ -40,7 +40,7 @@ export default function Platform({ canonical }: Props) {
                         <Accent>One connected workspace.</Accent>
                     </>
                 }
-                intro="One account, one team and one set of permissions for every Tatook application you use."
+                intro="One account, one team and one set of permissions for every Miles Softwares application you use."
                 aside={<WorkspacePicture />}
             >
                 <Link href="/start" className={button.light}>
@@ -61,7 +61,7 @@ export default function Platform({ canonical }: Props) {
                     <SectionHeading
                         id="how-it-works-heading"
                         title="Everything your applications share, set up once"
-                        lead="Each Tatook product does its own job. Your workspace holds what they have in common, so adding an application never means a new account, a new staff list or a new set of books."
+                        lead="Each Miles Softwares product does its own job. Your workspace holds what they have in common, so adding an application never means a new account, a new staff list or a new set of books."
                         align="left"
                     />
                     <div className="mt-12">
@@ -86,7 +86,7 @@ export default function Platform({ canonical }: Props) {
                         See plans and pricing
                     </Link>
                     <Link href="/products" className={button.outlineDark}>
-                        Explore Tatook Products
+                        Explore Miles Products
                     </Link>
                 </StepBand>
             </div>
@@ -101,11 +101,7 @@ export default function Platform({ canonical }: Props) {
                             aria-labelledby={`${group.id}-heading`}
                             className={`${cardSurface} flex scroll-mt-24 flex-col overflow-hidden`}
                         >
-                            <div className="site-dark relative overflow-hidden bg-linear-160 from-[#0a5a26] via-[#063519] to-[#032a16] px-7 pt-8 pb-7 sm:px-9">
-                                <span
-                                    aria-hidden
-                                    className="absolute inset-0 bg-[radial-gradient(rgb(255_255_255/0.12)_1px,transparent_1.5px)] [background-size:14px_14px] [mask-image:linear-gradient(to_left,black,transparent_70%)]"
-                                />
+                            <div className="site-dark relative overflow-hidden bg-site-navy px-7 pt-8 pb-7 sm:px-9">
                                 <h2
                                     id={`${group.id}-heading`}
                                     className={`relative text-2xl ${display}`}
@@ -127,7 +123,7 @@ export default function Platform({ canonical }: Props) {
                                             key={title}
                                             className="flex gap-4 py-5"
                                         >
-                                            <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-site-accent/10 text-site-accent-ink">
+                                            <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-site-tint text-site-accent-ink">
                                                 <Icon
                                                     className="size-5"
                                                     aria-hidden
@@ -177,7 +173,7 @@ export default function Platform({ canonical }: Props) {
 const workspaceApps = ['Finance', 'Retail', 'HR'];
 const team = [
     { initials: 'AK', tone: 'bg-site-accent-ink' },
-    { initials: 'MJ', tone: 'bg-[#0e9976]' },
+    { initials: 'MJ', tone: 'bg-site-accent-deep' },
     { initials: 'SD', tone: 'bg-site-accent' },
     { initials: 'RT', tone: 'bg-site-accent-deep' },
 ];
@@ -190,10 +186,8 @@ const roles = ['Owner', 'Cashier · Main branch', 'Accountant'];
 function WorkspacePicture() {
     return (
         <div aria-hidden className="relative mx-auto max-w-md py-8">
-            <div className="absolute top-1/2 left-1/2 size-80 -translate-1/2 rounded-full bg-site-accent/20 blur-3xl" />
-
-            <div className="relative rotate-[-2deg] rounded-xl bg-white shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] ring-1 ring-white/20">
-                <div className="flex items-center gap-3 rounded-t-xl bg-linear-160 from-[#0d6a2e] to-[#04381a] px-6 py-4">
+            <div className="relative rotate-[-2deg] rounded-xl bg-white shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] ring-1 ring-site-navy-line">
+                <div className="flex items-center gap-3 rounded-t-xl bg-site-accent-deep px-6 py-4">
                     <span className="aspect-square w-4 bg-site-highlight [clip-path:polygon(0_0,100%_0,58%_50%,58%_100%,26%_100%,26%_50%,0_50%)]" />
                     <span className="font-semibold text-white">
                         Your workspace
@@ -202,7 +196,7 @@ function WorkspacePicture() {
                         {[0, 1, 2].map((i) => (
                             <i
                                 key={i}
-                                className="size-2 rounded-full bg-white/40"
+                                className="size-2 rounded-full bg-site-navy-line"
                             />
                         ))}
                     </span>

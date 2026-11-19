@@ -30,7 +30,7 @@ function FinancePlan({ plan }: { plan: Plan }) {
 
     return (
         <li
-            className={`${card} flex h-full flex-col p-5 ${standalone ? 'border-site-accent ring-1 ring-site-accent/40' : ''}`}
+            className={`${card} flex h-full flex-col p-5 ${standalone ? 'border-site-accent ring-1 ring-site-accent' : ''}`}
         >
             <div className="flex items-start justify-between gap-3">
                 <h3 className="text-lg font-semibold tracking-tight text-slate-900">

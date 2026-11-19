@@ -99,7 +99,7 @@ export const services: Service[] = [
         id: 'system-integration',
         icon: Cable,
         title: 'System Integration',
-        body: 'Connect the systems you already use with each other or with Tatook, so information is entered once and flows where it is needed.',
+        body: 'Connect the systems you already use with each other or with Miles Softwares, so information is entered once and flows where it is needed.',
         href: quoteUrl('Project: System integration'),
         cta: 'Discuss your project',
         points: [
@@ -112,7 +112,7 @@ export const services: Service[] = [
         id: 'erp-customization',
         icon: Settings2,
         title: 'ERP Customization',
-        body: 'Adapt a Tatook ERP you already use or are about to buy: extra fields, documents, reports, print layouts and approval steps.',
+        body: 'Adapt a Miles ERP you already use or are about to buy: extra fields, documents, reports, print layouts and approval steps.',
         href: quoteUrl('Quote: ERP customization'),
         cta: 'Request a quotation',
         points: [
@@ -141,7 +141,7 @@ const hasMobile = (entry: CatalogEntry) =>
         (platform) => platform === 'android' || platform === 'ios',
     );
 
-/** The ways a Tatook product can run. Not every product offers each one. */
+/** The ways a Miles Softwares product can run. Not every product offers each one. */
 export function deployments(trialDays: number): Deployment[] {
     return [
         {
@@ -207,13 +207,12 @@ function sealPath(points: number, outer: number, inner: number): string {
 const seal = sealPath(28, 98, 91);
 
 /**
- * The badge at the top of a deployment card: a scalloped green seal with a
- * dotted inner ring, the icon and a short word, a lime ribbon across it and
+ * The badge at the top of a deployment card: a scalloped navy seal with a
+ * dotted inner ring, the icon and a short word, a green ribbon across it and
  * two tails below.
  */
 function DeploymentSeal({ option }: { option: Deployment }) {
     const Icon = option.icon;
-    const gradient = `seal-${option.id}`;
 
     return (
         <div className="relative mx-auto size-44 transition-transform duration-500 group-hover:-rotate-3 group-hover:scale-105">
@@ -230,19 +229,12 @@ function DeploymentSeal({ option }: { option: Deployment }) {
             <svg
                 aria-hidden
                 viewBox="0 0 200 200"
-                className="absolute inset-0 size-full drop-shadow-[0_12px_22px_rgba(0,0,0,0.45)]"
+                className="absolute inset-0 size-full"
             >
-                <defs>
-                    <linearGradient id={gradient} x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#0a6a2c" />
-                        <stop offset="60%" stopColor="#05451b" />
-                        <stop offset="100%" stopColor="#032a16" />
-                    </linearGradient>
-                </defs>
                 <path
                     d={seal}
-                    fill={`url(#${gradient})`}
-                    stroke="#8bd103"
+                    fill="#001b48"
+                    stroke="#01c5fd"
                     strokeWidth="3"
                     strokeLinejoin="round"
                 />
@@ -251,8 +243,7 @@ function DeploymentSeal({ option }: { option: Deployment }) {
                     cy="100"
                     r="78"
                     fill="none"
-                    stroke="#8bd103"
-                    strokeOpacity="0.55"
+                    stroke="#0a64c4"
                     strokeWidth="2"
                     strokeDasharray="1 6"
                     strokeLinecap="round"
@@ -262,8 +253,7 @@ function DeploymentSeal({ option }: { option: Deployment }) {
                     cy="100"
                     r="70"
                     fill="none"
-                    stroke="#ffffff"
-                    strokeOpacity="0.12"
+                    stroke="#0a2d66"
                     strokeWidth="1"
                 />
             </svg>
@@ -283,11 +273,11 @@ function DeploymentSeal({ option }: { option: Deployment }) {
             <div className="absolute inset-x-[-14%] top-[60%]">
                 <span
                     aria-hidden
-                    className="absolute top-2 -left-3 -z-10 h-full w-8 bg-[#6da402] [clip-path:polygon(0_0,100%_0,100%_100%,0_100%,35%_50%)]"
+                    className="absolute top-2 -left-3 -z-10 h-full w-8 bg-site-leaf [clip-path:polygon(0_0,100%_0,100%_100%,0_100%,35%_50%)]"
                 />
                 <span
                     aria-hidden
-                    className="absolute top-2 -right-3 -z-10 h-full w-8 bg-[#6da402] [clip-path:polygon(0_0,100%_0,65%_50%,100%_100%,0_100%)]"
+                    className="absolute top-2 -right-3 -z-10 h-full w-8 bg-site-leaf [clip-path:polygon(0_0,100%_0,65%_50%,100%_100%,0_100%)]"
                 />
                 <span className="relative block bg-site-highlight px-3 py-1.5 text-center text-xs font-extrabold tracking-[0.12em] text-site-night uppercase shadow-md shadow-site-night/20">
                     {option.tag}
@@ -298,7 +288,7 @@ function DeploymentSeal({ option }: { option: Deployment }) {
 }
 
 /**
- * The ways to run Tatook software, each naming the released products that
+ * The ways to run Miles Softwares software, each naming the released products that
  * offer it, so no option reads as available for everything. Each card leads
  * with a seal-and-ribbon badge.
  */
@@ -321,29 +311,17 @@ export function DeploymentOptions({
                     <li
                         key={option.id}
                         id={option.id}
-                        className="group relative isolate flex scroll-mt-28 flex-col overflow-hidden rounded-2xl bg-linear-to-b from-white via-white to-[#f1f9ea] shadow-sm ring-1 ring-site-line transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-site-night/10"
+                        className="group relative isolate flex scroll-mt-28 flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-site-line transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-site-night/10"
                     >
                         {/* A faint watermark of the option's icon in the lower corner. */}
                         <Icon
                             aria-hidden
                             strokeWidth={1}
-                            className="pointer-events-none absolute -right-8 -bottom-8 -z-10 size-48 text-site-accent/[0.07] transition-transform duration-700 group-hover:-rotate-12"
+                            className="pointer-events-none absolute -right-8 -bottom-8 -z-10 size-48 text-site-tint transition-transform duration-700 group-hover:-rotate-12"
                         />
 
-                        {/* The badge on a deep green stage with sunburst rays. */}
-                        <div className="relative isolate overflow-hidden bg-[linear-gradient(160deg,#0b6b2d,#05451b_55%,#032a16)] px-6 pt-8 pb-14">
-                            <div
-                                aria-hidden
-                                className="pointer-events-none absolute inset-0 -z-10 bg-[repeating-conic-gradient(from_0deg_at_50%_44%,#ffffff14_0deg_7deg,transparent_7deg_15deg)] mask-[radial-gradient(circle_at_50%_44%,black_20%,transparent_70%)] transition-transform duration-[2s] group-hover:rotate-6"
-                            />
-                            <div
-                                aria-hidden
-                                className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(#a3e63530_1px,transparent_1px)] mask-[linear-gradient(to_top,black,transparent_60%)] bg-size-[14px_14px]"
-                            />
-                            <div
-                                aria-hidden
-                                className="pointer-events-none absolute top-[44%] left-1/2 -z-10 size-52 -translate-1/2 rounded-full bg-site-highlight/25 blur-3xl"
-                            />
+                        {/* The badge on a deep blue stage. */}
+                        <div className="relative isolate overflow-hidden bg-site-accent-deep px-6 pt-8 pb-14">
                             <DeploymentSeal option={option} />
 
                             {/* A soft wave into the card body. */}
@@ -355,8 +333,7 @@ export function DeploymentOptions({
                             >
                                 <path
                                     d="M0 18 C 90 2, 170 34, 260 16 S 370 6, 400 12 V40 H0 Z"
-                                    fill="#8bd103"
-                                    fillOpacity="0.35"
+                                    fill="#0164b2"
                                 />
                                 <path
                                     d="M0 28 C 100 12, 190 42, 280 24 S 370 16, 400 22 V40 H0 Z"
@@ -477,7 +454,7 @@ const serviceGroups: Omit<Service, 'href' | 'cta'>[] = [
     {
         id: 'erp-customization',
         icon: Settings2,
-        title: 'Customize a Tatook product',
+        title: 'Customize a Miles Softwares product',
         body: 'Start from one of our ERPs and have it adapted: extra fields, documents, print layouts, reports and approval steps.',
         points: [
             'Your product licence plus a setup charge',
@@ -488,13 +465,19 @@ const serviceGroups: Omit<Service, 'href' | 'cta'>[] = [
 ];
 
 /**
- * One colour per banner, all from the green brand family: the fill, the
- * text on that fill, and the colour for headings on white.
+ * One colour per banner, all from the logo's blues: the fill, the
+ * text on that fill, the colour for headings on white and a lighter
+ * shade of the fill for the header's circle.
  */
-const bannerThemes: { fill: string; onFill: string; ink: string }[] = [
-    { fill: '#037f1f', onFill: '#ffffff', ink: '#037f1f' },
-    { fill: '#05451b', onFill: '#ffffff', ink: '#05451b' },
-    { fill: '#8bd103', onFill: '#033214', ink: '#3f7300' },
+const bannerThemes: {
+    fill: string;
+    onFill: string;
+    ink: string;
+    soft: string;
+}[] = [
+    { fill: '#0353ff', onFill: '#ffffff', ink: '#0353ff', soft: '#1f68ff' },
+    { fill: '#001b48', onFill: '#ffffff', ink: '#001b48', soft: '#0a2d66' },
+    { fill: '#01c5fd', onFill: '#00122f', ink: '#006a8e', soft: '#3dd3fd' },
 ];
 
 /**
@@ -519,6 +502,7 @@ export function ServiceCards() {
                                 '--banner': theme.fill,
                                 '--banner-on': theme.onFill,
                                 '--banner-ink': theme.ink,
+                                '--banner-soft': theme.soft,
                             } as CSSProperties
                         }
                     >
@@ -536,15 +520,11 @@ export function ServiceCards() {
                             <span className="relative block h-44 bg-(--banner) text-(--banner-on)">
                                 <span
                                     aria-hidden
-                                    className="absolute inset-0 bg-[repeating-linear-gradient(135deg,rgba(255,255,255,0.09)_0_14px,transparent_14px_28px)]"
+                                    className="absolute -top-16 -right-16 size-48 rounded-full bg-(--banner-soft)"
                                 />
                                 <span
                                     aria-hidden
-                                    className="absolute -top-16 -right-16 size-48 rounded-full bg-white/10"
-                                />
-                                <span
-                                    aria-hidden
-                                    className="absolute top-5 left-6 font-public-display text-6xl leading-none font-extrabold opacity-25 tabular-nums"
+                                    className="absolute top-5 left-6 font-public-display text-6xl leading-none font-extrabold text-(--banner-soft) tabular-nums"
                                 >
                                     {String(i + 1).padStart(2, '0')}
                                 </span>
@@ -556,8 +536,7 @@ export function ServiceCards() {
                                 >
                                     <path
                                         d="M0 30 Q 200 -10 400 30 V60 H0 Z"
-                                        fill="#ffffff"
-                                        fillOpacity="0.35"
+                                        fill="var(--banner-soft)"
                                     />
                                     <path
                                         d="M0 44 Q 200 4 400 44 V60 H0 Z"
@@ -589,7 +568,7 @@ export function ServiceCards() {
                                 <span className="mt-4 block text-center text-sm leading-relaxed text-slate-600">
                                     {service.body}
                                 </span>
-                                <span className="mt-6 flex flex-col divide-y divide-site-line rounded-xl bg-site-wash/60 px-4 ring-1 ring-site-line">
+                                <span className="mt-6 flex flex-col divide-y divide-site-line rounded-xl bg-site-wash px-4 ring-1 ring-site-line">
                                     {service.points.map((point) => (
                                         <span
                                             key={point}
@@ -612,7 +591,7 @@ export function ServiceCards() {
                             <span className="relative flex items-center justify-between gap-3 overflow-hidden bg-(--banner) px-6 py-4 text-(--banner-on) sm:px-7">
                                 <span
                                     aria-hidden
-                                    className="absolute inset-y-0 right-0 w-2/5 bg-white/12 [clip-path:polygon(22%_0,100%_0,100%_100%,0_100%)]"
+                                    className="absolute inset-y-0 right-0 w-2/5 bg-site-navy-light [clip-path:polygon(22%_0,100%_0,100%_100%,0_100%)]"
                                 />
                                 <span className="relative text-sm font-bold">
                                     Learn more
@@ -637,7 +616,7 @@ export function ServiceCards() {
                         />
                         <span
                             aria-hidden
-                            className="mt-1 h-3 w-[90%] rounded-[50%] bg-site-night/15 blur-md"
+                            className="mt-1 h-3 w-[90%] rounded-[50%] bg-slate-200"
                         />
                     </li>
                 );

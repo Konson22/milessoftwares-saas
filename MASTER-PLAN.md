@@ -22,7 +22,7 @@ Do not implement the entire project in one uncontrolled operation. Work through 
 
 **Parent Company:** Miles Global Link Co. Ltd.
 
-**Website:** https://milesoftwares.com
+**Website:** https://milessoftwares.com
 
 **Technology Stack:**
 - Laravel backend

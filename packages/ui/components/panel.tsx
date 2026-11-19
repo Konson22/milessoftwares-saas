@@ -7,6 +7,7 @@ import { cn } from '../lib/utils';
 export function Panel({ className, ...props }: ComponentProps<'section'>) {
     return (
         <section
+            data-slot="panel"
             className={cn(
                 'overflow-hidden border bg-card text-card-foreground',
                 className,
@@ -32,6 +33,7 @@ export function PanelHeader({
 }) {
     return (
         <div
+            data-slot="panel-header"
             className={cn(
                 'flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2',
                 className,
@@ -60,6 +62,7 @@ export function PanelHeader({
 export function PanelToolbar({ className, ...props }: ComponentProps<'div'>) {
     return (
         <div
+            data-slot="panel-toolbar"
             className={cn(
                 'flex flex-wrap items-center gap-2 border-b px-3 py-2',
                 className,
@@ -70,5 +73,11 @@ export function PanelToolbar({ className, ...props }: ComponentProps<'div'>) {
 }
 
 export function PanelBody({ className, ...props }: ComponentProps<'div'>) {
-    return <div className={cn('p-3', className)} {...props} />;
+    return (
+        <div
+            data-slot="panel-body"
+            className={cn('p-3', className)}
+            {...props}
+        />
+    );
 }

@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milesoftwares.com/contracts/events/projects.finance_request.accepted.v1.schema.json",
+    "$id": "https://milessoftwares.com/contracts/events/projects.finance_request.accepted.v1.schema.json",
     "title": "projects.finance_request.accepted, schema_version 1",
     "description": "Finance took the request in and gives its own reference (unique per organization). Contract: docs/finance/finance-projects-contract.md.",
     "type": "object",

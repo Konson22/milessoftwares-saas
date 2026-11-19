@@ -63,7 +63,7 @@ export default function HeroShowcase({ products }: { products: Product[] }) {
                 <div
                     key={current.code}
                     aria-live="polite"
-                    className="hero-caption flex min-w-0 items-center gap-3 rounded-lg bg-white/95 py-2.5 pr-5 pl-2.5 text-site-ink"
+                    className="hero-caption flex min-w-0 items-center gap-3 rounded-lg bg-white py-2.5 pr-5 pl-2.5 text-site-ink"
                 >
                     <span className={`${iconChip} size-10 shrink-0 rounded-xl`}>
                         <Icon className="size-5" aria-hidden />
@@ -89,7 +89,7 @@ export default function HeroShowcase({ products }: { products: Product[] }) {
                                 aria-label={`Show ${product.name}`}
                                 aria-current={i === active ? 'true' : undefined}
                                 onClick={() => setActive(i)}
-                                className={`relative h-1.5 overflow-hidden rounded-full bg-white/35 transition-all duration-500 hover:bg-white/60 ${i === active ? 'w-8' : 'w-1.5'}`}
+                                className={`relative h-1.5 overflow-hidden rounded-full bg-site-navy-line transition-all duration-500 hover:bg-slate-300 ${i === active ? 'w-8' : 'w-1.5'}`}
                             >
                                 {i === active && (
                                     <span

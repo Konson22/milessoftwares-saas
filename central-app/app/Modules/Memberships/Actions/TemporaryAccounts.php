@@ -9,6 +9,7 @@ use App\Modules\Authorization\Actions\AssignmentDenied;
 use App\Modules\Authorization\Actions\AssignRole;
 use App\Modules\Authorization\Actions\SeparationOfDutiesWarning;
 use App\Modules\Authorization\Support\AccessResolver;
+use App\Modules\Authorization\Support\ApplicationPeopleManagers;
 use App\Modules\Authorization\Support\Scope;
 use App\Modules\Authorization\Support\WorkspaceAbilities;
 use App\Modules\Memberships\Enums\MembershipStatus;
@@ -76,7 +77,7 @@ final class TemporaryAccounts
             throw new MembershipActionDenied('A username is 3 to 32 letters, digits, dots, dashes or underscores, starting with a letter or digit.');
         }
 
-        $this->assertMayAdd($actor);
+        $this->assertMayAdd($actor, $proposed);
 
         $organization = $this->tenant->require();
         if ($organization->status !== OrganizationStatus::Active) {
@@ -211,9 +212,17 @@ final class TemporaryAccounts
         return null;
     }
 
-    private function assertMayAdd(OrganizationMembership $actor): void
+    /**
+     * Owners and access administrators add anyone; an application's people
+     * manager adds people with that application's roles only (and nothing
+     * else: a new temporary password stays with the administrators).
+     *
+     * @param  list<ProposedRole>  $proposed
+     */
+    private function assertMayAdd(OrganizationMembership $actor, array $proposed = []): void
     {
-        if (! (new WorkspaceAbilities($this->access))->manageAccess($actor)) {
+        if (! (new WorkspaceAbilities($this->access))->manageAccess($actor)
+            && ! app(ApplicationPeopleManagers::class)->managesAll($actor, $proposed)) {
             throw new MembershipActionDenied('You cannot add people to this organization.');
         }
     }

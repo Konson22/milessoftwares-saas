@@ -213,7 +213,7 @@ function Welcome({
                                     ` · ${plural(current.applications.length, 'application')}`}
                             </>
                         ) : (
-                            'Your Tatook account.'
+                            'Your Miles Softwares account.'
                         )}
                     </p>
                 </div>
@@ -283,7 +283,7 @@ function BillingAlerts({ billing }: { billing: Billing }) {
         alerts.push({
             tone: 'info',
             icon: ReceiptText,
-            text: `${billing.paymentsAwaitingConfirmation} reported payment${billing.paymentsAwaitingConfirmation === 1 ? ' is' : 's are'} waiting for confirmation by Tatook.`,
+            text: `${billing.paymentsAwaitingConfirmation} reported payment${billing.paymentsAwaitingConfirmation === 1 ? ' is' : 's are'} waiting for confirmation by Miles Softwares.`,
             href: workspaceRoutes.billing,
             cta: 'Details',
         });

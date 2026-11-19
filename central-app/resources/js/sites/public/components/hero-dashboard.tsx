@@ -9,7 +9,7 @@ const stats = [
 
 const bars = [40, 55, 47, 73, 65, 91];
 
-const activity = ['#87D83B', '#10B981', '#B1DD3D', '#0E9976'];
+const activity = ['#2A98D3', '#0F48AA', '#2AA9DA', '#0D3C8D'];
 
 /**
  * The dashboard at the centre of the home hero, in HTML so it stays sharp
@@ -23,18 +23,18 @@ export default function HeroDashboard() {
     return (
         <div
             aria-hidden
-            className="@container relative size-full overflow-hidden rounded-[5.5%/8.4%] border-[1.1cqw] border-[#125B3B] bg-[#F4FFF8] font-public select-none"
+            className="@container relative size-full overflow-hidden rounded-[5.5%/8.4%] border-[1.1cqw] border-[#112954] bg-[#F4FFFF] font-public select-none"
         >
             {/* Title bar. */}
-            <div className="flex h-[16%] items-center gap-[3cqw] bg-[#075B36] px-[4cqw] text-[2.8cqw] font-bold text-[#F1FFF4]">
-                <span className="aspect-square w-[3.6cqw] bg-[#B3ED52] [clip-path:polygon(0_0,100%_0,58%_50%,58%_100%,26%_100%,26%_50%,0_50%)]" />
-                <span>Tatook</span>
-                <span className="eco-live aspect-square w-[1.5cqw] rounded-full bg-[#7CE644]" />
+            <div className="flex h-[16%] items-center gap-[3cqw] bg-[#062354] px-[4cqw] text-[2.8cqw] font-bold text-[#F1FBFF]">
+                <span className="aspect-square w-[3.6cqw] bg-[#3BB4EB] [clip-path:polygon(0_0,100%_0,58%_50%,58%_100%,26%_100%,26%_50%,0_50%)]" />
+                <span>Miles Softwares</span>
+                <span className="eco-live aspect-square w-[1.5cqw] rounded-full bg-[#2F9DE3]" />
                 <span className="ml-auto flex gap-[0.9cqw]">
                     {[0, 1, 2].map((i) => (
                         <i
                             key={i}
-                            className="aspect-square w-[1.1cqw] rounded-full bg-[#9CDEB1]"
+                            className="aspect-square w-[1.1cqw] rounded-full bg-[#85A8D6]"
                         />
                     ))}
                 </span>
@@ -42,11 +42,11 @@ export default function HeroDashboard() {
 
             <div className="grid h-[84%] grid-cols-[19%_81%]">
                 {/* Sidebar. */}
-                <div className="flex flex-col gap-[2.6cqw] border-r border-[#C9E7D2] bg-[#E1F6E9] px-[3cqw] py-[4cqw]">
+                <div className="flex flex-col gap-[2.6cqw] border-r border-[#B6C9DE] bg-[#DCE8F4] px-[3cqw] py-[4cqw]">
                     {[0, 1, 2, 3, 4].map((i) => (
                         <i
                             key={i}
-                            className={`h-[1.3cqw] rounded-full ${i === 0 ? 'w-full bg-[#4DA675]' : 'w-4/5 bg-[#A8D0B6]'}`}
+                            className={`h-[1.3cqw] rounded-full ${i === 0 ? 'w-full bg-[#476699]' : 'w-4/5 bg-[#94A9C5]'}`}
                         />
                     ))}
                 </div>
@@ -57,15 +57,15 @@ export default function HeroDashboard() {
                         {stats.map((stat) => (
                             <div
                                 key={stat.label}
-                                className="flex min-w-0 flex-col justify-around rounded-[1.3cqw] border border-[#D9EEE1] bg-white px-[2cqw] py-[1.4cqw]"
+                                className="flex min-w-0 flex-col justify-around rounded-[1.3cqw] border border-[#CEDBE9] bg-white px-[2cqw] py-[1.4cqw]"
                             >
-                                <span className="text-[2.1cqw] font-semibold whitespace-nowrap text-[#5A7E69]">
+                                <span className="text-[2.1cqw] font-semibold whitespace-nowrap text-[#536074]">
                                     {stat.label}
                                 </span>
-                                <span className="text-[4.2cqw] leading-none font-extrabold tracking-tight text-[#064E3B]">
+                                <span className="text-[4.2cqw] leading-none font-extrabold tracking-tight text-[#061E48]">
                                     {stat.value}
                                 </span>
-                                <span className="text-[2.1cqw] font-bold text-[#1C9D50]">
+                                <span className="text-[2.1cqw] font-bold text-[#1A4990]">
                                     {stat.trend}
                                 </span>
                             </div>
@@ -74,15 +74,15 @@ export default function HeroDashboard() {
 
                     <div className="grid min-h-0 flex-1 grid-cols-[1.55fr_1fr] gap-[2.2cqw]">
                         {/* Performance chart. */}
-                        <div className="flex min-h-0 min-w-0 flex-col rounded-[1.3cqw] border border-[#D9EEE1] bg-white p-[2.2cqw]">
-                            <span className="text-[2.3cqw] font-bold text-[#174D35]">
+                        <div className="flex min-h-0 min-w-0 flex-col rounded-[1.3cqw] border border-[#CEDBE9] bg-white p-[2.2cqw]">
+                            <span className="text-[2.3cqw] font-bold text-[#152747]">
                                 Business performance
                             </span>
-                            <div className="relative mt-[1.6cqw] flex min-h-0 flex-1 items-end gap-[2cqw] border-b border-[#D6E9DD] px-[1.6cqw]">
+                            <div className="relative mt-[1.6cqw] flex min-h-0 flex-1 items-end gap-[2cqw] border-b border-[#C9D5E2] px-[1.6cqw]">
                                 {bars.map((height, n) => (
                                     <span
                                         key={n}
-                                        className={`eco-bar flex-1 origin-bottom rounded-t-[0.7cqw] ${n % 2 ? 'bg-linear-to-t from-[#047E5A] to-[#38C88D]' : 'bg-linear-to-t from-[#048653] to-[#9CDE33]'}`}
+                                        className={`eco-bar flex-1 origin-bottom rounded-t-[0.7cqw] ${n % 2 ? 'bg-linear-to-t from-[#042D74] to-[#3364B9]' : 'bg-linear-to-t from-[#04307B] to-[#23A0D8]'}`}
                                         style={
                                             {
                                                 height: `${height}%`,
@@ -100,7 +100,7 @@ export default function HeroDashboard() {
                                         points="5,79 32,62 58,67 85,40 109,48 145,13"
                                         pathLength={1}
                                         fill="none"
-                                        stroke="#C1E344"
+                                        stroke="#2FB2E0"
                                         strokeWidth={2.5}
                                         strokeLinecap="round"
                                         strokeLinejoin="round"
@@ -112,8 +112,8 @@ export default function HeroDashboard() {
                         </div>
 
                         {/* Recent activity. */}
-                        <div className="min-h-0 min-w-0 overflow-hidden rounded-[1.3cqw] border border-[#D9EEE1] bg-white p-[2.2cqw]">
-                            <span className="text-[2.3cqw] font-bold text-[#174D35]">
+                        <div className="min-h-0 min-w-0 overflow-hidden rounded-[1.3cqw] border border-[#CEDBE9] bg-white p-[2.2cqw]">
+                            <span className="text-[2.3cqw] font-bold text-[#152747]">
                                 Activity
                             </span>
                             {activity.map((dot, j) => (
@@ -127,8 +127,8 @@ export default function HeroDashboard() {
                                         style={{ backgroundColor: dot }}
                                     />
                                     <span className="flex flex-1 flex-col gap-[0.8cqw]">
-                                        <i className="h-[0.9cqw] w-[90%] rounded-full bg-[#B8DEC7]" />
-                                        <i className="h-[0.9cqw] w-[60%] rounded-full bg-[#DCEEE3]" />
+                                        <i className="h-[0.9cqw] w-[90%] rounded-full bg-[#A2B7D4]" />
+                                        <i className="h-[0.9cqw] w-[60%] rounded-full bg-[#D2DEE9]" />
                                     </span>
                                 </div>
                             ))}

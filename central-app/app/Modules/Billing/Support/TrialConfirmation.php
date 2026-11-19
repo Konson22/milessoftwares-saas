@@ -65,7 +65,7 @@ final class TrialConfirmation
                 $organization->tax_id ? 'Tax ID: '.$organization->tax_id : null,
             ])),
             'from' => [
-                'name' => 'Tatook',
+                'name' => 'Miles Softwares',
                 'issuer' => (string) config('platform.billing.issuer'),
                 'address' => (string) config('platform.billing.address'),
                 'phone' => (string) config('platform.billing.phone'),

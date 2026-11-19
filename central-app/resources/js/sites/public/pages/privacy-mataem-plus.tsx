@@ -1,45 +1,46 @@
-import { Link } from "@inertiajs/react";
-import LegalPage from "@/sites/public/components/legal";
-import type { LegalSection } from "@/sites/public/components/legal";
-import { Accent } from "@/sites/public/components/page-hero";
-import Seo from "@/sites/public/components/seo";
-import { supportEmail, whatsappNumber } from "@/sites/public/components/social";
+import { Link } from '@inertiajs/react';
+import LegalPage from '@/sites/public/components/legal';
+import type { LegalSection } from '@/sites/public/components/legal';
+import { Accent } from '@/sites/public/components/page-hero';
+import Seo from '@/sites/public/components/seo';
+import { supportEmail, whatsappNumber } from '@/sites/public/components/social';
 
 type Props = {
     canonical: string;
 };
 
 /** Change with the text, so the page says when it last changed. */
-const updated = "2026-11-07";
+const updated = '2026-11-07';
 
 const email = <a href={`mailto:${supportEmail}`}>{supportEmail}</a>;
 
 const sections: LegalSection[] = [
     {
-        id: "about",
-        title: "About this policy",
+        id: 'about',
+        title: 'About this policy',
         body: (
             <>
                 <p>
                     Mataem Plus is a restaurant app for phones and tablets, made
-                    by Miles Global Link Co. Ltd ("Miles Global Link", "we", "us")
-                    as part of Tatook. It runs a
-                    restaurant's floor, orders, kitchen tickets, bills, shifts,
-                    menu and drinks stock.
+                    by Miles Global Link Co. Ltd ("Miles Global Link", "we",
+                    "us") as part of Miles Softwares. It runs a restaurant's
+                    floor, orders, kitchen tickets, bills, shifts, menu and
+                    drinks stock.
                 </p>
                 <p>
                     This policy explains what the app collects, where it keeps
-                    it and who can see it. It adds to our main{" "}
+                    it and who can see it. It adds to our main{' '}
                     <Link href="/privacy">privacy policy</Link>, which covers
-                    Tatook accounts and workspaces. For anything in it, write to{" "}
-                    {email} or message us on WhatsApp at {whatsappNumber}.
+                    Miles Softwares accounts and workspaces. For anything in it,
+                    write to {email} or message us on WhatsApp at{' '}
+                    {whatsappNumber}.
                 </p>
             </>
         ),
     },
     {
-        id: "what-the-app-handles",
-        title: "What the app handles",
+        id: 'what-the-app-handles',
+        title: 'What the app handles',
         body: (
             <>
                 <p>
@@ -78,30 +79,31 @@ const sections: LegalSection[] = [
         ),
     },
     {
-        id: "workspace",
-        title: "Where it is kept: your Tatook workspace",
+        id: 'workspace',
+        title: 'Where it is kept: your Miles Softwares workspace',
         body: (
             <>
                 <p>
-                    You sign in with your Tatook account (email and password,
-                    two-step sign-in, or Google). What you record is sent over
-                    encrypted connections to your restaurant's Tatook workspace,
-                    and shared there with the restaurant's other phones, tablets
-                    and computers and the staff whose roles allow it.
+                    You sign in with your Miles Softwares account (email and
+                    password, two-step sign-in, or Google). What you record is
+                    sent over encrypted connections to your restaurant's Miles
+                    Softwares workspace, and shared there with the restaurant's
+                    other phones, tablets and computers and the staff whose
+                    roles allow it.
                 </p>
                 <p>
                     The workspace belongs to your organization, and we process
                     its data on the organization's behalf. How we collect, keep
                     and share account and workspace data, and the providers that
-                    host it, is set out in our main{" "}
+                    host it, is set out in our main{' '}
                     <Link href="/privacy">privacy policy</Link>.
                 </p>
             </>
         ),
     },
     {
-        id: "on-the-device",
-        title: "What stays on the device",
+        id: 'on-the-device',
+        title: 'What stays on the device',
         body: (
             <>
                 <p>So the floor can keep working when the connection drops:</p>
@@ -132,12 +134,13 @@ const sections: LegalSection[] = [
         ),
     },
     {
-        id: "permissions",
-        title: "Device permissions",
+        id: 'permissions',
+        title: 'Device permissions',
         body: (
             <ul>
                 <li>
-                    <strong>Internet:</strong> to reach your Tatook workspace.
+                    <strong>Internet:</strong> to reach your Miles Softwares
+                    workspace.
                 </li>
                 <li>
                     <strong>Vibration:</strong> a short buzz to confirm an
@@ -147,8 +150,8 @@ const sections: LegalSection[] = [
         ),
     },
     {
-        id: "printing",
-        title: "Printing bills and tickets",
+        id: 'printing',
+        title: 'Printing bills and tickets',
         body: (
             <p>
                 Bills and kitchen tickets are sent to the printer you choose
@@ -157,13 +160,13 @@ const sections: LegalSection[] = [
         ),
     },
     {
-        id: "sharing",
-        title: "Who we share it with",
+        id: 'sharing',
+        title: 'Who we share it with',
         body: (
             <p>
                 We do not sell personal information, and we do not share
                 anything from the app for advertising. Workspace data is kept
-                with the service providers listed in our main{" "}
+                with the service providers listed in our main{' '}
                 <Link href="/privacy">privacy policy</Link>, which host and
                 protect our servers. If you choose Google sign-in, Google
                 handles that step under its own policy and tells us only your
@@ -174,21 +177,21 @@ const sections: LegalSection[] = [
         ),
     },
     {
-        id: "security",
-        title: "Security",
+        id: 'security',
+        title: 'Security',
         body: (
             <p>
-                Connections to Tatook are encrypted, sign-in tokens are kept in
-                the device's secure storage, and each person sees only what
-                their role allows. No system is perfectly secure, so tell us at{" "}
-                {email} straight away if you think an account or device has been
-                compromised.
+                Connections to Miles Softwares are encrypted, sign-in tokens are
+                kept in the device's secure storage, and each person sees only
+                what their role allows. No system is perfectly secure, so tell
+                us at {email} straight away if you think an account or device
+                has been compromised.
             </p>
         ),
     },
     {
-        id: "deletion",
-        title: "Deleting your data",
+        id: 'deletion',
+        title: 'Deleting your data',
         body: (
             <>
                 <ul>
@@ -197,9 +200,9 @@ const sections: LegalSection[] = [
                         or clear its storage in the device's settings.
                     </li>
                     <li>
-                        <strong>Your account and workspace:</strong> write to{" "}
+                        <strong>Your account and workspace:</strong> write to{' '}
                         {email} from the email address on your account, as
-                        explained in our main{" "}
+                        explained in our main{' '}
                         <Link href="/privacy">privacy policy</Link>.
                     </li>
                     <li>
@@ -216,8 +219,8 @@ const sections: LegalSection[] = [
         ),
     },
     {
-        id: "children",
-        title: "Children",
+        id: 'children',
+        title: 'Children',
         body: (
             <p>
                 Mataem Plus is business software for restaurants. It is not
@@ -227,14 +230,14 @@ const sections: LegalSection[] = [
         ),
     },
     {
-        id: "changes",
-        title: "Changes to this policy",
+        id: 'changes',
+        title: 'Changes to this policy',
         body: (
             <p>
                 When we change this policy we update the date at the top of this
                 page, and for important changes we tell users in the app or by
-                email before they take effect. Using Tatook is also covered by
-                our <Link href="/terms">terms of service</Link>.
+                email before they take effect. Using Miles Softwares is also
+                covered by our <Link href="/terms">terms of service</Link>.
             </p>
         ),
     },
@@ -246,7 +249,7 @@ export default function PrivacyMataemPlus({ canonical }: Props) {
         <>
             <Seo
                 title="Mataem Plus privacy policy"
-                description="What the Mataem Plus restaurant app collects, where it keeps it and who can see it, on the device and in a Tatook workspace."
+                description="What the Mataem Plus restaurant app collects, where it keeps it and who can see it, on the device and in a Miles Softwares workspace."
                 canonical={canonical}
             />
 

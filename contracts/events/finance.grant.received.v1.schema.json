@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milesoftwares.com/contracts/events/finance.grant.received.v1.schema.json",
+    "$id": "https://milessoftwares.com/contracts/events/finance.grant.received.v1.schema.json",
     "title": "finance.grant.received, schema_version 1",
     "description": "A payment received from a funder under a grant: Dr bank (or where it was paid into), Cr Grant income. Amounts are integers in the currency's minor unit.",
     "type": "object",
