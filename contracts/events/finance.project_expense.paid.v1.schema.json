@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milesoftwares.com/contracts/events/finance.project_expense.paid.v1.schema.json",
+    "$id": "https://milessoftwares.com/contracts/events/finance.project_expense.paid.v1.schema.json",
     "title": "finance.project_expense.paid, schema_version 1",
     "description": "Spending paid, usually on a project: Dr the cost category's account (Salaries and wages, Project materials and supplies, Project equipment, Project travel, Subcontracted services or Other expenses), tagged with the project as a dimension, Cr bank, cash, mobile money, or Employee advances when it was paid from a staff advance. Petty cash payments come this way with method cash. Amounts are integers in the currency's minor unit.",
     "type": "object",

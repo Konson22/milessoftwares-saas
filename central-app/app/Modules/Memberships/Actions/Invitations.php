@@ -9,6 +9,7 @@ use App\Modules\Authorization\Actions\AssignmentDenied;
 use App\Modules\Authorization\Actions\AssignRole;
 use App\Modules\Authorization\Actions\SeparationOfDutiesWarning;
 use App\Modules\Authorization\Support\AccessResolver;
+use App\Modules\Authorization\Support\ApplicationPeopleManagers;
 use App\Modules\Authorization\Support\Scope;
 use App\Modules\Authorization\Support\WorkspaceAbilities;
 use App\Modules\Memberships\Enums\MembershipStatus;
@@ -58,7 +59,7 @@ final class Invitations
      */
     public function invite(OrganizationMembership $inviter, string $email, array $proposed = [], bool $acknowledgeSeparationOfDuties = false): array
     {
-        $this->assertMayInvite($inviter);
+        $this->assertMayInvite($inviter, $proposed);
 
         $email = mb_strtolower(trim($email));
         $organization = $this->tenant->require();
@@ -125,7 +126,7 @@ final class Invitations
      */
     public function resend(OrganizationMembership $actor, Invitation $invitation): string
     {
-        $this->assertMayInvite($actor);
+        $this->assertMayInvite($actor, $invitation->proposedRoles());
 
         if ($invitation->effectiveStatus() !== 'pending' && $invitation->effectiveStatus() !== 'expired') {
             throw new MembershipActionDenied('Only open invitations can be resent.');
@@ -146,7 +147,7 @@ final class Invitations
 
     public function revoke(OrganizationMembership $actor, Invitation $invitation): void
     {
-        $this->assertMayInvite($actor);
+        $this->assertMayInvite($actor, $invitation->proposedRoles());
 
         if ($invitation->status !== 'pending') {
             return;
@@ -165,7 +166,7 @@ final class Invitations
      */
     public function delete(OrganizationMembership $actor, Invitation $invitation): void
     {
-        $this->assertMayInvite($actor);
+        $this->assertMayInvite($actor, $invitation->proposedRoles());
 
         DB::transaction(function () use ($actor, $invitation): void {
             $this->revoke($actor, $invitation);
@@ -228,7 +229,7 @@ final class Invitations
             return $this->tenant->run($organization, function () use ($invitation, $user, $organization): array {
                 $inviter = OrganizationMembership::query()->with('organization')->find($invitation->invited_by_membership_id);
 
-                if ($inviter === null || ! $inviter->isActive() || ! (new WorkspaceAbilities($this->access))->manageAccess($inviter)) {
+                if ($inviter === null || ! $inviter->isActive() || ! $this->mayInvite($inviter, $invitation->proposedRoles())) {
                     throw new MembershipActionDenied('The person who invited you can no longer add members. Ask for a new invitation.');
                 }
 
@@ -311,11 +312,26 @@ final class Invitations
         return $notes === [] ? null : implode(' ', $notes);
     }
 
-    private function assertMayInvite(OrganizationMembership $membership): void
+    /**
+     * @param  list<ProposedRole>  $proposed
+     */
+    private function assertMayInvite(OrganizationMembership $membership, array $proposed): void
     {
-        if (! (new WorkspaceAbilities($this->access))->manageAccess($membership)) {
+        if (! $this->mayInvite($membership, $proposed)) {
             throw new MembershipActionDenied('You cannot invite people to this organization.');
         }
+    }
+
+    /**
+     * Owners and access administrators invite anyone; an application's
+     * people manager invites people for that application's roles only.
+     *
+     * @param  list<ProposedRole>  $proposed
+     */
+    private function mayInvite(OrganizationMembership $membership, array $proposed): bool
+    {
+        return (new WorkspaceAbilities($this->access))->manageAccess($membership)
+            || app(ApplicationPeopleManagers::class)->managesAll($membership, $proposed);
     }
 
     /**
@@ -342,7 +358,8 @@ final class Invitations
             throw new MembershipActionDenied("{$role->name} cannot be given at that scope.");
         }
 
-        if (! $this->access->isOwner($inviter) && ! $this->access->holds($inviter, 'platform.access.manage', $scope)) {
+        if (! $this->access->isOwner($inviter) && ! $this->access->holds($inviter, 'platform.access.manage', $scope)
+            && ! app(ApplicationPeopleManagers::class)->manages($inviter, $role->application_id, $scope)) {
             throw new MembershipActionDenied('You cannot manage access at that scope.');
         }
     }

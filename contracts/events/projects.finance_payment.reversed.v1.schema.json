@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milesoftwares.com/contracts/events/projects.finance_payment.reversed.v1.schema.json",
+    "$id": "https://milessoftwares.com/contracts/events/projects.finance_payment.reversed.v1.schema.json",
     "title": "projects.finance_payment.reversed, schema_version 1",
     "description": "Money paid was taken back, in part or in full, for a payment Projects recorded. Contract: docs/finance/finance-projects-contract.md.",
     "type": "object",

@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milesoftwares.com/contracts/events/finance.payroll.posted.v1.schema.json",
+    "$id": "https://milessoftwares.com/contracts/events/finance.payroll.posted.v1.schema.json",
     "title": "finance.payroll.posted, schema_version 1",
     "description": "An approved payroll run, as one summarised journal: run totals only, never one person's pay. earnings + employer_contributions = income_tax + social_security + other_deductions + payable. Finance posts Dr Salaries and wages, Dr Employer social security; Cr PAYE, Social security payable, Other payroll deductions payable, Salaries payable, dated the last day of the period.",
     "type": "object",

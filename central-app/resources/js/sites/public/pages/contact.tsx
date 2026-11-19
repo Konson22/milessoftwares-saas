@@ -23,7 +23,7 @@ export default function Contact({ formToken, subject, canonical }: Props) {
         <>
             <Seo
                 title="Contact us"
-                description="Contact Tatook about ERP, accounting, HR or custom software: pricing, free trials, partnerships and support. Send us a message or chat on WhatsApp."
+                description="Contact Miles Softwares about ERP, accounting, HR or custom software: pricing, free trials, partnerships and support. Send us a message or chat on WhatsApp."
                 canonical={canonical}
             />
 
@@ -90,7 +90,7 @@ export default function Contact({ formToken, subject, canonical }: Props) {
                                 <SocialIcon
                                     key={link.name}
                                     link={link}
-                                    className="bg-site-ink/5 text-site-ink hover:bg-site-ink/10"
+                                    className="bg-slate-50 text-site-ink hover:bg-slate-100"
                                 />
                             ))}
                         </div>

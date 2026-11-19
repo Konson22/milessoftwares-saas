@@ -105,7 +105,7 @@ class PageController extends Controller
         ]);
     }
 
-    /** Custom Solutions: custom development and customizing a Tatook product. */
+    /** Custom Solutions: custom development and customizing a Miles Softwares product. */
     public function services(): Response
     {
         return Inertia::render('public/services', [
@@ -211,6 +211,14 @@ class PageController extends Controller
     {
         return Inertia::render('public/privacy-miles-pharmacy', [
             'canonical' => PlatformHosts::url(PlatformHosts::root(), 'privacy/miles-pharmacy'),
+        ]);
+    }
+
+    /** The Miles Logbook mobile app's privacy policy, the URL for its store listing. */
+    public function privacyMilesLogbook(): Response
+    {
+        return Inertia::render('public/privacy-miles-logbook', [
+            'canonical' => PlatformHosts::url(PlatformHosts::root(), 'privacy/miles-logbook'),
         ]);
     }
 

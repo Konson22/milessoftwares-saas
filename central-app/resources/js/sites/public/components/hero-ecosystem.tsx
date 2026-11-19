@@ -35,7 +35,7 @@ const iconDelay = (index: number) => 200 + index * 85;
 const lineDelay = (index: number) => 1250 + index * 60;
 
 /**
- * The home hero's illustration: the Tatook dashboard with the eight
+ * The home hero's illustration: the Miles Softwares dashboard with the eight
  * application areas slowly circling it, each joined to it by a line that a
  * few dots travel along.
  *
@@ -88,15 +88,15 @@ export default function HeroEcosystem() {
             }
         >
             <figcaption id={`${uid}-caption`} className="sr-only">
-                The Tatook dashboard with eight areas of a business circling it:
-                analytics, finance, human resources, inventory, sales and point
-                of sale, projects, scheduling and operations.
+                The Miles Softwares dashboard with eight areas of a business
+                circling it: analytics, finance, human resources, inventory,
+                sales and point of sale, projects, scheduling and operations.
             </figcaption>
 
             {/* A soft halo behind the dashboard. */}
             <div
                 aria-hidden
-                className="eco-halo pointer-events-none absolute aspect-[1.5] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#72ee8b22] shadow-[0_0_0_16px_#77de7220]"
+                className="eco-halo pointer-events-none absolute aspect-[1.5] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#0a3a8c] shadow-[0_0_0_16px_#06275e]"
                 style={{
                     left: pct(C.x, W),
                     top: pct(C.y, H),
@@ -132,8 +132,7 @@ export default function HeroEcosystem() {
                                     d={`M ${r * Math.cos(a)} ${r * Math.sin(a)} L 0 0`}
                                     pathLength={1}
                                     vectorEffect="non-scaling-stroke"
-                                    stroke={on ? '#A3E635' : '#10B981'}
-                                    strokeOpacity={on ? 0.95 : 0.4}
+                                    stroke={on ? '#4fd6ff' : '#1f68ff'}
                                     strokeWidth={on ? 2.5 : 1.5}
                                     strokeLinecap="round"
                                     className="eco-line"
@@ -167,7 +166,7 @@ export default function HeroEcosystem() {
                             >
                                 <span className="absolute top-1/2 left-1/2 -mt-[1.1667%] -ml-[1.1667%] w-[2.3333%]">
                                     <span
-                                        className={`grid aspect-square place-items-center rounded-full bg-[#A3E63540] opacity-0 ${flow.direction === 'in' ? 'eco-flow-in' : 'eco-flow-out'}`}
+                                        className={`grid aspect-square place-items-center rounded-full bg-[#0a3a8c] opacity-0 ${flow.direction === 'in' ? 'eco-flow-in' : 'eco-flow-out'}`}
                                         style={
                                             {
                                                 '--r': `${(FLOW_FROM / (RX * 2)) * 100}cqw`,
@@ -175,7 +174,7 @@ export default function HeroEcosystem() {
                                             } as CSSProperties
                                         }
                                     >
-                                        <span className="aspect-square w-[43%] rounded-full bg-[#A3E635]" />
+                                        <span className="aspect-square w-[43%] rounded-full bg-[#4fd6ff]" />
                                     </span>
                                 </span>
                             </div>
@@ -249,7 +248,7 @@ export default function HeroEcosystem() {
 
             {/* The dashboard, above the orbit so icons slide out from behind it. */}
             <div
-                className="eco-dash absolute z-30 aspect-[1.52] rounded-[5.5%/8.4%] shadow-[0_24px_65px_#011b0eaa,0_0_0_1px_#77dca7,0_0_36px_#30cb6830]"
+                className="eco-dash absolute z-30 aspect-[1.52] rounded-[5.5%/8.4%] shadow-[0_24px_65px_#000a1c,0_0_0_1px_#66d4f7]"
                 style={{
                     left: pct(C.x - D.width / 2, W),
                     top: pct(C.y - D.height / 2, H),
@@ -290,7 +289,7 @@ function ApplicationIcon({
         </>
     );
     const shared =
-        'group relative block rounded-[22%] outline-none focus-visible:ring-2 focus-visible:ring-site-highlight focus-visible:ring-offset-4 focus-visible:ring-offset-[#073517]';
+        'group relative block rounded-[22%] outline-none focus-visible:ring-2 focus-visible:ring-site-highlight focus-visible:ring-offset-4 focus-visible:ring-offset-site-night';
 
     if (app.href) {
         return (

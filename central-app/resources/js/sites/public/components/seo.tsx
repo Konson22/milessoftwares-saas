@@ -6,7 +6,7 @@ import {
     whatsappNumber,
 } from '@/sites/public/components/social';
 
-export const siteName = 'Tatook';
+export const siteName = 'Miles Softwares';
 
 type Props = {
     title: string;
@@ -20,11 +20,11 @@ type Props = {
     noindex?: boolean;
 };
 
-/** The company that makes Tatook. */
+/** The company that makes Miles Softwares. */
 export const companyName = 'Miles Global Link Co. Ltd';
 
 /**
- * Tatook for structured data on any page: the brand, with Miles Global
+ * Miles Softwares for structured data on any page: the brand, with Miles Global
  * Link as the company behind it.
  */
 export function organization(origin: string): Record<string, unknown> {
@@ -34,9 +34,9 @@ export function organization(origin: string): Record<string, unknown> {
         '@type': 'Organization',
         '@id': `${origin}/#organization`,
         name: siteName,
-        // "Tatook" alone reads as a misspelling of "tattoo" to search
+        // "Miles Softwares" alone reads as a misspelling of "tattoo" to search
         // engines; the alternate names tie it to business software.
-        alternateName: ['Tatook ERP', 'Tatook Business Software'],
+        alternateName: ['Miles ERP', 'Miles Business Software'],
         legalName: companyName,
         url: `${origin}/`,
         logo: {
@@ -45,7 +45,7 @@ export function organization(origin: string): Record<string, unknown> {
         },
         image: `${origin}/images/logo-with-text.png`,
         description:
-            'Tatook is ERP and business software for pharmacies, shops, restaurants, schools and petrol stations, with accounting, HR and payroll, made by Miles Global Link Co. Ltd.',
+            'Miles Softwares is ERP and business software for pharmacies, shops, restaurants, schools and petrol stations, with accounting, HR and payroll, made by Miles Global Link Co. Ltd.',
         slogan: 'Bring it all together',
         email: supportEmail,
         telephone,
@@ -80,7 +80,7 @@ export function postalAddress(): Record<string, unknown> {
 }
 
 /**
- * Tatook as software (the platform as a whole; each product page describes
+ * Miles Softwares as software (the platform as a whole; each product page describes
  * its own application).
  */
 export function softwareApplication(origin: string): Record<string, unknown> {
@@ -88,7 +88,7 @@ export function softwareApplication(origin: string): Record<string, unknown> {
         '@type': 'SoftwareApplication',
         '@id': `${origin}/#software`,
         name: siteName,
-        alternateName: 'Tatook ERP',
+        alternateName: 'Miles ERP',
         url: `${origin}/`,
         applicationCategory: 'BusinessApplication',
         applicationSubCategory: 'Enterprise resource planning (ERP)',
@@ -110,7 +110,7 @@ export function softwareApplication(origin: string): Record<string, unknown> {
     };
 }
 
-/** The browser and social title: "Page - Tatook", or as given when it leads with the brand. */
+/** The browser and social title: "Page - Miles Softwares", or as given when it leads with the brand. */
 export function fullTitle(title: string): string {
     return title.startsWith(`${siteName} |`) ? title : `${title} - ${siteName}`;
 }

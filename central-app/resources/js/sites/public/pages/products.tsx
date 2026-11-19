@@ -94,12 +94,12 @@ export default function Products({ catalog, trialDays, canonical }: Props) {
         <>
             <Seo
                 title="ERP software and business applications"
-                description="Tatook ERP for pharmacy, retail, restaurant, school, logistics and NGOs, plus accounting, HR, payroll, inventory, procurement and project management."
+                description="Miles ERP for pharmacy, retail, restaurant, school, logistics and NGOs, plus accounting, HR, payroll, inventory, procurement and project management."
                 canonical={canonical}
                 jsonLd={{
                     '@context': 'https://schema.org',
                     '@type': 'ItemList',
-                    name: 'Tatook products',
+                    name: 'Miles Softwares products',
                     itemListElement: categories
                         .flatMap(byCategory)
                         .map((entry, i) => ({
@@ -118,7 +118,7 @@ export default function Products({ catalog, trialDays, canonical }: Props) {
             />
 
             {/* The filter: stays under the fixed header while the list scrolls. */}
-            <div className="sticky top-14 z-30 border-b border-site-line bg-white/90 backdrop-blur sm:top-16">
+            <div className="sticky top-14 z-30 border-b border-site-line bg-white sm:top-16">
                 <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6 lg:px-8">
                     <div
                         role="group"
@@ -200,7 +200,7 @@ export default function Products({ catalog, trialDays, canonical }: Props) {
                     {/* A coupon: notched edges and a dashed tear line. */}
                     <div className="relative flex flex-col gap-6 overflow-hidden rounded-xl bg-site-wash p-6 ring-1 ring-site-line sm:p-8 md:flex-row md:items-center md:gap-8">
                         <div className="flex flex-1 flex-col items-start gap-5 sm:flex-row sm:items-center">
-                            <span className="inline-flex size-16 shrink-0 items-center justify-center rounded-2xl bg-linear-160 from-[#0a5a26] to-[#032a16] text-site-highlight shadow-lg shadow-site-night/20">
+                            <span className="inline-flex size-16 shrink-0 items-center justify-center rounded-2xl bg-site-navy text-site-highlight shadow-lg shadow-site-night/20">
                                 <MonitorSmartphone
                                     className="size-8"
                                     aria-hidden
@@ -247,7 +247,7 @@ export default function Products({ catalog, trialDays, canonical }: Props) {
                         Run your business. <Accent>All connected.</Accent>
                     </>
                 }
-                body={`Every Tatook product shares one sign-in, one organization and one set of books. Start a ${trialDays}-day free trial of the one you need first.`}
+                body={`Every Miles Softwares product shares one sign-in, one organization and one set of books. Start a ${trialDays}-day free trial of the one you need first.`}
             >
                 <Link href="/start" className={button.light}>
                     Start Your {trialDays}-Day Free Trial
@@ -262,7 +262,7 @@ export default function Products({ catalog, trialDays, canonical }: Props) {
 }
 
 /**
- * The page's opening band: dark green, the title and intro, and beside
+ * The page's opening band: deep blue, the title and intro, and beside
  * them a fan of three product cards with their promotion badges, as on the
  * cards below. The fan is decorative and shows from `lg`; with reduced
  * motion it stays still.
@@ -295,7 +295,7 @@ function ProductsHero({
     ].filter((card) => card.product);
 
     return (
-        <section className="site-dark relative isolate overflow-hidden bg-[radial-gradient(circle_at_78%_40%,#11512b,#063519_55%,#032a16_100%)]">
+        <section className="site-dark relative isolate overflow-hidden bg-site-accent-deep">
             <HeroBackdrop />
             <div
                 className={`${container} grid items-center gap-10 pt-24 pb-10 sm:pt-28 sm:pb-12 lg:grid-cols-[1.05fr_1fr]`}
@@ -315,7 +315,6 @@ function ProductsHero({
                 </div>
 
                 <div aria-hidden className="relative hidden h-[22rem] lg:block">
-                    <div className="absolute top-1/2 left-1/2 size-80 -translate-1/2 rounded-full bg-site-accent/20 blur-3xl" />
                     {fan.map(({ product, place, float }) => (
                         <div key={product.slug} className={`absolute ${place}`}>
                             <div className={float}>
@@ -341,9 +340,8 @@ function FanCard({
     trialDays: number;
 }) {
     return (
-        <div className="relative w-60 rounded-xl bg-white shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] ring-1 ring-white/20 xl:w-64">
-            <div className="relative flex h-24 items-end overflow-hidden rounded-t-xl bg-linear-160 from-[#0d6a2e] to-[#04381a] px-5 pr-24 pb-4">
-                <span className="absolute inset-0 bg-[radial-gradient(rgb(255_255_255/0.16)_1px,transparent_1.5px)] [background-size:12px_12px] [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+        <div className="relative w-60 rounded-xl bg-white shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] ring-1 ring-site-navy-line xl:w-64">
+            <div className="relative flex h-24 items-end overflow-hidden rounded-t-xl bg-site-accent-deep px-5 pr-24 pb-4">
                 <span className="relative text-lg leading-tight font-semibold text-white">
                     {product.name}
                 </span>
@@ -356,7 +354,7 @@ function FanCard({
             <div className="space-y-2 p-5">
                 <i className="block h-2 w-full rounded-full bg-site-line" />
                 <i className="block h-2 w-4/5 rounded-full bg-site-line" />
-                <i className="block h-2 w-3/5 rounded-full bg-site-line/70" />
+                <i className="block h-2 w-3/5 rounded-full bg-site-line" />
                 <span className="mt-5 flex items-center gap-2">
                     <b className="block h-8 w-32 rounded-full bg-site-ink" />
                     <b className="block h-2 w-14 rounded-full bg-site-line" />

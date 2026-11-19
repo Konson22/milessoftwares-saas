@@ -1,0 +1,140 @@
+{
+    "application": {
+        "code": "logbook",
+        "name": "Miles Logbook",
+        "category": "products",
+        "kind": "standalone",
+        "status": "beta"
+    },
+    "version": "1.0.3",
+    "permissions": [
+        {
+            "key": "logbook.manage",
+            "name": "Manage logbooks and log sheets",
+            "description": "Create and archive logbooks, build and publish log sheet templates, and decide who reaches restricted logbooks. Reaches every logbook.",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "logbook.people.manage",
+            "name": "Manage Logbook's people",
+            "description": "Invite people or add accounts for Logbook, and give or take back Logbook's delegable roles (Contributor, Reviewer, Viewer) from Logbook itself, without workspace access administration.",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "logbook.entries.create",
+            "name": "Write log entries",
+            "description": "Write, save and submit entries on the log sheets one contributes to, and correct entries returned to them.",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "logbook.entries.review",
+            "name": "Review log entries",
+            "description": "Mark submitted entries reviewed or return them for correction, on the sheets one reviews. Never one's own entry.",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "logbook.view",
+            "name": "Read log entries",
+            "description": "Read every submitted entry, with its history, in the logbooks one reaches.",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "logbook.reports.view",
+            "name": "View reports and export",
+            "description": "Counts, summaries and CSV or PDF exports of the entries one can read.",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "logbook.audit.view",
+            "name": "View the Logbook audit trail",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        }
+    ],
+    "roles": [
+        {
+            "key": "logbook_contributor",
+            "name": "Contributor",
+            "description": "Writes and submits entries, and corrects returned ones.",
+            "sensitivity": 1,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": ["logbook.entries.create"]
+        },
+        {
+            "key": "logbook_reviewer",
+            "name": "Reviewer",
+            "description": "Reviews or returns entries written by others, and reads their history.",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": ["logbook.entries.review", "logbook.view"]
+        },
+        {
+            "key": "logbook_viewer",
+            "name": "Viewer",
+            "description": "Reads entries and reports; changes nothing.",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": ["logbook.view", "logbook.reports.view"]
+        },
+        {
+            "key": "logbook_auditor",
+            "name": "Auditor",
+            "description": "Reads entries, reports and the audit trail; changes nothing.",
+            "sensitivity": 2,
+            "delegable": false,
+            "scopes": ["organization"],
+            "permissions": [
+                "logbook.view",
+                "logbook.reports.view",
+                "logbook.audit.view"
+            ]
+        },
+        {
+            "key": "logbook_manager",
+            "name": "Manager",
+            "description": "Creates logbooks and log sheets, publishes templates, adds people and gives them Logbook roles, decides access, and reads every logbook and its reports.",
+            "sensitivity": 3,
+            "delegable": false,
+            "scopes": ["organization"],
+            "permissions": [
+                "logbook.manage",
+                "logbook.people.manage",
+                "logbook.view",
+                "logbook.reports.view"
+            ]
+        },
+        {
+            "key": "logbook_administrator",
+            "name": "Logbook administrator",
+            "description": "Everything in Logbook, including the audit trail.",
+            "sensitivity": 3,
+            "delegable": false,
+            "scopes": ["organization"],
+            "permissions": [
+                "logbook.manage",
+                "logbook.people.manage",
+                "logbook.entries.create",
+                "logbook.entries.review",
+                "logbook.view",
+                "logbook.reports.view",
+                "logbook.audit.view"
+            ]
+        }
+    ],
+    "separation_of_duties": [
+        {
+            "permissions": ["logbook.entries.create", "logbook.entries.review"],
+            "mode": "warn",
+            "description": "Logbook refuses review of one's own entry; one person holding both still needs a second reviewer for their own entries."
+        }
+    ]
+}

@@ -37,11 +37,11 @@ class ActivationCodeSent extends Notification implements ShouldQueue
     {
         $support = (string) config('platform.marketing.support_email');
         $restaurant = $this->product === 'restaurant';
-        $app = $restaurant ? 'Mataem Plus' : 'Tatook Pharmacy';
+        $app = $restaurant ? 'Mataem Plus' : 'Miles Pharmacy';
 
         return (new MailMessage)
             ->subject("Your {$app} activation code")
-            ->replyTo($support, 'Tatook')
+            ->replyTo($support, 'Miles Softwares')
             ->markdown('mail.activation-code', [
                 'code' => $this->code,
                 'device' => $this->device,

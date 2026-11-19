@@ -21,7 +21,7 @@ Work incrementally, following the phases below.
 
 **Software Brand:** Miles Global Softwares
 
-**Primary Domain:** milesoftwares.com
+**Primary Domain:** milessoftwares.com
 
 The platform must support:
 
@@ -48,22 +48,22 @@ Implement the following hostname structure:
 
 | Domain | Function |
 |---|---|
-| milesoftwares.com | Public marketing website |
-| www.milesoftwares.com | Redirect to primary website |
-| auth.milesoftwares.com | Central authentication, your businesses, new business |
-| app.milesoftwares.com | Retired: old links redirect to auth or the business host |
-| admin.milesoftwares.com | Internal system administration |
-| {business}.milesoftwares.com | Individual customer workspace: dashboard at /, settings, plans and billing under /manage |
+| milessoftwares.com | Public marketing website |
+| www.milessoftwares.com | Redirect to primary website |
+| auth.milessoftwares.com | Central authentication, your businesses, new business |
+| app.milessoftwares.com | Retired: old links redirect to auth or the business host |
+| admin.milessoftwares.com | Internal system administration |
+| {business}.milessoftwares.com | Individual customer workspace: dashboard at /, settings, plans and billing under /manage |
 
 Each registered business receives a unique subdomain.
 
 Examples:
 
-manggala.milesoftwares.com
+manggala.milessoftwares.com
 
-abcpharmacy.milesoftwares.com
+abcpharmacy.milessoftwares.com
 
-jubaschool.milesoftwares.com
+jubaschool.milessoftwares.com
 
 Within a business workspace, use module routing:
 
@@ -150,7 +150,7 @@ Keep module boundaries explicit through interfaces, services, policies, and doma
 
 Domain:
 
-milesoftwares.com
+milessoftwares.com
 
 Develop a professional public-facing software website.
 
@@ -207,7 +207,7 @@ Use a reusable product catalog rather than maintaining duplicated hardcoded prod
 
 Domain:
 
-auth.milesoftwares.com
+auth.milessoftwares.com
 
 Implement centralized identity management.
 
@@ -588,7 +588,7 @@ Provide reusable role and scope selection components.
 
 Domain:
 
-{business}.milesoftwares.com (/ and /manage/...), with the list of businesses at auth.milesoftwares.com/workspaces. app.milesoftwares.com is retired and redirects.
+{business}.milessoftwares.com (/ and /manage/...), with the list of businesses at auth.milessoftwares.com/workspaces. app.milessoftwares.com is retired and redirects.
 
 This is the customer-facing control panel.
 
@@ -619,7 +619,7 @@ The dashboard should link users to the correct business workspace.
 
 Example:
 
-manggala.milesoftwares.com
+manggala.milessoftwares.com
 
 ---
 
@@ -629,7 +629,7 @@ Each organization gets a unique workspace.
 
 Example:
 
-manggala.milesoftwares.com
+manggala.milessoftwares.com
 
 Build a workspace shell containing:
 
@@ -773,7 +773,7 @@ For example, purchasing may be centralized while pharmacy-specific medicine batc
 
 Domain:
 
-admin.milesoftwares.com
+admin.milessoftwares.com
 
 This application is strictly for Miles Global Softwares internal staff.
 

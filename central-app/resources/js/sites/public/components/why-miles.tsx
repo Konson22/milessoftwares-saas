@@ -7,8 +7,8 @@ import { button, container, display } from '@/sites/public/components/styles';
 type Reason = (typeof whyMiles)[number];
 
 /**
- * Why Tatook, on the home page: the four reasons around a
- * picture of the Tatook workspace on every screen, with dashed connectors
+ * Why Miles Softwares, on the home page: the four reasons around a
+ * picture of the Miles Softwares workspace on every screen, with dashed connectors
  * from each card to it. On small screens the picture sits between the
  * cards. Pale blue band, white
  * cards, the logo blue for icons and accents; no navy backgrounds.
@@ -25,17 +25,13 @@ export default function WhyMiles() {
             className="relative isolate overflow-hidden bg-site-soft"
         >
             {/* Faint dot grid behind the hub. */}
-            <div
-                aria-hidden
-                className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(var(--color-site-accent)_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)] bg-size-[22px_22px] opacity-15"
-            />
             <div className={`${container} py-20 sm:py-28`}>
                 <div className="mx-auto max-w-3xl text-center">
                     <h2
                         id="why-heading"
                         className={`${display} text-3xl sm:text-4xl lg:text-5xl`}
                     >
-                        Why <Accent>Tatook</Accent>
+                        Why <Accent>Miles Softwares</Accent>
                     </h2>
                     <p className="mt-5 text-base leading-relaxed text-slate-600 sm:text-lg">
                         Software made for the trade you run, on the screens you
@@ -99,7 +95,7 @@ function ReasonCard({
 
     return (
         <li
-            className={`group relative rounded-xl bg-white p-6 transition-transform duration-300 hover:-translate-y-1 sm:p-7 lg:after:absolute lg:after:top-1/2 lg:after:w-6 lg:after:border-t-2 lg:after:border-dashed lg:after:border-site-accent/40 lg:after:content-[''] ${connector}`}
+            className={`group relative rounded-xl bg-white p-6 transition-transform duration-300 hover:-translate-y-1 sm:p-7 lg:after:absolute lg:after:top-1/2 lg:after:w-6 lg:after:border-t-2 lg:after:border-dashed lg:after:border-site-accent lg:after:content-[''] ${connector}`}
         >
             <div className="flex items-center gap-4">
                 <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-site-accent text-white transition-transform duration-300 group-hover:scale-105">
@@ -110,7 +106,7 @@ function ReasonCard({
                 </h3>
                 <span
                     aria-hidden
-                    className="font-public-display text-3xl font-semibold text-site-accent/20 tabular-nums"
+                    className="font-public-display text-3xl font-semibold text-site-tint-strong tabular-nums"
                 >
                     {String(number).padStart(2, '0')}
                 </span>
@@ -138,7 +134,7 @@ function ReasonCard({
 }
 
 /**
- * The Tatook workspace on a laptop, tablet and phone with the trades around
+ * The Miles Softwares workspace on a laptop, tablet and phone with the trades around
  * it. Its white background multiplies into the band and the edges fade, so
  * it sits on the section with no frame.
  */
@@ -146,10 +142,10 @@ function Hub() {
     return (
         <figure className="mx-auto w-full max-w-md lg:w-[24rem] lg:max-w-none xl:w-[32rem]">
             <img
-                src="/images/home/tatook-ecosystem.webp"
-                srcSet="/images/home/tatook-ecosystem-700.webp 700w, /images/home/tatook-ecosystem.webp 1190w"
+                src="/images/home/miles-ecosystem.webp"
+                srcSet="/images/home/miles-ecosystem-700.webp 700w, /images/home/miles-ecosystem.webp 1190w"
                 sizes="(min-width: 1280px) 32rem, (min-width: 1024px) 24rem, 28rem"
-                alt="Tatook on a laptop, tablet and phone, joined to shop, team, device and cloud icons"
+                alt="Miles Softwares on a laptop, tablet and phone, joined to shop, team, device and cloud icons"
                 width={1190}
                 height={800}
                 loading="lazy"

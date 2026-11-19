@@ -31,7 +31,7 @@ beforeEach(function () {
         $importer->import(json_decode((string) file_get_contents(base_path("tests/Fixtures/catalogs/{$code}.json")), true));
     }
     if (! Application::query()->where('code', 'procurement')->exists()) {
-        Application::query()->create(['code' => 'procurement', 'name' => 'Tatook Procurement', 'category' => 'products', 'kind' => 'standalone', 'status' => 'beta']);
+        Application::query()->create(['code' => 'procurement', 'name' => 'Miles Procurement', 'category' => 'products', 'kind' => 'standalone', 'status' => 'beta']);
     }
     Application::query()->whereIn('code', NGO_APPS)->update(['status' => 'beta', 'trial_enabled' => true]);
     Application::query()->where('code', 'projects')->update(['route_prefix' => 'projects']);

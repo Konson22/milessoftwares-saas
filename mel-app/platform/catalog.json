@@ -1,12 +1,12 @@
 {
     "application": {
         "code": "mel",
-        "name": "Tatook M&E",
+        "name": "Miles M&E",
         "category": "products",
         "kind": "standalone",
         "status": "beta"
     },
-    "version": "2.0.0",
+    "version": "2.0.1",
     "permissions": [
         {
             "key": "mel.programmes.view",
@@ -32,7 +32,7 @@
         {
             "key": "mel.projects.link",
             "name": "Link reporting units to Projects",
-            "description": "Connects a reporting unit to a project kept in Tatook Projects. Projects stays the record of the project.",
+            "description": "Connects a reporting unit to a project kept in Miles Projects. Projects stays the record of the project.",
             "sensitivity": 2,
             "scopes": ["organization"]
         },

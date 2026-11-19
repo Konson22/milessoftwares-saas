@@ -46,7 +46,7 @@ maps `mel` to `mel-app` by default). What is specific to it:
 1. Database, owned by `miles_owner`: `sudo -u postgres psql -v db_name=mel -f ops/postgres/product-database.sql`.
 2. `/srv/miles/shared/products/mel/.env` (0600 `miles:miles`) from `mel-app/.env.example`:
    `APP_ENV=production`, `APP_DEBUG=false`, new `APP_KEY`, `DB_DATABASE=mel`,
-   `DB_USERNAME=miles_app`, `PLATFORM_ROOT_DOMAIN=tatook.com`, the `PLATFORM_*` client values.
+   `DB_USERNAME=miles_app`, `PLATFORM_ROOT_DOMAIN=milessoftwares.com`, the `PLATFORM_*` client values.
 3. Storage `/srv/miles/shared/products/mel/storage/{app,framework/{cache,sessions,views},logs}`.
    **Evidence files, import sheets and form attachments live in `storage/app/private`**: back it up
    with the database. A verified result's evidence cannot be uploaded again.

@@ -15,7 +15,7 @@ const apps: Record<
     { name: string; device: string; place: string; where: string; file: string }
 > = {
     pharmacy: {
-        name: 'Tatook Pharmacy',
+        name: 'Miles Pharmacy',
         device: 'PC',
         place: 'Pharmacy',
         where: 'On the PC, open Settings, Activation. Scanning its QR code with your phone fills them in here.',
@@ -47,7 +47,7 @@ type Props = {
 };
 
 /**
- * Activating Tatook Pharmacy on a PC, or Mataem Plus on a phone, with no
+ * Activating Miles Pharmacy on a PC, or Mataem Plus on a phone, with no
  * internet, from another device: the licence key, and the device's codes
  * (filled in by the app's QR code or link), give the activation code to
  * carry back.
@@ -206,7 +206,7 @@ function Done({
     return (
         <div className="space-y-5">
             <p className="flex items-center gap-2 text-lg font-semibold text-site-ink">
-                <CheckCircle2 className="size-5 text-emerald-600" aria-hidden />
+                <CheckCircle2 className="size-5 text-site-leaf" aria-hidden />
                 Activated for {app.device} {result.device}
             </p>
             <p className="text-sm text-slate-600">

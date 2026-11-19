@@ -3,6 +3,7 @@
 use App\Sites\Central\Http\Controllers\Api\AppBranchController;
 use App\Sites\Central\Http\Controllers\Api\AppInvitationController;
 use App\Sites\Central\Http\Controllers\Api\AppOrganizationController;
+use App\Sites\Central\Http\Controllers\Api\AppPeopleController;
 use App\Sites\Central\Http\Controllers\Api\IntegrationController;
 use App\Sites\Central\Http\Controllers\Api\LicenceActivationController;
 use App\Sites\Central\Http\Controllers\Api\MemberAccountController;
@@ -62,6 +63,21 @@ Route::prefix('api/v1')->middleware('throttle:600,1')->name('api.')->group(funct
     Route::post('member-accounts', [MemberAccountController::class, 'store'])
         ->middleware(['api.client:members.write', 'throttle:30,60'])
         ->name('member-accounts.store');
+
+    // An application looking after its own people from its own screens
+    // (platform.application_people_managers: Logbook's Manager).
+    Route::prefix('people')->name('people.')->group(function () {
+        Route::middleware('api.client:access.read')->group(function () {
+            Route::get('members', [AppPeopleController::class, 'members'])->name('members');
+            Route::get('invitations', [AppPeopleController::class, 'invitations'])->name('invitations.index');
+        });
+        Route::middleware(['api.client:members.write', 'throttle:60,1'])->group(function () {
+            Route::post('invitations', [AppPeopleController::class, 'invite'])->name('invitations.store');
+            Route::post('invitations/{invitation}/cancel', [AppPeopleController::class, 'cancelInvitation'])->whereUuid('invitation')->name('invitations.cancel');
+            Route::post('roles', [AppPeopleController::class, 'assign'])->name('roles.store');
+            Route::post('roles/revoke', [AppPeopleController::class, 'revoke'])->name('roles.revoke');
+        });
+    });
 
     // A workspace one organization creates for another (a donor for its
     // grantee), waiting for its owner to claim it.

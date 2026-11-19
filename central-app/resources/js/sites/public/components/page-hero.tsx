@@ -52,7 +52,7 @@ export default function PageHero({
 }
 
 /**
- * The dark green opening band of the main pages: the title, the intro and
+ * The deep blue opening band of the main pages: the title, the intro and
  * up to a few actions, with `aside` beside them from `lg` (a picture, or
  * links). `asideClassName` decides where the aside shows; by default only
  * from `lg`, as pictures are decorative.
@@ -71,7 +71,7 @@ export function DarkHero({
     asideClassName?: string;
 }) {
     return (
-        <section className="site-dark relative isolate overflow-hidden bg-[radial-gradient(circle_at_78%_40%,#11512b,#063519_55%,#032a16_100%)]">
+        <section className="site-dark relative isolate overflow-hidden bg-site-accent-deep">
             <HeroBackdrop />
             <div
                 className={`${container} grid items-center gap-10 pt-24 pb-12 sm:pt-28 sm:pb-14 ${aside ? 'lg:grid-cols-[1.05fr_1fr]' : ''}`}
@@ -101,13 +101,13 @@ export function DarkHero({
 }
 
 /**
- * A faint dot grid that fades out towards the copy, behind a light hero.
+ * A pale dot grid on the side away from the copy, behind a light hero.
  * Decorative only.
  */
 export function GridBackdrop() {
     return (
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-            <div className="site-dots absolute inset-y-0 right-0 w-full [mask-image:linear-gradient(to_left,black,transparent_75%)] text-site-accent/15 lg:w-2/3" />
+            <div className="site-dots absolute inset-y-0 right-0 hidden w-1/2 text-site-tint-strong lg:block" />
         </div>
     );
 }
@@ -119,10 +119,10 @@ export function GridBackdrop() {
 export function LightBackdrop() {
     return (
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-            <div className="absolute top-16 right-[7%] hidden size-28 rounded-full border-2 border-dashed border-site-highlight/30 md:block" />
-            <div className="site-float absolute top-[22%] left-[6%] hidden size-4 rounded-full bg-site-highlight/70 md:block" />
-            <div className="site-float-slow absolute right-[16%] bottom-[18%] hidden size-3 rounded-full bg-site-navy/40 md:block" />
-            <div className="site-dots absolute bottom-6 left-[12%] hidden h-24 w-40 text-site-accent/20 md:block" />
+            <div className="absolute top-16 right-[7%] hidden size-28 rounded-full border-2 border-dashed border-site-tint-strong md:block" />
+            <div className="site-float absolute top-[22%] left-[6%] hidden size-4 rounded-full bg-site-highlight md:block" />
+            <div className="site-float-slow absolute right-[16%] bottom-[18%] hidden size-3 rounded-full bg-site-highlight md:block" />
+            <div className="site-dots absolute bottom-6 left-[12%] hidden h-24 w-40 text-site-tint-strong md:block" />
         </div>
     );
 }
@@ -135,8 +135,8 @@ export function HeroBackdrop() {
     return (
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
             <Constellation />
-            <div className="absolute top-28 left-[6%] hidden size-40 rounded-full border border-site-highlight/25 md:block" />
-            <div className="site-dots absolute bottom-16 left-[10%] h-24 w-40 text-white/15" />
+            <div className="absolute top-28 left-[6%] hidden size-40 rounded-full border border-site-tint-strong md:block" />
+            <div className="site-dots absolute bottom-16 left-[10%] h-24 w-40 text-site-navy-line" />
         </div>
     );
 }
@@ -186,9 +186,9 @@ function Constellation() {
         <svg
             viewBox="0 0 1200 600"
             preserveAspectRatio="xMidYMid slice"
-            className="absolute inset-0 size-full text-white"
+            className="absolute inset-0 size-full text-[#1d4cb0]"
         >
-            <g stroke="currentColor" strokeOpacity="0.09" strokeWidth="1">
+            <g stroke="currentColor" strokeWidth="1">
                 {links.map(([x1, y1, x2, y2]) => (
                     <line
                         key={`${x1}-${y1}-${x2}-${y2}`}
@@ -205,12 +205,7 @@ function Constellation() {
                     cx={x}
                     cy={y}
                     r={i % 4 === 0 ? 2.6 : 1.6}
-                    fill="currentColor"
-                    className="site-twinkle"
-                    style={{
-                        opacity: 0.5,
-                        animationDelay: `${(i % 7) * 0.6}s`,
-                    }}
+                    fill={i % 4 === 0 ? '#01c5fd' : '#3d6fd6'}
                 />
             ))}
         </svg>
@@ -258,7 +253,7 @@ export function IconBox({
 export function SpeedMark({ className = '' }: { className?: string }) {
     return (
         <span aria-hidden className={`flex items-center gap-1.5 ${className}`}>
-            <span className="h-1.5 w-3 rounded-full bg-site-navy in-[.site-dark]:bg-white/40" />
+            <span className="h-1.5 w-3 rounded-full bg-site-navy in-[.site-dark]:bg-site-highlight" />
             <span className="h-1.5 w-6 rounded-full bg-site-accent-ink in-[.site-dark]:bg-site-highlight" />
             <span className="h-1.5 w-10 rounded-full bg-site-accent" />
         </span>

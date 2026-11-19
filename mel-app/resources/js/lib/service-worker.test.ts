@@ -15,7 +15,7 @@ function load() {
     const listeners: Record<string, Listener> = {};
     const stored: string[] = [];
     const self: Record<string, unknown> = {
-        location: { href: 'https://acme.tatook.com/mel/sw.js' },
+        location: { href: 'https://acme.milessoftwares.com/mel/sw.js' },
         addEventListener: (name: string, fn: Listener) => {
             listeners[name] = fn;
         },
@@ -61,11 +61,11 @@ describe('the service worker', () => {
     it('caches static build files, the icons and the offline page', () => {
         const { cacheable } = load();
         for (const url of [
-            'https://acme.tatook.com/mel/build/assets/app-3f9a1c.js',
-            'https://acme.tatook.com/mel/build/assets/app-3f9a1c.css',
-            'https://acme.tatook.com/mel/build/assets/inter-latin.woff2',
-            'https://acme.tatook.com/mel/icons/icon-192.png',
-            'https://acme.tatook.com/mel/offline.html',
+            'https://acme.milessoftwares.com/mel/build/assets/app-3f9a1c.js',
+            'https://acme.milessoftwares.com/mel/build/assets/app-3f9a1c.css',
+            'https://acme.milessoftwares.com/mel/build/assets/inter-latin.woff2',
+            'https://acme.milessoftwares.com/mel/icons/icon-192.png',
+            'https://acme.milessoftwares.com/mel/offline.html',
         ]) {
             expect(cacheable(get(url)), url).toBe(true);
         }
@@ -74,17 +74,17 @@ describe('the service worker', () => {
     it('never caches pages, data, the API, exports or photos', () => {
         const { cacheable } = load();
         for (const url of [
-            'https://acme.tatook.com/mel',
-            'https://acme.tatook.com/mel/',
-            'https://acme.tatook.com/mel/collect/submissions',
-            'https://acme.tatook.com/mel/collect/submissions/01936f5e-0000-7000-8000-000000000000',
-            'https://acme.tatook.com/mel/collect/submissions/x/photos/y',
-            'https://acme.tatook.com/mel/collect/exports/x/download',
-            'https://acme.tatook.com/mel/api/v1/collect/assignments',
-            'https://acme.tatook.com/mel/integration/v1/projects/x/verified-results',
-            'https://acme.tatook.com/mel/build/manifest.json',
-            'https://acme.tatook.com/mel/build/assets/app.js?v=1',
-            'https://acme.tatook.com/finance/build/assets/app.js',
+            'https://acme.milessoftwares.com/mel',
+            'https://acme.milessoftwares.com/mel/',
+            'https://acme.milessoftwares.com/mel/collect/submissions',
+            'https://acme.milessoftwares.com/mel/collect/submissions/01936f5e-0000-7000-8000-000000000000',
+            'https://acme.milessoftwares.com/mel/collect/submissions/x/photos/y',
+            'https://acme.milessoftwares.com/mel/collect/exports/x/download',
+            'https://acme.milessoftwares.com/mel/api/v1/collect/assignments',
+            'https://acme.milessoftwares.com/mel/integration/v1/projects/x/verified-results',
+            'https://acme.milessoftwares.com/mel/build/manifest.json',
+            'https://acme.milessoftwares.com/mel/build/assets/app.js?v=1',
+            'https://acme.milessoftwares.com/finance/build/assets/app.js',
             'https://evil.example/mel/build/assets/app.js',
         ]) {
             expect(cacheable(get(url)), url).toBe(false);
@@ -92,7 +92,7 @@ describe('the service worker', () => {
         expect(
             cacheable({
                 method: 'POST',
-                url: 'https://acme.tatook.com/mel/build/assets/app.js',
+                url: 'https://acme.milessoftwares.com/mel/build/assets/app.js',
             }),
         ).toBe(false);
     });
@@ -107,10 +107,10 @@ describe('the service worker', () => {
         });
         await done;
         expect(stored).toEqual([
-            'https://acme.tatook.com/mel/offline.html',
-            'https://acme.tatook.com/mel/icons/icon-192.png',
-            'https://acme.tatook.com/mel/icons/icon-512.png',
-            'https://acme.tatook.com/mel/manifest.webmanifest',
+            'https://acme.milessoftwares.com/mel/offline.html',
+            'https://acme.milessoftwares.com/mel/icons/icon-192.png',
+            'https://acme.milessoftwares.com/mel/icons/icon-512.png',
+            'https://acme.milessoftwares.com/mel/manifest.webmanifest',
         ]);
     });
 
@@ -121,7 +121,7 @@ describe('the service worker', () => {
             request: {
                 method: 'GET',
                 mode: 'cors',
-                url: 'https://acme.tatook.com/mel/collect/submissions',
+                url: 'https://acme.milessoftwares.com/mel/collect/submissions',
             },
             respondWith: () => {
                 answered = true;

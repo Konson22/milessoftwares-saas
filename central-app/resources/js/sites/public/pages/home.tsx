@@ -105,13 +105,9 @@ function highlights(trialDays: number): {
  */
 function ApplicationTiles() {
     return (
-        <div className="site-dark relative isolate overflow-hidden rounded-xl bg-[radial-gradient(circle_at_30%_20%,#11512b,#063519_60%,#032a16)] p-4 shadow-2xl shadow-site-night/20 sm:p-8">
-            <div
-                aria-hidden
-                className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(#a3e63526_1px,transparent_1px)] bg-size-[22px_22px]"
-            />
+        <div className="site-dark relative isolate overflow-hidden rounded-xl bg-site-navy p-4 shadow-2xl shadow-site-night/20 sm:p-8">
             <ul
-                aria-label="Areas of a business Tatook connects"
+                aria-label="Areas of a business Miles Softwares connects"
                 className="grid grid-cols-4 gap-2 sm:gap-4"
             >
                 {heroApplications.map((app) => {
@@ -133,14 +129,14 @@ function ApplicationTiles() {
                         </>
                     );
                     const box =
-                        'group block h-full rounded-lg bg-white/5 px-1 py-3 ring-1 ring-white/10 transition-colors sm:px-2 sm:py-5';
+                        'group block h-full rounded-lg bg-site-navy-light px-1 py-3 ring-1 ring-site-navy-line transition-colors sm:px-2 sm:py-5';
 
                     return (
                         <li key={app.id}>
                             {app.href ? (
                                 <Link
                                     href={app.href}
-                                    className={`${box} hover:bg-white/10 hover:ring-site-highlight/60 focus-visible:outline-2 focus-visible:outline-site-highlight`}
+                                    className={`${box} hover:bg-site-navy-light hover:ring-site-highlight focus-visible:outline-2 focus-visible:outline-site-highlight`}
                                 >
                                     {tile}
                                 </Link>
@@ -170,10 +166,10 @@ export default function MarketingHome({
     return (
         <>
             <Seo
-                // Brand first, then what it is, so "Tatook" is read as ERP
+                // Brand first, then what it is, so "Miles Softwares" is read as ERP
                 // and business software rather than a misspelt "tattoo".
-                title="Tatook | ERP & Business Software for Pharmacy, Retail, Finance & HR"
-                description="Tatook is ERP and business software by Miles Global Link: pharmacy, retail, restaurant and school ERPs with accounting, HR and payroll under one account."
+                title="Miles Softwares | ERP Software for Pharmacy, Retail, Finance & HR"
+                description="Miles Softwares is ERP and business software by Miles Global Link: pharmacy, retail, restaurant and school ERPs with accounting, HR and payroll under one account."
                 canonical={canonical}
                 jsonLd={{
                     '@context': 'https://schema.org',
@@ -184,7 +180,7 @@ export default function MarketingHome({
                             '@type': 'WebSite',
                             '@id': `${origin}/#website`,
                             name: siteName,
-                            alternateName: 'Tatook ERP',
+                            alternateName: 'Miles ERP',
                             url: `${origin}/`,
                             publisher: { '@id': `${origin}/#organization` },
                         },
@@ -198,12 +194,8 @@ export default function MarketingHome({
               the tablet up, and above the copy on phones. The page then
               alternates light and dark bands down to the closing call.
             */}
-            <section className="site-dark relative overflow-hidden bg-[radial-gradient(circle_at_75%_45%,#11512b,#063519_56%,#032a16_100%)]">
+            <section className="site-dark relative overflow-hidden bg-site-accent-deep">
                 {/* Faint dot grid, strongest behind the illustration. */}
-                <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 bg-[radial-gradient(#a3e63533_1px,transparent_1px)] mask-[radial-gradient(ellipse_at_75%_45%,black,transparent_65%)] bg-size-[24px_24px]"
-                />
                 <div
                     className={`${container} relative grid items-center gap-8 pt-24 pb-20 sm:pt-28 sm:pb-24 md:grid-cols-[46fr_54fr] md:gap-6 lg:grid-cols-[48fr_52fr] lg:gap-10 lg:pt-32 lg:pb-28`}
                 >
@@ -218,7 +210,7 @@ export default function MarketingHome({
                         </h1>
                         <p className="site-rise mt-5 max-w-[35rem] text-base leading-relaxed text-pretty text-slate-300 [animation-delay:120ms] sm:text-[1.0625rem] lg:text-lg">
                             Pharmacy, retail, finance and HR, connected under
-                            one Tatook account.
+                            one Miles Softwares account.
                         </p>
                         <div className="site-rise mt-8 flex flex-wrap items-center gap-3 [animation-delay:220ms]">
                             <a href="#products" className={button.primary}>
@@ -248,7 +240,7 @@ export default function MarketingHome({
                         <li key={item.href}>
                             <Link
                                 href={item.href}
-                                className="group flex h-full items-start gap-4 rounded-lg bg-white p-6 shadow-xl ring-1 shadow-site-night/10 ring-site-line transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-2xl hover:ring-site-accent/40"
+                                className="group flex h-full items-start gap-4 rounded-lg bg-white p-6 shadow-xl ring-1 shadow-site-night/10 ring-site-line transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-2xl hover:ring-site-accent"
                             >
                                 <IconBox icon={item.icon} index={i} />
                                 <span className="flex-1">
@@ -272,7 +264,7 @@ export default function MarketingHome({
                 </ul>
             </div>
 
-            {/* 2. Tatook Products: the whole family in one picture; each product is on the Products page. */}
+            {/* 2. Miles Products: the whole family in one picture; each product is on the Products page. */}
             <section
                 id="products"
                 aria-labelledby="products-heading"
@@ -299,9 +291,9 @@ export default function MarketingHome({
                         <p className="mt-4 max-w-xl text-base leading-relaxed text-pretty text-slate-600">
                             From managing sales and inventory to handling
                             financial operations, customer relationships, and
-                            other essential business activities, Tatook provides
-                            reliable, scalable, and easy-to-use solutions for
-                            modern organizations.
+                            other essential business activities, Miles Softwares
+                            provides reliable, scalable, and easy-to-use
+                            solutions for modern organizations.
                         </p>
                         <Link
                             href="/products"
@@ -314,11 +306,11 @@ export default function MarketingHome({
                 </div>
             </section>
 
-            {/* 3. Tatook Workspace */}
+            {/* 3. Miles Workspace */}
             <section
                 id="cloud"
                 aria-labelledby="cloud-heading"
-                className="site-dark relative isolate scroll-mt-24 overflow-hidden bg-[radial-gradient(circle_at_85%_0%,#11512b,#063519_55%,#032a16)] text-slate-300"
+                className="site-dark relative isolate scroll-mt-24 overflow-hidden bg-site-navy text-slate-300"
             >
                 <div className={`${container} py-20 sm:py-28`}>
                     <div className="flex flex-wrap items-end justify-between gap-6">
@@ -333,12 +325,12 @@ export default function MarketingHome({
                                         </Accent>
                                     </>
                                 }
-                                lead="Your organization gets one workspace for every Tatook application: one account, one team and one set of permissions, whichever applications you use."
+                                lead="Your organization gets one workspace for every Miles Softwares application: one account, one team and one set of permissions, whichever applications you use."
                                 align="left"
                             />
                         </div>
                         <Link href="/platform" className={button.outlineDark}>
-                            Explore Tatook Workspace
+                            Explore Miles Workspace
                         </Link>
                     </div>
                     <div className="mt-14">
@@ -351,7 +343,7 @@ export default function MarketingHome({
             <section
                 id="custom"
                 aria-labelledby="custom-heading"
-                className="relative scroll-mt-24 overflow-hidden bg-gradient-to-b from-white via-site-wash/60 to-white"
+                className="relative scroll-mt-24 overflow-hidden bg-site-wash"
             >
                 <div className={`${container} py-20 sm:py-28`}>
                     <div className="grid items-center gap-12 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
@@ -373,7 +365,7 @@ export default function MarketingHome({
                                 {customSteps.map((step) => (
                                     <li
                                         key={step.title}
-                                        className="rounded-lg bg-white/70 p-4 ring-1 ring-site-line"
+                                        className="rounded-lg bg-white p-4 ring-1 ring-site-line"
                                     >
                                         <step.icon
                                             className="size-5 text-site-accent-ink"
@@ -462,7 +454,7 @@ export default function MarketingHome({
                     </div>
                     <Link
                         href="/downloads"
-                        className="group mt-10 flex flex-wrap items-center gap-x-6 gap-y-4 rounded-lg border border-site-line bg-white p-6 shadow-sm transition-[border-color,box-shadow] hover:border-site-accent/40 hover:shadow-lg hover:shadow-site-night/5 sm:p-8"
+                        className="group mt-10 flex flex-wrap items-center gap-x-6 gap-y-4 rounded-lg border border-site-line bg-white p-6 shadow-sm transition-[border-color,box-shadow] hover:border-site-accent hover:shadow-lg hover:shadow-site-night/5 sm:p-8"
                     >
                         <span className="flex -space-x-2" aria-hidden>
                             <span className="inline-flex size-11 items-center justify-center rounded-xl bg-white text-site-accent-ink ring-1 ring-site-line">
@@ -493,14 +485,14 @@ export default function MarketingHome({
                 </div>
             </section>
 
-            {/* 6. Why Tatook */}
+            {/* 6. Why Miles Softwares */}
             <WhyMiles />
 
             {/* 7. How we work */}
             <section
                 id="how-it-works"
                 aria-labelledby="how-heading"
-                className="site-dark relative isolate scroll-mt-24 overflow-hidden bg-[radial-gradient(circle_at_15%_100%,#11512b,#063519_55%,#032a16)] text-slate-300"
+                className="site-dark relative isolate scroll-mt-24 overflow-hidden bg-site-navy text-slate-300"
             >
                 <div className={`${container} py-20 sm:py-28`}>
                     <SectionHeading
@@ -516,7 +508,7 @@ export default function MarketingHome({
                         {howItWorks.map((step, i) => (
                             <li
                                 key={step.title}
-                                className="rounded-lg bg-white/5 p-6 ring-1 ring-white/10"
+                                className="rounded-lg bg-site-navy-light p-6 ring-1 ring-site-navy-line"
                             >
                                 <span className="inline-flex size-10 items-center justify-center rounded-full bg-site-highlight font-public-display text-sm font-semibold text-site-night">
                                     {ordinal(i)}

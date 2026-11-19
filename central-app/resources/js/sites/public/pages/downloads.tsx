@@ -66,7 +66,7 @@ const platforms: {
     {
         id: 'android',
         title: 'Android',
-        lead: 'Counter apps for Android phones and tablets. They sign in to your Tatook workspace.',
+        lead: 'Counter apps for Android phones and tablets. They sign in to your Miles Softwares workspace.',
         icon: Smartphone,
     },
 ];
@@ -102,15 +102,15 @@ export default function Downloads({ apps, canonical }: Props) {
     return (
         <>
             <Seo
-                title="Download the Tatook apps"
-                description="Download Tatook for Windows and Android: pharmacy and shop counters that work online or fully offline, the restaurant app and mobile counters."
+                title="Download the Miles Softwares apps"
+                description="Download Miles Softwares for Windows and Android: pharmacy and shop counters that work online or fully offline, the restaurant app and mobile counters."
                 canonical={canonical}
             />
 
             <DarkHero
                 title={
                     <>
-                        Get the Tatook apps.{' '}
+                        Get the Miles Softwares apps.{' '}
                         <Accent>For Windows and Android.</Accent>
                     </>
                 }
@@ -142,7 +142,7 @@ export default function Downloads({ apps, canonical }: Props) {
                 >
                     <div className={`${container} py-16 sm:py-24`}>
                         <div className="flex items-center gap-4">
-                            <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-2xl bg-linear-160 from-[#0a5a26] to-[#032a16] text-site-highlight shadow-lg shadow-site-night/20">
+                            <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-2xl bg-site-navy text-site-highlight shadow-lg shadow-site-night/20">
                                 <platform.icon className="size-7" aria-hidden />
                             </span>
                             <div>
@@ -183,7 +183,7 @@ export default function Downloads({ apps, canonical }: Props) {
                             <Accent>Start with a free trial.</Accent>
                         </>
                     }
-                    body="The workspace apps sign in to your Tatook workspace. Create one in a few minutes, then install the app on your counter. The offline pharmacy needs no workspace at all."
+                    body="The workspace apps sign in to your Miles Softwares workspace. Create one in a few minutes, then install the app on your counter. The offline pharmacy needs no workspace at all."
                 >
                     <Link href="/start" className={button.light}>
                         Get Started
@@ -207,14 +207,10 @@ function AppCard({ app }: { app: App }) {
         <article
             className={`${cardSurface} group flex h-full flex-col overflow-hidden`}
         >
-            <div className="site-dark relative flex items-end gap-4 overflow-hidden bg-linear-160 from-[#0a5a26] via-[#063519] to-[#032a16] px-6 pt-8 pb-6 sm:px-8">
+            <div className="site-dark relative flex items-end gap-4 overflow-hidden bg-site-navy px-6 pt-8 pb-6 sm:px-8">
                 <span
                     aria-hidden
-                    className="absolute inset-0 bg-[radial-gradient(rgb(255_255_255/0.12)_1px,transparent_1.5px)] [background-size:14px_14px] [mask-image:linear-gradient(to_left,black,transparent_70%)]"
-                />
-                <span
-                    aria-hidden
-                    className="relative inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-site-highlight ring-1 ring-white/15"
+                    className="relative inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-site-navy-light text-site-highlight ring-1 ring-site-navy-line"
                 >
                     <PlatformIcon className="size-6" />
                 </span>
@@ -358,7 +354,8 @@ const topics: {
                     </li>
                 </ol>
                 <p className="mt-3">
-                    Only install Tatook apps downloaded from tatook.com.
+                    Only install Miles Softwares apps downloaded from
+                    milesoftwares.com.
                 </p>
             </>
         ),
@@ -370,7 +367,7 @@ const topics: {
         body: (
             <>
                 <p>
-                    Tatook Pharmacy for Windows asks how you want to work the
+                    Miles Pharmacy for Windows asks how you want to work the
                     first time it opens:
                 </p>
                 <ul className="mt-3 list-disc space-y-1.5 pl-5">
@@ -381,10 +378,11 @@ const topics: {
                         licence key. Back it up from Settings, Backups.
                     </li>
                     <li>
-                        <strong>With my Tatook workspace:</strong> sign in with
-                        your Tatook account and choose the workspace and branch.
-                        Sales made while the internet is down are sent once it
-                        is back. Shops sign in to Tatook Retail the same way.
+                        <strong>With my Miles Softwares workspace:</strong> sign
+                        in with your Miles Softwares account and choose the
+                        workspace and branch. Sales made while the internet is
+                        down are sent once it is back. Shops sign in to Miles
+                        Retail the same way.
                     </li>
                 </ul>
             </>
@@ -410,7 +408,7 @@ const topics: {
                         <strong>Without internet on that PC:</strong> scan the
                         QR code with your phone, or open{' '}
                         <Link href="/activate" className={textLink}>
-                            tatook.com/activate
+                            milesoftwares.com/activate
                         </Link>{' '}
                         and enter the device code the app shows. Type the
                         activation code you get back into the app, or open the
@@ -468,8 +466,8 @@ const topics: {
                     browser to install apps, then go back and choose Install.
                 </li>
                 <li>
-                    Open the app and sign in with your Tatook account. Apps from
-                    Google Play, when listed, update by themselves.
+                    Open the app and sign in with your Miles Softwares account.
+                    Apps from Google Play, when listed, update by themselves.
                 </li>
             </ol>
         ),
@@ -523,10 +521,10 @@ function SetupHelp() {
                             key={topic.id}
                             id={topic.id}
                             aria-labelledby={`${topic.id}-heading`}
-                            className="scroll-mt-24 rounded-xl bg-white p-6 shadow-[0_1px_2px_rgb(5_69_27/0.06),0_10px_30px_-12px_rgb(5_69_27/0.18)] ring-1 ring-site-line sm:p-8"
+                            className="scroll-mt-24 rounded-xl bg-white p-6 shadow-[0_1px_2px_rgb(0_27_72/0.06),0_10px_30px_-12px_rgb(0_27_72/0.18)] ring-1 ring-site-line sm:p-8"
                         >
                             <div className="flex items-center gap-3">
-                                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-linear-160 from-[#0a5a26] to-[#032a16] text-site-highlight">
+                                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-site-navy text-site-highlight">
                                     <Icon className="size-5" aria-hidden />
                                 </span>
                                 <h3
@@ -580,7 +578,7 @@ function ReleaseNotes({ apps }: { apps: App[] }) {
                                 className="grid scroll-mt-24 gap-6 rounded-xl bg-white p-6 ring-1 ring-site-line sm:p-8 lg:grid-cols-[1fr_2fr] lg:gap-16"
                             >
                                 <div className="flex items-start gap-3">
-                                    <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-site-accent/10 text-site-accent-ink">
+                                    <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-site-tint text-site-accent-ink">
                                         <PlatformIcon
                                             className="size-5"
                                             aria-hidden
@@ -648,7 +646,7 @@ function ReleaseEntry({
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <h4 className="font-semibold">Version {release.version}</h4>
                 {latest && (
-                    <span className="rounded-full bg-site-accent/10 px-2.5 py-0.5 text-xs font-semibold text-site-accent-ink">
+                    <span className="rounded-full bg-site-tint px-2.5 py-0.5 text-xs font-semibold text-site-accent-ink">
                         Latest
                     </span>
                 )}
@@ -688,11 +686,9 @@ function ReleaseEntry({
 function DevicesPicture() {
     return (
         <div aria-hidden className="relative mx-auto max-w-lg py-6">
-            <div className="absolute top-1/2 left-1/2 size-80 -translate-1/2 rounded-full bg-site-accent/20 blur-3xl" />
-
             {/* The PC: a window with the counter. */}
-            <div className="relative overflow-hidden rounded-lg bg-white shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] ring-1 ring-white/20">
-                <div className="flex items-center gap-2 bg-[#04381a] px-4 py-2.5">
+            <div className="relative overflow-hidden rounded-lg bg-white shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] ring-1 ring-site-navy-line">
+                <div className="flex items-center gap-2 bg-site-night px-4 py-2.5">
                     <span className="aspect-square w-3 bg-site-highlight [clip-path:polygon(0_0,100%_0,58%_50%,58%_100%,26%_100%,26%_50%,0_50%)]" />
                     <span className="text-xs font-semibold text-white">
                         Counter
@@ -701,7 +697,7 @@ function DevicesPicture() {
                         {[0, 1, 2].map((i) => (
                             <i
                                 key={i}
-                                className="size-2 rounded-full bg-white/35"
+                                className="size-2 rounded-full bg-site-navy-line"
                             />
                         ))}
                     </span>
@@ -714,7 +710,7 @@ function DevicesPicture() {
                                 className="flex aspect-[4/3] flex-col justify-end gap-1 rounded-lg bg-white p-2 ring-1 ring-site-line"
                             >
                                 <i className="h-1.5 w-4/5 rounded-full bg-site-line" />
-                                <i className="h-1.5 w-1/2 rounded-full bg-site-accent/40" />
+                                <i className="h-1.5 w-1/2 rounded-full bg-site-tint-strong" />
                             </span>
                         ))}
                     </div>
@@ -734,11 +730,11 @@ function DevicesPicture() {
             </div>
 
             {/* The phone, in front. */}
-            <div className="absolute -right-2 -bottom-4 w-32 rotate-[6deg] rounded-[1.75rem] bg-[#0b1f14] p-1.5 shadow-[0_24px_48px_-12px_rgb(0_0_0/0.7)] ring-1 ring-white/15 xl:-right-6">
+            <div className="absolute -right-2 -bottom-4 w-32 rotate-[6deg] rounded-[1.75rem] bg-site-ink p-1.5 shadow-[0_24px_48px_-12px_rgb(0_0_0/0.7)] ring-1 ring-site-navy-line xl:-right-6">
                 <div className="overflow-hidden rounded-[1.4rem] bg-site-soft">
-                    <div className="bg-[#04381a] px-3 pt-3 pb-2">
-                        <i className="mx-auto block h-1 w-8 rounded-full bg-white/30" />
-                        <i className="mt-2 block h-1.5 w-12 rounded-full bg-white/60" />
+                    <div className="bg-site-night px-3 pt-3 pb-2">
+                        <i className="mx-auto block h-1 w-8 rounded-full bg-site-navy-line" />
+                        <i className="mt-2 block h-1.5 w-12 rounded-full bg-slate-300" />
                     </div>
                     <div className="space-y-1.5 p-2.5">
                         {[0, 1, 2, 3].map((i) => (
@@ -746,7 +742,7 @@ function DevicesPicture() {
                                 key={i}
                                 className="flex items-center gap-1.5 rounded-md bg-white p-1.5 ring-1 ring-site-line"
                             >
-                                <i className="size-3 rounded bg-site-accent/30" />
+                                <i className="size-3 rounded bg-site-tint-strong" />
                                 <i className="h-1.5 flex-1 rounded-full bg-site-line" />
                             </span>
                         ))}

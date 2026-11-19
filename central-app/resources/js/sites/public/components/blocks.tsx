@@ -29,7 +29,7 @@ export function FeatureGrid({
             {features.map(({ icon, title, body }, i) => (
                 <li
                     key={title}
-                    className="flex items-start gap-4 border-t border-site-line pt-6 text-site-ink in-[.site-dark]:border-white/15 in-[.site-dark]:text-white sm:flex-col sm:gap-0"
+                    className="flex items-start gap-4 border-t border-site-line pt-6 text-site-ink in-[.site-dark]:border-site-navy-line in-[.site-dark]:text-white sm:flex-col sm:gap-0"
                 >
                     <IconBox icon={icon} index={i} />
                     <div>
@@ -47,7 +47,7 @@ export function FeatureGrid({
 }
 
 /**
- * Features as cards: a dark green icon chip, title and a sentence or two
+ * Features as cards: a navy icon chip, title and a sentence or two
  * on a white card that lifts on hover. Five features in three columns
  * become two wide cards over three.
  */
@@ -74,7 +74,7 @@ export function FeatureCards({
                     key={title}
                     className={`${cardSurface} group p-6 sm:p-7 ${bento ? (i < 2 ? 'lg:col-span-3' : 'lg:col-span-2') : ''}`}
                 >
-                    <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-linear-160 from-[#0a5a26] to-[#032a16] text-site-highlight shadow-md shadow-site-night/20 motion-safe:transition-transform motion-safe:duration-300 group-hover:-rotate-6">
+                    <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-site-navy text-site-highlight shadow-md shadow-site-night/20 motion-safe:transition-transform motion-safe:duration-300 group-hover:-rotate-6">
                         <Icon className="size-6" aria-hidden />
                     </span>
                     <Heading className="mt-5 text-lg font-semibold text-site-ink">
@@ -91,13 +91,13 @@ export function FeatureCards({
 
 /** The white card surface of the redesigned pages, with a hover lift. */
 export const cardSurface =
-    'rounded-xl bg-white ring-1 ring-site-line shadow-[0_1px_2px_rgb(5_69_27/0.06),0_10px_30px_-12px_rgb(5_69_27/0.18)] transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgb(5_69_27/0.08),0_24px_48px_-16px_rgb(5_69_27/0.3)]';
+    'rounded-xl bg-white ring-1 ring-site-line shadow-[0_1px_2px_rgb(0_27_72/0.06),0_10px_30px_-12px_rgb(0_27_72/0.18)] transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgb(0_27_72/0.08),0_24px_48px_-16px_rgb(0_27_72/0.3)]';
 
 /** Two digits, as numbered steps read: 01, 02, … */
 const ordinal = (i: number) => String(i + 1).padStart(2, '0');
 
 /**
- * Numbered steps on a dark green band: a heading, the steps in a row of
+ * Numbered steps on a navy band: a heading, the steps in a row of
  * cards joined by a dashed line, and optional actions under them.
  */
 export function StepBand({
@@ -118,7 +118,7 @@ export function StepBand({
     return (
         <section
             aria-labelledby={`${id}-heading`}
-            className={`site-dark relative isolate overflow-hidden bg-[radial-gradient(circle_at_15%_100%,#11512b,#063519_55%,#032a16)] text-slate-300 ${className}`}
+            className={`site-dark relative isolate overflow-hidden bg-site-navy text-slate-300 ${className}`}
         >
             <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
                 <SectionHeading
@@ -130,12 +130,12 @@ export function StepBand({
                 <ol className="relative mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                     <span
                         aria-hidden
-                        className="absolute top-11 right-[12%] left-[12%] hidden border-t-2 border-dashed border-white/15 lg:block"
+                        className="absolute top-11 right-[12%] left-[12%] hidden border-t-2 border-dashed border-site-navy-line lg:block"
                     />
                     {steps.map((step, i) => (
                         <li
                             key={step.title}
-                            className="relative rounded-xl bg-white/[0.06] p-6 ring-1 ring-white/10 backdrop-blur-sm transition-colors hover:bg-white/[0.09] sm:p-7"
+                            className="relative rounded-xl bg-site-navy-light p-6 ring-1 ring-site-navy-line transition-colors hover:bg-site-navy-line sm:p-7"
                         >
                             <span className="inline-flex size-10 items-center justify-center rounded-full bg-site-highlight font-public-display text-sm font-semibold text-site-night shadow-[0_0_0_6px_rgb(139_209_3/0.15)]">
                                 {ordinal(i)}

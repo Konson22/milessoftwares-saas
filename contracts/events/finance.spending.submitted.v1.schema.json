@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milesoftwares.com/contracts/events/finance.spending.submitted.v1.schema.json",
+    "$id": "https://milessoftwares.com/contracts/events/finance.spending.submitted.v1.schema.json",
     "title": "finance.spending.submitted, schema_version 1",
     "description": "Projects hands approved spending to Finance as a payment request (integrated mode only). Operational approval happened in Projects; Finance accepts or rejects it, approves and pays. Not a journal: nothing is posted until Finance pays. Contract: docs/finance/finance-projects-contract.md.",
     "type": "object",

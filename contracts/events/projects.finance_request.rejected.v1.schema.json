@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milesoftwares.com/contracts/events/projects.finance_request.rejected.v1.schema.json",
+    "$id": "https://milessoftwares.com/contracts/events/projects.finance_request.rejected.v1.schema.json",
     "title": "projects.finance_request.rejected, schema_version 1",
     "description": "Finance refused the request. Final: Projects decides whether to release the commitment or resubmit a new revision. Contract: docs/finance/finance-projects-contract.md.",
     "type": "object",

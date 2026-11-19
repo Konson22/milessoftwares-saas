@@ -26,7 +26,7 @@ Projects runs in a browser and needs an internet connection. Offline field colle
 
 ## Getting started
 
-You reach Projects at your organization's own address, `yourorganization.milesoftwares.com/projects`, and sign in once with your Tatook account.
+You reach Projects at your organization's own address, `yourorganization.milessoftwares.com/projects`, and sign in once with your Tatook account.
 
 1. **Create an account.** Sign up with email and verify it, or use Google when it is offered. One account can belong to several organizations.
 2. **Set up your organization.** The person who sets it up becomes its owner. Name, currency and time zone belong to the workspace and are changed on the platform.

@@ -6,7 +6,7 @@ reference lives in `examples/sample-app` (see the end of this page). Sending bus
 Finance, HR or Payroll, and health reporting (scopes `events.issue`, `health.write`), are in
 `docs/shared-modules.md`.
 
-All platform endpoints are on the **auth host**, `https://auth.milesoftwares.com`
+All platform endpoints are on the **auth host**, `https://auth.milessoftwares.com`
 (`http://auth.tatook.localhost:8100` locally). Discovery:
 `/.well-known/openid-configuration`.
 
@@ -36,7 +36,7 @@ GET /oauth/authorize?client_id=…&redirect_uri=…&response_type=code&scope=ope
 
 - **Redirect URIs match exactly.** A product served on tenant hosts registers a _tenant callback
   path_ (e.g. `/retail/auth/callback`); the platform then allows exactly
-  `https://{slug}.milesoftwares.com/retail/auth/callback` for every organization that is entitled
+  `https://{slug}.milessoftwares.com/retail/auth/callback` for every organization that is entitled
   to the product, and removes it when the entitlement ends or the slug changes.
 - Exchange the code at `POST /oauth/token` (`grant_type=authorization_code`, `code`,
   `redirect_uri`, `code_verifier`, client credentials).
@@ -255,7 +255,7 @@ features; only staff with `plans.manage` (plans) and `entitlements.manage` (over
 ## 6. Serving a product on workspace hosts
 
 A product lives under its **route prefix** on every workspace host:
-`https://{slug}.milesoftwares.com/pharmacy`. The launcher in the workspace links there, and the
+`https://{slug}.milessoftwares.com/pharmacy`. The launcher in the workspace links there, and the
 sign-in client's tenant callback path is `/pharmacy/auth/callback`.
 
 - The prefix is set in admin → Applications (lowercase, `^[a-z][a-z0-9-]*$`). Paths the workspace

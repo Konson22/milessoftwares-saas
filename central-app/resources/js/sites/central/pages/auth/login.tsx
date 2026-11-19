@@ -29,7 +29,7 @@ export default function Login({
             <Head title="Log in" />
 
             {status && (
-                <div className="rounded-lg border border-brand-green/30 bg-brand-green/10 px-4 py-3 text-center text-sm font-medium text-brand-teal">
+                <div className="rounded-lg border border-site-tint-strong bg-site-tint px-4 py-3 text-center text-sm font-medium text-brand-teal">
                     {status}
                 </div>
             )}
@@ -130,5 +130,5 @@ export default function Login({
 
 Login.layout = {
     title: 'Welcome back',
-    description: 'Sign in with your Tatook account',
+    description: 'Sign in with your Miles Softwares account',
 };

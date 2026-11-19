@@ -85,9 +85,15 @@ export function ShellSidebar({
     );
 
     return (
-        <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
+        <div
+            data-slot="shell-sidebar"
+            className="flex h-full flex-col bg-sidebar text-sidebar-foreground"
+        >
             {/* Same height as the top bar, so the two borders line up. */}
-            <div className="flex h-13 shrink-0 items-center border-b border-sidebar-border px-3.5">
+            <div
+                data-slot="shell-brand"
+                className="flex h-13 shrink-0 items-center border-b border-sidebar-border px-3.5"
+            >
                 {brand.external ? (
                     <a href={hrefOf(brand.href)} className={brandClass}>
                         {brandContent}
@@ -118,7 +124,8 @@ export function ShellSidebar({
                 )}
                 {groups.map((group) => (
                     <div key={group.title}>
-                        {(groups.length > 1 || group.items.some((i) => i.external)) &&
+                        {(groups.length > 1 ||
+                            group.items.some((i) => i.external)) &&
                             group.title !== '' && (
                                 <p
                                     className={cn(
@@ -206,7 +213,9 @@ function SidebarItem({
             <Icon
                 className={cn(
                     'size-4 shrink-0',
-                    current ? 'text-sidebar-ring' : 'text-sidebar-foreground/70',
+                    current
+                        ? 'text-sidebar-ring'
+                        : 'text-sidebar-foreground/70',
                 )}
                 aria-hidden
             />

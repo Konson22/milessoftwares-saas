@@ -63,7 +63,7 @@ type Props = {
 const sourceLabel: Record<string, string> = {
     subscription: 'Included in your plan',
     trial: 'Free trial',
-    manual: 'Granted by Tatook',
+    manual: 'Granted by Miles Softwares',
 };
 
 export default function OrganizationSubscription({
@@ -81,7 +81,7 @@ export default function OrganizationSubscription({
 
             <PageHeader
                 title="Subscription"
-                description="Your plans and the applications they include. Changes are confirmed by Tatook."
+                description="Your plans and the applications they include. Changes are confirmed by Miles Softwares."
                 actions={
                     <Button asChild>
                         <Link href={workspaceRoutes.plans}>
@@ -241,8 +241,8 @@ function SubscriptionRow({ subscription }: { subscription: Subscription }) {
 
             {subscription.cancellationRequestId ? (
                 <p className="text-sm text-amber-700 dark:text-amber-300">
-                    Cancellation requested. Your access continues until Tatook
-                    processes it.
+                    Cancellation requested. Your access continues until Miles
+                    Softwares processes it.
                 </p>
             ) : (
                 <CancelDialog subscription={subscription} />

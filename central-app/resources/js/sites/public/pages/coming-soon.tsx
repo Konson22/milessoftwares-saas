@@ -28,7 +28,7 @@ export default function ComingSoon({ catalog, trialDays, canonical }: Props) {
         <>
             <Seo
                 title="Coming soon"
-                description="New Tatook business applications and industry ERP solutions on the way. Join the waitlist and we will tell you first."
+                description="New Miles Softwares business applications and industry ERP solutions on the way. Join the waitlist and we will tell you first."
                 canonical={canonical}
             />
 
@@ -39,7 +39,7 @@ export default function ComingSoon({ catalog, trialDays, canonical }: Props) {
                         <Accent>on the same books</Accent>
                     </>
                 }
-                intro="New Tatook products on the way. Join the waitlist and we will tell you first."
+                intro="New Miles Softwares products on the way. Join the waitlist and we will tell you first."
             />
 
             <Group

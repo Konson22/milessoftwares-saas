@@ -116,7 +116,7 @@ export default function PlanCard({
                     <ArrowRight className="size-4" aria-hidden />
                 </Link>
             ) : null}
-            <div className="mt-8 border-t border-site-line pt-7 in-[.site-dark]:border-white/15">
+            <div className="mt-8 border-t border-site-line pt-7 in-[.site-dark]:border-site-navy-line">
                 <p className="text-sm font-semibold in-[.site-dark]:text-white">
                     Includes
                 </p>

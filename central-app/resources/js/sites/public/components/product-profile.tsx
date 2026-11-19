@@ -47,8 +47,8 @@ const operatingSystems: Record<Platform, string> = {
  * A product's own page as a profile: what it is on a dark band at the
  * top, the details in one column beside a short "at a glance" card, then
  * plans and questions. Words, features, platforms and plans come from the
- * catalog and the registry. No green type: headings and links are
- * near-black, green is kept for icons and buttons.
+ * catalog and the registry. No coloured type: headings and links are
+ * near-black, blue is kept for icons and buttons.
  */
 export default function ProductProfile({
     product,
@@ -65,7 +65,10 @@ export default function ProductProfile({
 
     const primary = (style: string) =>
         product.trial ? (
-            <a href={trialUrl(product.trial, product.trialProduct)} className={style}>
+            <a
+                href={trialUrl(product.trial, product.trialProduct)}
+                className={style}
+            >
                 Start Your {trialDays}-Day Free Trial
                 <ArrowRight className="size-4" aria-hidden />
             </a>
@@ -111,7 +114,7 @@ export default function ProductProfile({
     ].filter((app) => app.points.length > 0);
 
     const heading = 'text-2xl font-semibold tracking-tight text-slate-900';
-    // The hero's main action: white on the dark green, not green on green.
+    // The hero's main action: white on the navy band.
     const onDark =
         'inline-flex items-center justify-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white';
 
@@ -178,8 +181,8 @@ export default function ProductProfile({
             />
 
             {/* Profile header */}
-            {/* White and light grey type on the brand's dark green. */}
-            <section className="site-dark bg-[#063519]">
+            {/* White and light grey type on the brand's navy. */}
+            <section className="site-dark bg-site-night">
                 <div className={`${container} pt-24 pb-10 sm:pt-28 sm:pb-14`}>
                     <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
                         <span className="inline-flex size-16 shrink-0 items-center justify-center rounded-2xl bg-white text-site-accent-ink sm:size-20">
@@ -269,7 +272,7 @@ export default function ProductProfile({
                                                 href={link.url}
                                                 className={`${card} group flex h-full flex-col p-5`}
                                             >
-                                                <span className="inline-flex size-10 items-center justify-center rounded-lg bg-site-accent/10 text-site-accent-ink">
+                                                <span className="inline-flex size-10 items-center justify-center rounded-lg bg-site-tint text-site-accent-ink">
                                                     <Icon
                                                         className="size-5"
                                                         aria-hidden

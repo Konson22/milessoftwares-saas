@@ -5,13 +5,15 @@ namespace App\Modules\Authorization\Actions;
 use App\Modules\Audit\AuditLogger;
 use App\Modules\Authorization\Models\RoleAssignment;
 use App\Modules\Authorization\Support\AccessResolver;
+use App\Modules\Authorization\Support\ApplicationPeopleManagers;
 use App\Modules\Authorization\Support\Scope;
 use App\Modules\Integration\Support\IntegrationEvents;
 use App\Modules\Memberships\Models\OrganizationMembership;
 
 /**
  * Revokes an assignment. Mirrors AssignRole: a non-owner needs
- * platform.access.manage at a scope containing the assignment and may only
+ * platform.access.manage at a scope containing the assignment (or to manage
+ * the people of the role's application there) and may only
  * revoke roles no more sensitive than their own in that application.
  * Anyone may give up their own roles.
  */
@@ -21,6 +23,7 @@ final class RevokeRole
         private readonly AccessResolver $access,
         private readonly AuditLogger $audit,
         private readonly IntegrationEvents $events,
+        private readonly ApplicationPeopleManagers $peopleManagers,
     ) {}
 
     /**
@@ -35,7 +38,8 @@ final class RevokeRole
         $ownAssignment = $assignment->membership_id === $revoker->getKey();
 
         if (! $ownAssignment && ! $this->access->isOwner($revoker)) {
-            if (! $this->access->holds($revoker, 'platform.access.manage', Scope::of($assignment))) {
+            if (! $this->access->holds($revoker, 'platform.access.manage', Scope::of($assignment))
+                && ! $this->peopleManagers->manages($revoker, $assignment->application_id, Scope::of($assignment))) {
                 throw new AssignmentDenied('no_access_manage', 'You cannot manage access at that scope.');
             }
 

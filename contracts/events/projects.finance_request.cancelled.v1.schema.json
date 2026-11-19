@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milesoftwares.com/contracts/events/projects.finance_request.cancelled.v1.schema.json",
+    "$id": "https://milessoftwares.com/contracts/events/projects.finance_request.cancelled.v1.schema.json",
     "title": "projects.finance_request.cancelled, schema_version 1",
     "description": "Finance confirms the cancellation Projects asked for. Contract: docs/finance/finance-projects-contract.md.",
     "type": "object",

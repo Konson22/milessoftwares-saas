@@ -65,6 +65,18 @@ final class PlatformFake
     /** @var array<string, list<string>>|null the errors the next addMemberAccount call is refused with */
     public ?array $refuseMemberAccount = null;
 
+    /** @var array<string, list<array<string, mixed>>> active workspace members (workspaceMembers), by organization slug */
+    public array $workspaceMembers = [];
+
+    /** @var list<array<string, mixed>> changes sent to the people API (invitePerson, giveRole, takeBackRole, cancelInvitation) */
+    public array $peopleCalls = [];
+
+    /** @var array<string, list<array<string, mixed>>> open invitations (pendingInvitations), by organization id */
+    public array $pendingInvitations = [];
+
+    /** @var array<string, list<string>>|null the errors the next people change is refused with */
+    public ?array $refusePeople = null;
+
     /** @var list<string> modules the organization is not entitled to: event tokens answer 404 */
     public array $notEntitledTo = [];
 
@@ -220,6 +232,34 @@ final class PlatformFake
                     'expires_at' => now()->addDays(7)->toIso8601String(),
                     'role_note' => null,
                 ], 201);
+            }
+
+            if ($request->method() === 'GET' && in_array($path, ['/api/v1/people/members', '/api/v1/people/invitations'], true)) {
+                parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+                $id = (string) ($query['organization_id'] ?? '');
+                if ($path === '/api/v1/people/invitations') {
+                    return Http::response(['data' => $this->pendingInvitations[$id] ?? []]);
+                }
+                foreach ($this->organizations as $slug => $organization) {
+                    if ($organization['id'] === $id) {
+                        return Http::response(['data' => $this->workspaceMembers[$slug] ?? []]);
+                    }
+                }
+
+                return Http::response(['message' => 'Not Found'], 404);
+            }
+
+            if (str_starts_with($path, '/api/v1/people/')) {
+                $errors = $this->refusePeople;
+                $this->refusePeople = null;
+                if ($errors !== null) {
+                    return Http::response(['message' => 'Refused.', 'errors' => $errors], 422);
+                }
+                $this->peopleCalls[] = ['path' => $path, ...$request->data()];
+
+                return $path === '/api/v1/people/invitations'
+                    ? Http::response(['id' => (string) Str::uuid(), 'email' => mb_strtolower((string) $request['email']), 'expires_at' => now()->addDays(7)->toIso8601String()], 201)
+                    : Http::response(['message' => 'Done.'], 201);
             }
 
             if ($path === '/api/v1/health') {

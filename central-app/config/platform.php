@@ -8,7 +8,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | The registrable domain every platform host hangs off. Production uses
-    | milesoftwares.com; local development uses tatook.localhost,
+    | milessoftwares.com; local development uses tatook.localhost,
     | which browsers resolve to 127.0.0.1 without hosts-file entries.
     |
     */
@@ -86,7 +86,19 @@ return [
 
     // Applications whose backend may add a member with a username and a
     // temporary password its own form collected (Api\MemberAccountController).
-    'member_account_applications' => ['petrol'],
+    'member_account_applications' => ['petrol', 'logbook'],
+
+    /*
+    | Applications whose own managers look after their people: application
+    | code => the catalog permission that does it. Holding it, a member gives
+    | and takes back that application's delegable roles and invites or adds
+    | people for them, without workspace access administration
+    | (Authorization\Support\ApplicationPeopleManagers).
+    */
+
+    'application_people_managers' => [
+        'logbook' => 'logbook.people.manage',
+    ],
 
     'slug' => [
         'min_length' => 4,
@@ -141,9 +153,9 @@ return [
             [
                 'code' => 'pharmacy',
                 'platform' => 'windows',
-                'name' => 'Tatook Pharmacy',
-                'summary' => 'Your pharmacy on a Windows PC, two ways. On its own: the whole pharmacy on one PC with its own database, no internet or account needed, free for 90 days and then activated with a licence key. Or as the counter of your Tatook workspace: keeps selling when the internet drops and sends the sales once it is back (shops sign in to Tatook Retail with the same app).',
-                'needs' => 'Nothing to start: a 90-day trial on one PC, or a Tatook workspace with Pharmacy or Retail',
+                'name' => 'Miles Pharmacy',
+                'summary' => 'Your pharmacy on a Windows PC, two ways. On its own: the whole pharmacy on one PC with its own database, no internet or account needed, free for 90 days and then activated with a licence key. Or as the counter of your Miles Softwares workspace: keeps selling when the internet drops and sends the sales once it is back (shops sign in to Miles Retail with the same app).',
+                'needs' => 'Nothing to start: a 90-day trial on one PC, or a Miles Softwares workspace with Pharmacy or Retail',
                 'file' => 'Miles Pharmacy Setup 1.1.0.exe',
                 'version' => '1.1.0',
                 'product' => 'erp/pharmacy',
@@ -163,7 +175,7 @@ return [
                         'date' => '2026-10-25',
                         'file' => 'Miles Pharmacy Setup 1.0.0.exe',
                         'changes' => [
-                            'First release: the pharmacy and shop counter for Tatook workspaces, with sales that wait for the internet.',
+                            'First release: the pharmacy and shop counter for Miles Softwares workspaces, with sales that wait for the internet.',
                             'Barcode scanners, receipt printing and keyboard shortcuts.',
                         ],
                     ],
@@ -172,9 +184,9 @@ return [
             [
                 'code' => 'restaurant',
                 'platform' => 'windows',
-                'name' => 'Tatook Restaurant',
+                'name' => 'Miles Restaurant',
                 'summary' => 'The floor, orders, kitchen screen, shifts and bills of your workspace restaurant on a Windows PC.',
-                'needs' => 'A Tatook workspace with Restaurant',
+                'needs' => 'A Miles Softwares workspace with Restaurant',
                 'file' => 'Miles Restaurant Setup 1.0.0.exe',
                 'version' => '1.0.0',
                 'product' => 'erp/restaurant',
@@ -191,7 +203,7 @@ return [
                 'platform' => 'android',
                 'name' => 'Miles Pharma POS',
                 'summary' => 'The pharmacy counter on an Android phone or tablet: sell, look up stock and prices, and scan barcodes with the camera.',
-                'needs' => 'A Tatook workspace with Pharmacy',
+                'needs' => 'A Miles Softwares workspace with Pharmacy',
                 'file' => 'Miles Pharmacy POS 1.0.0.apk',
                 'version' => '1.0.0',
                 'product' => 'erp/pharmacy',
@@ -207,9 +219,9 @@ return [
             [
                 'code' => 'retail-android',
                 'platform' => 'android',
-                'name' => 'Tatook Retail',
+                'name' => 'Miles Retail',
                 'summary' => 'The shop counter on an Android phone or tablet: sales, stock counts and price checks from the shop floor.',
-                'needs' => 'A Tatook workspace with Retail & POS',
+                'needs' => 'A Miles Softwares workspace with Retail & POS',
                 'file' => 'Miles Retail 1.0.0.apk',
                 'version' => '1.0.0',
                 'product' => 'erp/retail',
@@ -227,7 +239,7 @@ return [
                 'platform' => 'android',
                 'name' => 'Mataem Plus',
                 'summary' => 'Take orders at the table on an Android phone or tablet and send them straight to the kitchen.',
-                'needs' => 'A Tatook workspace with Restaurant',
+                'needs' => 'A Miles Softwares workspace with Restaurant',
                 'file' => 'Miles Restaurant 1.0.0.apk',
                 'version' => '1.0.0',
                 'product' => 'erp/restaurant',

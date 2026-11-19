@@ -20,9 +20,9 @@ export const button = {
     /** Main action on a dark band. */
     light: `${base} bg-site-accent-ink text-white hover:bg-site-accent-deep focus-visible:outline-white`,
     /** Secondary action on a dark or gradient band. */
-    outlineDark: `${base} border border-white/40 text-white hover:border-white hover:bg-white/10 focus-visible:outline-white`,
+    outlineDark: `${base} border border-slate-400 text-white hover:border-white hover:bg-site-navy-light focus-visible:outline-white`,
     /** Secondary action on white or lavender. */
-    outline: `${base} border border-site-line bg-white text-site-ink hover:border-site-highlight/50 hover:text-site-accent-ink focus-visible:outline-site-highlight`,
+    outline: `${base} border border-site-line bg-white text-site-ink hover:border-site-accent hover:text-site-accent-ink focus-visible:outline-site-highlight`,
 };
 
 export const textLink =
@@ -37,7 +37,7 @@ export const display =
  * hairline box whose border and shadow come up on hover.
  */
 export const card =
-    'rounded-lg border border-site-line bg-white transition-[border-color,box-shadow] duration-200 hover:border-site-accent/40 hover:shadow-lg hover:shadow-site-night/5';
+    'rounded-lg border border-site-line bg-white transition-[border-color,box-shadow] duration-200 hover:border-site-accent hover:shadow-lg hover:shadow-site-night/5';
 
 /** Static surface (feature tiles, steps): same chrome, no hover. */
 export const panel = 'rounded-lg border border-site-line bg-white';
@@ -70,7 +70,7 @@ export const darkBand =
  * logo cyan on a pale wash. The icon keeps 3:1 on it.
  */
 export const tints = [
-    'bg-site-accent/10 text-site-accent-ink in-[.site-dark]:bg-white/10 in-[.site-dark]:text-white',
+    'bg-site-tint text-site-accent-ink in-[.site-dark]:bg-site-navy-light in-[.site-dark]:text-white',
     'bg-site-wash text-site-accent-ink',
 ] as const;
 
@@ -102,7 +102,7 @@ export function trialUrl(code?: string, product?: string | null): string {
 
 /**
  * A plan's own call to action: its free trial, or asking for it (paid plans
- * are switched on by Tatook once paid). Both keep the plan through signing
+ * are switched on by Miles Softwares once paid). Both keep the plan through signing
  * up and choosing the organization.
  */
 export function planUrl(code: string, action: 'trial' | 'subscribe'): string {

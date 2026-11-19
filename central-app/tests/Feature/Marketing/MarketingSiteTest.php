@@ -186,7 +186,7 @@ it('confirms without repeating what the visitor typed', function (string $name, 
         ->and($html)->toContain('We received your message')
         ->and($html)->toContain('images/logo-with-text.png')
         ->and($html)->toContain('mailto:support@milesoftwares.test')
-        ->and($mail->replyTo)->toBe([['support@milesoftwares.test', 'Tatook']])
+        ->and($mail->replyTo)->toBe([['support@milesoftwares.test', 'Miles Softwares']])
         ->and($html)->not->toContain('spam.example');
 })->with([
     'a plain name' => ['Amina Deng', 'Hello Amina,'],
@@ -293,6 +293,7 @@ it('serves the products, platform, coming-soon, about, services and legal pages'
     ['privacy', 'public/privacy'],
     ['privacy/mataem-plus', 'public/privacy-mataem-plus'],
     ['privacy/miles-pharmacy', 'public/privacy-miles-pharmacy'],
+    ['privacy/miles-logbook', 'public/privacy-miles-logbook'],
     ['terms', 'public/terms'],
 ]);
 
@@ -367,7 +368,7 @@ it('lists every product of the brief on the products page', function () {
             $slugs = fn (string $category) => collect($catalog)->where('category', $category)->pluck('slug')->values()->all();
 
             return $slugs('erp') === ['pharmacy', 'retail', 'restaurant', 'school', 'ngo', 'logistics']
-                && $slugs('application') === ['finance', 'petrol', 'projects', 'monitoring-evaluation', 'hr', 'payroll', 'procurement', 'inventory', 'crm', 'assets'];
+                && $slugs('application') === ['finance', 'petrol', 'projects', 'monitoring-evaluation', 'hr', 'payroll', 'procurement', 'logbook', 'inventory', 'crm', 'assets'];
         }));
 });
 

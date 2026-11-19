@@ -53,8 +53,10 @@ class LocalPlansSeeder extends Seeder
         'projects-mel-bundle' => ['Projects + M&E', 'Project Management and Monitoring & Evaluation together, linked in one workspace.', 'monitoring_evaluation', ['projects', 'mel'], null],
         // NGO Suite (ADR-0024): one plan, one subscription item per application. Price awaiting approval.
         'ngo-suite' => ['NGO Suite', 'Projects with partners and donors, grants, Finance & Accounting, Procurement and Monitoring & Evaluation with field data collection.', 'ngo', ['projects', 'finance', 'mel', 'procurement'], null],
-        // Tatook Procurement on its own (ADR-0023). Price awaiting approval.
+        // Miles Procurement on its own (ADR-0023). Price awaiting approval.
         'procurement-standard' => ['Procurement Standard', 'Plans, requisitions, sourcing and evaluation, purchase orders, receiving and supplier invoices.', 'procurement', ['procurement'], null],
+        // Miles Logbook on its own (ADR-0025).
+        'logbook-standard' => ['Logbook Standard', 'Log sheets, numbered entries with supervisor review, attachments, reports and the audit trail.', 'logbook', ['logbook'], 1500],
     ];
 
     public function run(): void

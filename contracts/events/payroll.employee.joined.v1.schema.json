@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milesoftwares.com/contracts/events/payroll.employee.joined.v1.schema.json",
+    "$id": "https://milessoftwares.com/contracts/events/payroll.employee.joined.v1.schema.json",
     "title": "payroll.employee.joined, schema_version 1",
     "description": "Someone Payroll should pay: added the first time, work details refreshed when sent again (HR sends it on hire and on every change; any product that keeps staff may send it). Organizational facts only: pay, bank details and identity numbers are entered in Payroll itself.",
     "type": "object",

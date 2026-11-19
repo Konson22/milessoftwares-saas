@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://milesoftwares.com/contracts/events/projects.finance_payment.completed.v1.schema.json",
+    "$id": "https://milessoftwares.com/contracts/events/projects.finance_payment.completed.v1.schema.json",
     "title": "projects.finance_payment.completed, schema_version 1",
     "description": "Money paid under the request, in part or in full. One event per Finance payment id; Projects records each payment once. Contract: docs/finance/finance-projects-contract.md.",
     "type": "object",

@@ -45,7 +45,7 @@ export default function Start({
         <>
             <Seo
                 title="Start your free trial"
-                description={`Choose a Tatook application and try it free for ${trialDuration(trialDays)}. No payment details needed.`}
+                description={`Choose a Miles Softwares application and try it free for ${trialDuration(trialDays)}. No payment details needed.`}
                 canonical={canonical}
             />
 
@@ -197,7 +197,7 @@ function AppOption({
     onSelect: () => void;
 }) {
     return (
-        <label className="relative flex cursor-pointer gap-4 rounded-xl border border-site-line bg-white p-5 transition-colors hover:border-site-accent/40 has-[:checked]:border-site-accent has-[:checked]:bg-site-accent/[0.04] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-site-accent">
+        <label className="relative flex cursor-pointer gap-4 rounded-xl border border-site-line bg-white p-5 transition-colors hover:border-site-accent has-[:checked]:border-site-accent has-[:checked]:bg-site-accent/[0.04] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-site-accent">
             <input
                 type="radio"
                 name="application"

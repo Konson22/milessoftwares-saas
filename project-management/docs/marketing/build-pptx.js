@@ -246,7 +246,7 @@ async function presentation() {
   s.addText('GET STARTED', { placeholder: 'eyebrow' });
   s.addText('Set up your organization in an afternoon', { placeholder: 'title' });
   s.addText('Sign up, create the workspace, invite the team, and record your first project. A donor’s invitation works too, and you can connect later.', { placeholder: 'body' });
-  s.addText('yourorganization.milesoftwares.com/projects · [contact email]', { x: 0.8, y: 6.5, w: 11.7, h: 0.45, fontSize: 14, color: '7FB0FF', margin: 0, isTextBox: true });
+  s.addText('yourorganization.milessoftwares.com/projects · [contact email]', { x: 0.8, y: 6.5, w: 11.7, h: 0.45, fontSize: 14, color: '7FB0FF', margin: 0, isTextBox: true });
   s.addNotes('Close with a demo request. Replace the contact placeholder before sharing.');
 
   const file = path.join(OUT, 'Projects-Product-Presentation.pptx');

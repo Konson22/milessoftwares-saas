@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
- * Internal Tatook staff record. Not mass assignable: staff are
+ * Internal Miles Softwares staff record. Not mass assignable: staff are
  * created by an existing Super Admin or a console command only.
  *
  * @property string $id

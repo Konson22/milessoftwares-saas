@@ -15,7 +15,8 @@ export default function WorkspaceSuspended({ organization }: Props) {
                     </h1>
                     <p className="mt-3 text-muted-foreground">
                         This workspace is temporarily unavailable. Please
-                        contact your organization owner or Tatook support.
+                        contact your organization owner or Miles Softwares
+                        support.
                     </p>
                 </div>
             </main>
