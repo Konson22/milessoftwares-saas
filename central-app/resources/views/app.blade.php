@@ -30,9 +30,9 @@
             }
         </style>
 
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/favicon-96x96.png" type="image/png" sizes="96x96">
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        <link rel="icon" href="/favicon.ico?v=20261120" sizes="any">
+        <link rel="icon" href="/favicon-96x96.png?v=20261120" type="image/png" sizes="96x96">
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20261120">
         <meta name="theme-color" content="#001b48">
 
         @php

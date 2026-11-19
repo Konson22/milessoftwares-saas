@@ -41,9 +41,9 @@ export function organization(origin: string): Record<string, unknown> {
         url: `${origin}/`,
         logo: {
             '@type': 'ImageObject',
-            url: `${origin}/images/logo-icon.png`,
+            url: `${origin}/images/logo-icon.png?v=20261120`,
         },
-        image: `${origin}/images/logo-with-text.png`,
+        image: `${origin}/images/logo-with-text.png?v=20261120`,
         description:
             'Miles Softwares is ERP and business software for pharmacies, shops, restaurants, schools and petrol stations, with accounting, HR and payroll, made by Miles Global Link Co. Ltd.',
         slogan: 'Bring it all together',

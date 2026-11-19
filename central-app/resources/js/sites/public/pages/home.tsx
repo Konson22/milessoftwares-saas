@@ -401,8 +401,8 @@ export default function MarketingHome({
                         </div>
                         <figure className="lg:order-first">
                             <img
-                                src="/images/home/custom-software.webp"
-                                srcSet="/images/home/custom-software-800.webp 800w, /images/home/custom-software.webp 1536w"
+                                src="/images/home/custom-software.webp?v=20261120"
+                                srcSet="/images/home/custom-software-800.webp?v=20261120 800w, /images/home/custom-software.webp?v=20261120 1536w"
                                 sizes="(min-width: 1024px) 50vw, 100vw"
                                 alt="A business owner at her laptop, with Finance, HR, Inventory, Sales and POS, Projects, Scheduling, Operations and Analytics around one dashboard"
                                 width={1536}

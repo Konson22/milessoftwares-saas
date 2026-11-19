@@ -44,7 +44,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noindex">
         <title>@yield('title') · Miles Softwares</title>
-        <link rel="icon" href="/favicon.ico" sizes="any">
+        <link rel="icon" href="/favicon.ico?v=20261120" sizes="any">
         <style>
             :root {
                 --bg: #ffffff;
@@ -183,8 +183,8 @@
         <main>
             <a class="brand" href="{{ PlatformHosts::url(PlatformHosts::root()) }}">
                 <picture>
-                    <source srcset="/images/logo-with-text-light.png" media="(prefers-color-scheme: dark)">
-                    <img src="/images/logo-with-text.png" alt="Miles Softwares">
+                    <source srcset="/images/logo-with-text-light.png?v=20261120" media="(prefers-color-scheme: dark)">
+                    <img src="/images/logo-with-text.png?v=20261120" alt="Miles Softwares">
                 </picture>
             </a>
 

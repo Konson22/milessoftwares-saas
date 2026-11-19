@@ -80,8 +80,8 @@ function Brand({ light = false }: { light?: boolean }) {
             <img
                 src={
                     light
-                        ? '/images/logo-site-light.webp'
-                        : '/images/logo-site.webp'
+                        ? '/images/logo-site-light.webp?v=20261120'
+                        : '/images/logo-site.webp?v=20261120'
                 }
                 alt="Miles Softwares"
                 width={429}
