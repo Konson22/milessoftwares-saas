@@ -9,13 +9,13 @@ export default function AppLogoIcon({
     return (
         <>
             <img
-                src="/images/logo-icon.png"
+                src="/images/logo-icon.png?v=20261120"
                 alt={alt}
                 className={`dark:hidden ${className ?? ''}`}
                 {...props}
             />
             <img
-                src="/images/logo-icon-light.png"
+                src="/images/logo-icon-light.png?v=20261120"
                 alt={alt}
                 className={`hidden dark:block ${className ?? ''}`}
                 {...props}

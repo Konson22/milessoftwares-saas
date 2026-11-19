@@ -15,8 +15,8 @@ export default function AppLogo({
         <img
             src={
                 inverted
-                    ? '/images/logo-with-text-light.png'
-                    : '/images/logo-with-text.png'
+                    ? '/images/logo-with-text-light.png?v=20261120'
+                    : '/images/logo-with-text.png?v=20261120'
             }
             alt={alt}
             width={771}
