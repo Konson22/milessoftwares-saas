@@ -1,7 +1,7 @@
 import { router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { Button } from '@miles/ui/components/ui/button';
-import { Check, TextArea, TextField } from '@/components/fields';
+import { SelectField, TextArea, TextField } from '@/components/fields';
 import { LOGBOOK_ICONS } from '@/components/logbook-icon';
 
 export type LogbookData = {
@@ -9,10 +9,16 @@ export type LogbookData = {
     description: string | null;
     icon: string | null;
     restricted: boolean;
+    departmentId: string | null;
 };
 
+export type DepartmentOption = { id: string; name: string };
+
 /**
- * Name, description, icon and whether only listed members reach it.
+ * Name, description, icon and the department it belongs to. Who reaches it
+ * is its members list, on the logbook's page. A manager for some
+ * departments files logbooks under one of them; the whole workspace is for
+ * workspace-wide managers.
  */
 export function LogbookForm({
     initial,
@@ -20,8 +26,12 @@ export function LogbookForm({
     method,
     submitLabel,
     onDone,
+    departments,
+    canFileUnderWorkspace,
 }: {
     initial: LogbookData;
+    departments: DepartmentOption[];
+    canFileUnderWorkspace: boolean;
     url: string;
     method: 'post' | 'put';
     submitLabel: string;
@@ -32,7 +42,9 @@ export function LogbookForm({
         name: initial.name,
         description: initial.description ?? '',
         icon: initial.icon ?? 'book',
-        restricted: initial.restricted,
+        department_id:
+            initial.departmentId ??
+            (canFileUnderWorkspace ? '' : (departments[0]?.id ?? '')),
     });
     const [busy, setBusy] = useState(false);
 
@@ -58,6 +70,24 @@ export function LogbookForm({
                 error={errors.name}
                 placeholder="e.g. Facility Management"
                 required
+            />
+            <SelectField
+                label="Department"
+                value={data.department_id}
+                onChange={(department_id) =>
+                    setData({ ...data, department_id })
+                }
+                empty={canFileUnderWorkspace ? 'Whole workspace' : undefined}
+                options={departments.map((d) => ({
+                    value: d.id,
+                    label: d.name,
+                }))}
+                error={errors.department_id}
+                hint={
+                    data.department_id
+                        ? 'Its members must have a Logbook role for this department (or the whole workspace).'
+                        : 'Its members must have a Logbook role for the whole workspace.'
+                }
             />
             <TextArea
                 label="Description"
@@ -87,17 +117,6 @@ export function LogbookForm({
                     ))}
                 </div>
             </fieldset>
-            <div className="grid gap-1">
-                <Check
-                    label="Restricted: only members listed on this logbook reach it"
-                    checked={data.restricted}
-                    onChange={(restricted) => setData({ ...data, restricted })}
-                />
-                <p className="text-xs text-muted-foreground">
-                    Open logbooks are reached by everyone with a Logbook role in
-                    Tatook. Managers always reach every logbook.
-                </p>
-            </div>
             <div>
                 <Button type="submit" disabled={busy}>
                     {submitLabel}

@@ -1,7 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { ClipboardCheck } from 'lucide-react';
 import { EmptyState } from '@miles/ui/components/empty-state';
-import { PageHeader } from '@miles/ui/components/page-header';
+import { PageHeader } from '@/components/page-header';
 import { Panel, PanelHeader } from '@miles/ui/components/panel';
 import { EntriesTable } from '@/components/entries-table';
 import { Status } from '@/components/fields';
@@ -28,7 +28,7 @@ export default function Reviews({ pending, decided }: Props) {
             <Head title="Reviews" />
             <PageHeader
                 title="Reviews"
-                description="Submitted entries on the sheets you review, oldest first. Your own entries are reviewed by someone else."
+                description="Submitted entries waiting on your review, oldest first."
             />
             <Panel>
                 <PanelHeader title={`Waiting on review (${pending.length})`} />

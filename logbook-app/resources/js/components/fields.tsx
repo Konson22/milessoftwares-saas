@@ -1,34 +1,56 @@
 import type { ReactNode } from 'react';
+import { useId } from 'react';
 import { Input } from '@miles/ui/components/ui/input';
 import { Label } from '@miles/ui/components/ui/label';
-import { StatusBadge } from '@miles/ui/components/status-badge';
+import type { Tone } from '@miles/ui/components/status-badge';
 import type { Option } from '@/lib/logbook';
 import { status } from '@/lib/logbook';
 
 /**
  * Form fields shared by every page: a label, the control and its error.
+ * The controls' look (frame, bottom edge, focus) lives in app.css on their
+ * data-slot, so every input, select and textarea matches.
  */
 export function Field({
     label,
     error,
     hint,
+    required,
+    htmlFor,
     children,
     className,
 }: {
     label: string;
     error?: string;
     hint?: ReactNode;
+    required?: boolean;
+    htmlFor?: string;
     children: ReactNode;
     className?: string;
 }) {
     return (
-        <div className={`grid gap-1.5 ${className ?? ''}`}>
-            <Label>{label}</Label>
+        <div className={`grid content-start gap-1 ${className ?? ''}`}>
+            <Label
+                htmlFor={htmlFor}
+                className="text-[13px] leading-5 font-medium text-foreground"
+            >
+                {label}
+                {required && (
+                    <span className="text-destructive" aria-hidden>
+                        {' '}
+                        *
+                    </span>
+                )}
+            </Label>
             {children}
             {hint && !error && (
                 <p className="text-xs text-muted-foreground">{hint}</p>
             )}
-            {error && <p className="text-xs text-destructive">{error}</p>}
+            {error && (
+                <p className="flex items-start gap-1 text-xs font-medium text-destructive">
+                    {error}
+                </p>
+            )}
         </div>
     );
 }
@@ -55,9 +77,19 @@ export function TextField({
     inputMode?: 'decimal' | 'numeric' | 'text';
     min?: string;
 }) {
+    const id = useId();
+
     return (
-        <Field label={label} error={error} hint={hint} className={className}>
+        <Field
+            label={label}
+            error={error}
+            hint={hint}
+            required={rest.required}
+            htmlFor={id}
+            className={className}
+        >
             <Input
+                id={id}
                 type={type}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
@@ -83,13 +115,18 @@ export function TextArea({
     rows?: number;
     className?: string;
 }) {
+    const id = useId();
+
     return (
-        <Field label={label} error={error} className={className}>
+        <Field label={label} error={error} htmlFor={id} className={className}>
             <textarea
+                id={id}
+                data-slot="textarea"
                 rows={rows}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring"
+                aria-invalid={error ? true : undefined}
+                className="w-full px-2.5 py-1.5 text-sm"
             />
         </Field>
     );
@@ -114,12 +151,24 @@ export function SelectField({
     empty?: string;
     className?: string;
 }) {
+    const id = useId();
+
     return (
-        <Field label={label} error={error} hint={hint} className={className}>
+        <Field
+            label={label}
+            error={error}
+            hint={hint}
+            htmlFor={id}
+            className={className}
+        >
             <select
+                id={id}
+                data-slot="select"
+                data-empty={value === '' ? true : undefined}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring"
+                aria-invalid={error ? true : undefined}
+                className="w-full truncate pl-2.5 text-sm"
             >
                 {empty !== undefined && <option value="">{empty}</option>}
                 {options.map((option) => (
@@ -142,12 +191,13 @@ export function Check({
     onChange: (checked: boolean) => void;
 }) {
     return (
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex cursor-pointer items-center gap-2 text-sm">
             <input
                 type="checkbox"
+                data-slot="check"
                 checked={checked}
                 onChange={(e) => onChange(e.target.checked)}
-                className="size-4"
+                className="size-4 cursor-pointer"
             />
             {label}
         </label>
@@ -157,7 +207,49 @@ export function Check({
 export function Status({ value }: { value: string }) {
     const { label, tone } = status(value);
 
-    return <StatusBadge tone={tone}>{label}</StatusBadge>;
+    return <Badge tone={tone}>{label}</Badge>;
+}
+
+/** Solid light tints with dark text, as in the design reference. */
+const TONES: Record<Tone, string> = {
+    neutral: 'bg-[#eef2f6] text-[#334155]',
+    info: 'bg-[#e3edfc] text-[#1d4fb8]',
+    success: 'bg-[#e1f4ea] text-[#137a4b]',
+    warning: 'bg-[#fcf1cf] text-[#8a5a00]',
+    danger: 'bg-[#fde6e6] text-[#c01c1c]',
+};
+
+/** A small rounded label: a status, a priority, a type or a flag. */
+export function Badge({
+    tone = 'neutral',
+    children,
+}: {
+    tone?: Tone;
+    children: ReactNode;
+}) {
+    return (
+        <span
+            className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium whitespace-nowrap ${TONES[tone]}`}
+        >
+            {children}
+        </span>
+    );
+}
+
+const PRIORITY_TONES: Record<string, Tone> = {
+    low: 'success',
+    normal: 'warning',
+    high: 'danger',
+    urgent: 'danger',
+};
+
+/** A task's priority: low green, normal amber, high and urgent red. */
+export function Priority({ value }: { value: string }) {
+    return (
+        <Badge tone={PRIORITY_TONES[value] ?? 'neutral'}>
+            {status(value).label}
+        </Badge>
+    );
 }
 
 /** A definition list row for detail pages. */

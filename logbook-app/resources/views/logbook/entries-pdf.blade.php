@@ -16,7 +16,7 @@
     </style>
 </head>
 <body>
-    <div class="muted">{{ $organization }} · Tatook Logbook</div>
+    <div class="muted">{{ $organization }} · Miles Logbook</div>
     <h1>{{ $sheet ? $sheet->code.' · '.$sheet->name : 'Log entries' }}</h1>
     <div class="muted">
         {{ count($rows) }} {{ count($rows) === 1 ? 'entry' : 'entries' }}

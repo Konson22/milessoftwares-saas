@@ -1,0 +1,316 @@
+/*
+ * Miles Logbook's own look (the 2026-11 design reference): a deep navy
+ * navigation pane that stays open, a cool light canvas, white cards with
+ * soft 10px corners, and a teal accent for actions and the current page.
+ * Colours are solid throughout: light tints are their own solid colours,
+ * never see-through. Imported after @miles/ui/theme.css; the rules are
+ * unlayered so they win over Tailwind's utilities without !important.
+ */
+
+@theme {
+    --radius: 0.375rem;
+    --radius-xs: 0.25rem;
+    --radius-sm: 0.375rem;
+    --radius-md: 0.375rem;
+    --radius-lg: 0.625rem;
+    --radius-xl: 0.625rem;
+    --radius-2xl: 0.75rem;
+    --radius-3xl: 0.75rem;
+    --radius-4xl: 1rem;
+}
+
+:root {
+    --background: #f3f5f8;
+    --foreground: #16202c;
+    --card: #ffffff;
+    --card-foreground: #16202c;
+    --popover: #ffffff;
+    --popover-foreground: #16202c;
+    --muted: #f4f6f9;
+    --muted-foreground: #5b6776;
+    --accent: #eef2f6;
+    --accent-foreground: #16202c;
+    --secondary: #eef2f6;
+    --secondary-foreground: #16202c;
+    --border: #e2e7ee;
+    --input: #d3dae3;
+    --destructive: #d42a2a;
+    --destructive-foreground: #d42a2a;
+
+    /* Teal: buttons, links, the current tab and page. */
+    --primary: #0e8a6c;
+    --primary-foreground: #ffffff;
+    --ring: #0e8a6c;
+    --lb-primary-hover: #0b7259;
+    --lb-primary-tint: #e2f4ee;
+    --lb-primary-tint-strong: #b7e2d3;
+
+    --chart-1: #12a083;
+    --chart-2: #0d2a45;
+    --chart-3: #3b82c4;
+    --chart-4: #e0a526;
+    --chart-5: #64748b;
+
+    /* The navigation pane. */
+    --sidebar: #0d2a45;
+    --sidebar-foreground: #dbe4ee;
+    --sidebar-primary: #0e8a6c;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #0e8a6c;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #1c3a58;
+    --sidebar-ring: #5fd4b6;
+}
+
+/* ---- Shell ---------------------------------------------------------- */
+
+[data-slot='shell-sidebar'] {
+    border-right: 0;
+}
+
+/* The brand: the logo tile, then the product name in bold white. The
+   logo stays in view when the sidebar is folded to its icon rail. */
+[data-slot='shell-brand'] {
+    height: 4rem;
+    padding: 0 0.75rem;
+    border-bottom-color: var(--sidebar-border);
+}
+
+[data-slot='shell-brand'] img {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.5rem;
+}
+
+[data-slot='shell-brand'] .text-sm {
+    font-size: 1.3125rem;
+    line-height: 1.75rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+[data-slot='shell-brand'] .text-xs {
+    color: #9fb3c8;
+}
+
+[data-slot='shell-sidebar'] nav {
+    padding: 0.75rem 0;
+}
+
+[data-slot='shell-sidebar'] nav > * + * {
+    margin-top: 0.75rem;
+}
+
+/* Items: roomy rows that become a solid teal pill when current. */
+[data-slot='shell-sidebar'] nav li a {
+    height: 2.5rem;
+    margin: 0.125rem 0.75rem;
+    padding: 0 0.875rem;
+    border-radius: 0.5rem;
+    font-size: 0.9375rem;
+    color: var(--sidebar-foreground);
+}
+
+[data-slot='shell-sidebar'] nav li a svg {
+    width: 1.125rem;
+    height: 1.125rem;
+    color: #b8c7d8;
+}
+
+[data-slot='shell-sidebar'] nav li a:hover {
+    background-color: #173a5c;
+    color: #ffffff;
+}
+
+[data-slot='shell-sidebar'] nav li a[aria-current='page'] {
+    background-color: var(--primary);
+    color: #ffffff;
+    font-weight: 500;
+}
+
+[data-slot='shell-sidebar'] nav li a[aria-current='page']::before {
+    display: none;
+}
+
+[data-slot='shell-sidebar'] nav li a[aria-current='page'] svg {
+    color: #ffffff;
+}
+
+/* Group titles (only "Coming soon" carries one). */
+[data-slot='shell-sidebar'] .text-sidebar-foreground\/50 {
+    color: #7f95ad;
+}
+
+[data-slot='shell-sidebar'] .text-sidebar-foreground\/70 {
+    color: #b8c7d8;
+}
+
+[data-slot='shell-sidebar'] .hover\:bg-white\/5:hover {
+    background-color: #173a5c;
+}
+
+[data-slot='shell-header'] {
+    height: 4rem;
+    padding: 0 1.5rem;
+    background-color: #ffffff;
+    border-bottom-color: var(--border);
+}
+
+@media (min-width: 64rem) {
+    [data-slot='shell-main'] {
+        padding: 1.5rem 2rem 2rem;
+    }
+}
+
+/* The signed-in person's initials: a teal disc. */
+[data-slot='shell-header'] .bg-blue-100 {
+    background-color: #2aa58a;
+    color: #ffffff;
+}
+
+/* ---- Cards ---------------------------------------------------------- */
+
+[data-slot='panel'] {
+    border-radius: 0.625rem;
+    border-color: var(--border);
+    box-shadow: 0 1px 2px #e6eaf0;
+}
+
+[data-slot='panel-header'] {
+    padding: 0.875rem 1.125rem;
+    border-bottom-color: #edf0f4;
+}
+
+[data-slot='panel-header'] h2 {
+    font-size: 1.0625rem;
+    font-weight: 600;
+}
+
+[data-slot='panel-toolbar'] {
+    padding: 0.75rem 1.125rem;
+    background-color: #ffffff;
+    border-bottom-color: #edf0f4;
+}
+
+[data-slot='panel-body'] {
+    padding: 1.125rem;
+}
+
+/* Stat tiles: icon beside a big figure, as in the reference. */
+[data-slot='stat-card'] {
+    border-radius: 0.625rem;
+    border-color: var(--border);
+    background-color: #ffffff;
+    padding: 1rem 1.125rem;
+    box-shadow: 0 1px 2px #e6eaf0;
+    transition:
+        border-color 150ms,
+        box-shadow 150ms;
+}
+
+a[data-slot='stat-card']:hover {
+    border-color: var(--lb-primary-tint-strong);
+    background-color: #ffffff;
+    box-shadow: 0 2px 8px #dfe5ec;
+}
+
+[data-slot='stat-card'] .text-xl {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+    font-weight: 600;
+}
+
+[data-slot='stat-card'] p.text-xs {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--foreground);
+}
+
+[data-slot='stat-icon'] {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.5rem;
+}
+
+[data-slot='stat-icon'][data-accent='blue'] {
+    background-color: var(--lb-primary-tint);
+    color: var(--primary);
+}
+
+[data-slot='stat-icon'][data-accent='emerald'] {
+    background-color: #e3f5ea;
+    color: #15803d;
+}
+
+[data-slot='stat-icon'][data-accent='amber'] {
+    background-color: #fdf3d8;
+    color: #b45309;
+}
+
+[data-slot='stat-icon'][data-accent='red'] {
+    background-color: #fde8e8;
+    color: #c81e1e;
+}
+
+[data-slot='stat-icon'][data-accent='slate'] {
+    background-color: #eef2f6;
+    color: #475569;
+}
+
+[data-slot='stat-icon'][data-accent='violet'] {
+    background-color: #e4eef8;
+    color: #1e5a96;
+}
+
+/* ---- Tables --------------------------------------------------------- */
+
+[data-slot='panel'] thead tr {
+    background-color: #f7f9fb;
+}
+
+[data-slot='panel'] thead {
+    background-color: #f7f9fb;
+}
+
+[data-slot='panel'] th {
+    color: #3c4857;
+    font-weight: 500;
+}
+
+[data-slot='panel'] td,
+[data-slot='panel'] th {
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+}
+
+[data-slot='panel'] tbody tr:hover {
+    background-color: #f7f9fb;
+}
+
+/* ---- Buttons -------------------------------------------------------- */
+
+[data-slot='button'] {
+    border-radius: 0.25rem;
+    font-weight: 500;
+}
+
+[data-slot='button'].bg-primary:hover {
+    background-color: var(--lb-primary-hover);
+}
+
+[data-slot='button'].h-8 {
+    height: 2.25rem;
+    padding-left: 0.875rem;
+    padding-right: 0.875rem;
+}
+
+[data-slot='button'].border-input {
+    background-color: #ffffff;
+    border-color: var(--input);
+}
+
+[data-slot='button'].border-input:hover {
+    background-color: var(--lb-primary-tint);
+    border-color: var(--lb-primary-tint-strong);
+    color: var(--primary);
+}

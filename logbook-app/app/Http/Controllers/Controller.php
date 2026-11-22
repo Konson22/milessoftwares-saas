@@ -8,6 +8,7 @@ use App\Logbook\Fields;
 use App\Logbook\Models\Attachment;
 use App\Logbook\Models\Entry;
 use App\Logbook\Models\Logbook;
+use App\Logbook\Models\LogResource;
 use App\Logbook\Models\LogSheet;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -119,6 +120,17 @@ abstract class Controller
         return array_values(Access::writableSheets()->with('logbook:id,name')->orderBy('name')->get()
             ->map(fn (LogSheet $s) => ['id' => $s->id, 'name' => $s->name, 'code' => $s->code, 'logbook' => $s->logbook->name])
             ->all());
+    }
+
+    /**
+     * Active resources for resource fields (ADR-0026 §2.10).
+     *
+     * @return list<array{value: string, label: string, type: string}>
+     */
+    protected static function resourceOptions(): array
+    {
+        return array_values(LogResource::query()->where('active', true)->orderBy('code')->get(['id', 'code', 'name', 'type'])
+            ->map(fn (LogResource $r) => ['value' => $r->id, 'label' => $r->label(), 'type' => $r->type])->all());
     }
 
     /**

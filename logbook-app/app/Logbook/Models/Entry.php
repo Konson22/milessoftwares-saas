@@ -23,6 +23,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $status
  * @property bool $review_required
  * @property CarbonImmutable $occurred_at
+ * @property string|null $schedule_occurrence_id
+ * @property string|null $log_track_id
+ * @property array{lat: float, lng: float, accuracy_m: float|null, captured_at: string, received_at: string, source: string}|null $location
  * @property array<string, mixed> $values
  * @property string|null $search_text
  * @property int $revision
@@ -55,6 +58,7 @@ class Entry extends Model
     {
         return [
             'values' => 'array',
+            'location' => 'array',
             'review_required' => 'boolean',
             'revision' => 'integer',
             'occurred_at' => 'immutable_datetime',

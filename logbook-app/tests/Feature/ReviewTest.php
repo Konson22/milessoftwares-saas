@@ -109,9 +109,9 @@ it('refuses transitions out of order', function () {
     as_($this->team['reviewer'], 'logbook_reviewer');
     review($draft->id, 'reviewed')->assertNotFound();
 
-    // Someone else cannot change the author's returned entry.
+    // Someone else cannot change the author's returned entry, nor even see it.
     as_($this->team['other'], 'logbook_contributor');
-    $this->put(p("entries/{$this->entry->id}"), ['occurred_at' => '2026-11-19T08:30', 'values' => generatorValues()])->assertForbidden();
+    $this->put(p("entries/{$this->entry->id}"), ['occurred_at' => '2026-11-19T08:30', 'values' => generatorValues()])->assertNotFound();
 });
 
 it('finalizes entries on sheets without review, never marking them reviewed', function () {

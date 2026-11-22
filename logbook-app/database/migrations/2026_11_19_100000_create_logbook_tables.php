@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Tatook Logbook (ADR-0025): logbooks, log sheets with immutable template
+ * Miles Logbook (ADR-0025): logbooks, log sheets with immutable template
  * versions, access lists, entries with their submitted revisions, reviews,
  * attachments, reference sequences and the audit trail.
  *

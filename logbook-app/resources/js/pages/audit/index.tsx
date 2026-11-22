@@ -2,7 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { History } from 'lucide-react';
 import { useState } from 'react';
 import { EmptyState } from '@miles/ui/components/empty-state';
-import { PageHeader } from '@miles/ui/components/page-header';
+import { PageHeader } from '@/components/page-header';
 import { Panel, PanelToolbar } from '@miles/ui/components/panel';
 import { SearchField } from '@miles/ui/components/search-field';
 import {
@@ -65,7 +65,7 @@ export default function Audit({
             <Head title="Audit trail" />
             <PageHeader
                 title="Audit trail"
-                description="Every change to logbooks, templates, entries and access. Kept permanently; nobody can edit it."
+                description="Every change to logbooks, templates, entries and access, kept permanently."
             />
             <Panel>
                 <PanelToolbar className="grid gap-3 sm:grid-cols-3">
@@ -123,7 +123,7 @@ export default function Audit({
                                                 {formatDateTime(e.at)}
                                             </TableCell>
                                             <TableCell>
-                                                {e.user ?? 'Tatook'}
+                                                {e.user ?? 'Miles Logbook'}
                                             </TableCell>
                                             <TableCell>
                                                 {action(e.action)}

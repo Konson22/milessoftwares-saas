@@ -1,7 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { NotebookPen } from 'lucide-react';
 import { EmptyState } from '@miles/ui/components/empty-state';
-import { PageHeader } from '@miles/ui/components/page-header';
+import { PageHeader } from '@/components/page-header';
 import { Panel } from '@miles/ui/components/panel';
 import type { WritableSheet } from '@/lib/logbook';
 import { create } from '@/routes/entries';

@@ -8,6 +8,7 @@ use App\Logbook\Models\LogSheet;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Miles\PlatformClient\Api\PlatformUnavailable;
 
 /**
  * Logbooks and who reaches a restricted one. Logbooks are archived, never
@@ -67,6 +68,7 @@ final class Logbooks
         if ($sheet !== null && $sheet->logbook_id !== $logbook->id) {
             throw ValidationException::withMessages(['log_sheet_id' => 'That sheet is not in this logbook.']);
         }
+        self::mustCover($logbook, $userId, $role);
 
         return DB::transaction(function () use ($logbook, $userId, $role, $sheet, $by) {
             $grant = AccessGrant::query()->where('logbook_id', $logbook->id)->where('user_id', $userId)
@@ -85,6 +87,43 @@ final class Logbooks
 
             return $grant;
         });
+    }
+
+    /** What each membership role needs from the person's Logbook role. */
+    public const MEMBER_PERMISSIONS = [
+        'contributor' => ['logbook.entries.create', 'write entries'],
+        'reviewer' => ['logbook.entries.review', 'review entries'],
+        'viewer' => ['logbook.view', 'read entries'],
+    ];
+
+    /**
+     * A membership only works with a Logbook role that allows it in the
+     * logbook's department, so one that would do nothing is refused with
+     * the reason.
+     */
+    private static function mustCover(Logbook $logbook, string $userId, string $role): void
+    {
+        $name = User::query()->whereKey($userId)->value('name') ?? 'This person';
+        try {
+            $member = Member::of($userId);
+        } catch (PlatformUnavailable) {
+            throw ValidationException::withMessages(['user_id' => 'The platform could not be reached to check this person\'s Logbook role. Try again in a moment.']);
+        }
+        if ($member === null) {
+            throw ValidationException::withMessages(['user_id' => "{$name} has no Logbook role in this workspace."]);
+        }
+
+        [$permission, $doing] = self::MEMBER_PERMISSIONS[$role];
+        if (! $member->can($permission)) {
+            throw ValidationException::withMessages(['role' => "{$name}'s Logbook role does not let them {$doing}."]);
+        }
+
+        $reach = $member->reach($permission);
+        if ($reach !== null && ($logbook->department_id === null || ! in_array($logbook->department_id, $reach, true))) {
+            throw ValidationException::withMessages(['user_id' => $logbook->department_id === null
+                ? "{$name}'s Logbook role covers some departments only; this logbook belongs to the whole workspace."
+                : "{$name}'s Logbook role does not cover this logbook's department."]);
+        }
     }
 
     public static function revoke(AccessGrant $grant, User $by): void

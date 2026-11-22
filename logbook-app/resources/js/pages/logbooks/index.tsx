@@ -1,11 +1,11 @@
 import { Head, Link } from '@inertiajs/react';
-import { BookOpen, Lock, Plus } from 'lucide-react';
+import { BookOpen, Building2, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { EmptyState } from '@miles/ui/components/empty-state';
-import { PageHeader } from '@miles/ui/components/page-header';
+import { PageHeader } from '@/components/page-header';
 import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
-import { LogbookForm } from '@/components/logbook-form';
+import { LogbookForm, type DepartmentOption } from '@/components/logbook-form';
 import { LogbookIcon } from '@/components/logbook-icon';
 import { index, show, store } from '@/routes/logbooks';
 
@@ -18,13 +18,22 @@ type Props = {
         icon: string | null;
         restricted: boolean;
         status: string;
+        department: string | null;
         sheets: number;
         entries: number;
     }[];
     canManage: boolean;
+    departments: DepartmentOption[];
+    canFileUnderWorkspace: boolean;
 };
 
-export default function Logbooks({ archived, logbooks, canManage }: Props) {
+export default function Logbooks({
+    archived,
+    logbooks,
+    canManage,
+    departments,
+    canFileUnderWorkspace,
+}: Props) {
     const [creating, setCreating] = useState(false);
 
     return (
@@ -32,7 +41,7 @@ export default function Logbooks({ archived, logbooks, canManage }: Props) {
             <Head title="Logbooks" />
             <PageHeader
                 title={archived ? 'Archived logbooks' : 'Logbooks'}
-                description="Each logbook groups related log sheets: IT operations, vehicles, security, the generator room."
+                description="Logbooks for facilities, fleet and field operations, each with its log sheets."
                 actions={
                     <>
                         <Button asChild variant="ghost">
@@ -63,7 +72,10 @@ export default function Logbooks({ archived, logbooks, canManage }: Props) {
                                 description: null,
                                 icon: 'book',
                                 restricted: false,
+                                departmentId: null,
                             }}
+                            departments={departments}
+                            canFileUnderWorkspace={canFileUnderWorkspace}
                             url={store().url}
                             method="post"
                             submitLabel="Create logbook"
@@ -112,15 +124,6 @@ export default function Logbooks({ archived, logbooks, canManage }: Props) {
                                         <span className="truncate font-semibold group-hover:text-primary">
                                             {l.name}
                                         </span>
-                                        {l.restricted && (
-                                            <span className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-sm border px-1.5 text-xs text-muted-foreground">
-                                                <Lock
-                                                    className="size-3"
-                                                    aria-hidden
-                                                />
-                                                Restricted
-                                            </span>
-                                        )}
                                     </span>
                                     <span className="line-clamp-2 min-h-10 text-sm text-muted-foreground">
                                         {l.description ?? 'No description.'}
@@ -128,6 +131,15 @@ export default function Logbooks({ archived, logbooks, canManage }: Props) {
                                 </span>
                             </span>
                             <span className="mt-auto flex items-center gap-4 border-t border-[#ebebeb] bg-[#fafafa] px-4 py-2.5 text-xs text-muted-foreground">
+                                <span className="inline-flex min-w-0 items-center gap-1">
+                                    <Building2
+                                        className="size-3 shrink-0"
+                                        aria-hidden
+                                    />
+                                    <span className="truncate">
+                                        {l.department ?? 'Whole workspace'}
+                                    </span>
+                                </span>
                                 <span>
                                     <span className="font-semibold text-foreground tabular-nums">
                                         {l.sheets}

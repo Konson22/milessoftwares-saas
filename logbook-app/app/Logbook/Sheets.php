@@ -63,15 +63,23 @@ final class Sheets
      * Saves fields to the sheet's draft, opening one (from the published
      * version) when there is none.
      */
-    public static function saveDraft(LogSheet $sheet, mixed $fields, User $by): LogSheetVersion
+    /**
+     * @param  bool  $withLocation  false: the draft keeps its location settings (ADR-0028)
+     */
+    public static function saveDraft(LogSheet $sheet, mixed $fields, User $by, mixed $location = null, bool $withLocation = false): LogSheetVersion
     {
         self::editable($sheet);
         $checked = Fields::check($fields);
         self::fail($checked['errors']);
+        $settings = $withLocation ? Tracks::settingsInput($location) : null;
 
-        return DB::transaction(function () use ($sheet, $checked, $by) {
+        return DB::transaction(function () use ($sheet, $checked, $by, $settings, $withLocation) {
             $draft = self::draft($sheet, $by);
-            $draft->forceFill(['fields' => $checked['fields']])->save();
+            $draft->forceFill(['fields' => $checked['fields']]);
+            if ($withLocation) {
+                $draft->forceFill(['location' => $settings]);
+            }
+            $draft->save();
 
             return $draft;
         });
@@ -93,6 +101,7 @@ final class Sheets
             'version' => $latest + 1,
             'status' => 'draft',
             'fields' => $sheet->publishedVersion->fields ?? [],
+            'location' => $sheet->publishedVersion?->location,
             'created_by' => $by->id,
         ]);
         AuditTrail::record('template.draft_opened', $sheet, $by, ['version' => $draft->version]);
@@ -120,7 +129,7 @@ final class Sheets
                 'published_by' => $by->id,
             ])->save();
             $sheet->forceFill(['published_version_id' => $draft->id, 'status' => 'active'])->save();
-            AuditTrail::record('template.published', $sheet, $by, ['version' => $draft->version, 'fields' => count($checked['fields'])]);
+            AuditTrail::record('template.published', $sheet, $by, ['version' => $draft->version, 'fields' => count($checked['fields']), 'location' => Tracks::settings($draft)['mode'] ?? null]);
 
             return $draft;
         });

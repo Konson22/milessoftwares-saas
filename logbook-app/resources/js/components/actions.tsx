@@ -1,6 +1,7 @@
 import { router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { Button } from '@miles/ui/components/ui/button';
+import { ModalButton, useConfirm } from '@/components/dialogs';
 import { TextArea } from '@/components/fields';
 
 /**
@@ -15,6 +16,7 @@ export function ActionButton({
     variant = 'default',
     confirm,
     method = 'post',
+    data = {},
 }: {
     url: string;
     label: string;
@@ -23,56 +25,60 @@ export function ActionButton({
     variant?: 'default' | 'outline' | 'destructive' | 'secondary';
     confirm?: string;
     method?: 'post' | 'delete';
+    /** Sent with the action, such as the revision the page shows. */
+    data?: Record<string, string | number>;
 }) {
-    const [open, setOpen] = useState(false);
     const [text, setText] = useState('');
     const [busy, setBusy] = useState(false);
     const errors = usePage().props.errors as Record<string, string>;
+    const ask = useConfirm();
 
-    const send = (data: Record<string, string>) => {
+    const send = (fields: Record<string, string>, after?: () => void) => {
         setBusy(true);
         router.visit(url, {
             method,
-            data,
+            data: { ...data, ...fields },
             preserveScroll: true,
             onSuccess: () => {
-                setOpen(false);
                 setText('');
+                after?.();
             },
             onFinish: () => setBusy(false),
         });
     };
 
-    if (reason && open) {
+    if (reason) {
         return (
-            <div className="grid w-full gap-2 rounded-md border p-3">
-                <TextArea
-                    label={reason}
-                    value={text}
-                    onChange={setText}
-                    error={errors.reason}
-                    rows={2}
-                />
-                <div className="flex gap-2">
-                    <Button
-                        size="sm"
-                        variant={variant}
-                        disabled={
-                            busy || (!reasonOptional && text.trim() === '')
-                        }
-                        onClick={() => send({ reason: text })}
-                    >
-                        {label}
-                    </Button>
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setOpen(false)}
-                    >
-                        Back
-                    </Button>
-                </div>
-            </div>
+            <ModalButton label={label} variant={variant} maxWidth="lg">
+                {(close) => (
+                    <div className="grid gap-3">
+                        <TextArea
+                            label={reason}
+                            value={text}
+                            onChange={setText}
+                            error={errors.reason}
+                            rows={3}
+                        />
+                        <div className="flex justify-end gap-2">
+                            <Button variant="outline" onClick={close}>
+                                Back
+                            </Button>
+                            <Button
+                                variant={
+                                    variant === 'outline' ? 'default' : variant
+                                }
+                                disabled={
+                                    busy ||
+                                    (!reasonOptional && text.trim() === '')
+                                }
+                                onClick={() => send({ reason: text }, close)}
+                            >
+                                {label}
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </ModalButton>
         );
     }
 
@@ -81,10 +87,15 @@ export function ActionButton({
             size="sm"
             variant={variant}
             disabled={busy}
-            onClick={() => {
-                if (reason) {
-                    setOpen(true);
-                } else if (!confirm || window.confirm(confirm)) {
+            onClick={async () => {
+                if (
+                    !confirm ||
+                    (await ask({
+                        title: confirm,
+                        confirmLabel: label,
+                        destructive: variant === 'destructive',
+                    }))
+                ) {
                     send({});
                 }
             }}

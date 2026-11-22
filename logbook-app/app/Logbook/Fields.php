@@ -17,6 +17,13 @@ use Illuminate\Support\Str;
  * reading outside it is still recorded (that is what the log is for) but is
  * flagged as out of range for the reviewer. `unit` is shown after the value.
  *
+ * Conditional fields (ADR-0026 §2.9): show_if {field, in: [values]}
+ * names an EARLIER yes/no or choice field (so there are no cycles). A
+ * hidden field is not required and its value is cleared on save. Exception
+ * rules: a number with raise_exception (outside its normal range), or a
+ * yes/no or single choice whose answer is in exception_values, opens an
+ * exception on submission (App\Logbook\Exceptions::fromSubmission).
+ *
  * Definitions are data: nothing in them is ever executed. Every value is
  * checked here, on the server, against the entry's own template version.
  */
@@ -35,23 +42,30 @@ final class Fields
         'yes_no' => 'Yes / No',
         'file' => 'File or photo',
         'user' => 'Person',
+        'resource' => 'Resource',
     ];
+
+    /** Types a later field's show_if can name (ADR-0026 §2.9). */
+    public const CONDITIONAL = ['yes_no', 'select_one', 'select_multiple'];
 
     /** The settings each type takes; anything else is dropped. */
     public const SETTINGS = [
         'text' => ['placeholder', 'max_length', 'default'],
         'textarea' => ['placeholder', 'max_length', 'default'],
-        'integer' => ['placeholder', 'min', 'max', 'expected_min', 'expected_max', 'unit', 'default'],
-        'decimal' => ['placeholder', 'min', 'max', 'expected_min', 'expected_max', 'unit', 'default'],
+        'integer' => ['placeholder', 'min', 'max', 'expected_min', 'expected_max', 'unit', 'default', 'raise_exception', 'exception_severity'],
+        'decimal' => ['placeholder', 'min', 'max', 'expected_min', 'expected_max', 'unit', 'default', 'raise_exception', 'exception_severity'],
         'date' => [],
         'time' => [],
         'datetime' => [],
-        'select_one' => ['choices', 'default'],
+        'select_one' => ['choices', 'default', 'exception_values', 'exception_severity'],
         'select_multiple' => ['choices'],
-        'yes_no' => ['default'],
+        'yes_no' => ['default', 'exception_values', 'exception_severity'],
         'file' => [],
         'user' => [],
+        'resource' => ['resource_type'],
     ];
+
+    public const SEVERITIES = ['low', 'medium', 'high', 'critical'];
 
     public const NUMERIC = ['integer', 'decimal'];
 
@@ -210,6 +224,41 @@ final class Fields
                 $clean['choices'] = $choices;
             }
 
+            if (in_array('raise_exception', $settings, true) && ($field['raise_exception'] ?? false) === true) {
+                if (! isset($clean['expected_min']) && ! isset($clean['expected_max'])) {
+                    $errors["{$at}.raise_exception"] = 'Set a normal range for readings outside it to open an exception.';
+                } else {
+                    $clean['raise_exception'] = true;
+                }
+            }
+
+            if (in_array('exception_values', $settings, true) && is_array($field['exception_values'] ?? null) && $field['exception_values'] !== []) {
+                $allowed = $type === 'yes_no' ? ['yes', 'no'] : array_column($clean['choices'] ?? [], 'value');
+                $listed = array_values(array_unique(array_map('strval', array_filter($field['exception_values'], 'is_scalar'))));
+                if (array_diff($listed, $allowed) !== []) {
+                    $errors["{$at}.exception_values"] = 'Choose answers from this field.';
+                } else {
+                    $clean['exception_values'] = $listed;
+                }
+            }
+
+            if ((isset($clean['raise_exception']) || isset($clean['exception_values'])) && in_array($field['exception_severity'] ?? null, self::SEVERITIES, true)) {
+                $clean['exception_severity'] = $field['exception_severity'];
+            }
+
+            if (in_array('resource_type', $settings, true) && is_string($field['resource_type'] ?? null) && trim($field['resource_type']) !== '') {
+                $clean['resource_type'] = mb_substr(trim($field['resource_type']), 0, 48);
+            }
+
+            if (is_array($field['show_if'] ?? null) && self::filled($field['show_if']['field'] ?? null)) {
+                [$condition, $error] = self::condition($field['show_if'], $out);
+                if ($error !== null) {
+                    $errors["{$at}.show_if"] = $error;
+                } else {
+                    $clean['show_if'] = $condition;
+                }
+            }
+
             // A default must itself be a valid answer.
             if (in_array('default', $settings, true) && self::filled($field['default'] ?? null)) {
                 [$value, $error] = self::value($clean, $field['default']);
@@ -235,15 +284,20 @@ final class Fields
      * @param  array<string, mixed>  $input
      * @param  array<string, list<string>>  $files
      * @param  callable(string): bool  $isMember  whether a user id is a member of the organization
+     * @param  (callable(string, string|null): bool)|null  $isResource  whether a resource id (of an optional type) is active here
      * @return array{values: array<string, mixed>, errors: array<string, string>}
      */
-    public static function clean(array $fields, array $input, array $files, callable $isMember, bool $requireAll): array
+    public static function clean(array $fields, array $input, array $files, callable $isMember, bool $requireAll, ?callable $isResource = null): array
     {
         $values = [];
         $errors = [];
 
         foreach ($fields as $field) {
             $name = (string) $field['name'];
+            // Hidden by its condition: not required, and its value is cleared.
+            if (! self::visible($field, $values)) {
+                continue;
+            }
             $raw = $field['type'] === 'file' ? ($files[$name] ?? []) : ($input[$name] ?? null);
 
             if (! self::filled($raw)) {
@@ -257,6 +311,9 @@ final class Fields
             [$value, $error] = self::value($field, $raw);
             if ($error === null && $field['type'] === 'user' && ! $isMember((string) $value)) {
                 $error = 'Choose a member of this organization.';
+            }
+            if ($error === null && $field['type'] === 'resource' && ($isResource === null || ! $isResource((string) $value, $field['resource_type'] ?? null))) {
+                $error = 'Choose an active resource of this workspace.';
             }
 
             if ($error !== null) {
@@ -408,6 +465,9 @@ final class Fields
             case 'user':
                 return is_string($raw) && Str::isUuid($raw) ? [$raw, null] : [null, 'Choose a person.'];
 
+            case 'resource':
+                return is_string($raw) && Str::isUuid($raw) ? [$raw, null] : [null, 'Choose a resource.'];
+
             case 'file':
                 if (! is_array($raw) || count($raw) > self::MAX_FILES) {
                     return [null, 'At most '.self::MAX_FILES.' files.'];
@@ -439,6 +499,7 @@ final class Fields
             'select_multiple' => implode(', ', array_map(fn ($v) => $labels[$v] ?? (string) $v, (array) $value)),
             'yes_no' => $value === true ? 'Yes' : 'No',
             'user' => $people[$value] ?? 'Unknown person',
+            'resource' => $people[$value] ?? 'Unknown resource',
             'file' => implode(', ', array_map(fn ($id) => $fileNames[$id] ?? 'File', (array) $value)),
             'datetime' => str_replace('T', ' ', (string) $value),
             default => is_scalar($value) ? (string) $value : (string) json_encode($value),
@@ -497,6 +558,64 @@ final class Fields
         $name = Str::of($label)->ascii()->lower()->replaceMatches('/[^a-z0-9]+/', '_')->trim('_')->substr(0, 48)->toString();
 
         return preg_match('/^[a-z]/', $name) === 1 ? $name : 'f_'.mb_substr($name, 0, 46);
+    }
+
+    /**
+     * Whether a field shows, given the values answered so far: always
+     * without show_if; otherwise when the named field's answer is listed
+     * (any listed choice, for multiple choice).
+     *
+     * @param  array<string, mixed>  $field
+     * @param  array<string, mixed>  $values
+     * @param  list<array<string, mixed>>|null  $fields  the template; when given, a condition on a hidden field is itself false
+     */
+    public static function visible(array $field, array $values, ?array $fields = null): bool
+    {
+        $condition = $field['show_if'] ?? null;
+        if (! is_array($condition) || ! is_string($condition['field'] ?? null)) {
+            return true;
+        }
+        if ($fields !== null) {
+            $parent = self::byName($fields)[$condition['field']] ?? null;
+            if ($parent !== null && ! self::visible($parent, $values, $fields)) {
+                return false;
+            }
+        }
+        $answer = $values[$condition['field']] ?? null;
+        $listed = array_map('strval', (array) ($condition['in'] ?? []));
+
+        return match (true) {
+            is_bool($answer) => in_array($answer ? 'yes' : 'no', $listed, true),
+            is_array($answer) => array_intersect(array_map('strval', $answer), $listed) !== [],
+            is_scalar($answer) => in_array((string) $answer, $listed, true),
+            default => false,
+        };
+    }
+
+    /**
+     * A show_if checked against the fields before it: [{field, in}, null] or [null, error].
+     *
+     * @param  array<string, mixed>  $raw
+     * @param  list<array<string, mixed>>  $earlier
+     * @return array{0: array{field: string, in: list<string>}|null, 1: string|null}
+     */
+    private static function condition(array $raw, array $earlier): array
+    {
+        $parent = self::byName($earlier)[(string) $raw['field']] ?? null;
+        if ($parent === null) {
+            return [null, 'Show this field depending on a field above it.'];
+        }
+        if (! in_array($parent['type'], self::CONDITIONAL, true)) {
+            return [null, 'Only a yes/no or choice field can decide whether another shows.'];
+        }
+        $listed = isset($raw['in']) && is_array($raw['in']) ? $raw['in'] : (isset($raw['equals']) ? [$raw['equals']] : []);
+        $listed = array_values(array_unique(array_map(fn ($v) => is_bool($v) ? ($v ? 'yes' : 'no') : (string) $v, array_filter($listed, fn ($v) => is_scalar($v)))));
+        $allowed = $parent['type'] === 'yes_no' ? ['yes', 'no'] : array_column($parent['choices'] ?? [], 'value');
+        if ($listed === [] || array_diff($listed, $allowed) !== []) {
+            return [null, 'Choose which answers of "'.$parent['label'].'" show this field.'];
+        }
+
+        return [['field' => (string) $parent['name'], 'in' => $listed], null];
     }
 
     public static function filled(mixed $value): bool

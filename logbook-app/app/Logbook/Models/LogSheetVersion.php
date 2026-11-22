@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * published it never changes again (a PostgreSQL trigger refuses it), and
  * every entry written against it is read through it.
  *
+ * @property array{mode: string, required: bool, resource_required: bool, accuracy_m: int|null}|null $location
  * @property string $id
  * @property string $organization_id
  * @property string $log_sheet_id
@@ -31,7 +32,7 @@ class LogSheetVersion extends Model
 
     protected function casts(): array
     {
-        return ['fields' => 'array', 'version' => 'integer', 'published_at' => 'immutable_datetime'];
+        return ['fields' => 'array', 'location' => 'array', 'version' => 'integer', 'published_at' => 'immutable_datetime'];
     }
 
     public function isPublished(): bool

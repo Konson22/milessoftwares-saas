@@ -1,7 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { NotebookPen, Plus } from 'lucide-react';
 import { EmptyState } from '@miles/ui/components/empty-state';
-import { PageHeader } from '@miles/ui/components/page-header';
+import { PageHeader } from '@/components/page-header';
 import { Panel, PanelToolbar } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
 import type { FilterOptions, Filters } from '@/components/entries-table';

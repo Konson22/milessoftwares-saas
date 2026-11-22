@@ -2,19 +2,25 @@
 
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\EntryController;
+use App\Http\Controllers\ExceptionController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LogbookController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PeopleController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\SheetController;
+use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TrackController;
 use App\Http\Middleware\RememberMember;
 use Illuminate\Support\Facades\Route;
 use Miles\PlatformClient\PlatformConfig;
 
 /*
 |--------------------------------------------------------------------------
-| Tatook Logbook (ADR-0025)
+| Miles Logbook (ADR-0025)
 |--------------------------------------------------------------------------
 |
 | Served at {workspace}/logbook. The "platform" middleware resolves the
@@ -33,7 +39,7 @@ if (! app(PlatformConfig::class)->configured()) {
 
 Route::prefix(app(PlatformConfig::class)->path())
     ->middleware(['web', 'platform', RememberMember::class])
-    ->whereUuid(['entry', 'attachment', 'logbook', 'sheet', 'grant'])
+    ->whereUuid(['entry', 'attachment', 'logbook', 'sheet', 'grant', 'task', 'series', 'file', 'exception', 'schedule', 'occurrence', 'notification', 'resource', 'location'])
     ->group(function () {
         Route::get('/', HomeController::class)->name('home');
 
@@ -101,6 +107,78 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::get('reports/entries.csv', [ReportController::class, 'csv'])->middleware('throttle:10,1')->name('reports.csv');
             Route::get('reports/entries.pdf', [ReportController::class, 'pdf'])->middleware('throttle:10,1')->name('reports.pdf');
         });
+
+        // Operations (ADR-0026). Tasks: the assignee works them; tasks.manage gives, follows up and verifies.
+        Route::get('tasks', [TaskController::class, 'index'])->name('tasks.index');
+        Route::get('tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
+        Route::post('tasks/{task}/start', [TaskController::class, 'start'])->name('tasks.start');
+        Route::post('tasks/{task}/complete', [TaskController::class, 'complete'])->name('tasks.complete');
+        Route::post('tasks/{task}/files', [TaskController::class, 'upload'])->middleware('throttle:30,1')->name('tasks.files.store');
+        Route::delete('task-files/{file}', [TaskController::class, 'removeFile'])->name('tasks.files.destroy');
+        Route::get('work-files/{file}', [TaskController::class, 'download'])->name('work-files.show');
+        Route::middleware('can:logbook.tasks.manage')->group(function () {
+            Route::post('tasks', [TaskController::class, 'store'])->middleware('throttle:60,1')->name('tasks.store');
+            Route::put('tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
+            Route::post('tasks/{task}/assign', [TaskController::class, 'assign'])->name('tasks.assign');
+            Route::post('tasks/{task}/verify', [TaskController::class, 'verify'])->name('tasks.verify');
+            Route::post('tasks/{task}/cancel', [TaskController::class, 'cancel'])->name('tasks.cancel');
+            Route::post('tasks/{task}/reopen', [TaskController::class, 'reopen'])->name('tasks.reopen');
+            Route::post('task-series', [TaskController::class, 'storeSeries'])->name('task-series.store');
+            Route::put('task-series/{series}', [TaskController::class, 'updateSeries'])->name('task-series.update');
+            Route::post('task-series/{series}/pause', [TaskController::class, 'pauseSeries'])->name('task-series.pause');
+            Route::post('task-series/{series}/resume', [TaskController::class, 'resumeSeries'])->name('task-series.resume');
+            Route::post('task-series/{series}/end', [TaskController::class, 'endSeries'])->name('task-series.end');
+        });
+
+        // Exceptions: reported by those who record or review; followed up by tasks.manage.
+        Route::get('exceptions', [ExceptionController::class, 'index'])->name('exceptions.index');
+        Route::get('exceptions/{exception}', [ExceptionController::class, 'show'])->name('exceptions.show');
+        Route::post('exceptions', [ExceptionController::class, 'store'])->middleware('throttle:60,1')->name('exceptions.store');
+        Route::post('exceptions/{exception}/start', [ExceptionController::class, 'start'])->name('exceptions.start');
+        Route::post('exceptions/{exception}/resolve', [ExceptionController::class, 'resolve'])->name('exceptions.resolve');
+        Route::post('exceptions/{exception}/files', [ExceptionController::class, 'upload'])->middleware('throttle:30,1')->name('exceptions.files.store');
+        Route::delete('exception-files/{file}', [ExceptionController::class, 'removeFile'])->name('exceptions.files.destroy');
+        Route::middleware('can:logbook.tasks.manage')->group(function () {
+            Route::post('exceptions/{exception}/assign', [ExceptionController::class, 'assign'])->name('exceptions.assign');
+            Route::post('exceptions/{exception}/close', [ExceptionController::class, 'close'])->name('exceptions.close');
+            Route::post('exceptions/{exception}/reopen', [ExceptionController::class, 'reopen'])->name('exceptions.reopen');
+        });
+
+        // Scheduled log sheets: everyone sees the expected entries they reach; managers set schedules.
+        Route::get('schedules', [ScheduleController::class, 'index'])->name('schedules.index');
+        Route::middleware('can:logbook.manage')->group(function () {
+            Route::post('sheets/{sheet}/schedules', [ScheduleController::class, 'store'])->name('schedules.store');
+            Route::put('schedules/{schedule}', [ScheduleController::class, 'update'])->name('schedules.update');
+            Route::post('schedules/{schedule}/pause', [ScheduleController::class, 'pause'])->name('schedules.pause');
+            Route::post('schedules/{schedule}/resume', [ScheduleController::class, 'resume'])->name('schedules.resume');
+            Route::post('schedules/{schedule}/end', [ScheduleController::class, 'end'])->name('schedules.end');
+            Route::post('occurrences/{occurrence}/excuse', [ScheduleController::class, 'excuse'])->name('occurrences.excuse');
+        });
+
+        // Notifications: one's own only.
+        Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+        Route::get('notifications/recent', [NotificationController::class, 'recent'])->name('notifications.recent');
+        Route::get('notifications/{notification}/open', [NotificationController::class, 'open'])->name('notifications.open');
+        Route::post('notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
+        Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
+        Route::put('notifications/settings', [NotificationController::class, 'settings'])->name('notifications.settings');
+
+        // Resources and locations: read by everyone, kept by managers.
+        Route::get('resources', [ResourceController::class, 'index'])->name('resources.index');
+        Route::middleware('can:logbook.manage')->group(function () {
+            Route::post('resources', [ResourceController::class, 'store'])->name('resources.store');
+            Route::put('resources/{resource}', [ResourceController::class, 'update'])->name('resources.update');
+            Route::post('locations', [ResourceController::class, 'storeLocation'])->name('locations.store');
+            Route::put('locations/{location}', [ResourceController::class, 'updateLocation'])->name('locations.update');
+        });
+
+        // Routes (GPS, ADR-0028): own routes for everyone; others' with logbook.tracks.view.
+        Route::get('routes', [TrackController::class, 'index'])->name('tracks.index');
+        Route::get('routes/{track}', [TrackController::class, 'show'])->whereUuid('track')->name('tracks.show');
+        Route::get('routes/{track}/gpx', [TrackController::class, 'export'])->whereUuid('track')->name('tracks.export');
+        Route::delete('routes/{track}', [TrackController::class, 'destroy'])->whereUuid('track')->middleware('can:logbook.manage')->name('tracks.destroy');
+        // Coming soon (ADR-0028 phases 2 and 3): pages only.
+        Route::get('coming-soon/{page}', [TrackController::class, 'comingSoon'])->whereIn('page', ['gps-devices', 'fleet'])->name('coming-soon');
 
         Route::get('audit', AuditController::class)->middleware('can:logbook.audit.view')->name('audit.index');
     });

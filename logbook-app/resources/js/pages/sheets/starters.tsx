@@ -22,7 +22,7 @@ import {
     User,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { PageHeader } from '@miles/ui/components/page-header';
+import { PageHeader } from '@/components/page-header';
 import { Button } from '@miles/ui/components/ui/button';
 import { TextField } from '@/components/fields';
 import { show as logbookShow } from '@/routes/logbooks';

@@ -13,6 +13,8 @@ use App\Logbook\Models\EntryReview;
 use App\Logbook\Models\EntryRevision;
 use App\Logbook\Models\LogSheet;
 use App\Logbook\Reports;
+use App\Logbook\Schedules;
+use App\Logbook\Tracks;
 use App\Models\Workspace;
 use App\Models\WorkspaceMember;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -61,6 +63,11 @@ class EntryController extends Controller
         $sheet = Access::writableSheets()->findOrFail($sheetId);
         $version = $sheet->publishedVersion;
         abort_if($version === null, 404);
+        // Opened from a reminder: the expected entry this one is for.
+        $occurrenceId = $request->string('occurrence')->toString();
+        $occurrence = Str::isUuid($occurrenceId)
+            ? Schedules::visible()->whereKey($occurrenceId)->where('log_sheet_id', $sheet->id)->first()
+            : null;
 
         return Inertia::render('entries/form', [
             'sheet' => $this->sheetData($sheet),
@@ -72,7 +79,18 @@ class EntryController extends Controller
             // One key per opened form: a double click or a resent request makes one entry.
             'idempotencyKey' => (string) Str::uuid7(),
             'members' => WorkspaceMember::options(),
+            'resources' => self::resourceOptions(),
             'files' => (object) [],
+            // GPS (ADR-0028): what this version takes; the browser asks before giving a location.
+            'locationSettings' => Tracks::settings($version),
+            'location' => null,
+            'occurrence' => $occurrence === null ? null : [
+                'id' => $occurrence->id,
+                'dueAt' => $occurrence->due_at->toIso8601String(),
+                'closesAt' => $occurrence->closes_at->toIso8601String(),
+                'status' => $occurrence->status,
+                'taken' => $occurrence->log_entry_id !== null,
+            ],
         ]);
     }
 
@@ -84,9 +102,15 @@ class EntryController extends Controller
             'values' => ['present', 'array'],
             'idempotency_key' => ['nullable', 'string', 'max:64'],
             'submit' => ['boolean'],
+            'schedule_occurrence_id' => ['nullable', 'uuid'],
+            'location' => ['nullable', 'array'],
+            'location.lat' => ['required_with:location', 'numeric', 'between:-90,90'],
+            'location.lng' => ['required_with:location', 'numeric', 'between:-180,180'],
+            'location.accuracy_m' => ['nullable', 'numeric', 'min:0'],
+            'location.captured_at' => ['required_with:location', 'date'],
         ]);
         $sheet = Access::writableSheets()->whereKey((string) $data['sheet_id'])->firstOrFail();
-        $entry = Entries::create($sheet, $this->user(), $data['values'], $this->occurredAt($data['occurred_at']), $data['idempotency_key'] ?? null, (bool) ($data['submit'] ?? false));
+        $entry = Entries::create($sheet, $this->user(), $data['values'], $this->occurredAt($data['occurred_at']), $data['idempotency_key'] ?? null, (bool) ($data['submit'] ?? false), occurrenceId: $data['schedule_occurrence_id'] ?? null, place: ['location' => $data['location'] ?? null, 'source' => 'browser']);
 
         return $entry->status === 'draft'
             ? to_route('entries.edit', $entry->id)->with('success', 'Draft saved. Add files or finish it later.')
@@ -139,6 +163,9 @@ class EntryController extends Controller
                 'reviewer' => $entry->reviewer?->name,
                 'isMine' => $entry->created_by === $me->id,
                 'answers' => self::answers($entry->version->fields, $entry->values, $files),
+                'location' => $entry->location,
+                // The route it was written on, when the viewer may see that route.
+                'track' => $entry->log_track_id !== null && Tracks::visible()->whereKey($entry->log_track_id)->exists() ? $entry->log_track_id : null,
             ],
             'revisions' => array_reverse($revisionRows),
             'reviews' => $entry->reviews()->get()->map(fn (EntryReview $r) => [
@@ -174,7 +201,10 @@ class EntryController extends Controller
             'values' => (object) $entry->values,
             'occurredAt' => $entry->occurred_at->setTimezone(Workspace::current()->timezone ?? 'UTC')->format('Y-m-d\TH:i'),
             'idempotencyKey' => null,
+            'locationSettings' => Tracks::settings($entry->version),
+            'location' => $entry->location,
             'members' => WorkspaceMember::options(),
+            'resources' => self::resourceOptions(),
             'files' => (object) $files->groupBy('field')->map(fn ($group) => $group->map(fn (Attachment $a) => [
                 'id' => $a->id, 'name' => $a->name, 'size' => $a->size, 'mime' => $a->mime, 'removed' => false,
             ])->values())->all(),
@@ -188,8 +218,15 @@ class EntryController extends Controller
             'occurred_at' => ['required', 'date'],
             'values' => ['present', 'array'],
             'submit' => ['boolean'],
+            'location' => ['nullable', 'array'],
+            'location.lat' => ['required_with:location', 'numeric', 'between:-90,90'],
+            'location.lng' => ['required_with:location', 'numeric', 'between:-180,180'],
+            'location.accuracy_m' => ['nullable', 'numeric', 'min:0'],
+            'location.captured_at' => ['required_with:location', 'date'],
         ]);
-        $entry = Entries::update($entry, $this->user(), $data['values'], $this->occurredAt($data['occurred_at']));
+        // Sent only when the form shows location: otherwise the entry keeps what it has.
+        $place = $request->has('location') ? ['location' => $data['location'] ?? null, 'track_id' => $entry->log_track_id, 'source' => $entry->location['source'] ?? 'browser'] : null;
+        $entry = Entries::update($entry, $this->user(), $data['values'], $this->occurredAt($data['occurred_at']), $place);
 
         if ($data['submit'] ?? false) {
             $entry = Entries::submit($entry, $this->user());

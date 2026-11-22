@@ -104,9 +104,8 @@ it('serves files only to people who can read the entry', function () {
     as_($this->team['reviewer'], 'logbook_reviewer');
     $this->get(p("attachments/{$file->id}"))->assertOk();
 
-    // Restricting the logbook takes the files away from those not listed.
-    as_($this->team['manager'], 'logbook_manager');
-    $this->put(p("logbooks/{$this->logbook->id}"), ['name' => 'Facility Management', 'restricted' => true])->assertSessionHasNoErrors();
+    // Taken off the logbook, the reviewer loses its files too.
+    removeMember($this->logbook, $this->team['reviewer']);
     as_($this->team['reviewer'], 'logbook_reviewer');
     $this->get(p("attachments/{$file->id}"))->assertNotFound();
 

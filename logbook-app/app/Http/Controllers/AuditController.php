@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Logbook\Access;
+use App\Logbook\Member;
 use App\Logbook\Models\AuditEvent;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -10,6 +12,7 @@ use Inertia\Response;
 
 /**
  * The audit trail, read-only: no route changes or removes an event.
+ * Within the auditor's departments when their role is limited to some.
  */
 class AuditController extends Controller
 {
@@ -23,6 +26,9 @@ class AuditController extends Controller
         return Inertia::render('audit/index', [
             'filters' => $data,
             'events' => AuditEvent::query()
+                // A department auditor reads events of their department's logbooks;
+                // events about no logbook (resources, locations) belong to the whole workspace.
+                ->when(! Member::current()->everywhere('logbook.audit.view'), fn ($q) => $q->whereIn('logbook_id', Access::logbooks()->select('id')))
                 ->when($data['type'] ?? null, fn ($q, $t) => $q->where('subject_type', $t))
                 ->when($data['q'] ?? null, fn ($q, $term) => $q->where(fn ($w) => $w
                     ->where('subject_label', 'like', '%'.addcslashes($term, '%_\\').'%')

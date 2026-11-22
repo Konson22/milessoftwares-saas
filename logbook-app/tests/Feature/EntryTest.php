@@ -145,9 +145,16 @@ it('lists my entries and searches by keyword and reference', function () {
     as_($this->team['writer'], 'logbook_contributor');
     $this->get(p('entries'))->assertInertia(fn ($page) => $page->component('entries/index')->where('entries.total', 2));
     $this->get(p('entries?q=OIL+filter'))->assertInertia(fn ($page) => $page->where('entries.total', 1));
-    $this->get(p('entries?scope=all&q=gen-99'))->assertInertia(fn ($page) => $page->where('entries.total', 1)->where('entries.data.0.creator', 'Other'));
+    // A contributor never reads a colleague's entries.
+    $this->get(p('entries?scope=all&q=gen-99'))->assertInertia(fn ($page) => $page->where('entries.total', 0));
     $this->get(p('entries?scope=all&q=GEN-'.now()->year.'-000002'))->assertInertia(fn ($page) => $page->where('entries.total', 1));
-    $this->get(p('entries?scope=all&status=submitted&from=2026-11-19&to=2026-11-19'))->assertInertia(fn ($page) => $page->where('entries.total', 3));
+    $this->get(p('entries?scope=all&status=submitted&from=2026-11-19&to=2026-11-19'))->assertInertia(fn ($page) => $page->where('entries.total', 2));
     $this->get(p('entries?scope=all&from=2026-11-20'))->assertInertia(fn ($page) => $page->where('entries.total', 0));
+
+    // A viewer reads everyone's.
+    as_($this->team['viewer'], 'logbook_viewer');
+    $this->get(p('entries?scope=all&q=gen-99'))->assertInertia(fn ($page) => $page->where('entries.total', 1)->where('entries.data.0.creator', 'Other'));
+    $this->get(p('entries?scope=all&status=submitted&from=2026-11-19&to=2026-11-19'))->assertInertia(fn ($page) => $page->where('entries.total', 3));
+    as_($this->team['writer'], 'logbook_contributor');
     $this->get(p('entries?status=nonsense'))->assertSessionHasErrors('status');
 });

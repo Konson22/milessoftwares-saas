@@ -8,4 +8,6 @@ export type SharedProps = {
     /** For showing and hiding UI only: the server authorizes every action. */
     access: { isOwner: boolean; permissions: string[] } | null;
     flash: { success: string | null };
+    /** Unread notifications of the signed-in member (ADR-0026 §2.8). */
+    unread: number;
 };

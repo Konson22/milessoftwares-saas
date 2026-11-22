@@ -9,6 +9,7 @@ use App\Logbook\Models\EntryReview;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -41,7 +42,12 @@ class ReviewController extends Controller
         $data = $request->validate([
             'decision' => ['required', Rule::in(['reviewed', 'returned'])],
             'comment' => ['nullable', 'string', 'max:2000'],
+            // The revision the reviewer read: a resubmission since then is not decided unseen.
+            'revision' => ['nullable', 'integer', 'min:1'],
         ]);
+        if (isset($data['revision']) && $entry->revision !== (int) $data['revision']) {
+            throw ValidationException::withMessages(['decision' => 'This entry was corrected and submitted again since you opened it. Read the new revision first.']);
+        }
         $entry = Entries::review($entry, $this->user(), $data['decision'], $data['comment'] ?? null);
 
         return to_route('reviews.index')->with('success', $entry->status === 'reviewed'

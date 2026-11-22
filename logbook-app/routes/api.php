@@ -3,6 +3,8 @@
 use App\Http\Controllers\Api\EntryController;
 use App\Http\Controllers\Api\KitController;
 use App\Http\Controllers\Api\ReviewController;
+use App\Http\Controllers\Api\TrackController;
+use App\Http\Controllers\Api\WorkController;
 use App\Http\Middleware\RememberMember;
 use Illuminate\Support\Facades\Route;
 use Miles\PlatformClient\PlatformConfig;
@@ -52,5 +54,26 @@ Route::prefix(app(PlatformConfig::class)->path().'/api/v1')
         Route::middleware('can:logbook.entries.review')->group(function () {
             Route::get('reviews', [ReviewController::class, 'index'])->name('reviews.index');
             Route::post('entries/{entry}/review', [ReviewController::class, 'decide'])->whereUuid('entry')->name('reviews.decide');
+        });
+
+        // Operations (ADR-0026): the member's tasks, due inspections, notifications.
+        Route::get('tasks', [WorkController::class, 'tasks'])->name('tasks.index');
+        Route::get('tasks/{task}', [WorkController::class, 'task'])->whereUuid('task')->name('tasks.show');
+        Route::post('tasks/{task}/start', [WorkController::class, 'start'])->whereUuid('task')->name('tasks.start');
+        Route::post('tasks/{task}/complete', [WorkController::class, 'complete'])->whereUuid('task')->name('tasks.complete');
+        Route::post('tasks/{task}/evidence', [WorkController::class, 'evidence'])->whereUuid('task')->name('tasks.evidence');
+        Route::get('due', [WorkController::class, 'due'])->name('due');
+        Route::get('notifications', [WorkController::class, 'notifications'])->name('notifications.index');
+        Route::post('notifications/read', [WorkController::class, 'read'])->name('notifications.read');
+
+        // Push (ADR-0027): the phone's token, registered after sign-in and removed at sign-out.
+        Route::post('push-devices', [WorkController::class, 'registerDevice'])->middleware('throttle:30,1')->name('push-devices.store');
+        Route::post('push-devices/remove', [WorkController::class, 'unregisterDevice'])->name('push-devices.destroy');
+
+        // Routes (GPS, ADR-0028): recorded by the person on their phone, sent in batches.
+        Route::middleware('can:logbook.entries.create')->group(function () {
+            Route::get('tracks', [TrackController::class, 'index'])->name('tracks.index');
+            Route::post('tracks', [TrackController::class, 'upsert'])->middleware('throttle:120,1')->name('tracks.upsert');
+            Route::post('tracks/{track}/points', [TrackController::class, 'points'])->whereUuid('track')->middleware('throttle:240,1')->name('tracks.points');
         });
     });

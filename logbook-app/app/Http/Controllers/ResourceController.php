@@ -1,0 +1,127 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Logbook\AuditTrail;
+use App\Logbook\Models\Location;
+use App\Logbook\Models\LogResource;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
+use Inertia\Response;
+use Miles\PlatformClient\Tenancy\CurrentTenant;
+
+/**
+ * Resources and locations (ADR-0026 §2.10): named once, chosen in Resource
+ * fields and on tasks. Everyone in Logbook reads the list; managers keep
+ * it. Never deleted once in use: made inactive instead.
+ */
+class ResourceController extends Controller
+{
+    public function index(): Response
+    {
+        $locations = Location::query()->with('parent.parent')->orderBy('name')->get();
+
+        return Inertia::render('resources/index', [
+            'resources' => LogResource::query()->with('location.parent')->orderByDesc('active')->orderBy('code')->get()
+                ->map(fn (LogResource $r) => [
+                    'id' => $r->id, 'code' => $r->code, 'name' => $r->name, 'type' => $r->type, 'description' => $r->description,
+                    'locationId' => $r->location_id, 'location' => $r->location?->path(), 'active' => $r->active,
+                ])->values(),
+            'locations' => $locations->map(fn (Location $l) => ['id' => $l->id, 'name' => $l->name, 'path' => $l->path(), 'parentId' => $l->parent_id, 'active' => $l->active])->values(),
+            'types' => LogResource::query()->distinct()->orderBy('type')->pluck('type'),
+        ]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $resource = DB::transaction(function () use ($request) {
+            $resource = LogResource::query()->create($this->resourceInput($request));
+            AuditTrail::record('resource.created', $resource, $this->user());
+
+            return $resource;
+        });
+
+        return back()->with('success', "{$resource->label()} added.");
+    }
+
+    public function update(Request $request, string $resource): RedirectResponse
+    {
+        $resource = LogResource::query()->findOrFail($resource);
+        DB::transaction(function () use ($request, $resource) {
+            $before = ['code' => $resource->code, 'name' => $resource->name, 'active' => $resource->active];
+            $resource->update($this->resourceInput($request, $resource));
+            AuditTrail::record('resource.updated', $resource, $this->user(), ['from' => $before, 'to' => ['code' => $resource->code, 'name' => $resource->name, 'active' => $resource->active]]);
+        });
+
+        return back()->with('success', "{$resource->label()} saved.");
+    }
+
+    public function storeLocation(Request $request): RedirectResponse
+    {
+        $location = DB::transaction(function () use ($request) {
+            $location = Location::query()->create($this->locationInput($request));
+            AuditTrail::record('location.created', $location, $this->user());
+
+            return $location;
+        });
+
+        return back()->with('success', "{$location->name} added.");
+    }
+
+    public function updateLocation(Request $request, string $location): RedirectResponse
+    {
+        $location = Location::query()->findOrFail($location);
+        $data = $this->locationInput($request);
+        // No loops: a place cannot sit inside itself or one of its own places.
+        for ($at = $data['parent_id'] ?? null, $guard = 0; $at !== null && $guard < 10; $guard++) {
+            if ($at === $location->id) {
+                throw ValidationException::withMessages(['parent_id' => 'A place cannot sit inside itself.']);
+            }
+            $at = Location::query()->whereKey($at)->value('parent_id');
+        }
+        DB::transaction(function () use ($location, $data) {
+            $location->update($data);
+            AuditTrail::record('location.updated', $location, $this->user());
+        });
+
+        return back()->with('success', "{$location->name} saved.");
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function resourceInput(Request $request, ?LogResource $resource = null): array
+    {
+        if (is_string($request->input('code'))) {
+            $request->merge(['code' => strtoupper(trim($request->input('code')))]);
+        }
+        $organizationId = app(CurrentTenant::class)->require()->id;
+
+        return $request->validate([
+            'code' => ['required', 'string', 'max:32', 'regex:/^[A-Z0-9][A-Z0-9-]*$/', Rule::unique('log_resources', 'code')->where('organization_id', $organizationId)->ignore($resource?->id)],
+            'name' => ['required', 'string', 'max:120'],
+            'type' => ['required', 'string', 'max:48'],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'location_id' => ['nullable', 'uuid', Rule::exists('log_locations', 'id')->where('organization_id', $organizationId)],
+            'active' => ['boolean'],
+        ], ['code.regex' => 'Letters, digits and dashes, such as GEN-01.', 'code.unique' => 'Another resource has this code.']);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function locationInput(Request $request): array
+    {
+        $organizationId = app(CurrentTenant::class)->require()->id;
+
+        return $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'parent_id' => ['nullable', 'uuid', Rule::exists('log_locations', 'id')->where('organization_id', $organizationId)],
+            'active' => ['boolean'],
+        ]);
+    }
+}

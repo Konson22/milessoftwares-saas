@@ -1,5 +1,9 @@
 <?php
 
+use App\Logbook\Access;
+use App\Logbook\Logbooks;
+use App\Logbook\Member;
+use App\Logbook\Models\AccessGrant;
 use App\Logbook\Models\Entry;
 use App\Logbook\Models\Logbook;
 use App\Logbook\Models\LogSheet;
@@ -104,8 +108,40 @@ function team(string $slug = 'acme'): array
 function logbook(string $name = 'Facility Management', array $extra = [], string $slug = 'acme'): Logbook
 {
     test()->post(p('logbooks', $slug), ['name' => $name, ...$extra])->assertSessionHasNoErrors();
+    $logbook = inTenant(fn () => Logbook::query()->where('name', $name)->latest()->firstOrFail(), $slug);
 
-    return inTenant(fn () => Logbook::query()->where('name', $name)->latest()->firstOrFail(), $slug);
+    // Everyone signed up so far becomes a member in the first role theirs allows,
+    // as on the day membership became required; restricted ones start empty.
+    if (! ($extra['restricted'] ?? false)) {
+        inTenant(function () use ($logbook) {
+            foreach (User::query()->get() as $user) {
+                $member = Member::of((string) $user->id);
+                if ($member === null || Access::managesLogbook($logbook, $member)) {
+                    continue;
+                }
+                foreach (Logbooks::MEMBER_PERMISSIONS as $role => [$permission]) {
+                    if ($member->can($permission)) {
+                        AccessGrant::query()->create(['logbook_id' => $logbook->id, 'user_id' => $user->id, 'role' => $role, 'granted_by' => $logbook->created_by]);
+                        break;
+                    }
+                }
+            }
+        }, $slug);
+    }
+
+    return $logbook;
+}
+
+/** Makes someone a member of a logbook directly (a person who joined after it was made). */
+function addMember(Logbook $logbook, User $user, string $role = 'contributor', string $slug = 'acme'): void
+{
+    inTenant(fn () => AccessGrant::query()->create(['logbook_id' => $logbook->id, 'user_id' => $user->id, 'role' => $role, 'granted_by' => $logbook->created_by]), $slug);
+}
+
+/** Takes someone off a logbook: they no longer reach it. */
+function removeMember(Logbook $logbook, User $user, string $slug = 'acme'): void
+{
+    inTenant(fn () => AccessGrant::query()->where('logbook_id', $logbook->id)->where('user_id', $user->id)->delete(), $slug);
 }
 
 /**

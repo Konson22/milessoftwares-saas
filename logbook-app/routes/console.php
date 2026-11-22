@@ -10,3 +10,6 @@ Artisan::command('inspire', function () {
 
 // Retry events for shared modules (Finance, HR, Payroll) that are due.
 Schedule::command('platform:outbox')->everyMinute()->withoutOverlapping();
+
+// Logbook's clock (ADR-0026): recurring tasks, expected entries, missed ones, reminders.
+Schedule::command('logbook:operations')->everyMinute()->withoutOverlapping(10);
