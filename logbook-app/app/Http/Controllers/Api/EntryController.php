@@ -87,6 +87,13 @@ class EntryController extends Controller
             'occurred_at' => ['required', 'date'],
             'values' => ['nullable', 'array'],
             'submit' => ['boolean'],
+            'occurrence_id' => ['nullable', 'uuid'],
+            'location' => ['nullable', 'array'],
+            'location.lat' => ['required_with:location', 'numeric', 'between:-90,90'],
+            'location.lng' => ['required_with:location', 'numeric', 'between:-180,180'],
+            'location.accuracy_m' => ['nullable', 'numeric', 'min:0'],
+            'location.captured_at' => ['required_with:location', 'date'],
+            'track_id' => ['nullable', 'uuid'],
         ]);
         $user = $this->user();
 
@@ -104,7 +111,7 @@ class EntryController extends Controller
             return self::refused('version_unknown', 'The template version this entry was written on is unknown.', 409);
         }
 
-        $entry = Entries::create($sheet, $user, $data['values'] ?? [], $data['occurred_at'], $data['id'], (bool) ($data['submit'] ?? false), $version);
+        $entry = Entries::create($sheet, $user, $data['values'] ?? [], $data['occurred_at'], $data['id'], (bool) ($data['submit'] ?? false), $version, $data['occurrence_id'] ?? null, ['location' => $data['location'] ?? null, 'track_id' => $data['track_id'] ?? null, 'source' => 'phone']);
 
         return response()->json($this->entry($entry->load(['sheet', 'logbook', 'version'])), 201);
     }
@@ -118,6 +125,12 @@ class EntryController extends Controller
             'base_revision' => ['required', 'integer', 'min:0'],
             'occurred_at' => ['required', 'date'],
             'values' => ['nullable', 'array'],
+            'location' => ['nullable', 'array'],
+            'location.lat' => ['required_with:location', 'numeric', 'between:-90,90'],
+            'location.lng' => ['required_with:location', 'numeric', 'between:-180,180'],
+            'location.accuracy_m' => ['nullable', 'numeric', 'min:0'],
+            'location.captured_at' => ['required_with:location', 'date'],
+            'track_id' => ['nullable', 'uuid'],
         ]);
         $entry = $this->own($entry);
 
@@ -132,7 +145,8 @@ class EntryController extends Controller
             return self::refused('not_editable', 'This entry is '.$entry->status.' and can no longer be changed.', 409);
         }
 
-        $entry = Entries::update($entry, $this->user(), $data['values'] ?? [], $data['occurred_at']);
+        $place = $request->has('location') || $request->has('track_id') ? ['location' => $data['location'] ?? null, 'track_id' => $data['track_id'] ?? null, 'source' => 'phone'] : null;
+        $entry = Entries::update($entry, $this->user(), $data['values'] ?? [], $data['occurred_at'], $place);
 
         return response()->json($this->entry($entry->load(['sheet', 'logbook', 'version'])));
     }
@@ -241,6 +255,8 @@ class EntryController extends Controller
             'reviewedAt' => self::time($entry->reviewed_at),
             'updatedAt' => self::time($entry->updated_at),
             'values' => (object) $entry->values,
+            'location' => $entry->location,
+            'trackId' => $entry->log_track_id,
             'files' => $entry->attachments()->whereNull('removed_at')->get()->map(fn (Attachment $a) => self::file($a))->values()->all(),
             'lastReview' => $latest instanceof EntryReview ? [
                 'revision' => $latest->revision,

@@ -46,18 +46,17 @@ it('lets listed contributors write, on the whole logbook or one sheet', function
     writeEntry($this->guard)->assertSessionHasNoErrors();
     writeEntry($this->patrol)->assertNotFound();
     $this->get(p("logbooks/{$this->secure->id}"))->assertInertia(fn ($page) => $page->has('sheets', 1)->where('sheets.0.code', 'SEC'));
-    // Contributors read submitted entries of their own sheets only.
-    $this->get(p('entries?scope=all'))->assertInertia(fn ($page) => $page->where('entries.total', 2));
+    // Contributors read their own entries only, never colleagues'.
+    $this->get(p('entries?scope=all'))->assertInertia(fn ($page) => $page->where('entries.total', 1));
 });
 
 it('never grants more than the member\'s catalog permissions', function () {
-    // Listed as contributor, but the viewer role has no write permission.
-    grant($this->secure->id, $this->team['viewer']->id, 'contributor')->assertSessionHasNoErrors();
+    // Added as contributor, but the viewer role has no write permission: refused, with the reason.
+    grant($this->secure->id, $this->team['viewer']->id, 'contributor')->assertSessionHasErrors('role');
     as_($this->team['viewer'], 'logbook_viewer');
-    writeEntry($this->guard)->assertForbidden();
     $this->get(p("logbooks/{$this->secure->id}"))->assertNotFound();
 
-    // Listed as viewer, with the view permission: reads, still cannot write.
+    // Added as viewer, with the view permission: reads, still cannot write.
     as_($this->team['manager'], 'logbook_manager');
     grant($this->secure->id, $this->team['viewer']->id, 'viewer')->assertSessionHasNoErrors();
     as_($this->team['viewer'], 'logbook_viewer');
@@ -89,7 +88,7 @@ it('takes access away when the listing is removed', function () {
     $draft = latestEntry();
 
     as_($this->team['manager'], 'logbook_manager');
-    $grant = inTenant(fn () => AccessGrant::query()->sole());
+    $grant = inTenant(fn () => AccessGrant::query()->where('logbook_id', $this->secure->id)->sole());
     $this->delete(p("access/{$grant->id}"))->assertSessionHasNoErrors();
 
     as_($this->team['writer'], 'logbook_contributor');

@@ -4,13 +4,14 @@ import { useState } from 'react';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
 import { Label } from '@miles/ui/components/ui/label';
-import type { FieldDef, FileRef, Option } from '@/lib/logbook';
-import { fileSize } from '@/lib/logbook';
+import type { FieldDef, FileRef, Option, ResourceOption } from '@/lib/logbook';
+import { fieldVisible, fileSize } from '@/lib/logbook';
 import {
     destroy as destroyAttachment,
     show as showAttachment,
     store as storeAttachment,
 } from '@/routes/attachments';
+import { useConfirm } from '@/components/dialogs';
 
 export type Values = Record<string, unknown>;
 
@@ -28,6 +29,7 @@ export function EntryFields({
     onChange,
     errors,
     members,
+    resources = [],
     files,
     entryId,
 }: {
@@ -36,6 +38,8 @@ export function EntryFields({
     onChange: (name: string, value: unknown) => void;
     errors: Record<string, string>;
     members: Option[];
+    /** Active resources, for resource fields. */
+    resources?: ResourceOption[];
     /** Live attachments per file field; undefined in the preview. */
     files?: Record<string, FileRef[]>;
     /** Saved entry id: files can be attached once the entry exists. */
@@ -44,6 +48,10 @@ export function EntryFields({
     return (
         <div className="grid gap-5">
             {fields.map((field) => {
+                // Hidden by its condition: not asked, and cleared on save.
+                if (!fieldVisible(field, values, fields)) {
+                    return null;
+                }
                 const id = `field-${field.name}`;
                 const error = errors[`values.${field.name}`];
 
@@ -61,6 +69,7 @@ export function EntryFields({
                             value={values[field.name]}
                             onChange={(v) => onChange(field.name, v)}
                             members={members}
+                            resources={resources}
                             invalid={!!error}
                             files={files?.[field.name]}
                             entryId={entryId}
@@ -86,6 +95,7 @@ function Control({
     value,
     onChange,
     members,
+    resources,
     invalid,
     files,
     entryId,
@@ -95,6 +105,7 @@ function Control({
     value: unknown;
     onChange: (value: unknown) => void;
     members: Option[];
+    resources: ResourceOption[];
     invalid: boolean;
     files?: FileRef[];
     entryId?: string | null;
@@ -112,6 +123,7 @@ function Control({
         case 'textarea':
             return (
                 <textarea
+                    data-slot="textarea"
                     {...common}
                     rows={4}
                     value={text}
@@ -155,6 +167,7 @@ function Control({
         case 'select_one':
             return (
                 <select
+                    data-slot="select"
                     {...common}
                     value={text}
                     onChange={(e) => onChange(e.target.value)}
@@ -233,6 +246,7 @@ function Control({
         case 'user':
             return (
                 <select
+                    data-slot="select"
                     {...common}
                     value={text}
                     onChange={(e) => onChange(e.target.value)}
@@ -244,6 +258,29 @@ function Control({
                             {m.label}
                         </option>
                     ))}
+                </select>
+            );
+        case 'resource':
+            return (
+                <select
+                    data-slot="select"
+                    {...common}
+                    value={text}
+                    onChange={(e) => onChange(e.target.value)}
+                    className={`${inputClass} max-w-md`}
+                >
+                    <option value="">Choose a resource…</option>
+                    {resources
+                        .filter(
+                            (r) =>
+                                !field.resource_type ||
+                                r.type === field.resource_type,
+                        )
+                        .map((r) => (
+                            <option key={r.value} value={r.value}>
+                                {r.label}
+                            </option>
+                        ))}
                 </select>
             );
         case 'file':
@@ -286,6 +323,7 @@ function FileControl({
 }) {
     const [busy, setBusy] = useState(false);
     const errors = usePage().props.errors as Record<string, string>;
+    const ask = useConfirm();
 
     if (files === undefined) {
         return (
@@ -324,9 +362,13 @@ function FileControl({
                                 variant="ghost"
                                 aria-label={`Remove ${file.name}`}
                                 disabled={busy}
-                                onClick={() => {
+                                onClick={async () => {
                                     if (
-                                        !window.confirm(`Remove ${file.name}?`)
+                                        !(await ask({
+                                            title: `Remove ${file.name}?`,
+                                            confirmLabel: 'Remove',
+                                            destructive: true,
+                                        }))
                                     ) {
                                         return;
                                     }

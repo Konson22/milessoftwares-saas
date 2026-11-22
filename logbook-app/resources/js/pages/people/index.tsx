@@ -12,7 +12,7 @@ import {
 import type { ReactNode } from 'react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { EmptyState } from '@miles/ui/components/empty-state';
-import { PageHeader } from '@miles/ui/components/page-header';
+import { PageHeader } from '@/components/page-header';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
 import { Errors, SelectField, TextField } from '@/components/fields';
@@ -36,7 +36,16 @@ type Person = {
     signInName: string;
     isOwner: boolean;
     access: string;
-    roles: string[];
+    /** Each role once, with the departments it applies in (null: the whole workspace). */
+    roles: { key: string; departments: string[] | null }[];
+};
+
+type Department = { id: string; name: string };
+
+type Scope = {
+    departments: Department[];
+    /** The manager's own role is limited to departments: no whole-workspace option. */
+    mustChoose: boolean;
 };
 
 type Props = {
@@ -54,6 +63,8 @@ type Props = {
         expiresAt: string;
         roles: string[];
     }[];
+    departments: Department[];
+    mustChooseDepartment: boolean;
 };
 
 type Panel = 'invite' | 'account' | null;
@@ -73,7 +84,10 @@ export default function People({
     people,
     others,
     invitations,
+    departments,
+    mustChooseDepartment,
 }: Props) {
+    const scope: Scope = { departments, mustChoose: mustChooseDepartment };
     const errors = usePage().props.errors as Record<string, string>;
     const [panel, setPanel] = useState<Panel>(null);
     const [query, setQuery] = useState('');
@@ -140,14 +154,19 @@ export default function People({
                 </div>
             )}
 
-            {errors.people && panel === null && (
+            {(errors.people || errors.department_id) && panel === null && (
                 <div className="mb-4">
-                    <Errors errors={{ people: errors.people }} />
+                    <Errors
+                        errors={{
+                            people: errors.people ?? errors.department_id,
+                        }}
+                    />
                 </div>
             )}
 
             {panel === 'invite' && (
                 <InviteForm
+                    scope={scope}
                     roles={assignable}
                     firstRole={firstRole}
                     errors={errors}
@@ -160,6 +179,7 @@ export default function People({
             )}
             {panel === 'account' && (
                 <AccountForm
+                    scope={scope}
                     roles={assignable}
                     firstRole={firstRole}
                     errors={errors}
@@ -217,10 +237,12 @@ export default function People({
                                         isMe={p.userId === me}
                                         roles={roles}
                                         roleNames={roleNames}
-                                        onGive={(role) =>
+                                        scope={scope}
+                                        onGive={(role, departmentId) =>
                                             post(roleRoutes.store().url, {
                                                 membership_id: p.membershipId,
                                                 role,
+                                                department_id: departmentId,
                                             })
                                         }
                                         onTakeBack={(role) =>
@@ -245,10 +267,12 @@ export default function People({
                             others={others}
                             roles={assignable}
                             firstRole={firstRole}
-                            onGive={(membershipId, role) =>
+                            scope={scope}
+                            onGive={(membershipId, role, departmentId) =>
                                 post(roleRoutes.store().url, {
                                     membership_id: membershipId,
                                     role,
+                                    department_id: departmentId,
                                 })
                             }
                         />
@@ -338,6 +362,7 @@ function PersonRow({
     isMe,
     roles,
     roleNames,
+    scope,
     onGive,
     onTakeBack,
 }: {
@@ -345,11 +370,18 @@ function PersonRow({
     isMe: boolean;
     roles: Role[];
     roleNames: Record<string, string>;
-    onGive: (role: string) => void;
+    scope: Scope;
+    onGive: (role: string, departmentId: string | null) => void;
     onTakeBack: (role: string) => void;
 }) {
-    const canGive = roles.filter(
-        (r) => r.assignable && !p.roles.includes(r.key),
+    // A role held for the whole workspace covers every department already.
+    const everywhere = new Set(
+        p.roles.filter((r) => r.departments === null).map((r) => r.key),
+    );
+    const canGive = roles.filter((r) => r.assignable && !everywhere.has(r.key));
+    const [giving, setGiving] = useState('');
+    const [department, setDepartment] = useState(
+        scope.mustChoose ? (scope.departments[0]?.id ?? '') : '',
     );
     const assignable = new Set(
         roles.filter((r) => r.assignable).map((r) => r.key),
@@ -384,12 +416,18 @@ function PersonRow({
                         Owner · full access
                     </span>
                 ) : (
-                    p.roles.map((key) => (
+                    p.roles.map(({ key, departments }) => (
                         <span
                             key={key}
                             className="inline-flex items-center gap-1 rounded-sm border border-[#d1d1d1] bg-[#f5f5f5] py-0.5 pr-1 pl-2 text-xs"
                         >
                             {roleNames[key] ?? key}
+                            <span className="text-muted-foreground">
+                                ·{' '}
+                                {departments === null
+                                    ? 'Whole workspace'
+                                    : departments.join(', ')}
+                            </span>
                             {assignable.has(key) && !isMe && (
                                 <button
                                     type="button"
@@ -405,10 +443,16 @@ function PersonRow({
                 )}
                 {!p.isOwner && !isMe && canGive.length > 0 && (
                     <select
-                        value=""
-                        onChange={(e) =>
-                            e.target.value && onGive(e.target.value)
-                        }
+                        value={giving}
+                        onChange={(e) => {
+                            const role = e.target.value;
+                            // Without departments to choose from, the role is for the whole workspace.
+                            if (role && scope.departments.length === 0) {
+                                onGive(role, null);
+                            } else {
+                                setGiving(role);
+                            }
+                        }}
                         aria-label={`Give ${p.name} a role`}
                         className="h-7 rounded-md border border-dashed border-[#c7c7c7] bg-card px-2 text-xs text-muted-foreground hover:border-primary hover:text-primary"
                     >
@@ -420,6 +464,43 @@ function PersonRow({
                         ))}
                     </select>
                 )}
+                {giving && (
+                    <span className="flex items-center gap-1.5">
+                        <select
+                            value={department}
+                            onChange={(e) => setDepartment(e.target.value)}
+                            aria-label="In department"
+                            className="h-7 rounded-md border border-[#c7c7c7] bg-card px-2 text-xs"
+                        >
+                            {!scope.mustChoose && (
+                                <option value="">Whole workspace</option>
+                            )}
+                            {scope.departments.map((d) => (
+                                <option key={d.id} value={d.id}>
+                                    {d.name}
+                                </option>
+                            ))}
+                        </select>
+                        <Button
+                            size="sm"
+                            className="h-7"
+                            onClick={() => {
+                                onGive(giving, department || null);
+                                setGiving('');
+                            }}
+                        >
+                            Give
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7"
+                            onClick={() => setGiving('')}
+                        >
+                            Cancel
+                        </Button>
+                    </span>
+                )}
             </span>
         </li>
     );
@@ -429,24 +510,35 @@ function ExistingMembers({
     others,
     roles,
     firstRole,
+    scope,
     onGive,
 }: {
     others: Props['others'];
     roles: Role[];
     firstRole: string;
-    onGive: (membershipId: string, role: string) => void;
+    scope: Scope;
+    onGive: (
+        membershipId: string,
+        role: string,
+        departmentId: string | null,
+    ) => void;
 }) {
     const [member, setMember] = useState('');
     const [role, setRole] = useState(firstRole);
+    const [department, setDepartment] = useState(firstDepartment(scope));
 
     return (
         <Card title="Already in the workspace">
             <form
-                className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_12rem_auto] sm:items-end"
+                className={`grid gap-3 p-4 sm:items-end ${
+                    scope.departments.length > 0
+                        ? 'sm:grid-cols-[minmax(0,1fr)_11rem_11rem_auto]'
+                        : 'sm:grid-cols-[minmax(0,1fr)_12rem_auto]'
+                }`}
                 onSubmit={(e) => {
                     e.preventDefault();
                     if (member && role) {
-                        onGive(member, role);
+                        onGive(member, role, department || null);
                         setMember('');
                     }
                 }}
@@ -470,6 +562,11 @@ function ExistingMembers({
                         label: r.name,
                     }))}
                 />
+                <DepartmentField
+                    scope={scope}
+                    value={department}
+                    onChange={setDepartment}
+                />
                 <Button type="submit" variant="outline" disabled={!member}>
                     <UserPlus /> Give role
                 </Button>
@@ -479,6 +576,7 @@ function ExistingMembers({
 }
 
 function InviteForm({
+    scope,
     roles,
     firstRole,
     errors,
@@ -486,14 +584,20 @@ function InviteForm({
     onCancel,
     onSubmit,
 }: {
+    scope: Scope;
     roles: Role[];
     firstRole: string;
     errors: Record<string, string>;
     busy: boolean;
     onCancel: () => void;
-    onSubmit: (data: { email: string; role: string }) => void;
+    onSubmit: (data: {
+        email: string;
+        role: string;
+        department_id: string | null;
+    }) => void;
 }) {
     const [data, setData] = useState({ email: '', role: firstRole });
+    const [department, setDepartment] = useState(firstDepartment(scope));
 
     return (
         <FormCard
@@ -502,7 +606,9 @@ function InviteForm({
             title="Invite by email"
             note="They get an email with a link, and join Logbook with this role when they accept."
             onCancel={onCancel}
-            onSubmit={() => onSubmit(data)}
+            onSubmit={() =>
+                onSubmit({ ...data, department_id: department || null })
+            }
             submit={
                 <>
                     <Mail /> Send invitation
@@ -528,12 +634,20 @@ function InviteForm({
                     }))}
                     error={errors.role}
                 />
+                <DepartmentField
+                    scope={scope}
+                    value={department}
+                    onChange={setDepartment}
+                    error={errors.department_id}
+                    className="sm:col-span-2"
+                />
             </div>
         </FormCard>
     );
 }
 
 function AccountForm({
+    scope,
     roles,
     firstRole,
     errors,
@@ -541,6 +655,7 @@ function AccountForm({
     onCancel,
     onSubmit,
 }: {
+    scope: Scope;
     roles: Role[];
     firstRole: string;
     errors: Record<string, string>;
@@ -551,6 +666,7 @@ function AccountForm({
         username: string;
         password: string;
         role: string;
+        department_id: string | null;
     }) => void;
 }) {
     const [data, setData] = useState({
@@ -559,6 +675,7 @@ function AccountForm({
         password: '',
         role: firstRole,
     });
+    const [department, setDepartment] = useState(firstDepartment(scope));
 
     return (
         <FormCard
@@ -567,7 +684,9 @@ function AccountForm({
             title="Add an account"
             note="For someone without an email, such as field staff on the phone app. Give them the username and this temporary password; they choose their own at first sign-in."
             onCancel={onCancel}
-            onSubmit={() => onSubmit(data)}
+            onSubmit={() =>
+                onSubmit({ ...data, department_id: department || null })
+            }
             submit={
                 <>
                     <KeyRound /> Add account
@@ -610,8 +729,58 @@ function AccountForm({
                     }))}
                     error={errors.role}
                 />
+                <DepartmentField
+                    scope={scope}
+                    value={department}
+                    onChange={setDepartment}
+                    error={errors.department_id}
+                    className="sm:col-span-2"
+                />
             </div>
         </FormCard>
+    );
+}
+
+function firstDepartment(scope: Scope): string {
+    return scope.mustChoose ? (scope.departments[0]?.id ?? '') : '';
+}
+
+/**
+ * Where the role applies: the whole workspace, or one department, whose
+ * logbooks are then all the person reaches. Hidden when the workspace has
+ * no departments and the manager may give workspace-wide roles.
+ */
+function DepartmentField({
+    scope,
+    value,
+    onChange,
+    error,
+    className,
+}: {
+    scope: Scope;
+    value: string;
+    onChange: (value: string) => void;
+    error?: string;
+    className?: string;
+}) {
+    if (scope.departments.length === 0 && !scope.mustChoose) {
+        return null;
+    }
+
+    return (
+        <SelectField
+            label="Department"
+            value={value}
+            onChange={onChange}
+            empty={scope.mustChoose ? undefined : 'Whole workspace'}
+            options={scope.departments.map((d) => ({
+                value: d.id,
+                label: d.name,
+            }))}
+            error={error}
+            hint="They see only the logbooks of this department."
+            className={className}
+        />
     );
 }
 

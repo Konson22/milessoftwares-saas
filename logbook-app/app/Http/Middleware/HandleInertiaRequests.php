@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Logbook\Models\Notification;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Miles\PlatformClient\Access\CurrentAccess;
@@ -48,6 +49,10 @@ class HandleInertiaRequests extends Middleware
                     'permissions' => collect($access->roles)->pluck('permissions')->flatten()->unique()->values()->all(),
                 ];
             },
+            // The bell: the member's unread notifications in this workspace.
+            'unread' => fn () => $request->user() === null || app(CurrentTenant::class)->get() === null
+                ? 0
+                : Notification::query()->where('user_id', $request->user()->getAuthIdentifier())->whereNull('read_at')->count(),
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
             ],

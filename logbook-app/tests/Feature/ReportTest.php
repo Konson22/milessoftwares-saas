@@ -66,9 +66,8 @@ it('needs the reports permission, and stays within reach', function () {
     $this->get(p('reports/entries.csv'))->assertForbidden();
     $this->get(p('reports/entries.pdf'))->assertForbidden();
 
-    // A viewer not listed on a restricted logbook sees none of it.
-    as_($this->team['manager'], 'logbook_manager');
-    $this->put(p("logbooks/{$this->logbook->id}"), ['name' => 'Facility Management', 'restricted' => true])->assertSessionHasNoErrors();
+    // A viewer who is not a member of the logbook sees none of it.
+    removeMember($this->logbook, $this->team['viewer']);
     as_($this->team['viewer'], 'logbook_viewer');
     $this->get(p('reports'))->assertInertia(fn ($page) => $page->where('counts.total', 0));
     $this->get(p('reports/entries.csv?sheet='.$this->sheet->id))->assertNotFound();

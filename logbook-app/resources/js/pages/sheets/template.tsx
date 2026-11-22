@@ -8,13 +8,15 @@ import {
     Pencil,
     Plus,
     Trash2,
+    MapPin,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { PageHeader } from '@miles/ui/components/page-header';
+import { PageHeader } from '@/components/page-header';
 import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
 import type { Values } from '@/components/entry-fields';
+import type { LocationSettings } from '@/lib/tracks';
 import { EntryFields } from '@/components/entry-fields';
 import {
     Check,
@@ -24,10 +26,21 @@ import {
     TextArea,
     TextField,
 } from '@/components/fields';
-import type { FieldDef, FieldType, Option } from '@/lib/logbook';
-import { action, formatDateTime, nameFor } from '@/lib/logbook';
+import type {
+    FieldDef,
+    FieldType,
+    Option,
+    ResourceOption,
+} from '@/lib/logbook';
+import {
+    action,
+    CONDITIONAL_TYPES,
+    formatDateTime,
+    nameFor,
+} from '@/lib/logbook';
 import { publish, show, update } from '@/routes/sheets';
 import * as draft from '@/routes/sheets/draft';
+import { useConfirm } from '@/components/dialogs';
 
 type Props = {
     sheet: {
@@ -47,6 +60,9 @@ type Props = {
     publishedVersion: number | null;
     types: { value: FieldType; label: string; settings: string[] }[];
     members: Option[];
+    resources: ResourceOption[];
+    /** GPS (ADR-0028): part of the draft, published with it. Null: no location. */
+    location: LocationSettings | null;
     history: {
         id: string;
         action: string;
@@ -74,9 +90,12 @@ export default function Template({
     publishedVersion,
     types,
     members,
+    resources,
     history,
+    location: initialLocation,
 }: Props) {
     const errors = usePage().props.errors as Record<string, string>;
+    const ask = useConfirm();
     const [rows, setRows] = useState<Row[]>(() =>
         initial.map((f) => ({ ...f, key: newKey(), named: true })),
     );
@@ -84,6 +103,14 @@ export default function Template({
     const [tab, setTab] = useState<'fields' | 'preview' | 'settings'>('fields');
     const [busy, setBusy] = useState(false);
     const [dirty, setDirty] = useState(false);
+    const [location, setLocation] = useState<LocationForm>(() => ({
+        mode: initialLocation?.mode ?? 'off',
+        required: initialLocation?.required ?? false,
+        resource_required: initialLocation?.resource_required ?? false,
+        accuracy_m: initialLocation?.accuracy_m
+            ? String(initialLocation.accuracy_m)
+            : '',
+    }));
     const [preview, setPreview] = useState<Values>({});
     const publishedNames = useMemo(
         () => new Set(publishedVersion ? initial.map((f) => f.name) : []),
@@ -144,12 +171,15 @@ export default function Template({
             return out;
         });
 
-    const save = (andPublish: boolean) => {
+    const save = async (andPublish: boolean) => {
         if (
             andPublish &&
-            !window.confirm(
-                `Publish version ${(publishedVersion ?? 0) + 1}? New entries use it at once. It cannot be changed afterwards; earlier entries keep their own version.`,
-            )
+            !(await ask({
+                title: `Publish version ${(publishedVersion ?? 0) + 1}?`,
+                message:
+                    'New entries use it at once. It cannot be changed afterwards; earlier entries keep their own version.',
+                confirmLabel: 'Publish',
+            }))
         ) {
             return;
         }
@@ -162,13 +192,13 @@ export default function Template({
         if (andPublish) {
             router.post(
                 publish(sheet.id).url,
-                { fields: payload() } as RequestPayload,
+                { fields: payload(), location } as RequestPayload,
                 options,
             );
         } else {
             router.put(
                 draft.save(sheet.id).url,
-                { fields: payload() } as RequestPayload,
+                { fields: payload(), location } as RequestPayload,
                 options,
             );
         }
@@ -379,16 +409,21 @@ export default function Template({
                                             variant="ghost"
                                             aria-label="Remove"
                                             disabled={!editable}
-                                            onClick={() => {
+                                            onClick={async () => {
                                                 const warn = publishedNames.has(
                                                     row.name,
                                                 )
                                                     ? ' Entries already written keep their answer to it; new entries will not have it.'
                                                     : '';
                                                 if (
-                                                    window.confirm(
-                                                        `Remove “${row.label || 'this field'}” from the draft?${warn}`,
-                                                    )
+                                                    await ask({
+                                                        title: `Remove “${row.label || 'this field'}” from the draft?`,
+                                                        message:
+                                                            warn.trim() ||
+                                                            undefined,
+                                                        confirmLabel: 'Remove',
+                                                        destructive: true,
+                                                    })
                                                 ) {
                                                     change(
                                                         rows.filter(
@@ -415,6 +450,7 @@ export default function Template({
                                                 index={index}
                                                 settings={settingsOf(row.type)}
                                                 types={types}
+                                                earlier={rows.slice(0, index)}
                                                 errors={errors}
                                                 locked={publishedNames.has(
                                                     row.name,
@@ -430,6 +466,15 @@ export default function Template({
                         })}
                     </div>
                     <div className="grid content-start gap-6">
+                        <LocationPanel
+                            value={location}
+                            editable={editable}
+                            errors={errors}
+                            onChange={(next) => {
+                                setLocation(next);
+                                setDirty(true);
+                            }}
+                        />
                         {editable && (
                             <Panel>
                                 <PanelHeader title="Add a field" />
@@ -505,6 +550,7 @@ export default function Template({
                             }
                             errors={{}}
                             members={members}
+                            resources={resources}
                         />
                     </PanelBody>
                 </Panel>
@@ -520,6 +566,7 @@ function FieldEditor({
     index,
     settings,
     types,
+    earlier,
     errors,
     locked,
     onChange,
@@ -528,6 +575,8 @@ function FieldEditor({
     index: number;
     settings: string[];
     types: Props['types'];
+    /** The fields above this one: what its condition may name. */
+    earlier: Row[];
     errors: Record<string, string>;
     locked: boolean;
     onChange: (values: Partial<Row>) => void;
@@ -670,7 +719,198 @@ function FieldEditor({
                     onChange={(value) => onChange({ default: value })}
                 />
             )}
+            {settings.includes('resource_type') && (
+                <TextField
+                    label="Resource type (optional)"
+                    value={row.resource_type ?? ''}
+                    onChange={(resource_type) =>
+                        onChange({ resource_type: resource_type || undefined })
+                    }
+                    error={e('resource_type')}
+                    hint="Only resources of this type are offered, such as Generator."
+                />
+            )}
+            <ExceptionRule
+                row={row}
+                settings={settings}
+                error={e}
+                onChange={onChange}
+            />
+            <ConditionEditor
+                row={row}
+                earlier={earlier}
+                error={e('show_if')}
+                onChange={onChange}
+            />
         </div>
+    );
+}
+
+const SEVERITY_OPTIONS = [
+    { value: 'low', label: 'Low' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'high', label: 'High' },
+    { value: 'critical', label: 'Critical' },
+];
+
+const YES_NO = [
+    { value: 'yes', label: 'Yes' },
+    { value: 'no', label: 'No' },
+];
+
+/** When an answer opens an exception for follow-up (ADR-0026 §2.7). */
+function ExceptionRule({
+    row,
+    settings,
+    error,
+    onChange,
+}: {
+    row: Row;
+    settings: string[];
+    error: (key: string) => string | undefined;
+    onChange: (values: Partial<Row>) => void;
+}) {
+    const byRange = settings.includes('raise_exception');
+    const byAnswer = settings.includes('exception_values');
+    if (!byRange && !byAnswer) {
+        return null;
+    }
+    const answers = row.type === 'yes_no' ? YES_NO : (row.choices ?? []);
+    const picked = row.exception_values ?? [];
+    const active = byRange ? row.raise_exception === true : picked.length > 0;
+    const message = error('raise_exception') ?? error('exception_values');
+
+    return (
+        <fieldset className="grid gap-2 rounded-md border p-3 sm:col-span-2">
+            <legend className="px-1 text-sm font-medium">Exceptions</legend>
+            {byRange && (
+                <Check
+                    label="Open an exception when a reading is outside the normal range"
+                    checked={row.raise_exception === true}
+                    onChange={(raise_exception) =>
+                        onChange({
+                            raise_exception: raise_exception || undefined,
+                        })
+                    }
+                />
+            )}
+            {byAnswer && (
+                <div className="grid gap-1.5">
+                    <p className="text-sm">
+                        Open an exception when the answer is:
+                    </p>
+                    <div className="flex flex-wrap gap-4">
+                        {answers.map((a) => (
+                            <Check
+                                key={a.value}
+                                label={a.label}
+                                checked={picked.includes(a.value)}
+                                onChange={(on) => {
+                                    const next = on
+                                        ? [...picked, a.value]
+                                        : picked.filter((v) => v !== a.value);
+                                    onChange({
+                                        exception_values:
+                                            next.length > 0 ? next : undefined,
+                                    });
+                                }}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+            {active && (
+                <SelectField
+                    label="Severity"
+                    value={row.exception_severity ?? 'medium'}
+                    onChange={(v) =>
+                        onChange({
+                            exception_severity: v as Row['exception_severity'],
+                        })
+                    }
+                    options={SEVERITY_OPTIONS}
+                    className="max-w-xs"
+                />
+            )}
+            {message && <p className="text-xs text-destructive">{message}</p>}
+        </fieldset>
+    );
+}
+
+/** Show this field only for some answers of a yes/no or choice field above it. */
+function ConditionEditor({
+    row,
+    earlier,
+    error,
+    onChange,
+}: {
+    row: Row;
+    earlier: Row[];
+    error?: string;
+    onChange: (values: Partial<Row>) => void;
+}) {
+    const parents = earlier.filter((f) => CONDITIONAL_TYPES.includes(f.type));
+    if (parents.length === 0 && !row.show_if) {
+        return null;
+    }
+    const parent = parents.find((f) => f.name === row.show_if?.field);
+    const answers = parent
+        ? parent.type === 'yes_no'
+            ? YES_NO
+            : (parent.choices ?? [])
+        : [];
+    const picked = row.show_if?.in ?? [];
+
+    return (
+        <fieldset className="grid gap-2 rounded-md border p-3 sm:col-span-2">
+            <legend className="px-1 text-sm font-medium">
+                Show this field
+            </legend>
+            <SelectField
+                label="Only when"
+                value={row.show_if?.field ?? ''}
+                onChange={(field) =>
+                    onChange({
+                        show_if: field === '' ? undefined : { field, in: [] },
+                    })
+                }
+                options={parents.map((f) => ({
+                    value: f.name,
+                    label: f.label,
+                }))}
+                empty="Always"
+                className="max-w-md"
+            />
+            {parent && (
+                <div className="flex flex-wrap gap-4">
+                    <span className="text-sm text-muted-foreground">is</span>
+                    {answers.map((a) => (
+                        <Check
+                            key={a.value}
+                            label={a.label}
+                            checked={picked.includes(a.value)}
+                            onChange={(on) =>
+                                onChange({
+                                    show_if: {
+                                        field: parent.name,
+                                        in: on
+                                            ? [...picked, a.value]
+                                            : picked.filter(
+                                                  (v) => v !== a.value,
+                                              ),
+                                    },
+                                })
+                            }
+                        />
+                    ))}
+                </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+                A hidden field is not asked, and any answer it had is cleared
+                when the entry is saved.
+            </p>
+            {error && <p className="text-xs text-destructive">{error}</p>}
+        </fieldset>
     );
 }
 
@@ -872,6 +1112,99 @@ function SheetSettings({ sheet }: { sheet: Props['sheet'] }) {
                         </Button>
                     </div>
                 </form>
+            </PanelBody>
+        </Panel>
+    );
+}
+
+type LocationForm = {
+    mode: 'off' | 'entry' | 'route';
+    required: boolean;
+    resource_required: boolean;
+    accuracy_m: string;
+};
+
+/**
+ * GPS for this sheet (ADR-0028). Off by default. Choosing routes starts
+ * nothing on anyone's phone: each person starts their own recording.
+ */
+function LocationPanel({
+    value,
+    editable,
+    errors,
+    onChange,
+}: {
+    value: LocationForm;
+    editable: boolean;
+    errors: Record<string, string>;
+    onChange: (value: LocationForm) => void;
+}) {
+    const set = (patch: Partial<LocationForm>) =>
+        onChange({ ...value, ...patch });
+
+    return (
+        <Panel>
+            <PanelHeader
+                title={
+                    <span className="flex items-center gap-2">
+                        <MapPin className="size-4" /> Location (GPS)
+                    </span>
+                }
+                description="Saved with the draft and published with it."
+            />
+            <PanelBody className="grid gap-3">
+                <SelectField
+                    label="Take location"
+                    value={value.mode}
+                    onChange={(mode) =>
+                        set({ mode: mode as LocationForm['mode'] })
+                    }
+                    options={[
+                        { value: 'off', label: 'No (default)' },
+                        { value: 'entry', label: 'Where each entry is made' },
+                        { value: 'route', label: 'Record a route (trips)' },
+                    ]}
+                    error={errors['location.mode']}
+                />
+                {value.mode !== 'off' && (
+                    <>
+                        <Check
+                            label={
+                                value.mode === 'route'
+                                    ? 'Each entry needs a location or a route'
+                                    : 'Each entry needs a location'
+                            }
+                            checked={value.required}
+                            onChange={(required) => set({ required })}
+                        />
+                        {value.mode === 'route' && (
+                            <Check
+                                label="A route needs its vehicle or resource"
+                                checked={value.resource_required}
+                                onChange={(resource_required) =>
+                                    set({ resource_required })
+                                }
+                            />
+                        )}
+                        <TextField
+                            label="Accuracy guidance, metres (optional)"
+                            type="number"
+                            value={value.accuracy_m}
+                            onChange={(accuracy_m) => set({ accuracy_m })}
+                            error={errors['location.accuracy_m']}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            {value.mode === 'route'
+                                ? 'People start, pause and end each trip themselves on the phone app; nothing is recorded until they do, and they see while it is on. Entries written during a trip are linked to it.'
+                                : 'The phone or browser asks before taking the location, and the person sees it on the entry. No location is ever made up.'}
+                        </p>
+                    </>
+                )}
+                {!editable && (
+                    <p className="text-xs text-muted-foreground">
+                        This sheet cannot be changed now.
+                    </p>
+                )}
             </PanelBody>
         </Panel>
     );

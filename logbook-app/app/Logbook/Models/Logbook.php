@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $name
  * @property string|null $description
  * @property string|null $icon
+ * @property string|null $department_id Central's department; null = the whole workspace
  * @property string $status
  * @property bool $restricted
  * @property string $created_by

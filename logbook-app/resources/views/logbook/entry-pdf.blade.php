@@ -16,7 +16,7 @@
     </style>
 </head>
 <body>
-    <div class="muted">{{ $organization }} · Tatook Logbook</div>
+    <div class="muted">{{ $organization }} · Miles Logbook</div>
     <h1>{{ $entry->reference }} · {{ $entry->sheet->name }}</h1>
     <div class="muted">
         {{ $entry->logbook->name }} · template version {{ $entry->version->version }} ·

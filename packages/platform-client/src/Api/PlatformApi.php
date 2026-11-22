@@ -107,7 +107,7 @@ final class PlatformApi
      * active, disabled or suspended). Not cached: it is for the screens
      * where administrators review access, which change it in the workspace.
      *
-     * @return list<array{membership_id: string, sub: string, name: string, sign_in_name: string, membership_status: string, is_owner: bool, application_access: string, roles: list<array{role: string, name: string, scope_type: string, branch_id: string|null, expires_at: string|null}>}>
+     * @return list<array{membership_id: string, sub: string, name: string, sign_in_name: string, membership_status: string, is_owner: bool, application_access: string, roles: list<array{role: string, name: string, scope_type: string, branch_id: string|null, department_id?: string|null, expires_at: string|null}>}>
      *
      * @throws NotVisible
      * @throws PlatformUnavailable
@@ -116,7 +116,7 @@ final class PlatformApi
     {
         $data = $this->get('/api/v1/organizations/'.rawurlencode($organizationId).'/application-members', 'access.read');
 
-        /** @var list<array{membership_id: string, sub: string, name: string, sign_in_name: string, membership_status: string, is_owner: bool, application_access: string, roles: list<array{role: string, name: string, scope_type: string, branch_id: string|null, expires_at: string|null}>}> */
+        /** @var list<array{membership_id: string, sub: string, name: string, sign_in_name: string, membership_status: string, is_owner: bool, application_access: string, roles: list<array{role: string, name: string, scope_type: string, branch_id: string|null, department_id?: string|null, expires_at: string|null}>}> */
         return array_values(array_filter(is_array($data['data'] ?? null) ? $data['data'] : [], 'is_array'));
     }
 
@@ -291,7 +291,7 @@ final class PlatformApi
      * @throws NotVisible when the organization is not entitled to this application
      * @throws PlatformUnavailable
      */
-    public function addMemberAccount(string $organizationId, string $actorUserId, string $name, string $username, string $password, ?string $role = null, ?string $branchId = null): array
+    public function addMemberAccount(string $organizationId, string $actorUserId, string $name, string $username, string $password, ?string $role = null, ?string $branchId = null, ?string $departmentId = null): array
     {
         $data = $this->send('post', '/api/v1/member-accounts', 'members.write', array_filter([
             'organization_id' => $organizationId,
@@ -301,6 +301,7 @@ final class PlatformApi
             'password' => $password,
             'role' => $role,
             'branch_id' => $branchId,
+            'department_id' => $departmentId,
         ], fn ($value) => $value !== null));
 
         return [
@@ -357,13 +358,14 @@ final class PlatformApi
      * @throws NotVisible
      * @throws PlatformUnavailable
      */
-    public function invitePerson(string $organizationId, string $actorUserId, string $email, string $role, bool $acknowledgeSeparationOfDuties = false): array
+    public function invitePerson(string $organizationId, string $actorUserId, string $email, string $role, bool $acknowledgeSeparationOfDuties = false, ?string $departmentId = null): array
     {
         $data = $this->send('post', '/api/v1/people/invitations', 'members.write', [
             'organization_id' => $organizationId,
             'actor_user_id' => $actorUserId,
             'email' => $email,
             'role' => $role,
+            'department_id' => $departmentId,
             'acknowledge_sod' => $acknowledgeSeparationOfDuties,
         ]);
 
@@ -388,19 +390,21 @@ final class PlatformApi
     }
 
     /**
-     * Gives a member one of this application's roles at organization scope.
+     * Gives a member one of this application's roles: for the whole
+     * organization, or within one department ($departmentId).
      *
      * @throws PlatformRefused with the errors by field (role: not allowed, already held...; acknowledge_sod: warnings)
      * @throws NotVisible
      * @throws PlatformUnavailable
      */
-    public function giveRole(string $organizationId, string $actorUserId, string $membershipId, string $role, bool $acknowledgeSeparationOfDuties = false): void
+    public function giveRole(string $organizationId, string $actorUserId, string $membershipId, string $role, bool $acknowledgeSeparationOfDuties = false, ?string $departmentId = null): void
     {
         $this->send('post', '/api/v1/people/roles', 'members.write', [
             'organization_id' => $organizationId,
             'actor_user_id' => $actorUserId,
             'membership_id' => $membershipId,
             'role' => $role,
+            'department_id' => $departmentId,
             'acknowledge_sod' => $acknowledgeSeparationOfDuties,
         ]);
     }

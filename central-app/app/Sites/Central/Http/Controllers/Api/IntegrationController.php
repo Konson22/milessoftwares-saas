@@ -172,6 +172,7 @@ class IntegrationController extends Controller
                         'name' => $assignment->role->name,
                         'scope_type' => $assignment->scope_type->value,
                         'branch_id' => $assignment->branch_id,
+                        'department_id' => $assignment->department_id,
                         'expires_at' => $assignment->expires_at?->toIso8601String(),
                     ])->values()->all(),
                 ])

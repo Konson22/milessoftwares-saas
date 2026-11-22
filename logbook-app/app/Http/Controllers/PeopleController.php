@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Logbook\Departments;
+use App\Logbook\Member;
 use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,9 +25,16 @@ use Miles\PlatformClient\Tenancy\CurrentTenant;
  * platform applies the workspace's rules (ApplicationPeopleManagers there).
  * A Manager gives the delegable roles: Contributor, Reviewer, Viewer. The
  * owner-only roles (Manager, Auditor, administrator) are the owner's.
+ *
+ * A role is given for the whole workspace or for one department: then the
+ * person reaches only that department's logbooks. A people manager whose
+ * own role is limited to departments gives roles in those departments only
+ * (the platform checks it too).
  */
 class PeopleController extends Controller
 {
+    public const PERMISSION = 'logbook.people.manage';
+
     public function __construct(private readonly PlatformApi $platform) {}
 
     public function index(): Response
@@ -45,6 +54,16 @@ class PeopleController extends Controller
         $roles = self::roles();
         $names = array_column($roles, 'name', 'key');
         $listed = array_column($withRoles, 'membership_id');
+        $departments = Departments::names();
+
+        // A people manager for some departments sees the people working in them.
+        $reach = Member::current()->reach(self::PERMISSION);
+        if ($reach !== null) {
+            $withRoles = array_values(array_filter($withRoles, fn (array $m) => array_filter(
+                $m['roles'],
+                fn (array $r) => in_array((string) ($r['department_id'] ?? ''), $reach, true),
+            ) !== []));
+        }
 
         return Inertia::render('people/index', [
             'unavailable' => $unavailable,
@@ -58,7 +77,7 @@ class PeopleController extends Controller
                 'signInName' => $m['sign_in_name'],
                 'isOwner' => $m['is_owner'],
                 'access' => $m['application_access'],
-                'roles' => array_values(array_unique(array_map(fn (array $r) => $r['role'], $m['roles']))),
+                'roles' => self::grouped($m['roles'], $departments),
             ], array_filter($withRoles, fn (array $m) => $m['membership_status'] === 'active'))),
             'others' => array_values(array_map(fn (array $m) => [
                 'membershipId' => $m['membership_id'],
@@ -73,6 +92,8 @@ class PeopleController extends Controller
                 'roles' => $i['roles'],
             ], $invitations),
             'roleNames' => $names,
+            'departments' => Departments::options(self::PERMISSION),
+            'mustChooseDepartment' => ! Member::current()->everywhere(self::PERMISSION),
         ]);
     }
 
@@ -81,9 +102,10 @@ class PeopleController extends Controller
         $data = $request->validate([
             'email' => ['required', 'email', 'max:255'],
             'role' => ['required', Rule::in(array_column(self::roles(), 'key'))],
+            'department_id' => self::departmentRule(),
         ]);
 
-        return $this->call(fn () => $this->platform->invitePerson($this->organizationId(), $this->user()->id, $data['email'], $data['role'], true),
+        return $this->call(fn () => $this->platform->invitePerson($this->organizationId(), $this->user()->id, $data['email'], $data['role'], true, $data['department_id'] ?? null),
             "Invitation sent to {$data['email']}. They join Logbook when they accept it.");
     }
 
@@ -106,12 +128,13 @@ class PeopleController extends Controller
             'username' => ['required', 'string', 'regex:/^[a-z0-9][a-z0-9._-]{2,31}$/'],
             'password' => ['required', 'string', 'min:8', 'max:128'],
             'role' => ['required', Rule::in(array_column(self::roles(), 'key'))],
+            'department_id' => self::departmentRule(),
         ], [
             'username.regex' => 'A username is 3 to 32 letters, digits, dots, dashes or underscores, starting with a letter or digit.',
         ]);
 
         return $this->call(function () use ($data) {
-            $result = $this->platform->addMemberAccount($this->organizationId(), $this->user()->id, $data['name'], $data['username'], $data['password'], $data['role']);
+            $result = $this->platform->addMemberAccount($this->organizationId(), $this->user()->id, $data['name'], $data['username'], $data['password'], $data['role'], departmentId: $data['department_id'] ?? null);
             if ($result['role_note'] !== null) {
                 throw ValidationException::withMessages(['role' => $result['role_note']]);
             }
@@ -123,9 +146,10 @@ class PeopleController extends Controller
         $data = $request->validate([
             'membership_id' => ['required', 'uuid'],
             'role' => ['required', Rule::in(array_column(self::roles(), 'key'))],
+            'department_id' => self::departmentRule(),
         ]);
 
-        return $this->call(fn () => $this->platform->giveRole($this->organizationId(), $this->user()->id, $data['membership_id'], $data['role'], true), 'Role given.');
+        return $this->call(fn () => $this->platform->giveRole($this->organizationId(), $this->user()->id, $data['membership_id'], $data['role'], true, $data['department_id'] ?? null), 'Role given.');
     }
 
     public function takeBackRole(Request $request): RedirectResponse
@@ -147,13 +171,61 @@ class PeopleController extends Controller
     {
         $catalog = json_decode((string) file_get_contents(base_path('platform/catalog.json')), true);
 
-        return array_map(fn (array $role) => [
+        return array_values(array_map(fn (array $role) => [
             'key' => (string) $role['key'],
             'name' => (string) $role['name'],
             'description' => (string) ($role['description'] ?? ''),
             'delegable' => (bool) $role['delegable'],
             'sensitivity' => (int) $role['sensitivity'],
-        ], $catalog['roles'] ?? []);
+        ], $catalog['roles'] ?? []));
+    }
+
+    /**
+     * Empty: the whole workspace, which only a people manager for the whole
+     * workspace may give. Otherwise one of the departments they look after.
+     *
+     * @return list<mixed>
+     */
+    private static function departmentRule(): array
+    {
+        return [
+            Member::current()->everywhere(self::PERMISSION) ? 'nullable' : 'required',
+            'uuid',
+            Rule::in(array_column(Departments::options(self::PERMISSION), 'id')),
+        ];
+    }
+
+    /**
+     * A person's roles, one per role key, with the departments it applies
+     * in (null: the whole workspace).
+     *
+     * @param  list<array<string, mixed>>  $assignments
+     * @param  array<string, string>  $departments
+     * @return list<array{key: string, departments: list<string>|null}>
+     */
+    private static function grouped(array $assignments, array $departments): array
+    {
+        $roles = [];
+        foreach ($assignments as $assignment) {
+            $key = (string) $assignment['role'];
+            $type = (string) ($assignment['scope_type'] ?? 'organization');
+            $where = match ($type) {
+                'department' => $departments[(string) ($assignment['department_id'] ?? '')] ?? 'a removed department',
+                'branch' => 'a branch',
+                default => null,
+            };
+
+            if (! array_key_exists($key, $roles)) {
+                $roles[$key] = ['key' => $key, 'departments' => []];
+            }
+            if ($where === null || $roles[$key]['departments'] === null) {
+                $roles[$key]['departments'] = null;
+            } elseif (! in_array($where, $roles[$key]['departments'], true)) {
+                $roles[$key]['departments'][] = $where;
+            }
+        }
+
+        return array_values($roles);
     }
 
     /**
@@ -166,7 +238,7 @@ class PeopleController extends Controller
         } catch (PlatformRefused $e) {
             $errors = $e->errors === [] ? ['people' => [$e->getMessage()]] : $e->errors;
             // The platform's field names, mapped to the forms' (the acting member's problem is the page's).
-            $map = ['actor_user_id' => 'people', 'acknowledge_sod' => 'role', 'membership_id' => 'people', 'invitation' => 'people'];
+            $map = ['actor_user_id' => 'people', 'acknowledge_sod' => 'role', 'membership_id' => 'people', 'invitation' => 'people', 'department_id' => 'department_id'];
             $shown = [];
             foreach ($errors as $field => $messages) {
                 $shown[$map[$field] ?? $field] = implode(' ', (array) $messages);

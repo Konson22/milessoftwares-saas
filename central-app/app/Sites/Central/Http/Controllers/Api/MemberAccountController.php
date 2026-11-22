@@ -15,6 +15,7 @@ use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Organizations\Enums\OrganizationStatus;
 use App\Modules\Organizations\Models\Organization;
 use App\Modules\Structure\Models\Branch;
+use App\Modules\Structure\Models\Department;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -56,6 +57,7 @@ class MemberAccountController extends Controller
             'password' => ['required', 'string', 'min:8', 'max:128'],
             'role' => ['nullable', 'string', 'max:100'],
             'branch_id' => ['nullable', 'uuid'],
+            'department_id' => ['nullable', 'uuid', 'prohibits:branch_id'],
         ], [
             'username.regex' => __('A username is 3 to 32 letters, digits, dots, dashes or underscores, starting with a letter or digit.'),
         ]);
@@ -90,10 +92,15 @@ class MemberAccountController extends Controller
                     throw ValidationException::withMessages(['branch_id' => __('That branch does not exist.')]);
                 }
 
+                $departmentId = $validated['department_id'] ?? null;
+                if ($departmentId !== null && ! Department::query()->whereKey($departmentId)->where('status', 'active')->exists()) {
+                    throw ValidationException::withMessages(['department_id' => __('That department does not exist.')]);
+                }
+
                 $proposed[] = ['role_id' => $role->id, 'scope' => [
-                    'scope_type' => $branchId === null ? 'organization' : 'branch',
-                    'branch_id' => $branchId,
-                    'department_id' => null,
+                    'scope_type' => $departmentId !== null ? 'department' : ($branchId === null ? 'organization' : 'branch'),
+                    'branch_id' => $departmentId !== null ? null : $branchId,
+                    'department_id' => $departmentId,
                 ]];
             }
 

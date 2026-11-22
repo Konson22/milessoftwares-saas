@@ -29,7 +29,7 @@ it('shows Logbook\'s people, the rest of the workspace and open invitations', fu
     $this->get(p('people'))->assertOk()->assertInertia(fn ($page) => $page
         ->component('people/index')
         ->has('people', 1)
-        ->where('people.0.roles', ['logbook_manager'])
+        ->where('people.0.roles', [['key' => 'logbook_manager', 'departments' => null]])
         ->has('others', 1)
         ->where('others.0.name', 'Deng Driver')
         ->has('invitations', 1)

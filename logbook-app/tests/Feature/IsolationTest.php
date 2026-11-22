@@ -89,6 +89,7 @@ it('lists, counts, reports and exports only the organization\'s own entries', fu
 it('keeps each organization separate for a person who belongs to both', function () {
     // The Globex writer is also an Acme contributor: switching workspaces switches everything.
     actingAsRole('logbook_contributor', $this->theirWriter, 'acme');
+    addMember($this->ourLogbook, $this->theirWriter);
     $this->get(p('entries'))->assertInertia(fn ($page) => $page->where('entries.total', 0));
     writeEntry($this->ourSheet)->assertSessionHasNoErrors();
 

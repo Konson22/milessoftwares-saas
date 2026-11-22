@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Logbook\Access;
 use App\Logbook\Attachments;
 use App\Logbook\Fields;
+use App\Logbook\Models\LogResource;
 use App\Logbook\Models\LogSheet;
 use App\Logbook\Models\LogSheetVersion;
+use App\Logbook\Tracks;
 use App\Models\User;
 use App\Models\WorkspaceMember;
 use Illuminate\Http\JsonResponse;
@@ -32,6 +34,8 @@ class KitController extends Controller
             'can' => [
                 'write' => Gate::allows('logbook.entries.create'),
                 'review' => Gate::allows('logbook.entries.review'),
+                'manageTasks' => Gate::allows('logbook.tasks.manage'),
+                'viewRoutes' => Gate::allows(Tracks::VIEW),
             ],
         ]);
     }
@@ -43,7 +47,7 @@ class KitController extends Controller
     public function kit(): JsonResponse
     {
         $sheets = Gate::allows('logbook.entries.create')
-            ? Access::writableSheets()->with(['logbook:id,name,icon', 'publishedVersion:id,log_sheet_id,version,published_at'])->orderBy('name')->get()
+            ? Access::writableSheets()->with(['logbook:id,name,icon', 'publishedVersion:id,log_sheet_id,version,published_at,location'])->orderBy('name')->get()
             : collect();
 
         return response()->json([
@@ -51,6 +55,7 @@ class KitController extends Controller
             'can' => [
                 'write' => Gate::allows('logbook.entries.create'),
                 'review' => Gate::allows('logbook.entries.review'),
+                'manageTasks' => Gate::allows('logbook.tasks.manage'),
             ],
             'limits' => [
                 'fileMaxKb' => Attachments::MAX_KILOBYTES,
@@ -69,10 +74,15 @@ class KitController extends Controller
                     'id' => $sheet->publishedVersion?->id,
                     'version' => $sheet->publishedVersion?->version,
                 ],
+                // GPS (ADR-0028): null when the sheet takes no location.
+                'location' => Tracks::settings($sheet->publishedVersion),
             ])->values()->all(),
             // For person fields: id and name only.
             'members' => User::query()->whereIn('id', WorkspaceMember::query()->select('user_id'))->orderBy('name')->get(['id', 'name'])
                 ->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name])->values()->all(),
+            // For resource fields (ADR-0026 §2.10): active resources only.
+            'resources' => LogResource::query()->where('active', true)->with('location.parent')->orderBy('code')->get()
+                ->map(fn (LogResource $r) => ['id' => $r->id, 'code' => $r->code, 'name' => $r->name, 'type' => $r->type, 'location' => $r->location?->path()])->values()->all(),
         ]);
     }
 
@@ -90,6 +100,7 @@ class KitController extends Controller
             'version' => $version->version,
             'publishedAt' => self::time($version->published_at),
             'fields' => $version->fields,
+            'location' => Tracks::settings($version),
         ])->header('Cache-Control', 'no-store, private');
     }
 }

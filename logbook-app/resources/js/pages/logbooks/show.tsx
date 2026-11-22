@@ -1,7 +1,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
+    Building2,
     FilePlus2,
-    Lock,
     NotebookPen,
     Plus,
     Sparkles,
@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { EmptyState } from '@miles/ui/components/empty-state';
-import { PageHeader } from '@miles/ui/components/page-header';
+import { PageHeader } from '@/components/page-header';
 import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
 import {
@@ -22,7 +22,7 @@ import {
 } from '@miles/ui/components/ui/table';
 import { ActionButton } from '@/components/actions';
 import { Check, SelectField, Status, TextField } from '@/components/fields';
-import { LogbookForm } from '@/components/logbook-form';
+import { LogbookForm, type DepartmentOption } from '@/components/logbook-form';
 import { LogbookIcon } from '@/components/logbook-icon';
 import type { Option } from '@/lib/logbook';
 import { formatDateTime, ROLE_LABELS } from '@/lib/logbook';
@@ -34,6 +34,7 @@ import {
     starters,
     store as storeSheet,
 } from '@/routes/sheets';
+import { useConfirm } from '@/components/dialogs';
 
 type Props = {
     logbook: {
@@ -45,6 +46,8 @@ type Props = {
         status: string;
         createdAt: string;
         creator: string;
+        departmentId: string | null;
+        department: string | null;
     };
     sheets: {
         id: string;
@@ -71,6 +74,8 @@ type Props = {
         | null;
     members: Option[];
     canManage: boolean;
+    departments: DepartmentOption[];
+    canFileUnderWorkspace: boolean;
     hasEntries: boolean;
 };
 
@@ -80,6 +85,8 @@ export default function LogbookShow({
     grants,
     members,
     canManage,
+    departments,
+    canFileUnderWorkspace,
 }: Props) {
     const [editing, setEditing] = useState(false);
     const [adding, setAdding] = useState(false);
@@ -99,11 +106,10 @@ export default function LogbookShow({
                 badges={
                     <>
                         <Status value={logbook.status} />
-                        {logbook.restricted && (
-                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                                <Lock className="size-3" /> Restricted
-                            </span>
-                        )}
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                            <Building2 className="size-3" />{' '}
+                            {logbook.department ?? 'Whole workspace'}
+                        </span>
                     </>
                 }
                 actions={
@@ -156,6 +162,8 @@ export default function LogbookShow({
                     <PanelBody>
                         <LogbookForm
                             initial={logbook}
+                            departments={departments}
+                            canFileUnderWorkspace={canFileUnderWorkspace}
                             url={update(logbook.id).url}
                             method="put"
                             submitLabel="Save"
@@ -272,7 +280,6 @@ export default function LogbookShow({
             {grants !== null && (
                 <AccessPanel
                     logbookId={logbook.id}
-                    restricted={logbook.restricted}
                     access={grants}
                     members={members}
                     sheets={sheets.map((s) => ({
@@ -355,18 +362,17 @@ function NewSheet({ logbookId }: { logbookId: string }) {
 
 function AccessPanel({
     logbookId,
-    restricted,
     access,
     members,
     sheets,
 }: {
     logbookId: string;
-    restricted: boolean;
     access: NonNullable<Props['grants']>;
     members: Option[];
     sheets: Option[];
 }) {
     const errors = usePage().props.errors as Record<string, string>;
+    const ask = useConfirm();
     const [data, setData] = useState({
         user_id: '',
         role: 'contributor',
@@ -377,14 +383,16 @@ function AccessPanel({
     return (
         <Panel className="mt-6">
             <PanelHeader
-                title="Who reaches this logbook"
-                description={
-                    restricted
-                        ? 'Restricted: only the members listed here, with their Logbook role from Tatook. A listing never grants more than that role.'
-                        : 'Open: everyone with a Logbook role in Tatook. Make it restricted in Settings to use this list.'
-                }
+                title={`Members (${access.length})`}
+                description="Only the people added here reach this logbook (managers of its department always do). Each needs a Logbook role that allows what they are added as, for this logbook's department."
             />
             <PanelBody className="grid gap-4">
+                {access.length === 0 && (
+                    <p className="rounded-md border border-dashed px-3 py-4 text-sm text-muted-foreground">
+                        Nobody is a member yet, so only managers see this
+                        logbook. Add the people who write, review or read it.
+                    </p>
+                )}
                 {access.length > 0 && (
                     <ul className="divide-y rounded-md border">
                         {access.map((g) => (
@@ -408,15 +416,22 @@ function AccessPanel({
                                     size="sm"
                                     variant="ghost"
                                     aria-label={`Remove ${g.user}`}
-                                    onClick={() =>
-                                        window.confirm(
-                                            `Remove ${g.user} from this logbook?`,
-                                        ) &&
-                                        router.delete(
-                                            accessRoutes.destroy(g.id).url,
-                                            { preserveScroll: true },
-                                        )
-                                    }
+                                    onClick={async () => {
+                                        if (
+                                            await ask({
+                                                title: `Remove ${g.user} from this logbook?`,
+                                                message:
+                                                    'They no longer reach it. Their entries stay.',
+                                                confirmLabel: 'Remove',
+                                                destructive: true,
+                                            })
+                                        ) {
+                                            router.delete(
+                                                accessRoutes.destroy(g.id).url,
+                                                { preserveScroll: true },
+                                            );
+                                        }
+                                    }}
                                 >
                                     <Trash2 />
                                 </Button>

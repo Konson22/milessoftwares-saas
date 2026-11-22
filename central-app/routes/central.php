@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Controllers\FallbackController;
+use App\Modules\Identity\Http\Controllers\AvatarController;
 use App\Modules\Identity\Http\Controllers\FirstPartySignInController;
 use App\Modules\Identity\Http\Controllers\GoogleSignInController;
 use App\Modules\Identity\Http\Controllers\NativeGoogleSignInController;
 use App\Modules\Identity\Http\Controllers\SignOutController;
+use App\Modules\Identity\Support\Avatars;
 use App\Sites\Central\Http\Controllers\Account\ClaimController;
 use App\Sites\Central\Http\Controllers\Account\GetStartedController;
 use App\Sites\Central\Http\Controllers\Account\JoinController;
@@ -54,6 +56,10 @@ Route::domain(PlatformHosts::auth())->group(function () {
     // Wayfinder's generated TypeScript does not support yet.
     Route::get('/', fn () => redirect('/workspaces'));
     Route::get('signout', SignOutController::class)->name('signout');
+
+    // Uploaded profile pictures, shown by every app (users.avatar_url).
+    Route::get('avatars/{file}', AvatarController::class)
+        ->where('file', Avatars::FILE_PATTERN)->middleware('throttle:240,1')->name('avatars.show');
 
     // Sign in with Google (not configured: 404).
     Route::middleware(['guest:'.config('fortify.guard'), 'throttle:20,1'])->group(function () {

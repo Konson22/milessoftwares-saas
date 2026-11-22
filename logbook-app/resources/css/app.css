@@ -2,9 +2,108 @@
 
 @import 'tw-animate-css';
 @import '../../node_modules/@miles/ui/theme.css';
-/* Logbook wears the Microsoft 365 (Fluent) look; the other apps keep the shared one. */
-@import '../../node_modules/@miles/ui/themes/fluent.css';
+/* Logbook's own look (navy pane, teal accent); the other apps keep the shared one. */
+@import './theme.css';
 
 @source '../views';
+@source '../../node_modules/@inertiaui/modal-react';
 @source '../../node_modules/@miles/ui';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+
+/*
+ * Inertia UI Modal: no see-through backdrop and no fades (solid colours
+ * only). The page stays visible; the dialog stands out by a solid border
+ * and a solid offset shadow.
+ */
+.im-modal-dialog::backdrop,
+.im-slideover-dialog::backdrop,
+.im-backdrop {
+    background: transparent !important;
+    opacity: 1 !important;
+    transition: none !important;
+}
+
+.im-panel {
+    border-color: var(--border);
+    box-shadow: 6px 6px 0 0 var(--muted-foreground);
+}
+
+/*
+ * Form controls: a light rounded frame that turns teal on focus. Every
+ * input, select and textarea in Logbook wears it through its data-slot.
+ * Solid colours only: no see-through rings.
+ */
+[data-slot='input'],
+[data-slot='select'],
+[data-slot='textarea'] {
+    border: 1px solid var(--input);
+    border-radius: 0.5rem;
+    background-color: var(--card);
+    color: var(--foreground);
+    box-shadow: none;
+    transition: border-color 80ms linear;
+}
+
+[data-slot='input'],
+[data-slot='select'] {
+    height: 2.5rem;
+}
+
+[data-slot='input']:hover,
+[data-slot='select']:hover,
+[data-slot='textarea']:hover {
+    border-color: #a9b4c2;
+}
+
+[data-slot='input']:focus-visible,
+[data-slot='select']:focus-visible,
+[data-slot='textarea']:focus-visible {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px var(--primary);
+}
+
+[data-slot='input'][aria-invalid='true'],
+[data-slot='select'][aria-invalid='true'],
+[data-slot='textarea'][aria-invalid='true'] {
+    border-color: var(--destructive);
+    box-shadow: 0 0 0 1px var(--destructive);
+}
+
+[data-slot='input']:disabled,
+[data-slot='select']:disabled,
+[data-slot='textarea']:disabled {
+    opacity: 1;
+    background-color: var(--muted);
+    border-color: var(--border);
+    color: var(--muted-foreground);
+}
+
+[data-slot='input']::placeholder,
+[data-slot='textarea']::placeholder {
+    color: #707070;
+}
+
+/* Selects: the browser's arrow replaced by one chevron, the same everywhere. */
+[data-slot='select'] {
+    appearance: none;
+    padding-right: 2rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23424242' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.625rem center;
+    background-size: 1rem;
+    cursor: pointer;
+}
+
+/* "All logbooks", "Any": the unset choice reads lighter than a chosen one. */
+[data-slot='select'][data-empty='true'] {
+    color: var(--muted-foreground);
+}
+
+[data-slot='select'] option {
+    color: var(--foreground);
+}
+
+input[type='checkbox'][data-slot='check'] {
+    accent-color: var(--primary);
+}

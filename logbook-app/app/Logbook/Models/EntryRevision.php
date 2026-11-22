@@ -34,7 +34,7 @@ class EntryRevision extends Model
 
     protected function casts(): array
     {
-        return ['values' => 'array', 'revision' => 'integer', 'occurred_at' => 'immutable_datetime', 'submitted_at' => 'immutable_datetime'];
+        return ['values' => 'array', 'location' => 'array', 'revision' => 'integer', 'occurred_at' => 'immutable_datetime', 'submitted_at' => 'immutable_datetime'];
     }
 
     /** @return BelongsTo<LogSheetVersion, $this> */

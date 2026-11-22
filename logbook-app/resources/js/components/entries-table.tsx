@@ -1,9 +1,9 @@
 import { TriangleAlert } from 'lucide-react';
 import { Link, router } from '@inertiajs/react';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { SearchField } from '@miles/ui/components/search-field';
 import { Button } from '@miles/ui/components/ui/button';
-import { Input } from '@miles/ui/components/ui/input';
 import {
     Table,
     TableBody,
@@ -12,7 +12,7 @@ import {
     TableHeader,
     TableRow,
 } from '@miles/ui/components/ui/table';
-import { Field, SelectField, Status } from '@/components/fields';
+import { Field, SelectField, Status, TextField } from '@/components/fields';
 import type { EntryRow, Option, Paginated } from '@/lib/logbook';
 import { ENTRY_STATUSES, formatDateTime, status } from '@/lib/logbook';
 import { show } from '@/routes/entries';
@@ -180,12 +180,15 @@ export function EntryFilters({
     options,
     extra = {},
     statuses = ENTRY_STATUSES,
+    children,
 }: {
     url: string;
     filters: Filters;
     options: FilterOptions;
     extra?: Record<string, string | undefined>;
     statuses?: string[];
+    /** More filters, laid out in the same grid. */
+    children?: ReactNode;
 }) {
     const [q, setQ] = useState(filters.q ?? '');
     const apply = (next: Filters) =>
@@ -203,9 +206,9 @@ export function EntryFilters({
         : options.sheets;
 
     return (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+        <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
             <form
-                className="sm:col-span-2 lg:col-span-4 xl:col-span-2"
+                className="sm:col-span-2"
                 onSubmit={(e) => {
                     e.preventDefault();
                     apply({ q });
@@ -213,6 +216,7 @@ export function EntryFilters({
             >
                 <Field label="Search">
                     <SearchField
+                        className="max-w-none"
                         value={q}
                         placeholder="Reference or any answer"
                         onChange={(e) => setQ(e.target.value)}
@@ -244,20 +248,19 @@ export function EntryFilters({
                 }))}
                 empty="Any status"
             />
-            <Field label="From">
-                <Input
-                    type="date"
-                    value={filters.from ?? ''}
-                    onChange={(e) => apply({ from: e.target.value })}
-                />
-            </Field>
-            <Field label="To">
-                <Input
-                    type="date"
-                    value={filters.to ?? ''}
-                    onChange={(e) => apply({ to: e.target.value })}
-                />
-            </Field>
+            <TextField
+                label="From"
+                type="date"
+                value={filters.from ?? ''}
+                onChange={(from) => apply({ from })}
+            />
+            <TextField
+                label="To"
+                type="date"
+                value={filters.to ?? ''}
+                onChange={(to) => apply({ to })}
+            />
+            {children}
         </div>
     );
 }

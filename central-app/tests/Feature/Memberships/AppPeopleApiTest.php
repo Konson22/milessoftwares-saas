@@ -2,6 +2,7 @@
 
 use App\Modules\Authorization\Models\RoleAssignment;
 use App\Modules\Memberships\Models\Invitation;
+use App\Modules\Structure\Models\Department;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Notification;
 use Tests\Support\IntegrationFixtures;
@@ -97,4 +98,17 @@ it('is open only to applications whose managers look after their people', functi
 
     config(['platform.application_people_managers' => ['retail' => 'retail.payments.approve']]);
     people('roles', ['membership_id' => $this->person->id, 'role' => 'payments_clerk'], 'access.read')->assertForbidden();
+});
+
+it('gives a role within one department when asked, and only where the role allows it', function () {
+    $department = app(TenantContext::class)->run($this->organization, fn () => Department::query()->create(['name' => 'Maintenance', 'code' => 'MNT']));
+
+    // An unknown department is refused before anything is given.
+    people('roles', ['membership_id' => $this->person->id, 'role' => 'payments_clerk', 'department_id' => '00000000-0000-4000-8000-000000000000'])
+        ->assertUnprocessable()->assertJsonValidationErrors('department_id');
+
+    // The clerk role is not given per department in this catalog: the scope reaches AssignRole, which refuses it.
+    people('roles', ['membership_id' => $this->person->id, 'role' => 'payments_clerk', 'department_id' => $department->id])
+        ->assertUnprocessable()->assertJsonValidationErrors('role');
+    expect(liveRoles($this->person->id))->toBe([]);
 });

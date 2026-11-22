@@ -1240,7 +1240,7 @@
                 },
                 {
                     "question": "Does Logbook work offline or on phones?",
-                    "answer": "Logbook works in the browser today, on phones as well as computers. A mobile app with offline entry is planned."
+                    "answer": "Yes. Logbook works in the browser on phones as well as computers, and the Miles Logbook Android app, coming soon to Google Play, lets staff write entries with no signal. Entries wait safely on the phone and are sent, once only, when the connection is back. Supervisors can review entries in the app too."
                 }
             ]
         },

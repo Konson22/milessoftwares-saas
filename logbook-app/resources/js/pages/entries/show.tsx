@@ -1,7 +1,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { FileDown, Paperclip, Pencil, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
-import { PageHeader } from '@miles/ui/components/page-header';
+import { PageHeader } from '@/components/page-header';
 import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
 import { ActionButton } from '@/components/actions';
@@ -12,6 +12,8 @@ import { show as attachment } from '@/routes/attachments';
 import { destroy, edit, pdf } from '@/routes/entries';
 import { decide } from '@/routes/reviews';
 import { show as sheetShow } from '@/routes/sheets';
+import type { EntryLocation } from '@/lib/tracks';
+import { show as trackPage } from '@/routes/tracks';
 
 type Props = {
     entry: EntryRow & {
@@ -22,6 +24,8 @@ type Props = {
         reviewer: string | null;
         isMine: boolean;
         answers: Answer[];
+        location: EntryLocation | null;
+        track: string | null;
     };
     revisions: {
         revision: number;
@@ -145,6 +149,41 @@ export default function EntryShow({
                                             ? '—'
                                             : 'Not reviewed yet'}
                                 </Detail>
+                                {(entry.location || entry.track) && (
+                                    <Detail label="Location">
+                                        {entry.location ? (
+                                            <>
+                                                {entry.location.lat.toFixed(5)},{' '}
+                                                {entry.location.lng.toFixed(5)}
+                                                {entry.location.accuracy_m !==
+                                                    null &&
+                                                    ` (±${Math.round(entry.location.accuracy_m)} m)`}
+                                                <span className="block text-xs text-muted-foreground">
+                                                    Taken{' '}
+                                                    {formatDateTime(
+                                                        entry.location
+                                                            .captured_at,
+                                                    )}{' '}
+                                                    by the{' '}
+                                                    {entry.location.source ===
+                                                    'browser'
+                                                        ? 'browser'
+                                                        : 'phone'}
+                                                </span>
+                                            </>
+                                        ) : (
+                                            'No location taken'
+                                        )}
+                                        {entry.track && (
+                                            <Link
+                                                href={trackPage(entry.track)}
+                                                className="block text-xs hover:underline"
+                                            >
+                                                See the route it was written on
+                                            </Link>
+                                        )}
+                                    </Detail>
+                                )}
                             </dl>
                             <Answers answers={entry.answers} />
                         </PanelBody>
@@ -243,7 +282,9 @@ export default function EntryShow({
                             <ol className="grid gap-2 text-sm">
                                 {history.map((h) => (
                                     <li key={h.id}>
-                                        <strong>{h.user ?? 'Tatook'}</strong>{' '}
+                                        <strong>
+                                            {h.user ?? 'Miles Logbook'}
+                                        </strong>{' '}
                                         {action(h.action)}
                                         <span className="block text-xs text-muted-foreground">
                                             {formatDateTime(h.at)}
@@ -393,7 +434,7 @@ function ReviewForm({
         setBusy(true);
         router.post(
             decide(entryId).url,
-            { decision, comment },
+            { decision, comment, revision },
             { preserveScroll: true, onFinish: () => setBusy(false) },
         );
     };

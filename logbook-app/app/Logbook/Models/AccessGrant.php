@@ -8,9 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * A member listed on a restricted logbook (or one of its sheets) as
- * contributor, reviewer or viewer. Grants nothing beyond the member's
- * catalog permissions: it says where, the catalog says what.
+ * A member of a logbook (or of one of its sheets) as contributor, reviewer
+ * or viewer: without one, only managers reach the logbook. Grants nothing
+ * beyond the member's catalog role and its department: it says which
+ * logbooks, the role says what.
  *
  * @property string $id
  * @property string $organization_id

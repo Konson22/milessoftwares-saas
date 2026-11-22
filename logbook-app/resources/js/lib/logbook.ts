@@ -14,7 +14,8 @@ export type FieldType =
     | 'select_multiple'
     | 'yes_no'
     | 'file'
-    | 'user';
+    | 'user'
+    | 'resource';
 
 /** A template field, as app/Logbook/Fields.php keeps it. */
 export type FieldDef = {
@@ -33,7 +34,57 @@ export type FieldDef = {
     expected_max?: string | number;
     unit?: string;
     max_length?: number;
+    /** Shown only when an earlier yes/no or choice field has one of these answers. */
+    show_if?: { field: string; in: string[] };
+    /** A reading outside the normal range opens an exception. */
+    raise_exception?: boolean;
+    /** Answers that open an exception (yes/no or single choice). */
+    exception_values?: string[];
+    exception_severity?: 'low' | 'medium' | 'high' | 'critical';
+    /** Resource fields: only resources of this type. */
+    resource_type?: string;
 };
+
+/** A resource as pickers show it. */
+export type ResourceOption = Option & { type: string };
+
+/** Field types a later field's condition can name. */
+export const CONDITIONAL_TYPES: FieldType[] = [
+    'yes_no',
+    'select_one',
+    'select_multiple',
+];
+
+/**
+ * Whether a field shows, given the answers so far: the same rule as
+ * Fields::visible() on the server (a hidden field is cleared on save).
+ */
+export function fieldVisible(
+    field: FieldDef,
+    values: Record<string, unknown>,
+    fields: FieldDef[],
+): boolean {
+    const condition = field.show_if;
+    if (!condition) {
+        return true;
+    }
+    const parent = fields.find((f) => f.name === condition.field);
+    if (parent && !fieldVisible(parent, values, fields)) {
+        return false;
+    }
+    const answer = values[condition.field];
+    if (typeof answer === 'boolean') {
+        return condition.in.includes(answer ? 'yes' : 'no');
+    }
+    if (Array.isArray(answer)) {
+        return answer.some((a) => condition.in.includes(String(a)));
+    }
+    if (typeof answer === 'string' || typeof answer === 'number') {
+        return condition.in.includes(String(answer));
+    }
+
+    return false;
+}
 
 export type FileRef = {
     id: string;
@@ -94,6 +145,36 @@ const STATUS: Record<string, { label: string; tone: Tone }> = {
     active: { label: 'Active', tone: 'success' },
     archived: { label: 'Archived', tone: 'neutral' },
     published: { label: 'Published', tone: 'success' },
+    // Tasks
+    pending: { label: 'To do', tone: 'neutral' },
+    in_progress: { label: 'In progress', tone: 'info' },
+    awaiting_verification: { label: 'Awaiting verification', tone: 'info' },
+    completed: { label: 'Completed', tone: 'success' },
+    cancelled: { label: 'Cancelled', tone: 'neutral' },
+    overdue: { label: 'Overdue', tone: 'danger' },
+    // Exceptions
+    open: { label: 'Open', tone: 'warning' },
+    resolved: { label: 'Resolved', tone: 'info' },
+    closed: { label: 'Closed', tone: 'success' },
+    low: { label: 'Low', tone: 'neutral' },
+    normal: { label: 'Normal', tone: 'neutral' },
+    medium: { label: 'Medium', tone: 'warning' },
+    high: { label: 'High', tone: 'danger' },
+    urgent: { label: 'Urgent', tone: 'danger' },
+    critical: { label: 'Critical', tone: 'danger' },
+    // Expected entries
+    upcoming: { label: 'Upcoming', tone: 'neutral' },
+    due: { label: 'Due now', tone: 'info' },
+    awaiting_review: { label: 'Awaiting review', tone: 'info' },
+    late: { label: 'Late', tone: 'warning' },
+    missed: { label: 'Missed', tone: 'danger' },
+    excused: { label: 'Excused', tone: 'neutral' },
+    inactive: { label: 'Inactive', tone: 'neutral' },
+    // Recurring tasks and schedules
+    paused: { label: 'Paused', tone: 'warning' },
+    recording: { label: 'Recording', tone: 'info' },
+    ended: { label: 'Ended', tone: 'neutral' },
+    on_time: { label: 'On time', tone: 'success' },
 };
 
 export function status(key: string): { label: string; tone: Tone } {
@@ -135,6 +216,36 @@ const ACTIONS: Record<string, string> = {
     'entry.reviewed': 'marked the entry reviewed',
     'entry.returned': 'returned the entry for correction',
     'entry.discarded': 'discarded the draft',
+    'task.created': 'gave the task',
+    'task.updated': 'changed the task',
+    'task.reassigned': 'reassigned the task',
+    'task.started': 'started the task',
+    'task.completed': 'completed the task',
+    'task.submitted': 'reported the work for verification',
+    'task.verified': 'verified the work',
+    'task.returned': 'returned the work',
+    'task.cancelled': 'cancelled the task',
+    'task.reopened': 'reopened the task',
+    'task.file_added': 'added a file',
+    'task.file_removed': 'removed a file',
+    'task_series.created': 'set up the recurring task',
+    'task_series.updated': 'changed the recurring task',
+    'exception.raised': 'raised the exception',
+    'exception.assigned': 'assigned the exception',
+    'exception.started': 'started work on the exception',
+    'exception.resolved': 'resolved the exception',
+    'exception.closed': 'closed the exception',
+    'exception.reopened': 'reopened the exception',
+    'exception.file_added': 'added evidence',
+    'exception.file_removed': 'removed evidence',
+    'schedule.created': 'scheduled the log sheet',
+    'schedule.updated': 'changed the schedule',
+    'occurrence.excused': 'excused an expected entry',
+    'occurrence.missed': 'an expected entry was missed',
+    'resource.created': 'added the resource',
+    'resource.updated': 'changed the resource',
+    'location.created': 'added the location',
+    'location.updated': 'changed the location',
 };
 
 export function action(key: string): string {

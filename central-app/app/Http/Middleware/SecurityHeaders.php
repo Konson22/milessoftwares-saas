@@ -72,6 +72,8 @@ class SecurityHeaders
             $devSocket = ' '.preg_replace('#^http#', 'ws', $origin);
         }
 
+        $avatarHost = PlatformHosts::url(PlatformHosts::auth());
+
         // Meta Pixel and Google tags only run on the public marketing site.
         $trackingScript = '';
         $trackingImg = '';
@@ -111,8 +113,9 @@ class SecurityHeaders
             // Email Obfuscation and Rocket Loader off).
             "script-src 'nonce-{$nonce}' 'strict-dynamic' 'self'{$dev}{$trackingScript} https: 'unsafe-inline'",
             "style-src 'self' 'unsafe-inline'{$dev}",
-            // Google profile pictures (users.avatar_url) come from googleusercontent.com.
-            "img-src 'self' data: blob: https://*.googleusercontent.com{$dev}{$trackingImg}",
+            // Profile pictures (users.avatar_url): Google's from
+            // googleusercontent.com, uploaded ones from the auth host.
+            "img-src 'self' data: blob: https://*.googleusercontent.com {$avatarHost}{$dev}{$trackingImg}",
             "font-src 'self' data:{$dev}",
             "connect-src 'self'{$dev}{$devSocket}{$trackingConnect}",
             "frame-src 'self'{$trackingFrame}",
