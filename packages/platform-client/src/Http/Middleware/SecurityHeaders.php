@@ -64,12 +64,19 @@ final class SecurityHeaders
             $devSocket = ' '.preg_replace('#^http#', 'ws', $origin);
         }
 
+        // Uploaded profile pictures are served by the auth host (the issuer).
+        $avatarHost = '';
+        $issuer = parse_url((string) config('platform-client.issuer'));
+        if (isset($issuer['scheme'], $issuer['host'])) {
+            $avatarHost = ' '.$issuer['scheme'].'://'.$issuer['host'].(isset($issuer['port']) ? ':'.$issuer['port'] : '');
+        }
+
         return implode('; ', [
             "default-src 'self'",
             "script-src 'self' 'nonce-{$nonce}'{$dev}",
             "style-src 'self' 'unsafe-inline'{$dev}",
-            // Google profile pictures from the platform user (avatar).
-            "img-src 'self' data: blob: https://*.googleusercontent.com{$dev}",
+            // Profile pictures of the platform user (avatar): Google's, or uploaded to the auth host.
+            "img-src 'self' data: blob: https://*.googleusercontent.com{$avatarHost}{$dev}",
             "font-src 'self' data:{$dev}",
             "connect-src 'self'{$dev}{$devSocket}",
             "object-src 'none'",

@@ -19,6 +19,7 @@ use App\Modules\Memberships\Models\Invitation;
 use App\Modules\Memberships\Models\OrganizationMembership;
 use App\Modules\Organizations\Enums\OrganizationStatus;
 use App\Modules\Organizations\Models\Organization;
+use App\Modules\Structure\Models\Department;
 use App\Support\Tenancy\TenantContext;
 use Closure;
 use Illuminate\Http\JsonResponse;
@@ -107,15 +108,17 @@ class AppPeopleController extends Controller
             ...$this->actorRules(),
             'email' => ['required', 'email', 'max:255'],
             'role' => ['required', 'string', 'max:100'],
+            'department_id' => ['nullable', 'uuid'],
             'acknowledge_sod' => ['sometimes', 'boolean'],
         ]);
 
         return $this->asActor($request, $validated, function (Application $application, OrganizationMembership $actor) use ($validated, $invitations): JsonResponse {
             $role = $this->role($application, $validated['role']);
+            $scope = $this->scope($validated['department_id'] ?? null);
 
             try {
                 [$invitation] = $invitations->invite($actor, $validated['email'], [
-                    ['role_id' => $role->id, 'scope' => ['scope_type' => 'organization', 'branch_id' => null, 'department_id' => null]],
+                    ['role_id' => $role->id, 'scope' => $scope->attributes()],
                 ], (bool) ($validated['acknowledge_sod'] ?? false));
             } catch (MembershipActionDenied $e) {
                 throw ValidationException::withMessages(['email' => $e->getMessage()]);
@@ -160,6 +163,7 @@ class AppPeopleController extends Controller
             ...$this->actorRules(),
             'membership_id' => ['required', 'uuid'],
             'role' => ['required', 'string', 'max:100'],
+            'department_id' => ['nullable', 'uuid'],
             'acknowledge_sod' => ['sometimes', 'boolean'],
         ]);
 
@@ -171,7 +175,7 @@ class AppPeopleController extends Controller
             }
 
             try {
-                $assign->handle($actor, $grantee, $role, Scope::organization(), acknowledgeSeparationOfDuties: (bool) ($validated['acknowledge_sod'] ?? false));
+                $assign->handle($actor, $grantee, $role, $this->scope($validated['department_id'] ?? null), acknowledgeSeparationOfDuties: (bool) ($validated['acknowledge_sod'] ?? false));
             } catch (AssignmentDenied $e) {
                 throw ValidationException::withMessages(['role' => $e->getMessage()]);
             } catch (SeparationOfDutiesWarning $warning) {
@@ -212,6 +216,21 @@ class AppPeopleController extends Controller
 
             return response()->json(['message' => __('Role taken back.')]);
         });
+    }
+
+    /**
+     * The whole workspace, or one active department of it (in the tenant context).
+     */
+    private function scope(?string $departmentId): Scope
+    {
+        if ($departmentId === null) {
+            return Scope::organization();
+        }
+        if (! Department::query()->whereKey($departmentId)->where('status', 'active')->exists()) {
+            throw ValidationException::withMessages(['department_id' => __('That department does not exist.')]);
+        }
+
+        return Scope::department($departmentId);
     }
 
     /**

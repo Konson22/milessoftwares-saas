@@ -5,6 +5,8 @@ namespace App\Modules\Identity\Http\Controllers;
 use App\Models\User;
 use App\Modules\Identity\Models\SocialAccount;
 use App\Modules\Identity\Support\AuthenticationEventRecorder;
+use App\Modules\Identity\Support\Avatars;
+use App\Modules\Identity\Support\InviteeNames;
 use App\Modules\Identity\Support\SessionTracker;
 use App\Modules\Memberships\Actions\Invitations;
 use App\Modules\Memberships\Actions\MembershipActionDenied;
@@ -240,6 +242,13 @@ class GoogleSignInController
                 'last_used_at' => now(),
             ])->save();
 
+            // Joined from an invitation with "Accept" alone: named after the
+            // address until now, when Google gives the real name.
+            $googleName = Str::limit(trim($name), 255, '');
+            if ($googleName !== '' && $user->name === InviteeNames::fromEmail($user->email)) {
+                $user->forceFill(['name' => $googleName])->save();
+            }
+
             $this->recorder->record('social_account_linked', $user, context: ['provider' => self::PROVIDER]);
             $this->refreshAvatar($user, $avatar);
 
@@ -260,7 +269,8 @@ class GoogleSignInController
     /** Google's picture follows the Google account; none from Google keeps the old one. */
     private function refreshAvatar(?User $user, ?string $avatar): void
     {
-        if ($user !== null && $avatar !== null && $user->avatar_url !== $avatar) {
+        // A picture the person uploaded themselves stays theirs.
+        if ($user !== null && $avatar !== null && $user->avatar_url !== $avatar && ! Avatars::isUploaded($user->avatar_url)) {
             $user->forceFill(['avatar_url' => $avatar])->save();
         }
     }

@@ -6,6 +6,8 @@ use App\Concerns\PasswordValidationRules;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Identity\Http\Controllers\GoogleSignInController;
+use App\Modules\Identity\Support\Avatars;
+use App\Modules\Identity\Support\InviteeNames;
 use App\Modules\Memberships\Actions\Invitations;
 use App\Modules\Memberships\Actions\MembershipActionDenied;
 use App\Modules\Memberships\Models\Invitation;
@@ -16,17 +18,21 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Where invitation emails lead. Someone new chooses their name and password
- * and is in: holding the link proves they read mail at the invited address,
- * so the account starts verified and the invitation is accepted at once.
- * Or they join with the Google account of the invited address: no password,
- * and their Google name and picture.
+ * Where invitation emails lead. Holding the link proves they read mail at
+ * the invited address, so a new account starts verified and the invitation
+ * is accepted at once:
+ * - a Gmail address joins with "Accept" alone: no password (they come back
+ *   with "Continue with Google"), named after the address until Google
+ *   gives their name;
+ * - any other address chooses a name and password, and may add a picture;
+ *   or joins with the Google account of the invited address.
  * Someone who already has an account signs in and accepts on the auth host,
  * as before.
  */
@@ -53,6 +59,7 @@ class JoinController extends Controller
             'status' => 'new',
             'token' => $token,
             'email' => $invitation->email,
+            'gmail' => InviteeNames::isGmail($invitation->email),
             'organization' => Organization::query()->find($invitation->organization_id)?->display_name,
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
             'canJoinWithGoogle' => GoogleSignInController::configured(),
@@ -94,19 +101,32 @@ class JoinController extends Controller
             return redirect()->away($this->acceptUrl($token));
         }
 
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'password' => $this->passwordRules(),
-        ]);
+        $gmail = InviteeNames::isGmail($invitation->email);
+
+        if ($gmail) {
+            // Nothing to fill in: the address is the account, Google the way back in.
+            // No usable password: one can be set later through "Forgot your password?".
+            $validated = ['name' => InviteeNames::fromEmail($invitation->email), 'password' => Str::random(64)];
+            $avatar = null;
+        } else {
+            $validated = $request->validate([
+                'name' => ['required', 'string', 'max:255'],
+                'password' => $this->passwordRules(),
+                'avatar' => Avatars::rules(),
+            ]);
+            $file = $request->file('avatar');
+            $avatar = $file === null ? null : Avatars::store($file);
+        }
 
         // One transaction: if accepting fails (the inviter lost the right to
         // invite, the organization closed), no stray account is left behind.
         try {
-            [$user, $organization] = DB::transaction(function () use ($invitation, $validated, $token): array {
+            [$user, $organization] = DB::transaction(function () use ($invitation, $validated, $avatar, $token): array {
                 $user = new User;
                 $user->forceFill([
                     'name' => trim($validated['name']),
                     'email' => $invitation->email,
+                    'avatar_url' => $avatar,
                     'password' => $validated['password'],
                     'email_verified_at' => now(),
                 ])->save();
@@ -116,8 +136,10 @@ class JoinController extends Controller
                 return [$user, $result['organization']];
             });
         } catch (MembershipActionDenied $e) {
+            Avatars::delete($avatar);
             throw ValidationException::withMessages(['invitation' => $e->getMessage()]);
         } catch (QueryException $e) {
+            Avatars::delete($avatar);
             if ($e->getCode() === '23505') {
                 return redirect()->away($this->acceptUrl($token));
             }

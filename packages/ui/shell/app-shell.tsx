@@ -1,5 +1,5 @@
 import { usePage } from '@inertiajs/react';
-import { Menu } from 'lucide-react';
+import { Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { cn } from '../lib/utils';
@@ -18,6 +18,7 @@ export function AppShell({
     crumbs,
     actions,
     flash,
+    expanded = false,
     children,
 }: {
     sidebar: (onNavigate: () => void) => ReactNode;
@@ -26,10 +27,24 @@ export function AppShell({
     actions?: ReactNode;
     /** A one-line success message from the last action. */
     flash?: string | null;
+    /**
+     * At lg and up: the full sidebar open, with a top-bar button that folds
+     * it to the icon rail and back (remembered in this browser).
+     */
+    expanded?: boolean;
     children: ReactNode;
 }) {
     const { url } = usePage();
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [pinned, setPinned] = useState(() => readPinned());
+    const open = expanded && pinned;
+    const togglePinned = useCallback(() => {
+        setPinned((value) => {
+            writePinned(!value);
+
+            return !value;
+        });
+    }, []);
     const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
     useEffect(() => {
@@ -63,11 +78,22 @@ export function AppShell({
 
             {/* Desktop sidebar: an icon rail that widens over the page on
                 hover or keyboard focus, so the page never reflows. */}
-            <aside className="sticky top-0 z-30 hidden h-screen w-14 shrink-0 lg:block print:hidden">
-                <div className="shell-rail absolute inset-y-0 left-0 w-14 overflow-hidden transition-[width,box-shadow] duration-200 hover:w-64 hover:shadow-xl has-[:focus-visible]:w-64 has-[:focus-visible]:shadow-xl">
-                    <div className="h-full w-64">{sidebar(closeSidebar)}</div>
-                </div>
-            </aside>
+            {open ? (
+                <aside
+                    data-slot="shell-aside"
+                    className="sticky top-0 z-30 hidden h-screen w-60 shrink-0 lg:block print:hidden"
+                >
+                    {sidebar(closeSidebar)}
+                </aside>
+            ) : (
+                <aside className="sticky top-0 z-30 hidden h-screen w-14 shrink-0 lg:block print:hidden">
+                    <div className="shell-rail absolute inset-y-0 left-0 w-14 overflow-hidden transition-[width,box-shadow] duration-200 hover:w-64 hover:shadow-xl has-[:focus-visible]:w-64 has-[:focus-visible]:shadow-xl">
+                        <div className="h-full w-64">
+                            {sidebar(closeSidebar)}
+                        </div>
+                    </div>
+                </aside>
+            )}
 
             {/* Mobile sidebar drawer */}
             <div
@@ -110,6 +136,34 @@ export function AppShell({
                     >
                         <Menu className="size-4" aria-hidden />
                     </button>
+                    {expanded && (
+                        <button
+                            type="button"
+                            onClick={togglePinned}
+                            aria-label={
+                                pinned
+                                    ? 'Collapse navigation'
+                                    : 'Expand navigation'
+                            }
+                            aria-pressed={pinned}
+                            title={
+                                pinned
+                                    ? 'Collapse navigation'
+                                    : 'Expand navigation'
+                            }
+                            data-slot="shell-toggle"
+                            className="hidden size-9 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground lg:grid"
+                        >
+                            {pinned ? (
+                                <PanelLeftClose
+                                    className="size-5"
+                                    aria-hidden
+                                />
+                            ) : (
+                                <PanelLeftOpen className="size-5" aria-hidden />
+                            )}
+                        </button>
+                    )}
                     <div className="min-w-0 flex-1">
                         <Breadcrumbs crumbs={crumbs} />
                     </div>
@@ -137,4 +191,23 @@ export function AppShell({
             </div>
         </div>
     );
+}
+
+const PINNED_KEY = 'miles.sidebar.pinned';
+
+/** Whether the person left the sidebar open; open unless they folded it. */
+function readPinned(): boolean {
+    try {
+        return window.localStorage.getItem(PINNED_KEY) !== '0';
+    } catch {
+        return true;
+    }
+}
+
+function writePinned(value: boolean): void {
+    try {
+        window.localStorage.setItem(PINNED_KEY, value ? '1' : '0');
+    } catch {
+        // Storage blocked (private window): the choice lasts for this page only.
+    }
 }
