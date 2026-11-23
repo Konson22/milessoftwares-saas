@@ -294,6 +294,27 @@ export async function queueCorrection(store: CollectStore, item: Item, answers: 
   return {};
 }
 
+/**
+ * "Retry failed": items waiting out their backoff become due now. Their
+ * attempt count is kept, so the next failure waits as long as it would
+ * have; refusals (action required) are not touched, a person must act.
+ */
+export async function retryNow(store: CollectStore, scope: string, now: Date): Promise<number> {
+  let count = 0;
+  for (const item of await store.items(scope)) {
+    if (item.status === 'failed' && item.error?.code !== 'signed_out') {
+      await store.saveItem({ ...item, nextAttemptAt: null, updatedAt: now.toISOString() });
+      count++;
+    }
+  }
+  return count;
+}
+
+/** Whether anything is due to be sent now (the timer syncs only then). */
+export function anythingDue(items: Item[], now: Date): boolean {
+  return due(items, now).length > 0;
+}
+
 /** Synced items past the workspace's keep-on-device days are removed. */
 export async function purgeOld(store: CollectStore, scope: string, keepDays: number, now: Date): Promise<number> {
   let removed = 0;

@@ -3,7 +3,7 @@ import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 
-import { AUTH_URL, CLIENT_ID, GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID, reach } from '../config';
+import { AUTH_URL, CLIENT_ID, DEV_SERVER, GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID, reach } from '../config';
 import { secureStorage } from '../storage';
 
 /**
@@ -232,7 +232,6 @@ function googleSignIn(): GoogleModule | null {
   return google;
 }
 
-/** Signed in: the authorization request again, now answered with a redirect to the app. */
 /**
  * What the platform asks for before the app gets its tokens: a two-step
  * code, or (signed in with a temporary password a manager handed over)
@@ -278,8 +277,36 @@ async function reachable(response: Promise<Response>): Promise<Response> {
   try {
     return await response;
   } catch {
-    throw new Error('Cannot reach the sign-in service. Check the connection.');
+    throw new Error(unreachable());
   }
+}
+
+/** Sign-in calls give up after this long rather than spin on a dead network. */
+const SIGN_IN_TIMEOUT_MS = 20_000;
+
+/** A fetch that is aborted after SIGN_IN_TIMEOUT_MS. */
+async function timedFetch(url: string, init: RequestInit): Promise<Response> {
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), SIGN_IN_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: abort.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Why sign-in failed when nothing answered. In a development build that
+ * goes through DEV_SERVER (a USB phone on 127.0.0.1), the usual cause is the
+ * port forward, which adb drops whenever it restarts.
+ */
+function unreachable(): string {
+  if (__DEV__ && DEV_SERVER) {
+    return DEV_SERVER.includes('127.0.0.1') || DEV_SERVER.includes('localhost')
+      ? `Cannot reach the sign-in service at ${DEV_SERVER}. On the computer, run: adb reverse tcp:80 tcp:80`
+      : `Cannot reach the sign-in service at ${DEV_SERVER}. Check that the phone and the computer are on the same network.`;
+  }
+  return 'Cannot reach the sign-in service. Check the connection.';
 }
 
 async function refusal(response: Response) {
@@ -326,7 +353,7 @@ class WebSession {
 
   private async send(url: string, init: RequestInit): Promise<Response> {
     const target = reach(url);
-    const response = await fetch(target.url, {
+    const response = await timedFetch(target.url, {
       ...init,
       credentials: 'omit',
       redirect: 'manual',
@@ -392,7 +419,7 @@ export async function accessToken(force = false): Promise<string | null> {
  */
 export async function freshIdToken(): Promise<string> {
   const tokens = await refreshed();
-  if (!tokens?.idToken) throw new Error('Cannot reach Miles Softwares. Check the connection, or sign in again.');
+  if (!tokens?.idToken) throw new Error('Cannot reach Tatook. Check the connection, or sign in again.');
   return tokens.idToken;
 }
 
@@ -428,16 +455,24 @@ interface TokenResponse {
 
 async function tokenRequest(body: Record<string, string>): Promise<TokenResponse> {
   const target = reach(`${AUTH_URL}/oauth/token`);
-  const response = await fetch(target.url, {
-    method: 'POST',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', ...target.headers },
-    body: query(body),
-  });
+  let response: Response;
+  try {
+    response = await timedFetch(target.url, {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', ...target.headers },
+      body: query(body),
+    });
+  } catch {
+    throw new Error(unreachable());
+  }
   const json = await response.json().catch(() => null);
-  if (!response.ok || typeof json?.access_token !== 'string') {
+  if (response.ok && typeof json?.access_token === 'string') return json as TokenResponse;
+  // Only the platform saying no (a bad or revoked grant) signs out; a server
+  // error or a proxy page in front of it is a failure to try again.
+  if (response.status === 400 || response.status === 401) {
     throw new TokenRefused(json?.error_description ?? json?.message ?? 'Sign-in failed. Try again.');
   }
-  return json as TokenResponse;
+  throw new Error('The sign-in service had a problem. Try again shortly.');
 }
 
 function fromResponse(tokens: TokenResponse): Tokens {

@@ -79,13 +79,19 @@ export type Assignment = {
   closesAt: string | null;
   form: { id: string; name: string; description: string | null; purpose: string; status: string; programme: string | null; containsPersonalData: boolean };
   unit: { id: string; label: string } | null;
-  version: { id: string; number: number; sha256: string; schemaVersion: number } | null;
+  version: { id: string; number: number; sha256: string; schemaVersion: number; publishedAt?: string } | null;
+  /** Submissions expected from this person (null: no target; newer servers). */
+  expected?: number | null;
+  /** The collector's records on the server for this form, by review state (newer servers). */
+  progress?: { received: number; pending: number; accepted: number; correction: number; rejected: number };
 };
 
 export type Kit = {
   serverTime: string;
   settings: { photoMaxKb: number; keepOnDeviceDays: number };
   assignments: Assignment[];
+  /** The collector's own submissions per day, the last 30 days (newer servers). */
+  activity?: { date: string; count: number }[];
 };
 
 /** Everything the phone keeps, behind one interface (SQLCipher on the phone, memory in tests). */

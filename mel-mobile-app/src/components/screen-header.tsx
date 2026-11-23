@@ -5,8 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IconButton, type IconName } from '@/components/ui/button';
 
 /**
- * Title bar, in the icon's red, for the screens that sit above the tabs (checkout, receipt, returns, account).
- * Owns the top safe-area inset so the blue runs up under the status bar.
+ * Title bar in the brand's deep teal, for every signed-in screen.
+ * Owns the top safe-area inset so the colour runs up under the status bar.
  */
 export function ScreenHeader({
   title,

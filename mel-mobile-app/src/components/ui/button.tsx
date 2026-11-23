@@ -8,7 +8,7 @@ type Variant = 'primary' | 'accent' | 'secondary' | 'outline' | 'danger' | 'ghos
 
 const container: Record<Variant, string> = {
   primary: 'bg-brand-600 active:bg-brand-700',
-  // The icon's orange: taking payment, and the main action on navy.
+  // The pin's green: the main action on the dark teal surfaces (sign-in).
   accent: 'bg-accent active:bg-accent-600',
   secondary: 'bg-brand-50 active:bg-brand-100',
   outline: 'border border-brand-200 bg-white active:bg-brand-50',
@@ -73,7 +73,7 @@ export function Button({
       accessibilityState={{ disabled: !!inactive, busy: !!loading }}
       onPress={onPress}
       disabled={inactive}
-      className={`flex-row items-center justify-center gap-1.5 px-3 ${size === 'lg' ? 'min-h-11' : 'min-h-9'} ${container[variant]} ${inactive ? 'opacity-50' : ''} ${className}`}>
+      className={`flex-row items-center justify-center gap-1.5 px-3 ${size === 'lg' ? 'min-h-12' : 'min-h-11'} ${container[variant]} ${inactive ? 'opacity-50' : ''} ${className}`}>
       {loading ? (
         <ActivityIndicator color={iconColor[variant]} />
       ) : (

@@ -21,7 +21,7 @@ export interface BusinessChoice {
 export interface NewBusiness {
   display_name: string;
   legal_name: string;
-  /** The workspace address: <slug>.tatook.com. */
+  /** The workspace address: <slug>.milessoftwares.com. */
   slug: string;
   country_code: string;
   default_currency: string;
@@ -55,7 +55,7 @@ async function call<T>(method: string, path: string, body?: unknown, retried = f
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
-    throw new ApiError('Cannot reach Miles Softwares. Check the connection.', 0, {}, true);
+    throw new ApiError('Cannot reach Tatook. Check the connection.', 0, {}, true);
   }
 
   const json = await response.json().catch(() => null);

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Tatook M&E",
-    "slug": "tatook-mel",
+    "name": "Miles MDC",
+    "slug": "tatook-fdc",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
@@ -14,7 +14,7 @@
     "android": {
       "package": "com.tatook.mel",
       "adaptiveIcon": {
-        "backgroundColor": "#002657",
+        "backgroundColor": "#01839c",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -43,7 +43,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#002657",
+          "backgroundColor": "#04506a",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200
         }
@@ -57,7 +57,7 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Tatook M&E takes photos for the forms you fill in.",
+          "cameraPermission": "Miles MDC takes photos for the forms you fill in.",
           "photosPermission": false,
           "microphonePermission": false
         }
@@ -65,7 +65,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Tatook M&E records where a form was filled in when the form asks for it."
+          "locationWhenInUsePermission": "Miles MDC records where a form was filled in when the form asks for it."
         }
       ]
     ],
@@ -74,7 +74,11 @@
       "reactCompiler": true
     },
     "extra": {
-      "router": {}
-    }
+      "router": {},
+      "eas": {
+        "projectId": "6a7c3ebd-0c12-4a80-ba0a-6cdc7ca42d43"
+      }
+    },
+    "owner": "konsonaks-team"
   }
 }

@@ -4,7 +4,7 @@
  */
 
 /** The platform's auth host (OpenID provider): sign-in and tokens. */
-export const AUTH_URL = (process.env.EXPO_PUBLIC_AUTH_URL ?? 'https://auth.tatook.com').replace(/\/$/, '');
+export const AUTH_URL = (process.env.EXPO_PUBLIC_AUTH_URL ?? 'https://auth.milessoftwares.com').replace(/\/$/, '');
 
 /** The mobile app's public client, registered on the platform for M&E (PLATFORM_MOBILE_CLIENT_ID in mel-app). */
 export const CLIENT_ID = process.env.EXPO_PUBLIC_CLIENT_ID ?? '';
@@ -23,7 +23,7 @@ export const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
  * it at the dev PC (http://{workspace}.tatook.localhost does not
  * resolve on a phone).
  */
-const WORKSPACE_URL = (process.env.EXPO_PUBLIC_WORKSPACE_URL ?? 'https://{workspace}.tatook.com').replace(/\/$/, '');
+const WORKSPACE_URL = (process.env.EXPO_PUBLIC_WORKSPACE_URL ?? 'https://{workspace}.milessoftwares.com').replace(/\/$/, '');
 
 /** M&E's path on workspace hosts. */
 export const PRODUCT_PATH = (process.env.EXPO_PUBLIC_PRODUCT_PATH ?? 'mel').replace(/^\/|\/$/g, '');
@@ -43,7 +43,7 @@ export function webUrl(workspace: string, path = ''): string {
  * `adb reverse tcp:80 tcp:80`) and name the host in the Host header. The
  * sign-in browser needs nothing: it sends *.localhost to loopback itself.
  */
-const DEV_SERVER = (process.env.EXPO_PUBLIC_DEV_SERVER ?? '').replace(/\/$/, '');
+export const DEV_SERVER = (process.env.EXPO_PUBLIC_DEV_SERVER ?? '').replace(/\/$/, '');
 
 /** Where a call to `url` actually goes, and the headers that keep its host. */
 export function reach(url: string): { url: string; headers: Record<string, string> } {
