@@ -555,7 +555,7 @@ describe('brand entity', () => {
         expect(org).toMatchObject({
             name: 'Miles Softwares',
             legalName: 'Miles Global Link Co. Ltd',
-            email: 'info@tatook.com',
+            email: 'support@milessoftwares.com',
             telephone: '+211920079070',
             address: {
                 streetAddress:
@@ -582,7 +582,7 @@ describe('brand entity', () => {
             'Juba town, former GPOC building, 1st floor, office No 9, Juba, South Sudan',
         );
         expect(address?.textContent).toContain('+211 920 079 070');
-        expect(address?.textContent).toContain('info@tatook.com');
+        expect(address?.textContent).toContain('support@milessoftwares.com');
         const facebook = address?.querySelector('a[rel~="me"]');
         expect(facebook?.getAttribute('href')).toBe(
             'https://www.facebook.com/profile.php?id=61596215291990',

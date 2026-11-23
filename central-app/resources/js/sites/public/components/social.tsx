@@ -2,7 +2,7 @@
 export const whatsappNumber = '+211 920 079 070';
 
 /** Support's mailbox: contact form messages are emailed here too. */
-export const supportEmail = 'info@tatook.com';
+export const supportEmail = 'support@milessoftwares.com';
 
 /**
  * The office, word for word as on the Google Business Profile and in the
