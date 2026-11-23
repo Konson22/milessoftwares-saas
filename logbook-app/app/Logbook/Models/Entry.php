@@ -24,6 +24,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property bool $review_required
  * @property CarbonImmutable $occurred_at
  * @property string|null $schedule_occurrence_id
+ * @property string|null $shift_id ADR-0030: the shift it was recorded in
+ * @property-read Shift|null $shift
+ * @property 'named'|'extra'|null $schedule_link ADR-0030: what the author said it is for; null from older clients
  * @property string|null $log_track_id
  * @property array{lat: float, lng: float, accuracy_m: float|null, captured_at: string, received_at: string, source: string}|null $location
  * @property array<string, mixed> $values
@@ -89,6 +92,12 @@ class Entry extends Model
     public function version(): BelongsTo
     {
         return $this->belongsTo(LogSheetVersion::class, 'log_sheet_version_id');
+    }
+
+    /** @return BelongsTo<Shift, $this> */
+    public function shift(): BelongsTo
+    {
+        return $this->belongsTo(Shift::class);
     }
 
     /** @return BelongsTo<User, $this> */

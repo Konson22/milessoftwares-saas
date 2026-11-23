@@ -134,4 +134,16 @@ class LogException extends Model
     {
         return $this->hasMany(WorkFile::class, 'exception_id')->orderBy('created_at');
     }
+
+    /** @return BelongsTo<User, $this> */
+    public function resolver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'resolved_by');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function closer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'closed_by');
+    }
 }

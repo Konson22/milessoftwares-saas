@@ -3,7 +3,7 @@ import { useRef, useState, type ComponentRef } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ArtBackground, BrandMark } from '@/components/art-background';
+import { ArtBackground, PhotoHeader } from '@/components/art-background';
 import { KeyboardScroll } from '@/components/keyboard-scroll';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
@@ -11,13 +11,14 @@ import { GoogleButton } from '@/components/ui/google-button';
 import { Banner } from '@/components/ui/misc';
 import { useKeyboardHeight } from '@/hooks/use-keyboard';
 import { errorMessage } from '@/lib/api/client';
+import { BRAND } from '@/lib/brand';
 import { googleAvailable, NeedsBrowser, SignInCancelled } from '@/lib/auth/tokens';
 import { colors } from '@/lib/theme';
 import { useAuth, type SignInWith } from '@/store/auth';
 
 /**
  * Online: sign in with the platform, email (or the username of an account
- * a manager added without one, such as a pump attendant) and password here (and a
+ * a manager added without one, such as an enumerator) and password here (and a
  * two-step code when the account has one), no workspace address. The
  * person's business opens; in more than one, they choose which next; with
  * none yet, they create one, still signed in. Google signs in natively (the
@@ -92,19 +93,13 @@ export default function LoginScreen() {
         contentContainerStyle={{ flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
         bounces={false}>
-        {keyboard ? (
-          <View style={{ height: insets.top + 12 }} />
-        ) : (
-          <View className="flex-1 justify-center">
-            <BrandMark compact />
-          </View>
-        )}
+        {keyboard ? <View style={{ height: insets.top + 12 }} /> : <PhotoHeader />}
         <View
-          className={`w-full max-w-xl gap-3 self-center px-6 ${keyboard ? 'mt-auto pt-4' : 'pt-2'}`}
+          className={`w-full max-w-xl gap-3 self-center px-6 ${keyboard ? 'mt-auto pt-4' : 'flex-1 justify-center pt-2'}`}
           style={{ paddingBottom: (keyboard ? 0 : insets.bottom) + 16 }}>
           <View className="mb-1">
             <Text accessibilityRole="header" className="text-2xl font-bold text-white">
-              {choosing ? 'Choose your password' : twoFactor ? 'Two-step sign-in' : 'Welcome back'}
+              {choosing ? 'Choose your password' : twoFactor ? 'Two-step sign-in' : 'Login'}
             </Text>
             <Text className="text-base text-brand-100">
               {choosing
@@ -113,7 +108,7 @@ export default function LoginScreen() {
                 ? recovery
                   ? 'Enter one of your recovery codes.'
                   : 'Enter the code from your authenticator app.'
-                : 'Sign in with your email, or the username your manager gave you.'}
+                : BRAND.slogan}
             </Text>
           </View>
 
@@ -284,7 +279,6 @@ export default function LoginScreen() {
                   disabled={!!busy}
                 />
               )}
-              <Text className="pt-1 text-center text-sm text-brand-100">Your coordinator adds you to M&E and assigns your forms.</Text>
             </>
           )}
         </View>

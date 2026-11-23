@@ -4,6 +4,7 @@ namespace App\Logbook;
 
 use App\Logbook\Models\AuditEvent;
 use App\Logbook\Models\Entry;
+use App\Logbook\Models\Investigation;
 use App\Logbook\Models\Location;
 use App\Logbook\Models\Logbook;
 use App\Logbook\Models\LogException;
@@ -11,6 +12,7 @@ use App\Logbook\Models\LogResource;
 use App\Logbook\Models\LogSheet;
 use App\Logbook\Models\Schedule;
 use App\Logbook\Models\ScheduleOccurrence;
+use App\Logbook\Models\Shift;
 use App\Logbook\Models\Task;
 use App\Logbook\Models\TaskSeries;
 use App\Logbook\Models\Track;
@@ -43,6 +45,8 @@ final class AuditTrail
             $subject instanceof LogException => ['exception', $subject->reference.' · '.$subject->title, $subject->logbook_id],
             $subject instanceof LogResource => ['resource', $subject->label(), null],
             $subject instanceof Location => ['location', $subject->name, null],
+            $subject instanceof Shift => ['shift', $subject->label(), $subject->logbook_id],
+            $subject instanceof Investigation => ['investigation', $subject->reference.' · '.$subject->title, $subject->logbook_id],
             $subject instanceof Track => ['track', 'Route · '.$subject->user->name.' · '.$subject->started_at->format('Y-m-d H:i'), $subject->logbook_id],
             default => throw new InvalidArgumentException('Logbook does not audit '.$subject::class),
         };

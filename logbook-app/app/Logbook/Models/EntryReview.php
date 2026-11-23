@@ -5,6 +5,7 @@ namespace App\Logbook\Models;
 use App\Logbook\Models\Concerns\TenantModel;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * A review decision on one submitted revision. Append-only.
@@ -31,5 +32,11 @@ class EntryReview extends Model
     protected function casts(): array
     {
         return ['revision' => 'integer', 'decided_at' => 'immutable_datetime'];
+    }
+
+    /** @return BelongsTo<Entry, $this> */
+    public function entry(): BelongsTo
+    {
+        return $this->belongsTo(Entry::class, 'log_entry_id');
     }
 }

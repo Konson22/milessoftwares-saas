@@ -45,18 +45,21 @@ type Props = {
   notes?: Record<string, string>;
   /** Photos cannot change in a correction. */
   photosLocked?: boolean;
+  /** Only these items (one page of a long form); all when omitted. */
+  only?: string[];
   onChange: (name: string, value: unknown, photo?: PhotoFile | null) => void;
   onError: (message: string) => void;
 };
 
-export function FormRenderer({ definition, answers, evaluation, photos, photoMaxKb, showErrors, notes = {}, photosLocked, onChange, onError }: Props) {
+export function FormRenderer({ definition, answers, evaluation, photos, photoMaxKb, showErrors, notes = {}, photosLocked, only, onChange, onError }: Props) {
   const visible = new Set(evaluation.visible);
   const required = new Set(evaluation.required);
+  const page = only ? new Set(only) : null;
 
   return (
-    <View className="gap-4">
+    <View className="gap-5">
       {flatten(definition.items)
-        .filter((q) => visible.has(q.name))
+        .filter((q) => visible.has(q.name) && (!page || page.has(q.name)))
         .map((q) =>
           q.type === 'group' ? (
             <Text key={q.name} accessibilityRole="header" className="mt-2 border-b border-slate-300 pb-1 text-lg font-bold text-slate-800">
@@ -144,13 +147,19 @@ function Answer({
       );
 
     case 'date':
-      return <Input value={typeof value === 'string' ? value : ''} placeholder="YYYY-MM-DD" keyboard="numbers-and-punctuation" onChange={(t) => onChange(t === '' ? undefined : t)} />;
     case 'time':
-      return <Input value={typeof value === 'string' ? value : ''} placeholder="HH:MM" keyboard="numbers-and-punctuation" onChange={(t) => onChange(t === '' ? undefined : t)} />;
-    case 'datetime':
+    case 'datetime': {
+      const kind = q.type;
+      const placeholder = { date: 'YYYY-MM-DD', time: 'HH:MM', datetime: 'YYYY-MM-DDTHH:MM' }[kind];
       return (
-        <Input value={typeof value === 'string' ? value : ''} placeholder="YYYY-MM-DDTHH:MM" keyboard="numbers-and-punctuation" onChange={(t) => onChange(t === '' ? undefined : t)} />
+        <View className="flex-row gap-2">
+          <View className="flex-1">
+            <Input value={typeof value === 'string' ? value : ''} placeholder={placeholder} keyboard="numbers-and-punctuation" onChange={(t) => onChange(t === '' ? undefined : t)} />
+          </View>
+          <Button title={kind === 'date' ? 'Today' : 'Now'} variant="outline" size="lg" onPress={() => onChange(nowFor(kind))} />
+        </View>
       );
+    }
 
     case 'select_one':
     case 'yes_no':
@@ -244,6 +253,30 @@ function Answer({
     default:
       return <Text className="text-sm text-slate-500">This question needs a newer app.</Text>;
   }
+}
+
+/** The phone's current date or time, in the form the rules read. */
+export function nowFor(type: 'date' | 'time' | 'datetime', now = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const time = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  return type === 'date' ? date : type === 'time' ? time : `${date}T${time}`;
+}
+
+/** An answer as the collector reads it back on the review page. */
+export function answerText(definition: Definition, q: Question, value: unknown): string {
+  if (value === undefined || value === null || value === '') return '';
+  if (q.type === 'select_one' || q.type === 'yes_no') return choicesOf(definition, q).find((c) => c.name === value)?.label ?? String(value);
+  if (q.type === 'select_multiple' && Array.isArray(value)) {
+    const choices = choicesOf(definition, q);
+    return value.map((v) => choices.find((c) => c.name === v)?.label ?? String(v)).join(', ');
+  }
+  if (q.type === 'geopoint' && typeof value === 'object') {
+    const p = value as GeoPoint;
+    return `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}${p.accuracy !== undefined ? ` (± ${p.accuracy} m)` : ''}`;
+  }
+  if (q.type === 'photo') return 'Photo taken';
+  return String(value as string | number);
 }
 
 function Input({

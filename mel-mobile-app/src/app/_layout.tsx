@@ -19,8 +19,10 @@ void SplashScreen.preventAutoHideAsync();
 
 /**
  * Opens the signed-in person's collected work and keeps it moving: a sync
- * when the network comes back, when the app returns to the front, and
- * every minute while open (each item waits out its own backoff).
+ * when the network comes back, a full refresh when the app returns to the
+ * front, and a check every minute while open that sends only when
+ * something is due (each item waits out its own backoff), so an idle
+ * phone makes no requests and spares the battery and data.
  */
 function SyncRunner() {
   const scope = useScope();
@@ -32,9 +34,9 @@ function SyncRunner() {
 
   useEffect(() => {
     if (!scope) return;
-    const sync = () => void useCollect.getState().sync();
+    const sync = () => void useCollect.getState().syncDue();
     const network = Network.addNetworkStateListener((state) => {
-      if (state.isConnected && state.isInternetReachable !== false) sync();
+      if (state.isConnected && state.isInternetReachable !== false) void useCollect.getState().sync({ pull: true });
     });
     const app = AppState.addEventListener('change', (state) => {
       if (state === 'active') void useCollect.getState().refresh();
@@ -91,9 +93,8 @@ export default function RootLayout() {
           </Stack.Protected>
 
           <Stack.Protected guard={status === 'ready'}>
-            <Stack.Screen name="home" />
+            <Stack.Screen name="(tabs)" />
             <Stack.Screen name="fill/[id]" />
-            <Stack.Screen name="outbox" />
             <Stack.Screen name="account" options={{ presentation: 'modal' }} />
           </Stack.Protected>
         </Stack>

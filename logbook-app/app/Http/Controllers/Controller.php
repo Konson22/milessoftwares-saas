@@ -58,11 +58,29 @@ abstract class Controller
     protected static function summary(Entry $entry): string
     {
         $parts = [];
+        // Resource names, looked up once per request for a whole list.
+        /** @var array<string, string|null> $resources */
+        $resources = request()->attributes->get('logbook.resource_labels', []);
+        $wanted = [];
+        foreach ($entry->version->fields as $field) {
+            $value = $entry->values[$field['name']] ?? null;
+            if ($field['type'] === 'resource' && is_string($value) && ! array_key_exists($value, $resources)) {
+                $wanted[] = $value;
+            }
+        }
+        if ($wanted !== []) {
+            $found = LogResource::query()->whereIn('id', $wanted)->get();
+            foreach ($wanted as $id) {
+                $resources[$id] = $found->firstWhere('id', $id)?->label();
+            }
+            request()->attributes->set('logbook.resource_labels', $resources);
+        }
+        $names = array_filter($resources, fn ($label) => $label !== null);
         foreach ($entry->version->fields as $field) {
             if (in_array($field['type'], ['file', 'user', 'yes_no'], true)) {
                 continue;
             }
-            $text = Fields::text($field, $entry->values[$field['name']] ?? null);
+            $text = Fields::text($field, $entry->values[$field['name']] ?? null, $names);
             if ($text !== null) {
                 $parts[] = $text;
             }

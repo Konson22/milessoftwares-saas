@@ -26,6 +26,7 @@ type Props = {
         answers: Answer[];
         location: EntryLocation | null;
         track: string | null;
+        shift?: string | null;
     };
     revisions: {
         revision: number;
@@ -149,6 +150,9 @@ export default function EntryShow({
                                             ? '—'
                                             : 'Not reviewed yet'}
                                 </Detail>
+                                {entry.shift && (
+                                    <Detail label="Shift">{entry.shift}</Detail>
+                                )}
                                 {(entry.location || entry.track) && (
                                     <Detail label="Location">
                                         {entry.location ? (

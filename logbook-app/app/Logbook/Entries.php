@@ -42,8 +42,10 @@ final class Entries
      *
      * @param  array<string, mixed>  $input
      * @param  array{location?: array<string, mixed>|null, track_id?: string|null, source?: string}  $place  GPS (ADR-0028): kept only on sheets that take it
+     * @param  'named'|'extra'|null  $scheduleLink  ADR-0030 §4.3: for the occurrence named, an extra reading, or (older clients) not said
+     * @param  array{shift_id?: string|null}  $more  ADR-0030: the shift it was recorded in
      */
-    public static function create(LogSheet $sheet, User $by, array $input, string $occurredAt, ?string $key, bool $submit, ?LogSheetVersion $version = null, ?string $occurrenceId = null, array $place = []): Entry
+    public static function create(LogSheet $sheet, User $by, array $input, string $occurredAt, ?string $key, bool $submit, ?LogSheetVersion $version = null, ?string $occurrenceId = null, array $place = [], ?string $scheduleLink = null, array $more = []): Entry
     {
         if ($key !== null && ($existing = self::byKey($by, $key)) !== null) {
             return $existing;
@@ -58,14 +60,16 @@ final class Entries
         // Submitting at once: everything is checked first, so a refusal leaves nothing behind.
         $values = self::clean($version, $input, [], requireAll: $submit);
         $gps = Tracks::forEntry($version, $by, $place['location'] ?? null, $place['track_id'] ?? null, $place['source'] ?? 'phone');
+        $shiftId = Shifts::forEntry(Recording::settings($version)['shifts'] ?? 'off', $sheet->logbook_id, $more['shift_id'] ?? null);
 
         try {
             // The expected entry it was written for (opened from a reminder): kept only if it is
             // this sheet's, so a stale one from an offline phone is simply dropped.
             $occurrenceId = $occurrenceId !== null && ScheduleOccurrence::query()->whereKey($occurrenceId)->where('log_sheet_id', $sheet->id)->exists()
                 ? $occurrenceId : null;
+            $scheduleLink = in_array($scheduleLink, ['named', 'extra'], true) ? $scheduleLink : null;
 
-            return DB::transaction(function () use ($sheet, $version, $by, $values, $occurredAt, $key, $submit, $occurrenceId, $gps) {
+            return DB::transaction(function () use ($sheet, $version, $by, $values, $occurredAt, $key, $submit, $occurrenceId, $gps, $scheduleLink, $shiftId) {
                 $entry = Entry::query()->create([
                     'logbook_id' => $sheet->logbook_id,
                     'log_sheet_id' => $sheet->id,
@@ -75,7 +79,9 @@ final class Entries
                     'values' => $values,
                     'created_by' => $by->id,
                     'idempotency_key' => $key,
-                    'schedule_occurrence_id' => $occurrenceId,
+                    'schedule_occurrence_id' => $scheduleLink === 'extra' ? null : $occurrenceId,
+                    'schedule_link' => $scheduleLink,
+                    'shift_id' => $shiftId,
                     'location' => $gps['location'],
                     'log_track_id' => $gps['log_track_id'],
                 ]);
@@ -100,16 +106,20 @@ final class Entries
      *
      * @param  array<string, mixed>  $input
      * @param  array{location?: array<string, mixed>|null, track_id?: string|null, source?: string}|null  $place  null: the location stays as it is
+     * @param  array{shift_id?: string|null}  $more  a key left out keeps what the entry has
      */
-    public static function update(Entry $entry, User $by, array $input, string $occurredAt, ?array $place = null): Entry
+    public static function update(Entry $entry, User $by, array $input, string $occurredAt, ?array $place = null, array $more = []): Entry
     {
-        return DB::transaction(function () use ($entry, $by, $input, $occurredAt, $place) {
+        return DB::transaction(function () use ($entry, $by, $input, $occurredAt, $place, $more) {
             $entry = self::lockForAuthor($entry, $by);
             $values = self::clean($entry->version, $input, self::files($entry), requireAll: false);
             $entry->forceFill(['values' => $values, 'occurred_at' => CarbonImmutable::parse($occurredAt)]);
             if ($place !== null) {
                 $gps = Tracks::forEntry($entry->version, $by, $place['location'] ?? null, $place['track_id'] ?? null, $place['source'] ?? 'phone');
                 $entry->forceFill(['location' => $gps['location'], 'log_track_id' => $gps['log_track_id']]);
+            }
+            if (array_key_exists('shift_id', $more)) {
+                $entry->forceFill(['shift_id' => Shifts::forEntry(Shifts::setting($entry), $entry->logbook_id, $more['shift_id'])]);
             }
             $entry->save();
 
@@ -130,6 +140,7 @@ final class Entries
             $version = $entry->version;
             $values = self::clean($version, $entry->values, self::files($entry), requireAll: true);
             Tracks::checkRequired($entry);
+            Shifts::checkRequired($entry);
             $first = $entry->revision === 0;
             $reference = $entry->reference ?? References::next($sheet->code);
             $revision = $entry->revision + 1;
@@ -152,6 +163,7 @@ final class Entries
                 'occurred_at' => $entry->occurred_at,
                 'values' => $values,
                 'location' => $entry->location,
+                'shift_id' => $entry->shift_id,
                 'submitted_by' => $by->id,
                 'submitted_at' => now(),
             ]);

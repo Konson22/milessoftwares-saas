@@ -1,12 +1,16 @@
 import type { Item, LocalStatus } from './types';
 
-/** The phone's states as the collector reads them. */
+/**
+ * The phone's transport states as the collector reads them. "Uploaded"
+ * means the server has it, nothing more: review states are separate
+ * (overview.ts, VERIFICATION_LABEL).
+ */
 export const STATUS_LABEL: Record<LocalStatus, string> = {
   draft: 'Draft',
-  ready: 'Ready to send',
-  syncing: 'Sending',
-  synced: 'Sent',
-  failed: 'Waiting to retry',
+  ready: 'Ready to sync',
+  syncing: 'Syncing',
+  synced: 'Uploaded',
+  failed: 'Sync failed, will retry',
   action_required: 'Action required',
   quarantined: 'Unreadable',
 };

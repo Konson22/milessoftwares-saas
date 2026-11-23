@@ -1,0 +1,270 @@
+{
+    "application": {
+        "code": "procurement",
+        "name": "Miles Procurement",
+        "category": "products",
+        "kind": "standalone",
+        "status": "beta"
+    },
+    "version": "1.0.1",
+    "permissions": [
+        {
+            "key": "procurement.requisitions.create",
+            "name": "Raise purchase requisitions",
+            "description": "Draft, submit, amend and cancel one's own requisitions, and see them through to delivery.",
+            "sensitivity": 1,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "procurement.requisitions.approve",
+            "name": "Approve purchase requisitions",
+            "description": "Decide requisitions at the approval steps one is eligible for. Never one's own.",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "procurement.view",
+            "name": "View all procurement",
+            "description": "Every plan, requisition, sourcing event, order, receipt and supplier invoice of the organization.",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "procurement.plans.manage",
+            "name": "Prepare procurement plans",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "procurement.plans.approve",
+            "name": "Approve procurement plans",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "procurement.suppliers.manage",
+            "name": "Manage suppliers",
+            "description": "Add and change suppliers, their documents and their status (active, inactive, suspended).",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "procurement.sourcing.manage",
+            "name": "Run sourcing",
+            "description": "Requests for quotation, proposals and tenders: invite suppliers, record quotations, close and recommend an award.",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "procurement.evaluate",
+            "name": "Evaluate quotations",
+            "description": "Record compliance and scores against the criteria set before quotations were opened.",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "procurement.awards.approve",
+            "name": "Approve supplier selection",
+            "description": "Decide award recommendations at the steps one is eligible for. Never one's own recommendation.",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "procurement.orders.manage",
+            "name": "Prepare and issue purchase orders",
+            "description": "Draft orders from awards or approved requisitions, issue approved orders, amend, cancel and close them.",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "procurement.orders.approve",
+            "name": "Approve purchase orders",
+            "description": "Decide orders at the steps one is eligible for. Never an order one prepared.",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "procurement.receive",
+            "name": "Receive goods and accept services",
+            "description": "Record deliveries, inspection, accepted and rejected quantities, and service completion.",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "procurement.invoices.manage",
+            "name": "Record supplier invoices",
+            "description": "Supplier invoices against orders, and payment made outside Miles Softwares (recorded by hand, not verified).",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "procurement.reports.view",
+            "name": "View procurement reports",
+            "description": "Spending tracked by supplier, department and status, and exports.",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "procurement.settings.manage",
+            "name": "Manage procurement settings",
+            "description": "Approval rules, procurement methods and thresholds, currencies and the Finance connection.",
+            "sensitivity": 3,
+            "scopes": ["organization"]
+        },
+        {
+            "key": "procurement.audit.view",
+            "name": "View the procurement audit trail",
+            "sensitivity": 2,
+            "scopes": ["organization"]
+        }
+    ],
+    "roles": [
+        {
+            "key": "procurement_requester",
+            "name": "Requester",
+            "description": "Raises requisitions and follows their progress.",
+            "sensitivity": 1,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": ["procurement.requisitions.create"]
+        },
+        {
+            "key": "procurement_department_approver",
+            "name": "Department approver",
+            "description": "Approves requisitions; can also raise them.",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "procurement.requisitions.create",
+                "procurement.requisitions.approve"
+            ]
+        },
+        {
+            "key": "procurement_officer",
+            "name": "Procurement officer",
+            "description": "Runs sourcing, keeps suppliers and prepares purchase orders.",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": [
+                "procurement.view",
+                "procurement.requisitions.create",
+                "procurement.plans.manage",
+                "procurement.suppliers.manage",
+                "procurement.sourcing.manage",
+                "procurement.orders.manage",
+                "procurement.invoices.manage",
+                "procurement.reports.view"
+            ]
+        },
+        {
+            "key": "procurement_manager",
+            "name": "Procurement manager",
+            "description": "Everything an officer does, and approves plans, awards and orders prepared by others.",
+            "sensitivity": 3,
+            "delegable": false,
+            "scopes": ["organization"],
+            "permissions": [
+                "procurement.view",
+                "procurement.requisitions.create",
+                "procurement.requisitions.approve",
+                "procurement.plans.manage",
+                "procurement.plans.approve",
+                "procurement.suppliers.manage",
+                "procurement.sourcing.manage",
+                "procurement.awards.approve",
+                "procurement.orders.manage",
+                "procurement.orders.approve",
+                "procurement.invoices.manage",
+                "procurement.reports.view",
+                "procurement.audit.view"
+            ]
+        },
+        {
+            "key": "procurement_evaluator",
+            "name": "Evaluation committee member",
+            "description": "Evaluates quotations against the criteria.",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": ["procurement.view", "procurement.evaluate"]
+        },
+        {
+            "key": "procurement_receiving_officer",
+            "name": "Receiving officer",
+            "description": "Records deliveries and accepts services.",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": ["procurement.view", "procurement.receive"]
+        },
+        {
+            "key": "procurement_finance_viewer",
+            "name": "Finance viewer",
+            "description": "Sees orders, receipts and supplier invoices, and the reports.",
+            "sensitivity": 2,
+            "delegable": true,
+            "scopes": ["organization"],
+            "permissions": ["procurement.view", "procurement.reports.view"]
+        },
+        {
+            "key": "procurement_administrator",
+            "name": "Procurement administrator",
+            "description": "Settings, approval rules and the audit trail, with read access to everything.",
+            "sensitivity": 3,
+            "delegable": false,
+            "scopes": ["organization"],
+            "permissions": [
+                "procurement.view",
+                "procurement.reports.view",
+                "procurement.settings.manage",
+                "procurement.audit.view"
+            ]
+        },
+        {
+            "key": "procurement_auditor",
+            "name": "Auditor",
+            "description": "Reads everything, including the audit trail; changes nothing.",
+            "sensitivity": 2,
+            "delegable": false,
+            "scopes": ["organization"],
+            "permissions": [
+                "procurement.view",
+                "procurement.reports.view",
+                "procurement.audit.view"
+            ]
+        }
+    ],
+    "separation_of_duties": [
+        {
+            "permissions": [
+                "procurement.requisitions.create",
+                "procurement.requisitions.approve"
+            ],
+            "mode": "warn",
+            "description": "Procurement refuses approval of one's own requisition (unless settings allow it); one person holding both still removes a check when nobody else does."
+        },
+        {
+            "permissions": [
+                "procurement.sourcing.manage",
+                "procurement.awards.approve"
+            ],
+            "mode": "warn",
+            "description": "Procurement refuses approval of an award by whoever recommended it."
+        },
+        {
+            "permissions": [
+                "procurement.orders.manage",
+                "procurement.orders.approve"
+            ],
+            "mode": "warn",
+            "description": "Procurement refuses approval of an order by whoever prepared it."
+        },
+        {
+            "permissions": ["procurement.orders.manage", "procurement.receive"],
+            "mode": "warn",
+            "description": "Whoever places an order should not also confirm its delivery."
+        }
+    ]
+}

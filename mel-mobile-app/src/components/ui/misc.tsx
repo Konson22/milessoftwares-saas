@@ -34,7 +34,7 @@ export function Card({ children, className = '' }: { children: ReactNode; classN
   );
 }
 
-/** Summary panel in the icon's red. Children set their own text colors (white / brand-200 read well on it). */
+/** Summary panel in the brand teal. Children set their own text colors (white / brand-200 read well on it). */
 export function Hero({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <View className={`bg-brand-600 p-5 ${className}`}>{children}</View>;
 }

@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $role
  * @property string $granted_by
  * @property-read User $user
+ * @property-read Logbook $logbook
  * @property-read LogSheet|null $sheet
  */
 class AccessGrant extends Model
@@ -37,6 +38,12 @@ class AccessGrant extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** @return BelongsTo<Logbook, $this> */
+    public function logbook(): BelongsTo
+    {
+        return $this->belongsTo(Logbook::class);
     }
 
     /** @return BelongsTo<LogSheet, $this> */

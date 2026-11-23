@@ -9,7 +9,7 @@ import { Input } from '@miles/ui/components/ui/input';
 import { ActionButton } from '@/components/actions';
 import type { Values } from '@/components/entry-fields';
 import { EntryFields } from '@/components/entry-fields';
-import { Errors, Field, Status } from '@/components/fields';
+import { Errors, Field, SelectField, Status } from '@/components/fields';
 import type { FieldDef, FileRef, Option, ResourceOption } from '@/lib/logbook';
 import { formatDateTime } from '@/lib/logbook';
 import { destroy, show, store, update } from '@/routes/entries';
@@ -48,13 +48,59 @@ type Props = {
         /** Already answered by another entry. */
         taken: boolean;
     } | null;
+    /** ADR-0030: a scheduled sheet; the author says which reading this is. */
+    scheduled?: boolean;
+    readings?: Reading[];
     members: Option[];
     resources: ResourceOption[];
     files: Record<string, FileRef[]>;
     /** GPS (ADR-0028) for this version; null: no location is taken. */
     locationSettings?: LocationSettings | null;
     location?: EntryLocation | null;
+    /** ADR-0030 §4.5: whether entries name a shift, and the logbook's shifts. */
+    shiftSetting?: 'off' | 'optional' | 'required';
+    shifts?: ShiftOption[];
+    shiftId?: string | null;
 };
+
+type ShiftOption = {
+    value: string;
+    label: string;
+    starts: string;
+    ends: string;
+    mine: boolean;
+};
+
+/** The shift whose hours hold a local "YYYY-MM-DDTHH:MM", else the person's own. */
+function shiftAt(shifts: ShiftOption[], at: string): string {
+    const hm = at.slice(11, 16);
+    const hit = shifts.find((s) =>
+        s.ends < s.starts
+            ? hm >= s.starts || hm < s.ends
+            : hm >= s.starts && hm < s.ends,
+    );
+    const mine = shifts.filter((s) => s.mine);
+    return hit?.value ?? (mine.length === 1 ? mine[0].value : '');
+}
+
+type Reading = {
+    id: string;
+    opensAt: string;
+    dueAt: string;
+    closesAt: string;
+    status: string;
+};
+
+/** The reading whose window holds the time, else none. */
+function readingAt(readings: Reading[], at: string): string | null {
+    const t = new Date(at).getTime();
+    const hit = readings.find(
+        (r) =>
+            new Date(r.opensAt).getTime() <= t &&
+            new Date(r.closesAt).getTime() >= t,
+    );
+    return hit?.id ?? null;
+}
 
 /**
  * Writing an entry: the sheet's published template, rendered from its
@@ -69,8 +115,13 @@ export default function EntryForm({
     occurredAt: initialOccurredAt,
     idempotencyKey,
     occurrence = null,
+    scheduled = false,
+    readings = [],
     locationSettings = null,
     location: initialLocation = null,
+    shiftSetting = 'off',
+    shifts = [],
+    shiftId = null,
     members,
     resources,
     files,
@@ -80,6 +131,19 @@ export default function EntryForm({
     const [occurredAt, setOccurredAt] = useState(initialOccurredAt);
     const [busy, setBusy] = useState(false);
     const [place, setPlace] = useState<EntryLocation | null>(initialLocation);
+    // The reading this entry is for, or 'extra' (ADR-0030 §4.3).
+    const [reading, setReading] = useState<string>(
+        () =>
+            (occurrence && !occurrence.taken ? occurrence.id : null) ??
+            readingAt(readings, initialOccurredAt) ??
+            'extra',
+    );
+    // The shift: kept as chosen; until then, suggested from the time.
+    const [shift, setShift] = useState<string>(
+        () => shiftId ?? (entry ? '' : shiftAt(shifts, initialOccurredAt)),
+    );
+    const [shiftTouched, setShiftTouched] = useState(shiftId !== null);
+    const shiftData = shiftSetting === 'off' ? {} : { shift_id: shift || null };
     // Only on sheets that take a location; otherwise nothing is sent.
     const placeData = locationSettings ? { location: place } : {};
     const ask = useConfirm();
@@ -110,6 +174,7 @@ export default function EntryForm({
             values,
             submit,
             ...placeData,
+            ...shiftData,
         };
         const options = {
             preserveScroll: true,
@@ -126,9 +191,21 @@ export default function EntryForm({
                     submit,
                     sheet_id: sheet.id,
                     idempotency_key: idempotencyKey,
-                    schedule_occurrence_id:
-                        occurrence && !occurrence.taken ? occurrence.id : null,
+                    ...(scheduled
+                        ? {
+                              schedule_link:
+                                  reading === 'extra' ? 'extra' : 'named',
+                              schedule_occurrence_id:
+                                  reading === 'extra' ? null : reading,
+                          }
+                        : {
+                              schedule_occurrence_id:
+                                  occurrence && !occurrence.taken
+                                      ? occurrence.id
+                                      : null,
+                          }),
                     ...placeData,
+                    ...shiftData,
                 } as RequestPayload,
                 options,
             );
@@ -172,7 +249,42 @@ export default function EntryForm({
 
             <div className="grid gap-6 lg:grid-cols-3">
                 <div className="grid content-start gap-6 lg:col-span-2">
-                    {!entry && occurrence && (
+                    {shiftSetting !== 'off' && (
+                        <SelectField
+                            label={
+                                shiftSetting === 'required'
+                                    ? 'Shift'
+                                    : 'Shift (optional)'
+                            }
+                            value={shift}
+                            onChange={(next) => {
+                                setShift(next);
+                                setShiftTouched(true);
+                            }}
+                            options={shifts}
+                            empty={
+                                shifts.length === 0
+                                    ? 'No shifts set up for this logbook'
+                                    : 'No shift'
+                            }
+                            error={errors.shift_id}
+                            hint={
+                                !shiftTouched && shift !== ''
+                                    ? 'Suggested from the time; change it if it is wrong.'
+                                    : undefined
+                            }
+                            className="max-w-md"
+                        />
+                    )}
+                    {!entry && scheduled && (
+                        <ReadingPicker
+                            readings={readings}
+                            value={reading}
+                            onChange={setReading}
+                            takenNote={occurrence?.taken ?? false}
+                        />
+                    )}
+                    {!entry && !scheduled && occurrence && (
                         <div className="flex gap-3 rounded-md border border-sky-300 bg-sky-50 p-4 text-sm text-sky-900">
                             <CalendarClock className="size-5 shrink-0" />
                             <div>
@@ -240,9 +352,14 @@ export default function EntryForm({
                                 <Input
                                     type="datetime-local"
                                     value={occurredAt}
-                                    onChange={(e) =>
-                                        setOccurredAt(e.target.value)
-                                    }
+                                    onChange={(e) => {
+                                        setOccurredAt(e.target.value);
+                                        if (!shiftTouched) {
+                                            setShift(
+                                                shiftAt(shifts, e.target.value),
+                                            );
+                                        }
+                                    }}
                                     className="max-w-xs"
                                     required
                                 />
@@ -421,5 +538,75 @@ function LocationCapture({
                 {error && <p className="text-xs text-destructive">{error}</p>}
             </PanelBody>
         </Panel>
+    );
+}
+
+/** Which expected reading this entry answers, or an extra one between readings. */
+function ReadingPicker({
+    readings,
+    value,
+    onChange,
+    takenNote,
+}: {
+    readings: Reading[];
+    value: string;
+    onChange: (value: string) => void;
+    takenNote: boolean;
+}) {
+    const time = (at: string) =>
+        new Date(at).toLocaleTimeString(undefined, {
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+
+    return (
+        <fieldset className="grid gap-2 rounded-md border border-[#c9d6f2] bg-[#f3f6fd] p-4 text-sm">
+            <legend className="flex items-center gap-2 px-1 font-medium text-[#1d4396]">
+                <CalendarClock className="size-4" /> Which reading is this?
+            </legend>
+            {takenNote && (
+                <p className="text-xs text-[#1d4396]">
+                    The reading you opened was already written.
+                </p>
+            )}
+            {readings.map((r) => (
+                <label
+                    key={r.id}
+                    className="flex cursor-pointer items-center gap-2 rounded-md bg-card px-3 py-2 shadow-[0_0_0_1px_#dfe2e5]"
+                >
+                    <input
+                        type="radio"
+                        name="reading"
+                        checked={value === r.id}
+                        onChange={() => onChange(r.id)}
+                    />
+                    <span className="font-medium">
+                        Due {formatDateTime(r.dueAt)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                        opens {time(r.opensAt)} · counts until{' '}
+                        {time(r.closesAt)}
+                        {r.status === 'missed' && ' · marked missed'}
+                    </span>
+                </label>
+            ))}
+            <label className="flex cursor-pointer items-center gap-2 rounded-md bg-card px-3 py-2 shadow-[0_0_0_1px_#dfe2e5]">
+                <input
+                    type="radio"
+                    name="reading"
+                    checked={value === 'extra'}
+                    onChange={() => onChange('extra')}
+                />
+                <span className="font-medium">Extra reading</span>
+                <span className="text-xs text-muted-foreground">
+                    recorded on its own; counts for no expected reading
+                </span>
+            </label>
+            {readings.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                    No expected reading is open for you now.
+                </p>
+            )}
+        </fieldset>
     );
 }

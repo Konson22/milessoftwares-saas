@@ -76,6 +76,8 @@ Route::prefix('api/v1')->middleware('throttle:600,1')->name('api.')->group(funct
             Route::post('invitations/{invitation}/cancel', [AppPeopleController::class, 'cancelInvitation'])->whereUuid('invitation')->name('invitations.cancel');
             Route::post('roles', [AppPeopleController::class, 'assign'])->name('roles.store');
             Route::post('roles/revoke', [AppPeopleController::class, 'revoke'])->name('roles.revoke');
+            Route::post('departments', [AppPeopleController::class, 'createDepartment'])->name('departments.store');
+            Route::put('departments/{department}', [AppPeopleController::class, 'renameDepartment'])->whereUuid('department')->name('departments.update');
         });
     });
 

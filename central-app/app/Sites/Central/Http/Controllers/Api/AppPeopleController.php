@@ -5,12 +5,16 @@ namespace App\Sites\Central\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Modules\Applications\Models\Application;
 use App\Modules\Applications\Models\ApplicationRole;
+use App\Modules\Audit\AuditLogger;
 use App\Modules\Authorization\Actions\AssignmentDenied;
 use App\Modules\Authorization\Actions\AssignRole;
 use App\Modules\Authorization\Actions\RevokeRole;
 use App\Modules\Authorization\Actions\SeparationOfDutiesWarning;
 use App\Modules\Authorization\Models\RoleAssignment;
+use App\Modules\Authorization\Support\AccessResolver;
+use App\Modules\Authorization\Support\ApplicationPeopleManagers;
 use App\Modules\Authorization\Support\Scope;
+use App\Modules\Authorization\Support\WorkspaceAbilities;
 use App\Modules\Entitlements\Models\Entitlement;
 use App\Modules\Memberships\Actions\Invitations;
 use App\Modules\Memberships\Actions\MembershipActionDenied;
@@ -216,6 +220,82 @@ class AppPeopleController extends Controller
 
             return response()->json(['message' => __('Role taken back.')]);
         });
+    }
+
+    /**
+     * A new department, from an application that manages its own people
+     * (Logbook files logbooks under departments). Only a workspace
+     * administrator or a people manager for the whole workspace: departments
+     * are the workspace's, shared by every application. The code is made
+     * from the name.
+     */
+    public function createDepartment(Request $request, AuditLogger $audit): JsonResponse
+    {
+        $validated = $request->validate([
+            ...$this->actorRules(),
+            'name' => ['required', 'string', 'max:255'],
+        ]);
+
+        return $this->asActor($request, $validated, function (Application $application, OrganizationMembership $actor) use ($validated, $audit): JsonResponse {
+            $this->mayShapeDepartments($application, $actor);
+            $name = trim((string) $validated['name']);
+            if (Department::query()->whereRaw('lower(name) = ?', [mb_strtolower($name)])->where('status', '!=', 'archived')->exists()) {
+                throw ValidationException::withMessages(['name' => __('There is already a department with that name.')]);
+            }
+
+            $department = Department::query()->create(['name' => $name, 'code' => $this->departmentCode($name), 'status' => 'active']);
+            $audit->record('department.created', $department, ['changes' => $department->getAttributes(), 'via' => $application->code], actor: $actor->user, organizationId: $actor->organization_id);
+
+            return response()->json(['id' => $department->id, 'name' => $department->name, 'code' => $department->code], 201);
+        });
+    }
+
+    /** Renames a department, on the same terms as creating one. */
+    public function renameDepartment(Request $request, string $department, AuditLogger $audit): JsonResponse
+    {
+        $validated = $request->validate([
+            ...$this->actorRules(),
+            'name' => ['required', 'string', 'max:255'],
+        ]);
+
+        return $this->asActor($request, $validated, function (Application $application, OrganizationMembership $actor) use ($validated, $department, $audit): JsonResponse {
+            $this->mayShapeDepartments($application, $actor);
+            $model = Department::query()->whereKey($department)->where('status', '!=', 'archived')->first()
+                ?? throw ValidationException::withMessages(['department_id' => __('That department does not exist.')]);
+            $name = trim((string) $validated['name']);
+            if (Department::query()->whereKeyNot($model->id)->whereRaw('lower(name) = ?', [mb_strtolower($name)])->where('status', '!=', 'archived')->exists()) {
+                throw ValidationException::withMessages(['name' => __('There is already a department with that name.')]);
+            }
+
+            $model->update(['name' => $name]);
+            $audit->record('department.updated', $model, ['changes' => $model->getChanges(), 'via' => $application->code], actor: $actor->user, organizationId: $actor->organization_id);
+
+            return response()->json(['id' => $model->id, 'name' => $model->name, 'code' => $model->code]);
+        });
+    }
+
+    private function mayShapeDepartments(Application $application, OrganizationMembership $actor): void
+    {
+        $abilities = new WorkspaceAbilities(app(AccessResolver::class));
+        $allowed = $abilities->manageStructure($actor)
+            || app(ApplicationPeopleManagers::class)->manages($actor, $application->id, Scope::organization());
+
+        if (! $allowed) {
+            throw ValidationException::withMessages(['actor_user_id' => __('Only a people manager for the whole workspace can add or rename departments.')]);
+        }
+    }
+
+    /** A short code from the name, unique in the workspace: MAINTENANCE, MAINTENANCE-2... */
+    private function departmentCode(string $name): string
+    {
+        $base = strtoupper(substr((string) preg_replace('/[^A-Za-z0-9]+/', '-', $name), 0, 24));
+        $base = trim($base, '-') ?: 'DEPT';
+        $code = $base;
+        for ($n = 2; Department::query()->where('code', $code)->exists(); $n++) {
+            $code = $base.'-'.$n;
+        }
+
+        return $code;
     }
 
     /**

@@ -33,12 +33,10 @@ function asCurrent($membership): void
 }
 
 it('lists an entitled application for members who hold a role in it', function () {
+    // Their only application: the home page opens it.
     $this->actingAs($this->cashier->user)
         ->get(home())
-        ->assertInertia(fn (AssertableInertia $page) => $page
-            ->has('modules', 1)
-            ->where('modules.0.code', 'retail')
-            ->where('modules.0.href', rtrim(home(), '/').'/retail'));
+        ->assertRedirect(rtrim(home(), '/').'/retail');
 });
 
 it('gives the workspace sidebar the same applications as the launcher, on every workspace page', function () {
@@ -72,12 +70,10 @@ it('opens the workspace home to administrators, even right after signing in', fu
 });
 
 it('gives other members only a page to pick an application', function () {
-    foreach ([$this->cashier, $this->plainMember] as $membership) {
-        $this->actingAs($membership->user)
-            ->get(home())
-            ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page->component('central/workspace/apps'));
-    }
+    $this->actingAs($this->plainMember->user)
+        ->get(home())
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page->component('central/workspace/apps'));
 });
 
 it('keeps the member directory to administrators', function () {
@@ -94,11 +90,10 @@ it('takes a member with one application straight to it right after signing in', 
         ->assertRedirect(rtrim(home(), '/').'/retail');
 });
 
-it('shows the picker to a member with one application coming back later', function () {
+it('takes a member with one application straight to it coming back later too: Central is for administrators', function () {
     $this->actingAs($this->cashier->user)
         ->get(home())
-        ->assertOk()
-        ->assertInertia(fn (AssertableInertia $page) => $page->component('central/workspace/apps'));
+        ->assertRedirect(rtrim(home(), '/').'/retail');
 });
 
 it('takes a member straight to their application even when they belong to other businesses', function () {

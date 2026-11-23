@@ -7,8 +7,10 @@ use App\Logbook\Fields;
 use App\Logbook\Models\AuditEvent;
 use App\Logbook\Models\Entry;
 use App\Logbook\Models\Logbook;
+use App\Logbook\Models\LogException;
 use App\Logbook\Models\LogSheet;
 use App\Logbook\Models\LogSheetVersion;
+use App\Logbook\Recording;
 use App\Logbook\References;
 use App\Logbook\Sheets;
 use App\Logbook\StarterTemplates;
@@ -38,6 +40,12 @@ class SheetController extends Controller
                 'id' => $v->id, 'version' => $v->version, 'status' => $v->status, 'fields' => count($v->fields),
                 'publishedAt' => self::time($v->published_at),
             ]),
+            'fields' => collect($sheet->publishedVersion->fields ?? [])->map(fn (array $f) => [
+                'name' => $f['name'], 'label' => $f['label'], 'type' => Fields::TYPES[$f['type']] ?? $f['type'], 'required' => ($f['required'] ?? false) === true,
+                'unit' => $f['unit'] ?? null, 'range' => isset($f['expected_min']) || isset($f['expected_max']) ? [($f['expected_min'] ?? null), ($f['expected_max'] ?? null)] : null,
+            ])->values(),
+            'stats' => self::sheetStats($sheet),
+            'recordingMode' => Recording::mode($sheet),
             'canWrite' => Access::writableSheets()->whereKey($sheet->id)->exists(),
             'canManage' => Access::managedLogbooks()->whereKey($sheet->logbook_id)->exists(),
             'logbooks' => Access::manages() ? Access::managedLogbooks()->where('status', 'active')->orderBy('name')->get(['id', 'name'])
@@ -56,6 +64,8 @@ class SheetController extends Controller
             'fields' => $draft->fields ?? $sheet->publishedVersion->fields ?? [],
             // GPS (ADR-0028): part of the version, so it is published with the fields.
             'location' => Tracks::settings($draft ?? $sheet->publishedVersion),
+            // How the sheet is recorded (ADR-0030): also part of the version.
+            'recording' => ['mode' => Recording::mode($sheet, $draft ?? $sheet->publishedVersion), 'shifts' => Recording::settings($draft ?? $sheet->publishedVersion)['shifts'] ?? 'off', 'liveSchedules' => Recording::hasLiveSchedules($sheet)],
             'draftVersion' => $draft?->version,
             'publishedVersion' => $sheet->publishedVersion?->version,
             'types' => collect(Fields::TYPES)->map(fn ($label, $value) => ['value' => $value, 'label' => $label, 'settings' => Fields::SETTINGS[$value]])->values(),
@@ -121,8 +131,8 @@ class SheetController extends Controller
     public function saveDraft(Request $request, string $sheet): RedirectResponse
     {
         $sheet = Access::managedSheet($sheet);
-        $request->validate(['fields' => ['present', 'array', 'max:'.Fields::MAX_FIELDS], 'location' => ['nullable', 'array']]);
-        Sheets::saveDraft($sheet, $request->input('fields'), $this->user(), $request->input('location'), $request->has('location'));
+        $request->validate(['fields' => ['present', 'array', 'max:'.Fields::MAX_FIELDS], 'location' => ['nullable', 'array'], 'recording' => ['nullable', 'array']]);
+        Sheets::saveDraft($sheet, $request->input('fields'), $this->user(), $request->input('location'), $request->has('location'), $request->input('recording'), $request->has('recording'));
 
         return back()->with('success', 'Draft saved. Publish it when it is ready.');
     }
@@ -131,7 +141,7 @@ class SheetController extends Controller
     {
         $sheet = Access::managedSheet($sheet);
         if ($request->has('fields')) {
-            Sheets::saveDraft($sheet, $request->input('fields'), $this->user(), $request->input('location'), $request->has('location'));
+            Sheets::saveDraft($sheet, $request->input('fields'), $this->user(), $request->input('location'), $request->has('location'), $request->input('recording'), $request->has('recording'));
         }
         $version = Sheets::publish($sheet->fresh() ?? $sheet, $this->user());
 
@@ -171,6 +181,27 @@ class SheetController extends Controller
     /**
      * @return array<string, mixed>
      */
+    /**
+     * Activity on one sheet, within what the viewer reads.
+     *
+     * @return array<string, mixed>
+     */
+    private static function sheetStats(LogSheet $sheet): array
+    {
+        $entries = fn () => Access::entries()->where('log_sheet_id', $sheet->id)->where('status', '!=', 'draft');
+        $open = fn () => LogException::query()->where('log_sheet_id', $sheet->id)->whereIn('status', LogException::OPEN);
+
+        return [
+            'total' => $entries()->count(),
+            'lastWeek' => $entries()->where('occurred_at', '>=', now()->subDays(7))->count(),
+            'awaiting' => $entries()->where('status', 'submitted')->count(),
+            'returned' => $entries()->where('status', 'returned')->count(),
+            'lastEntryAt' => self::time($entries()->latest('occurred_at')->first(['id', 'occurred_at'])?->occurred_at),
+            'openExceptions' => $open()->count(),
+            'seriousExceptions' => $open()->whereIn('severity', ['high', 'critical'])->count(),
+        ];
+    }
+
     private function sheetData(LogSheet $sheet): array
     {
         return [

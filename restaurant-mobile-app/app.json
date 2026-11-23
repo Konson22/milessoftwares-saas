@@ -1,18 +1,18 @@
 {
   "expo": {
     "name": "Miles Resto",
-    "slug": "mataem-plus",
+    "slug": "miles-resto",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
-    "scheme": "com.milesoftwares.restaurant",
+    "scheme": "com.milesoftwares.resto",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.milesoftwares.restaurant"
+      "bundleIdentifier": "com.milesoftwares.resto"
     },
     "android": {
-      "package": "com.milesoftwares.restaurant",
+      "package": "com.milesoftwares.resto",
       "adaptiveIcon": {
         "backgroundColor": "#8F0101",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -44,7 +44,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "944e4ec8-20ae-48d2-813a-ec279483edb9"
+        "projectId": "c3f36d3e-d11a-478f-b0dc-00a802be8008"
       }
     },
     "owner": "konsonaks-team"

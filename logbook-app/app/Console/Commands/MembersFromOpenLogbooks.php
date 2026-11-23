@@ -84,7 +84,7 @@ class MembersFromOpenLogbooks extends Command
                     if (Access::managesLogbook($logbook, $member)) {
                         continue;
                     }
-                    $role = $this->roleFor($member, $logbook);
+                    $role = Logbooks::memberRoleFor($member, $logbook);
                     if ($role === null || AccessGrant::query()->where('logbook_id', $logbook->id)->where('user_id', $user->id)->whereNull('log_sheet_id')->exists()) {
                         continue;
                     }
@@ -111,17 +111,5 @@ class MembersFromOpenLogbooks extends Command
         });
 
         return $added;
-    }
-
-    private function roleFor(Member $member, Logbook $logbook): ?string
-    {
-        foreach (Logbooks::MEMBER_PERMISSIONS as $role => [$permission]) {
-            $reach = $member->reach($permission);
-            if ($member->can($permission) && ($reach === null || ($logbook->department_id !== null && in_array($logbook->department_id, $reach, true)))) {
-                return $role;
-            }
-        }
-
-        return null;
     }
 }

@@ -1,9 +1,11 @@
 import { Image } from 'expo-image';
 import type { ReactNode } from 'react';
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-/** Deep navy backdrop with soft glass circles, for the screens before signing in. */
+import { BRAND } from '@/lib/brand';
+
+/** Deep teal backdrop with soft circles, for the screens before signing in. */
 export function ArtBackground({ children }: { children: ReactNode }) {
   return (
     <View className="flex-1 overflow-hidden bg-brand-950">
@@ -11,6 +13,30 @@ export function ArtBackground({ children }: { children: ReactNode }) {
       <View pointerEvents="none" className="absolute -left-20 top-1/3 h-64 w-64 rounded-full bg-accent/10" />
       <View pointerEvents="none" className="absolute -bottom-28 right-6 h-72 w-72 rounded-full bg-brand-700/30" />
       {children}
+    </View>
+  );
+}
+
+/**
+ * The sign-in screen's header: the field-worker photo across the top, the
+ * form under it. The file's own fade (a light scrim under the status bar,
+ * deep teal at the bottom) carries it into the backdrop, see
+ * assets/images/login-bg.jpg.
+ */
+export function PhotoHeader() {
+  const { width, height } = useWindowDimensions();
+  // The photo's own shape (941 x 1035), but never more than half the screen,
+  // so the fields and Sign in still fit under it.
+  const size = Math.min(width * (1035 / 941), height * 0.5);
+  return (
+    <View style={{ height: size }}>
+      <Image
+        source={require('../../assets/images/login-bg.jpg')}
+        contentFit="cover"
+        contentPosition="top"
+        style={StyleSheet.absoluteFill}
+        accessible={false}
+      />
     </View>
   );
 }
@@ -25,11 +51,11 @@ export function BrandMark({ compact }: { compact?: boolean }) {
       style={{ paddingTop: insets.top + (compact ? 16 : 36) }}
       accessible
       accessibilityRole="header"
-      accessibilityLabel="Tatook M&E">
+      accessibilityLabel={`${BRAND.name}, ${BRAND.subtitle}`}>
       <Image source={require('../../assets/images/logo-light.png')} contentFit="contain" style={{ width: size, height: size }} accessibilityIgnoresInvertColors />
-      <View className="items-center">
-        <Text className={`font-bold text-white ${compact ? 'text-2xl' : 'text-3xl'}`}>Tatook M&E</Text>
-        <Text className="text-sm font-semibold uppercase tracking-[4px] text-brand-200">Pumps · shifts · tanks</Text>
+      <View className="items-center gap-0.5">
+        <Text className={`font-bold text-white ${compact ? 'text-2xl' : 'text-3xl'}`}>{BRAND.name}</Text>
+        <Text className="text-sm font-semibold text-brand-200">{BRAND.subtitle}</Text>
       </View>
     </View>
   );

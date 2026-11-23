@@ -26,9 +26,9 @@ import type { OnlineApi } from './types';
 type Role = 'cashier' | 'pharmacist' | 'manager';
 
 const DEMO_USERS: { id: string; name: string; email: string; role: Role }[] = [
-  { id: 'u-cashier', name: 'Deng Cashier', email: 'cashier@demo.milesoftwares.com', role: 'cashier' },
-  { id: 'u-pharmacist', name: 'Amina Pharmacist', email: 'pharmacist@demo.milesoftwares.com', role: 'pharmacist' },
-  { id: 'u-manager', name: 'Omar Manager', email: 'manager@demo.milesoftwares.com', role: 'manager' },
+  { id: 'u-cashier', name: 'Deng Cashier', email: 'cashier@demo.milessoftwares.com', role: 'cashier' },
+  { id: 'u-pharmacist', name: 'Amina Pharmacist', email: 'pharmacist@demo.milessoftwares.com', role: 'pharmacist' },
+  { id: 'u-manager', name: 'Omar Manager', email: 'manager@demo.milessoftwares.com', role: 'manager' },
 ];
 
 export const DEMO_ACCOUNTS = DEMO_USERS.map(({ id, name, role }) => ({ id, name, role }));

@@ -10,7 +10,7 @@ import { ApiError } from './client';
 export interface NewBusiness {
   display_name: string;
   legal_name: string;
-  /** The workspace address: <slug>.milesoftwares.com. */
+  /** The workspace address: <slug>.milessoftwares.com. */
   slug: string;
   country_code: string;
   default_currency: string;

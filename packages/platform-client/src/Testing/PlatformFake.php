@@ -257,6 +257,28 @@ final class PlatformFake
                 }
                 $this->peopleCalls[] = ['path' => $path, ...$request->data()];
 
+                // Departments: really added to (or renamed in) the organization's structure.
+                if ($path === '/api/v1/people/departments' || str_starts_with($path, '/api/v1/people/departments/')) {
+                    foreach ($this->organizations as $slug => $organization) {
+                        if ($organization['id'] !== (string) $request['organization_id']) {
+                            continue;
+                        }
+                        if ($request->method() === 'POST') {
+                            $id = $this->department($slug, (string) $request['name']);
+
+                            return Http::response(['id' => $id, 'name' => (string) $request['name'], 'code' => strtoupper((string) $request['name'])], 201);
+                        }
+                        $departmentId = substr($path, strlen('/api/v1/people/departments/'));
+                        foreach ($this->departments[$slug] ?? [] as $i => $department) {
+                            if ($department['id'] === $departmentId) {
+                                $this->departments[$slug][$i]['name'] = (string) $request['name'];
+                            }
+                        }
+
+                        return Http::response(['id' => $departmentId, 'name' => (string) $request['name'], 'code' => ''], 200);
+                    }
+                }
+
                 return $path === '/api/v1/people/invitations'
                     ? Http::response(['id' => (string) Str::uuid(), 'email' => mb_strtolower((string) $request['email']), 'expires_at' => now()->addDays(7)->toIso8601String()], 201)
                     : Http::response(['message' => 'Done.'], 201);

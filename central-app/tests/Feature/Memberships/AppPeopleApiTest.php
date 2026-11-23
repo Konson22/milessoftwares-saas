@@ -112,3 +112,17 @@ it('gives a role within one department when asked, and only where the role allow
         ->assertUnprocessable()->assertJsonValidationErrors('role');
     expect(liveRoles($this->person->id))->toBe([]);
 });
+
+it('lets a whole-workspace people manager add and rename departments, and nobody else', function () {
+    people('departments', ['name' => 'Maintenance'])->assertCreated()->assertJsonPath('code', 'MAINTENANCE');
+    people('departments', ['name' => 'maintenance'])->assertUnprocessable()->assertJsonValidationErrors('name');
+    $id = app(TenantContext::class)->run($this->organization, fn () => Department::query()->where('name', 'Maintenance')->value('id'));
+
+    test()->withToken(test()->serviceToken('members.write'))->putJson(test()->apiUrl('people/departments/'.$id), [
+        'organization_id' => $this->organization->id, 'actor_user_id' => $this->manager->user_id, 'name' => 'Workshop',
+    ])->assertOk()->assertJsonPath('name', 'Workshop');
+
+    // A member without the people permission cannot.
+    people('departments', ['actor_user_id' => $this->person->user_id, 'name' => 'Security'])
+        ->assertUnprocessable()->assertJsonValidationErrors('actor_user_id');
+});

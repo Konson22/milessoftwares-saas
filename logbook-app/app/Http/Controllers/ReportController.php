@@ -4,16 +4,39 @@ namespace App\Http\Controllers;
 
 use App\Logbook\Access;
 use App\Logbook\Entries;
+use App\Logbook\Exceptions;
 use App\Logbook\Fields;
+use App\Logbook\Investigations;
+use App\Logbook\Issues;
+use App\Logbook\Member;
+use App\Logbook\Models\AuditEvent;
 use App\Logbook\Models\Entry;
+use App\Logbook\Models\EntryReview;
+use App\Logbook\Models\EntryRevision;
+use App\Logbook\Models\Location;
+use App\Logbook\Models\LogException;
+use App\Logbook\Models\LogResource;
+use App\Logbook\Models\LogSheet;
+use App\Logbook\Models\Shift;
+use App\Logbook\Models\Task;
+use App\Logbook\Models\Track;
 use App\Logbook\Reports;
+use App\Logbook\Tasks;
+use App\Logbook\Timeline;
+use App\Logbook\Tracks;
+use App\Logbook\Trends;
 use App\Models\Workspace;
+use App\Models\WorkspaceMember;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use InertiaUI\Modal\Modal;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -27,19 +50,175 @@ class ReportController extends Controller
 
     public function index(Request $request): Response
     {
-        $filters = $request->validate(Reports::rules());
+        $filters = $request->validate([...Reports::rules(), 'view' => ['nullable', Rule::in(self::VIEWS)], 'page' => ['nullable', 'integer', 'min:1']]);
+        $view = (string) ($filters['view'] ?? 'overview');
+        unset($filters['view'], $filters['page']);
         $sheet = isset($filters['sheet']) ? Access::sheets()->whereKey((string) $filters['sheet'])->first() : null;
 
+        // Only the open view is worked out (ADR-0029).
         return Inertia::render('reports/index', [
             'filters' => $filters,
-            'options' => self::filterOptions(),
+            'view' => $view,
+            'options' => self::filterOptions() + self::reportOptions(),
             'counts' => Reports::counts($filters),
-            'numbers' => $sheet !== null ? Reports::numbers($sheet, $filters) : null,
+            'issues' => $view === 'overview' ? Issues::report($filters) : null,
+            'numbers' => $view === 'overview' && $sheet !== null ? Reports::numbers($sheet, $filters) : null,
             'sheet' => $sheet === null ? null : ['id' => $sheet->id, 'name' => $sheet->name, 'code' => $sheet->code],
-            'entries' => Reports::query($filters)->with(['logbook:id,name', 'sheet:id,name,code', 'creator:id,name', 'version:id,fields'])
-                ->latest('occurred_at')->paginate(25)->withQueryString()->through(fn (Entry $e) => self::entryRow($e)),
+            'table' => $view === 'table' ? self::table($filters, $sheet) : null,
+            'timeline' => $view === 'timeline' ? Timeline::build($filters) : null,
+            'trends' => $view === 'trends' && $sheet !== null ? Trends::forSheet($sheet, $filters) : null,
+            'map' => $view === 'map' ? self::map($filters) : null,
             'pdfLimit' => self::PDF_LIMIT,
         ]);
+    }
+
+    /**
+     * One entry in full, opened over the report (ADR-0029): answers with
+     * out-of-range flags, files, revisions, review decisions, related
+     * tasks and exceptions, location and route, audit history, and the
+     * actions the viewer may take. Read through Access::entry, so a link
+     * never opens more than the entry page would.
+     */
+    public function record(string $entry): Modal
+    {
+        $entry = Access::entry($entry);
+        abort_if($entry->status === 'draft', 404);
+        $entry->load(['logbook:id,name', 'sheet', 'version', 'creator:id,name', 'reviewer:id,name']);
+        $files = $entry->attachments()->get();
+        $answers = self::answers($entry->version->fields, $entry->values ?? [], $files);
+        $resourceIds = [];
+        foreach ($entry->version->fields as $field) {
+            if ($field['type'] === 'resource' && is_string($entry->values[$field['name']] ?? null)) {
+                $resourceIds[] = $entry->values[$field['name']];
+            }
+        }
+        $member = Member::current();
+
+        return Inertia::modal('reports/record', [
+            'entry' => [
+                ...self::entryRow($entry),
+                'version' => $entry->version->version,
+                'revision' => $entry->revision,
+                'reviewer' => $entry->reviewer?->name,
+                'reviewedAt' => self::time($entry->reviewed_at),
+                'answers' => $answers,
+                'location' => $entry->location,
+                'track' => $entry->log_track_id !== null && Tracks::visible()->whereKey($entry->log_track_id)->exists() ? $entry->log_track_id : null,
+                'logbookId' => $entry->logbook_id,
+            ],
+            'resources' => LogResource::query()->whereIn('id', $resourceIds)->get()->map(fn (LogResource $r) => ['id' => $r->id, 'label' => $r->label()])->values(),
+            'revisions' => $entry->revisions()->with('submitter:id,name')->get()->map(fn (EntryRevision $r) => [
+                'revision' => $r->revision, 'submittedAt' => self::time($r->submitted_at), 'submittedBy' => $r->submitter->name, 'occurredAt' => self::time($r->occurred_at),
+            ])->values(),
+            'reviews' => $entry->reviews()->get()->map(fn (EntryReview $r) => [
+                'id' => $r->id, 'revision' => $r->revision, 'decision' => $r->decision, 'comment' => $r->comment, 'reviewer' => $r->reviewer_name, 'decidedAt' => self::time($r->decided_at),
+            ])->values(),
+            'exceptions' => Exceptions::visible()->where('log_entry_id', $entry->id)->latest()->get()
+                ->map(fn (LogException $x) => ['id' => $x->id, 'reference' => $x->reference, 'title' => $x->title, 'severity' => $x->severity, 'status' => $x->status, 'field' => $x->field_label])->values(),
+            'tasks' => Tasks::visible()->where('log_entry_id', $entry->id)->with('assignee:id,name')->latest()->get()
+                ->map(fn (Task $t) => ['id' => $t->id, 'reference' => $t->reference, 'title' => $t->title, 'status' => $t->status, 'assignee' => $t->assignee->name, 'dueAt' => self::time($t->due_at)])->values(),
+            'history' => Gate::allows('logbook.audit.view') || Access::managesLogbook($entry->logbook)
+                ? AuditEvent::query()->where('subject_type', 'entry')->where('subject_id', $entry->id)->orderBy('created_at')->get()
+                    ->map(fn (AuditEvent $e) => ['id' => $e->id, 'action' => $e->action, 'user' => $e->user_name, 'at' => self::time($e->created_at)])->values()
+                : null,
+            'members' => Gate::allows(Tasks::MANAGE) ? WorkspaceMember::options() : [],
+            'investigations' => Investigations::canManage($member) ? Investigations::openOptions() : [],
+            'can' => [
+                'review' => $entry->status === 'submitted' && $entry->created_by !== $member->id
+                    && Gate::allows('logbook.entries.review') && Access::reachesSheet($entry->sheet, 'review'),
+                'reportException' => Gate::any(['logbook.entries.create', 'logbook.entries.review', Tasks::MANAGE]),
+                'createTask' => Gate::allows(Tasks::MANAGE),
+                'investigate' => Investigations::canManage($member),
+            ],
+        ])->baseRoute('reports.index');
+    }
+
+    public const VIEWS = ['overview', 'table', 'timeline', 'trends', 'map'];
+
+    /**
+     * People, items and places to filter by: only what this workspace has.
+     *
+     * @return array<string, mixed>
+     */
+    private static function reportOptions(): array
+    {
+        return [
+            'people' => array_map(fn (array $o) => ['value' => $o['value'], 'label' => preg_replace('/ \\(.*\\)$/', '', $o['label'])], WorkspaceMember::options()),
+            'resources' => array_values(LogResource::query()->orderBy('code')->get()->map(fn (LogResource $r) => ['value' => $r->id, 'label' => $r->label()])->all()),
+            'locations' => array_values(Location::query()->orderBy('name')->get(['id', 'name'])->map(fn (Location $l) => ['value' => $l->id, 'label' => $l->name])->all()),
+            'shifts' => array_values(Shift::query()->orderBy('starts_time')->get()->map(fn (Shift $s) => ['value' => $s->id, 'label' => $s->label().($s->active ? '' : ' (off)')])->all()),
+        ];
+    }
+
+    /**
+     * Entries as rows; with one sheet chosen, its fields as columns, each
+     * value read with the entry's own version.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array<string, mixed>
+     */
+    private static function table(array $filters, ?LogSheet $sheet): array
+    {
+        $columns = $sheet !== null
+            ? array_values(array_filter(Reports::columns($sheet), fn (array $f) => $f['type'] !== 'file'))
+            : [];
+        $page = Reports::query($filters)->with(['logbook:id,name', 'sheet:id,name,code', 'creator:id,name', 'version:id,fields'])
+            ->latest('occurred_at')->paginate(50)->withQueryString();
+
+        return [
+            'columns' => array_map(fn (array $f) => ['name' => $f['name'], 'label' => $f['label'], 'unit' => $f['unit'] ?? null, 'numeric' => in_array($f['type'], Fields::NUMERIC, true)], $columns),
+            'rows' => $page->through(function (Entry $e) use ($columns) {
+                $row = self::entryRow($e);
+                if ($columns !== []) {
+                    $people = Entries::people($e->version->fields, $e->values ?? []);
+                    $deviations = array_column(Fields::deviations($e->version->fields, $e->values ?? []), null, 'name');
+                    $byName = array_column($e->version->fields, null, 'name');
+                    $row['cells'] = array_map(fn (array $c) => [
+                        'text' => isset($byName[$c['name']]) ? Fields::text($byName[$c['name']], $e->values[$c['name']] ?? null, $people, []) : null,
+                        'flag' => isset($deviations[$c['name']]) ? $deviations[$c['name']]['direction'] : null,
+                    ], $columns);
+                }
+
+                return $row;
+            }),
+        ];
+    }
+
+    /**
+     * Where entries were written (their own captured location) and the
+     * routes recorded in the same scope. Nothing is drawn that was not
+     * captured; sheets without GPS simply add nothing.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array<string, mixed>
+     */
+    private static function map(array $filters): array
+    {
+        $points = Reports::query($filters)->whereNotNull('location')->with('sheet:id,code')->reorder()->latest('occurred_at')->limit(500)->get();
+        $tz = Workspace::current()->timezone ?? 'UTC';
+        $from = isset($filters['from']) ? CarbonImmutable::parse((string) $filters['from'], $tz)->startOfDay()->utc() : null;
+        $to = isset($filters['to']) ? CarbonImmutable::parse((string) $filters['to'], $tz)->addDay()->startOfDay()->utc() : null;
+        $tracks = Tracks::visible()->with(['user:id,name', 'sheet:id,code,name', 'resource:id,code,name'])
+            ->when($filters['logbook'] ?? null, fn ($q, $id) => $q->where('logbook_id', $id))
+            ->when($filters['sheet'] ?? null, fn ($q, $id) => $q->where('log_sheet_id', $id))
+            ->when($filters['resource'] ?? null, fn ($q, $id) => $q->where('log_resource_id', $id))
+            ->when($filters['person'] ?? null, fn ($q, $id) => $q->where('user_id', $id))
+            ->when($from, fn ($q, $d) => $q->where('started_at', '>=', $d))
+            ->when($to, fn ($q, $d) => $q->where('started_at', '<', $d))
+            ->latest('started_at')->limit(50)->get();
+
+        return [
+            'entries' => $points->filter(fn (Entry $e) => isset($e->location['lat'], $e->location['lng']))->map(fn (Entry $e) => [
+                'id' => $e->id, 'label' => ($e->reference ?? 'Entry').' · '.$e->sheet->code, 'at' => self::time($e->occurred_at),
+                'lat' => (float) $e->location['lat'], 'lng' => (float) $e->location['lng'], 'href' => route('entries.show', $e->id, false),
+            ])->values(),
+            'tracks' => $tracks->map(fn (Track $t) => [
+                'id' => $t->id, 'user' => $t->user->name, 'sheet' => $t->sheet->code.' · '.$t->sheet->name, 'resource' => $t->resource?->label(),
+                'startedAt' => self::time($t->started_at), 'endedAt' => self::time($t->ended_at), 'distanceM' => $t->distance_m, 'status' => $t->status,
+            ])->values(),
+            'truncated' => $points->count() >= 500,
+            'tiles' => ['url' => (string) config('logbook.map.tiles'), 'attribution' => (string) config('logbook.map.attribution')],
+        ];
     }
 
     /**

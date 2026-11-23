@@ -1,3 +1,5 @@
+import Constants from 'expo-constants';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
@@ -7,6 +9,7 @@ import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { Banner } from '@/components/ui/misc';
 import { unsent } from '@/collect/sync';
+import { BRAND } from '@/lib/brand';
 import { colors, webNoOutline } from '@/lib/theme';
 import { useAuth } from '@/store/auth';
 import { useCollect } from '@/store/collect';
@@ -59,8 +62,23 @@ export default function AccountScreen() {
             <Button title="Sign out" variant="danger" disabled={typed.trim().toUpperCase() !== CONFIRM_WORD} onPress={() => void signOut()} />
           </View>
         ) : (
-          <Button title="Sign out" variant="outline" icon="log-out-outline" onPress={() => void signOut()} />
+          <Button title="Sign out" variant="outline" icon="log-out-outline" size="lg" onPress={() => void signOut()} />
         )}
+
+        <View className="gap-2 border border-slate-200 bg-white p-4">
+          <View className="flex-row items-center gap-3">
+            <Image source={require('../../assets/images/icon.png')} style={{ width: 48, height: 48, borderRadius: 10 }} accessibilityIgnoresInvertColors />
+            <View className="flex-1">
+              <Text className="text-lg font-bold text-slate-900">{BRAND.name}</Text>
+              <Text className="text-sm text-slate-600">{BRAND.subtitle}</Text>
+            </View>
+          </View>
+          <Text className="text-base font-semibold text-brand-800">{BRAND.slogan}</Text>
+          <Text className="text-sm text-slate-600">{BRAND.description}</Text>
+          <Text className="pt-1 text-xs text-slate-500">
+            Version {Constants.expoConfig?.version ?? '?'} · Part of Tatook, by {BRAND.maker}
+          </Text>
+        </View>
       </ScrollView>
     </View>
   );

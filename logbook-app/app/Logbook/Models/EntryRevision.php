@@ -48,4 +48,10 @@ class EntryRevision extends Model
     {
         return $this->belongsTo(User::class, 'submitted_by');
     }
+
+    /** @return BelongsTo<Entry, $this> */
+    public function entry(): BelongsTo
+    {
+        return $this->belongsTo(Entry::class, 'log_entry_id');
+    }
 }

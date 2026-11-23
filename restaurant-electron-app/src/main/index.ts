@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
 
@@ -19,8 +20,10 @@ function createWindow() {
     backgroundColor: '#f4f5f8',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false,
+      // The preload only bridges IPC: nothing of Node is needed in the window.
+      sandbox: true,
       contextIsolation: true,
+      nodeIntegration: false,
     },
   });
 
@@ -32,11 +35,31 @@ function createWindow() {
     return { action: 'deny' };
   });
 
+  // The window only ever shows the app itself: any other page would get the
+  // desktop bridge, and with it the member's sign-in. Links go to the browser.
+  const home = window.webContents;
+  home.on('will-navigate', (event, url) => {
+    if (isAppUrl(url)) return;
+    event.preventDefault();
+    if (/^https?:/.test(url)) void shell.openExternal(url);
+  });
+  home.on('will-redirect', (event, url) => {
+    if (!isAppUrl(url)) event.preventDefault();
+  });
+  home.on('will-attach-webview', (event) => event.preventDefault());
+
   if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
     void window.loadURL(process.env.ELECTRON_RENDERER_URL);
   } else {
     void window.loadFile(join(__dirname, '../renderer/index.html'));
   }
+}
+
+/** The app's own pages: the packaged files, or the dev server while developing. */
+function isAppUrl(url: string): boolean {
+  const dev = !app.isPackaged ? process.env.ELECTRON_RENDERER_URL : undefined;
+  if (dev && url.startsWith(dev)) return true;
+  return url.startsWith(pathToFileURL(join(__dirname, '../renderer/')).href);
 }
 
 /** A bill in a hidden window, through the system print dialog. */

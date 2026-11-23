@@ -76,7 +76,7 @@ In production the client is added in the admin (Integrations â†’ Miles Petrol â†
 a public client with that redirect URI); its id goes into petrol-app's
 `PLATFORM_MOBILE_CLIENT_ID` and the app's `EXPO_PUBLIC_CLIENT_ID`. See
 `.env.example` for the variables. A phone cannot resolve
-`*.milesoftwares.localhost`: point the URLs at the dev PC's LAN address, or use
+`*.tatook.localhost`: point the URLs at the dev PC's LAN address, or use
 `EXPO_PUBLIC_DEV_SERVER` with `adb reverse`.
 
 ## Icons

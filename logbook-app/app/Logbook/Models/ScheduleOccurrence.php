@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $logbook_id
  * @property string $log_sheet_id
  * @property CarbonImmutable $occurs_on
+ * @property int $slot which of the schedule's times (ADR-0030)
  * @property CarbonImmutable $opens_at
  * @property CarbonImmutable $due_at
  * @property CarbonImmutable $closes_at
@@ -54,6 +55,7 @@ class ScheduleOccurrence extends Model
     {
         return [
             'occurs_on' => 'immutable_date',
+            'slot' => 'integer',
             'opens_at' => 'immutable_datetime',
             'due_at' => 'immutable_datetime',
             'closes_at' => 'immutable_datetime',

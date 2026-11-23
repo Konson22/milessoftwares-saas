@@ -38,6 +38,18 @@ it('shows Logbook\'s people, the rest of the workspace and open invitations', fu
             === ['logbook_contributor', 'logbook_reviewer', 'logbook_viewer']));
 });
 
+it('shows the invitation page with the roles this member gives, and returns to the list once sent', function () {
+    $this->get(p('people/invite'))->assertOk()->assertInertia(fn ($page) => $page
+        ->component('people/invite')
+        ->where('roles', fn ($roles) => collect($roles)->every(fn ($r) => $r['assignable']) && collect($roles)->pluck('key')->doesntContain('logbook_manager'))
+        ->where('mustChooseDepartment', false));
+
+    $this->from(p('people/invite'))->post(p('people/invitations'), ['email' => 'new@example.test', 'role' => 'logbook_contributor', 'from_page' => true])
+        ->assertSessionHasNoErrors()->assertRedirect(p('people'));
+    $this->from(p('people/invite'))->post(p('people/invitations'), ['email' => 'not-an-email', 'role' => 'logbook_contributor', 'from_page' => true])
+        ->assertSessionHasErrors('email')->assertRedirect(p('people/invite'));
+});
+
 it('invites, gives and takes back roles as the signed-in member', function () {
     $this->post(p('people/invitations'), ['email' => 'akol@example.test', 'role' => 'logbook_contributor'])->assertSessionHasNoErrors();
     $this->post(p('people/roles'), ['membership_id' => '01a1f5aa-0000-7000-8000-000000000002', 'role' => 'logbook_reviewer'])->assertSessionHasNoErrors();

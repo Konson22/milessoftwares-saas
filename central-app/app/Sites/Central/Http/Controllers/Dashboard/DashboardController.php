@@ -9,7 +9,6 @@ use App\Modules\Authorization\Support\WorkspaceAbilities;
 use App\Modules\Billing\Models\Invoice;
 use App\Modules\Billing\Support\AccountStanding;
 use App\Modules\Entitlements\Models\Entitlement;
-use App\Modules\Identity\Http\Controllers\FirstPartySignInController;
 use App\Modules\Marketing\Support\MarketingCatalog;
 use App\Modules\Memberships\Models\Invitation;
 use App\Modules\Memberships\Models\OrganizationMembership;
@@ -27,9 +26,10 @@ use Inertia\Response;
 /**
  * The workspace home ({business}.<root>/). Administrators get the dashboard:
  * the business at a glance, its applications and, for the owner, what it
- * owes (subscriptions and payments live on the billing pages). Everyone else gets a page to pick one of their applications, and
- * right after signing in goes straight into it when they have only one;
- * coming back later shows the picker.
+ * owes (subscriptions and payments live on the billing pages). Central is
+ * theirs only: everyone else works in their applications, so a member
+ * with one application always goes straight into it, and one with several
+ * gets a page to pick.
  */
 class DashboardController extends Controller
 {
@@ -42,7 +42,7 @@ class DashboardController extends Controller
         if (! (new WorkspaceAbilities($access))->administers($current)) {
             $modules = $launcher->for($current);
 
-            if (count($modules) === 1 && $request->session()->get(FirstPartySignInController::JUST_SIGNED_IN) === true) {
+            if (count($modules) === 1) {
                 return redirect()->away($modules[0]['href']);
             }
 

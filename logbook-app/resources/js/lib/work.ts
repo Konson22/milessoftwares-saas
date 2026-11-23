@@ -165,6 +165,8 @@ export type ScheduleRow = {
     dayOfMonth: number | null;
     opensTime: string;
     dueTime: string;
+    /** ADR-0030: every reading of the day (the first is opensTime/dueTime). */
+    times: { opens: string; due: string }[];
     lateMinutes: number;
     timezone: string;
     startsOn: string;
