@@ -39,11 +39,16 @@ final class Schedules
      */
     public static function save(LogSheet $sheet, ?Schedule $schedule, array $data, User $by): Schedule
     {
+        // Several readings a day (ADR-0030 §4.2): a list of {opens, due}; older forms send one pair.
+        $times = self::timesInput($data);
+        $data['opens_time'] = $times[0]['opens'];
+        $data['due_time'] = $times[0]['due'];
         Recurrence::check($data, ['opens_time', 'due_time']);
-        $errors = [];
-        if ($data['due_time'] < $data['opens_time']) {
-            $errors['due_time'] = 'The due time is before the opening time.';
+        // One owner of "when is this sheet expected" (ADR-0030 §3): only a scheduled sheet takes schedules.
+        if ($schedule === null && ! Recording::allowsSchedules($sheet)) {
+            throw ValidationException::withMessages(['frequency' => 'This log sheet is recorded '.mb_strtolower(Recording::LABELS[Recording::mode($sheet)]).'. Make it a scheduled sheet in its template first.']);
         }
+        $errors = self::timesErrors($times);
         $late = (int) ($data['late_minutes'] ?? 240);
         if ($late < 0 || $late > 10080) {
             $errors['late_minutes'] = 'Up to 7 days (10,080 minutes).';
@@ -79,7 +84,7 @@ final class Schedules
         $channels = Reminders::channelsInput($data['reminder_channels'] ?? null);
         $wantsActive = array_key_exists('active', $data) ? (bool) $data['active'] : null;
 
-        $schedule = DB::transaction(function () use ($sheet, $schedule, $data, $late, $completion, $responsible, $tokens, $channels, $startsOn, $endsOn, $by) {
+        $schedule = DB::transaction(function () use ($sheet, $schedule, $data, $times, $late, $completion, $responsible, $tokens, $channels, $startsOn, $endsOn, $by) {
             $schedule ??= new Schedule(['logbook_id' => $sheet->logbook_id, 'log_sheet_id' => $sheet->id, 'created_by' => $by->id, 'active' => true]);
             if ($schedule->ended_at !== null) {
                 throw ValidationException::withMessages(['schedule' => 'This schedule has ended. Set up a new one instead.']);
@@ -91,6 +96,7 @@ final class Schedules
                 'day_of_month' => $data['frequency'] === 'monthly' ? (int) $data['day_of_month'] : null,
                 'opens_time' => $data['opens_time'],
                 'due_time' => $data['due_time'],
+                'times' => $times,
                 'late_minutes' => $late,
                 'timezone' => $data['timezone'],
                 'starts_on' => $startsOn,
@@ -228,44 +234,138 @@ final class Schedules
                 continue;
             }
             $existing = ScheduleOccurrence::query()->where('schedule_id', $schedule->id)->where('occurs_on', '>=', $dates[0]->toDateString())
-                ->pluck('occurs_on')->map(fn ($d) => CarbonImmutable::parse($d)->toDateString())->flip();
+                ->get(['occurs_on', 'slot'])->map(fn (ScheduleOccurrence $o) => $o->occurs_on->toDateString().'#'.$o->slot)->flip();
             foreach ($dates as $date) {
-                $opensAt = Recurrence::at($date, $schedule->opens_time, $tz);
-                $dueAt = Recurrence::at($date, $schedule->due_time, $tz);
-                $closesAt = $dueAt->addMinutes($schedule->late_minutes);
-                if ($opensAt->gt($now->addDay()) || ($from !== null && $dueAt->lt($from))) {
-                    continue;
-                }
-                if ($existing->has($date->toDateString())) {
-                    continue;
-                }
-                try {
-                    DB::transaction(function () use ($schedule, $date, $opensAt, $dueAt, $closesAt, &$made) {
-                        $occurrence = ScheduleOccurrence::query()->create([
-                            'schedule_id' => $schedule->id,
-                            'logbook_id' => $schedule->logbook_id,
-                            'log_sheet_id' => $schedule->log_sheet_id,
-                            'occurs_on' => $date->toDateString(),
-                            'opens_at' => $opensAt,
-                            'due_at' => $dueAt,
-                            'closes_at' => $closesAt,
-                            'responsible_id' => $schedule->responsible_id,
-                            'status' => 'open',
-                        ]);
-                        // Entries already written in the window (made offline, or early) count.
-                        self::matchExisting($occurrence, $schedule);
-                        if ($occurrence->status === 'open' && $occurrence->log_entry_id === null) {
-                            Reminders::plan('occurrence', $occurrence->id, $schedule->reminders ?? [], null, $dueAt);
-                        }
-                        $made++;
-                    });
-                } catch (UniqueConstraintViolationException) {
-                    // Made by another run meanwhile.
+                foreach (self::times($schedule) as $slot => $time) {
+                    [$opensAt, $dueAt] = self::window($date, $time, $tz);
+                    $closesAt = $dueAt->addMinutes($schedule->late_minutes);
+                    if ($opensAt->gt($now->addDay()) || ($from !== null && $dueAt->lt($from))) {
+                        continue;
+                    }
+                    if ($existing->has($date->toDateString().'#'.$slot)) {
+                        continue;
+                    }
+                    $made += self::makeOccurrence($schedule, $date, $slot, $opensAt, $dueAt, $closesAt);
                 }
             }
         }
 
         return $made;
+    }
+
+    /** One expected reading; 0 when another run made it first. */
+    private static function makeOccurrence(Schedule $schedule, CarbonImmutable $date, int $slot, CarbonImmutable $opensAt, CarbonImmutable $dueAt, CarbonImmutable $closesAt): int
+    {
+        try {
+            return DB::transaction(function () use ($schedule, $date, $slot, $opensAt, $dueAt, $closesAt) {
+                $occurrence = ScheduleOccurrence::query()->create([
+                    'schedule_id' => $schedule->id,
+                    'logbook_id' => $schedule->logbook_id,
+                    'log_sheet_id' => $schedule->log_sheet_id,
+                    'occurs_on' => $date->toDateString(),
+                    'slot' => $slot,
+                    'opens_at' => $opensAt,
+                    'due_at' => $dueAt,
+                    'closes_at' => $closesAt,
+                    'responsible_id' => $schedule->responsible_id,
+                    'status' => 'open',
+                ]);
+                // Entries already written in the window (made offline, or early) count.
+                self::matchExisting($occurrence, $schedule);
+                if ($occurrence->status === 'open' && $occurrence->log_entry_id === null) {
+                    Reminders::plan('occurrence', $occurrence->id, $schedule->reminders ?? [], null, $dueAt);
+                }
+
+                return 1;
+            });
+        } catch (UniqueConstraintViolationException) {
+            // Made by another run meanwhile.
+            return 0;
+        }
+    }
+
+    /**
+     * The schedule's readings: its times list, or the one pair saved
+     * before ADR-0030.
+     *
+     * @return list<array{opens: string, due: string}>
+     */
+    public static function times(Schedule $schedule): array
+    {
+        $times = is_array($schedule->times) && $schedule->times !== [] ? $schedule->times : [['opens' => $schedule->opens_time, 'due' => $schedule->due_time]];
+
+        return array_map(fn (array $t) => ['opens' => (string) $t['opens'], 'due' => (string) $t['due']], $times);
+    }
+
+    /**
+     * When one reading opens and is due on a day. A due time before the
+     * opening time is on the next day (opens 23:30, due 00:30): the
+     * occurrence belongs to the day it opens.
+     *
+     * @param  array{opens: string, due: string}  $time
+     * @return array{0: CarbonImmutable, 1: CarbonImmutable}
+     */
+    public static function window(CarbonImmutable $date, array $time, string $tz): array
+    {
+        $opensAt = Recurrence::at($date, $time['opens'], $tz);
+        $dueAt = Recurrence::at($time['due'] < $time['opens'] ? $date->addDay() : $date, $time['due'], $tz);
+
+        return [$opensAt, $dueAt];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return list<array{opens: string, due: string}>
+     */
+    private static function timesInput(array $data): array
+    {
+        $raw = is_array($data['times'] ?? null) && $data['times'] !== []
+            ? $data['times']
+            : [['opens' => $data['opens_time'] ?? null, 'due' => $data['due_time'] ?? null]];
+        $times = [];
+        foreach (array_values($raw) as $i => $t) {
+            $opens = is_array($t) ? ($t['opens'] ?? null) : null;
+            $due = is_array($t) ? ($t['due'] ?? null) : null;
+            if (! is_string($opens) || ! preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $opens) || ! is_string($due) || ! preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $due)) {
+                throw ValidationException::withMessages([$i === 0 && ! isset($data['times']) ? 'opens_time' : "times.{$i}" => 'Use times as HH:MM, for example 05:30 and 06:00.']);
+            }
+            $times[] = ['opens' => $opens, 'due' => $due];
+        }
+        if (count($times) > 24) {
+            throw ValidationException::withMessages(['times' => 'At most 24 readings a day.']);
+        }
+        usort($times, fn ($a, $b) => strcmp($a['opens'], $b['opens']));
+
+        return $times;
+    }
+
+    /**
+     * Each reading's window, from opening to due, must not overlap the
+     * next one's: otherwise an entry could be meant for either.
+     *
+     * @param  list<array{opens: string, due: string}>  $times
+     * @return array<string, string>
+     */
+    private static function timesErrors(array $times): array
+    {
+        $minutes = fn (string $hm) => (int) substr($hm, 0, 2) * 60 + (int) substr($hm, 3, 2);
+        $spans = [];
+        foreach ($times as $i => $t) {
+            $start = $minutes($t['opens']);
+            $end = $minutes($t['due']);
+            if ($end === $start) {
+                return [count($times) === 1 ? 'due_time' : "times.{$i}" => 'The due time must differ from the opening time.'];
+            }
+            $spans[] = [$start, $end < $start ? $end + 1440 : $end];
+        }
+        foreach ($spans as $i => [$start, $end]) {
+            $next = $spans[$i + 1][0] ?? $spans[0][0] + 1440;
+            if (count($spans) > 1 && $end > $next) {
+                return ['times' => 'Two readings overlap: each must be due before the next one opens.'];
+            }
+        }
+
+        return [];
     }
 
     /**
@@ -302,6 +402,10 @@ final class Schedules
      */
     public static function entrySubmitted(Entry $entry): void
     {
+        // An extra reading (ADR-0030 §4.3) counts for no expected one.
+        if ($entry->schedule_link === 'extra') {
+            return;
+        }
         // The occurrence the entry was written for (opened from its reminder), when it still fits.
         $named = $entry->schedule_occurrence_id === null ? null : ScheduleOccurrence::query()
             ->whereKey($entry->schedule_occurrence_id)
@@ -314,6 +418,11 @@ final class Schedules
             ->lockForUpdate()
             ->first();
 
+        // Named explicitly but no longer eligible: it stays an extra reading. Only entries from
+        // clients that say nothing (older phone builds) are matched by their time.
+        if ($named === null && $entry->schedule_link === 'named') {
+            return;
+        }
         $occurrence = $named ?? ScheduleOccurrence::query()
             ->where('log_sheet_id', $entry->log_sheet_id)
             ->whereIn('status', ['open', 'missed'])
@@ -465,7 +574,9 @@ final class Schedules
         $sheet = $occurrence->sheet;
         $notice = [
             'category' => 'schedule', 'event' => 'schedule.missed',
-            'title' => "Missed: {$sheet->code} of ".$occurrence->occurs_on->format('j M'),
+            // Several readings a day: the title says which one.
+            'title' => "Missed: {$sheet->code} of ".$occurrence->occurs_on->format('j M')
+                .(count(self::times($occurrence->schedule)) > 1 ? ' '.$occurrence->due_at->setTimezone($occurrence->schedule->timezone)->format('H:i') : ''),
             'body' => $sheet->name.' was due '.self::when($occurrence->due_at).' and no entry came in.',
             'subject_type' => 'occurrence', 'subject_id' => $occurrence->id, 'link' => 'schedules',
             'dedupe' => "occurrence:{$occurrence->id}:missed", 'email' => true,
@@ -484,6 +595,8 @@ final class Schedules
             ->whereIn('status', ['submitted', 'reviewed', 'finalized', 'returned'])
             ->whereBetween('occurred_at', [$occurrence->opens_at, $occurrence->closes_at])
             ->when($occurrence->responsible_id !== null, fn (Builder $q) => $q->where('created_by', $occurrence->responsible_id))
+            // Only entries that did not say what they are for (ADR-0030 §4.3).
+            ->whereNull('schedule_link')
             ->whereNotIn('id', ScheduleOccurrence::query()->whereNotNull('log_entry_id')->select('log_entry_id'))
             ->orderBy('occurred_at')->first();
         if ($entry !== null) {
@@ -515,8 +628,7 @@ final class Schedules
             'frequency' => $schedule->frequency,
             'weekdays' => $schedule->weekdays,
             'day_of_month' => $schedule->day_of_month,
-            'opens' => $schedule->opens_time,
-            'due' => $schedule->due_time,
+            'times' => self::times($schedule),
             'late_minutes' => $schedule->late_minutes,
             'responsible' => $schedule->responsible_id !== null ? Tasks::name($schedule->responsible_id) : null,
             'completion' => $schedule->completion,

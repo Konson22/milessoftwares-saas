@@ -12,8 +12,11 @@ use App\Logbook\Models\Entry;
 use App\Logbook\Models\EntryReview;
 use App\Logbook\Models\EntryRevision;
 use App\Logbook\Models\LogSheet;
+use App\Logbook\Models\ScheduleOccurrence;
+use App\Logbook\Recording;
 use App\Logbook\Reports;
 use App\Logbook\Schedules;
+use App\Logbook\Shifts;
 use App\Logbook\Tracks;
 use App\Models\Workspace;
 use App\Models\WorkspaceMember;
@@ -25,6 +28,7 @@ use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -68,8 +72,13 @@ class EntryController extends Controller
         $occurrence = Str::isUuid($occurrenceId)
             ? Schedules::visible()->whereKey($occurrenceId)->where('log_sheet_id', $sheet->id)->first()
             : null;
+        $scheduled = Recording::mode($sheet, $version) === 'scheduled';
 
         return Inertia::render('entries/form', [
+            // ADR-0030 §4.3: on a scheduled sheet the author says which reading this is, or that it is an extra one.
+            'scheduled' => $scheduled,
+            'readings' => $scheduled ? self::openReadings($sheet, $this->user()->id) : [],
+            ...self::shiftProps($sheet->logbook_id, Recording::settings($version)['shifts'] ?? 'off', null, $this->user()->id),
             'sheet' => $this->sheetData($sheet),
             'fields' => $version->fields,
             'version' => $version->version,
@@ -94,6 +103,46 @@ class EntryController extends Controller
         ]);
     }
 
+    /**
+     * The shift choice on the form (ADR-0030 §4.5): the setting, the
+     * logbook's shifts, and the current choice.
+     *
+     * @return array{shiftSetting: string, shifts: list<array<string, mixed>>, shiftId: string|null}
+     */
+    private static function shiftProps(string $logbookId, string $setting, ?string $current, string $me): array
+    {
+        $options = $setting === 'off' ? [] : Shifts::options($logbookId);
+
+        return [
+            'shiftSetting' => $setting,
+            // Whether the person is linked to it: a suggestion when the time fits no shift.
+            'shifts' => array_map(fn (array $o) => [...array_diff_key($o, ['members' => 1]), 'mine' => in_array($me, $o['members'], true)], $options),
+            'shiftId' => $current,
+        ];
+    }
+
+    /**
+     * Readings of this sheet the person may still write for: not yet
+     * answered, theirs or anyone's, opened and not closed long ago.
+     *
+     * @return list<array{id: string, opensAt: string, dueAt: string, closesAt: string, status: string}>
+     */
+    private static function openReadings(LogSheet $sheet, string $userId): array
+    {
+        $now = now();
+
+        return array_values(Schedules::visible()->where('log_sheet_id', $sheet->id)
+            ->whereIn('status', ['open', 'missed'])->whereNull('log_entry_id')
+            ->where(fn ($q) => $q->whereNull('responsible_id')->orWhere('responsible_id', $userId))
+            ->where('opens_at', '<=', $now->copy()->addHours(2))
+            ->where('closes_at', '>=', $now->copy()->subDay())
+            ->orderBy('due_at')->limit(12)->get()
+            ->map(fn (ScheduleOccurrence $o) => [
+                'id' => $o->id, 'opensAt' => $o->opens_at->toIso8601String(), 'dueAt' => $o->due_at->toIso8601String(),
+                'closesAt' => $o->closes_at->toIso8601String(), 'status' => $o->status,
+            ])->all());
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
@@ -103,6 +152,9 @@ class EntryController extends Controller
             'idempotency_key' => ['nullable', 'string', 'max:64'],
             'submit' => ['boolean'],
             'schedule_occurrence_id' => ['nullable', 'uuid'],
+            // ADR-0030: the form always says, for a reading or an extra one.
+            'schedule_link' => ['nullable', Rule::in(['named', 'extra'])],
+            'shift_id' => ['nullable', 'uuid'],
             'location' => ['nullable', 'array'],
             'location.lat' => ['required_with:location', 'numeric', 'between:-90,90'],
             'location.lng' => ['required_with:location', 'numeric', 'between:-180,180'],
@@ -110,7 +162,7 @@ class EntryController extends Controller
             'location.captured_at' => ['required_with:location', 'date'],
         ]);
         $sheet = Access::writableSheets()->whereKey((string) $data['sheet_id'])->firstOrFail();
-        $entry = Entries::create($sheet, $this->user(), $data['values'], $this->occurredAt($data['occurred_at']), $data['idempotency_key'] ?? null, (bool) ($data['submit'] ?? false), occurrenceId: $data['schedule_occurrence_id'] ?? null, place: ['location' => $data['location'] ?? null, 'source' => 'browser']);
+        $entry = Entries::create($sheet, $this->user(), $data['values'], $this->occurredAt($data['occurred_at']), $data['idempotency_key'] ?? null, (bool) ($data['submit'] ?? false), occurrenceId: $data['schedule_occurrence_id'] ?? null, place: ['location' => $data['location'] ?? null, 'source' => 'browser'], scheduleLink: $data['schedule_link'] ?? null, more: ['shift_id' => $data['shift_id'] ?? null]);
 
         return $entry->status === 'draft'
             ? to_route('entries.edit', $entry->id)->with('success', 'Draft saved. Add files or finish it later.')
@@ -164,6 +216,7 @@ class EntryController extends Controller
                 'isMine' => $entry->created_by === $me->id,
                 'answers' => self::answers($entry->version->fields, $entry->values, $files),
                 'location' => $entry->location,
+                'shift' => $entry->shift?->label(),
                 // The route it was written on, when the viewer may see that route.
                 'track' => $entry->log_track_id !== null && Tracks::visible()->whereKey($entry->log_track_id)->exists() ? $entry->log_track_id : null,
             ],
@@ -203,6 +256,7 @@ class EntryController extends Controller
             'idempotencyKey' => null,
             'locationSettings' => Tracks::settings($entry->version),
             'location' => $entry->location,
+            ...self::shiftProps($entry->logbook_id, Shifts::setting($entry), $entry->shift_id, $this->user()->id),
             'members' => WorkspaceMember::options(),
             'resources' => self::resourceOptions(),
             'files' => (object) $files->groupBy('field')->map(fn ($group) => $group->map(fn (Attachment $a) => [
@@ -218,6 +272,7 @@ class EntryController extends Controller
             'occurred_at' => ['required', 'date'],
             'values' => ['present', 'array'],
             'submit' => ['boolean'],
+            'shift_id' => ['nullable', 'uuid'],
             'location' => ['nullable', 'array'],
             'location.lat' => ['required_with:location', 'numeric', 'between:-90,90'],
             'location.lng' => ['required_with:location', 'numeric', 'between:-180,180'],
@@ -226,7 +281,7 @@ class EntryController extends Controller
         ]);
         // Sent only when the form shows location: otherwise the entry keeps what it has.
         $place = $request->has('location') ? ['location' => $data['location'] ?? null, 'track_id' => $entry->log_track_id, 'source' => $entry->location['source'] ?? 'browser'] : null;
-        $entry = Entries::update($entry, $this->user(), $data['values'], $this->occurredAt($data['occurred_at']), $place);
+        $entry = Entries::update($entry, $this->user(), $data['values'], $this->occurredAt($data['occurred_at']), $place, $request->has('shift_id') ? ['shift_id' => $data['shift_id'] ?? null] : []);
 
         if ($data['submit'] ?? false) {
             $entry = Entries::submit($entry, $this->user());

@@ -2,9 +2,11 @@
 
 namespace App\Http\Middleware;
 
+use App\Logbook\Logbooks;
 use App\Models\WorkspaceMember;
 use Closure;
 use Illuminate\Http\Request;
+use Miles\PlatformClient\Api\PlatformUnavailable;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -19,8 +21,21 @@ class RememberMember
         $userId = $request->user()?->getAuthIdentifier();
 
         if (is_string($userId)) {
-            $member = WorkspaceMember::query()->ofUser($userId)->first()
-                ?? WorkspaceMember::query()->createOrFirst(['user_id' => $userId], ['last_seen_at' => now()]);
+            $member = WorkspaceMember::query()->ofUser($userId)->first();
+            if ($member === null) {
+                $member = WorkspaceMember::query()->createOrFirst(['user_id' => $userId], ['last_seen_at' => now()]);
+                // First visit: the logbooks chosen when they were invited.
+                try {
+                    Logbooks::applyPending($request->user());
+                } catch (PlatformUnavailable) {
+                    // Kept for the next first-visit check: see below.
+                    $member->delete();
+                    $member = null;
+                }
+            }
+            if ($member === null) {
+                return $next($request);
+            }
 
             if ($member->last_seen_at->lt(now()->subHour())) {
                 $member->update(['last_seen_at' => now()]);

@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property list<int>|null $weekdays
  * @property int|null $day_of_month
  * @property string $opens_time
+ * @property list<array{opens: string, due: string}>|null $times ADR-0030: several readings a day; null before
  * @property string $due_time
  * @property int $late_minutes
  * @property string $timezone
@@ -57,6 +58,7 @@ class Schedule extends Model
     {
         return [
             'weekdays' => 'array',
+            'times' => 'array',
             'reminders' => 'array',
             'reminder_channels' => 'array',
             'generate_from' => 'immutable_datetime',

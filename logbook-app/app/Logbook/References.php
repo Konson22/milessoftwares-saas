@@ -8,7 +8,7 @@ use App\Models\Workspace;
 /**
  * References per organization, code and year: GEN-2026-000001 for entries
  * (the sheet's code), TASK-2026-000001 for tasks and EXC-2026-000001 for
- * exceptions (ADR-0026). Drawn inside the creating transaction with the
+ * exceptions (ADR-0026), INV-2026-000001 for investigations (ADR-0029). Drawn inside the creating transaction with the
  * sequence row locked, so two people at once never get the same number
  * (each table is also unique on it). Entries draw theirs at first
  * submission, so discarded drafts leave no gaps.
@@ -23,8 +23,10 @@ final class References
 
     public const EXCEPTIONS = ['sequence' => 'exception', 'prefix' => 'EXC'];
 
+    public const INVESTIGATIONS = ['sequence' => 'investigation', 'prefix' => 'INV'];
+
     /** Sheet codes that would read like a task or exception reference. */
-    public const RESERVED_CODES = ['TASK', 'EXC'];
+    public const RESERVED_CODES = ['TASK', 'EXC', 'INV'];
 
     /**
      * @param  string  $code  the sheet code (also the prefix), or a sequence key with $prefix

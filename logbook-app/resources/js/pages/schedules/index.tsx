@@ -56,6 +56,8 @@ type Props = {
         logbooks: Option[];
         sheets: (Option & { logbook: string })[];
         members: Option[];
+        /** Sheets that may take a new schedule: scheduled ones (ADR-0030). */
+        schedulable: string[];
     };
     canManage: boolean;
 };
@@ -253,8 +255,11 @@ function ScheduleItem({
                     </p>
                     <p className="text-muted-foreground">
                         {recurrenceLabel(s.frequency, s.weekdays, s.dayOfMonth)}{' '}
-                        · opens {s.opensTime}, due {s.dueTime}, late for{' '}
-                        {s.lateMinutes} min ({s.timezone}) ·{' '}
+                        ·{' '}
+                        {s.times.length === 1
+                            ? `opens ${s.times[0].opens}, due ${s.times[0].due}`
+                            : `${s.times.length} readings: ${s.times.map((t) => t.due).join(', ')}`}
+                        , late for {s.lateMinutes} min ({s.timezone}) ·{' '}
                         {s.responsible?.name ?? 'anyone who writes on it'} ·{' '}
                         {s.completion === 'reviewed'
                             ? 'done once reviewed'
@@ -309,8 +314,11 @@ function NewSchedule({ options }: { options: Props['options'] }) {
                 label="Schedule a log sheet"
                 value={sheet}
                 onChange={setSheet}
-                options={options.sheets}
+                options={options.sheets.filter((s) =>
+                    options.schedulable.includes(s.value),
+                )}
                 empty="Choose a published log sheet…"
+                hint="Only sheets recorded as scheduled are listed; set that in a sheet's template."
                 className="max-w-md"
             />
             {sheet && (
@@ -344,8 +352,7 @@ function ScheduleForm({
         frequency: initial?.frequency ?? 'daily',
         weekdays: initial?.weekdays ?? [1],
         day_of_month: String(initial?.dayOfMonth ?? 1),
-        opens_time: initial?.opensTime ?? '07:00',
-        due_time: initial?.dueTime ?? '09:00',
+        times: initial?.times ?? [{ opens: '07:00', due: '09:00' }],
         late_minutes: String(initial?.lateMinutes ?? 240),
         timezone:
             initial?.timezone ??
@@ -356,8 +363,7 @@ function ScheduleForm({
         completion: initial?.completion ?? 'submitted',
         reminders: initial?.reminders ?? ['due', 'after:0'],
         reminder_channels: (initial?.reminderChannels ?? null) as
-            | Channel[]
-            | null,
+            Channel[] | null,
     });
     const set = (patch: Partial<typeof data>) => setData({ ...data, ...patch });
 
@@ -406,19 +412,10 @@ function ScheduleForm({
                     error={errors.day_of_month}
                 />
             )}
-            <TextField
-                label="Opens at"
-                type="time"
-                value={data.opens_time}
-                onChange={(opens_time) => set({ opens_time })}
-                error={errors.opens_time}
-            />
-            <TextField
-                label="Due at"
-                type="time"
-                value={data.due_time}
-                onChange={(due_time) => set({ due_time })}
-                error={errors.due_time}
+            <TimesEditor
+                value={data.times}
+                onChange={(times) => set({ times })}
+                errors={errors}
             />
             <TextField
                 label="Accepted late for (minutes)"
@@ -496,5 +493,88 @@ function ScheduleForm({
                 </Button>
             </div>
         </form>
+    );
+}
+
+/**
+ * The readings expected each day (ADR-0030 §4.2): each opens and is due
+ * at its own time. A due time before the opening time is the next day.
+ */
+function TimesEditor({
+    value,
+    onChange,
+    errors,
+}: {
+    value: { opens: string; due: string }[];
+    onChange: (value: { opens: string; due: string }[]) => void;
+    errors: Record<string, string>;
+}) {
+    const patch = (i: number, next: Partial<{ opens: string; due: string }>) =>
+        onChange(value.map((t, j) => (j === i ? { ...t, ...next } : t)));
+    const error =
+        errors.times ??
+        errors.opens_time ??
+        errors.due_time ??
+        Object.entries(errors).find(([k]) => k.startsWith('times.'))?.[1];
+
+    return (
+        <div className="grid gap-2 sm:col-span-2">
+            <span className="text-sm font-medium">Readings each day</span>
+            {value.map((t, i) => (
+                <div key={i} className="flex flex-wrap items-end gap-2">
+                    <TextField
+                        label={`Opens${value.length > 1 ? ` (${i + 1})` : ''}`}
+                        type="time"
+                        value={t.opens}
+                        onChange={(opens) => patch(i, { opens })}
+                        className="w-36"
+                    />
+                    <TextField
+                        label="Due"
+                        type="time"
+                        value={t.due}
+                        onChange={(due) => patch(i, { due })}
+                        className="w-36"
+                    />
+                    {t.due !== '' && t.due < t.opens && (
+                        <span className="pb-2 text-xs text-muted-foreground">
+                            due the next day
+                        </span>
+                    )}
+                    {value.length > 1 && (
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() =>
+                                onChange(value.filter((_, j) => j !== i))
+                            }
+                        >
+                            Remove
+                        </Button>
+                    )}
+                </div>
+            ))}
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            {value.length < 24 && (
+                <div>
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                            onChange([...value, { opens: '', due: '' }])
+                        }
+                    >
+                        Add a reading
+                    </Button>
+                </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+                Each reading is expected on its own and must be due before the
+                next one opens. Logbook lists them; people still write each
+                entry.
+            </p>
+        </div>
     );
 }

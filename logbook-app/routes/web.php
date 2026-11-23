@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Controllers\AuditController;
+use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\EntryController;
 use App\Http\Controllers\ExceptionController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\InvestigationController;
 use App\Http\Controllers\LogbookController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PeopleController;
@@ -12,6 +14,7 @@ use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\SheetController;
+use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TrackController;
 use App\Http\Middleware\RememberMember;
@@ -94,11 +97,20 @@ Route::prefix(app(PlatformConfig::class)->path())
         // (Central decides; ApplicationPeopleManagers lets the Manager through).
         Route::middleware('can:logbook.people.manage')->prefix('people')->name('people.')->group(function () {
             Route::get('/', [PeopleController::class, 'index'])->name('index');
+            Route::get('invite', [PeopleController::class, 'invitePage'])->name('invite.create');
             Route::post('invitations', [PeopleController::class, 'invite'])->middleware('throttle:30,60')->name('invite');
             Route::post('invitations/{invitation}/cancel', [PeopleController::class, 'cancelInvitation'])->whereUuid('invitation')->name('invitations.cancel');
             Route::post('accounts', [PeopleController::class, 'addAccount'])->middleware('throttle:30,60')->name('accounts.store');
             Route::post('roles', [PeopleController::class, 'giveRole'])->name('roles.store');
             Route::post('roles/revoke', [PeopleController::class, 'takeBackRole'])->name('roles.revoke');
+            Route::post('logbooks', [PeopleController::class, 'addToLogbook'])->name('logbooks.store');
+        });
+
+        // Departments: listed for people managers, added and renamed by one for the whole workspace.
+        Route::middleware('can:logbook.people.manage')->prefix('departments')->name('departments.')->group(function () {
+            Route::get('/', [DepartmentController::class, 'index'])->name('index');
+            Route::post('/', [DepartmentController::class, 'store'])->middleware('throttle:30,60')->name('store');
+            Route::put('{department}', [DepartmentController::class, 'update'])->whereUuid('department')->middleware('throttle:30,60')->name('update');
         });
 
         // Reports and exports, within the logbooks the member reaches.
@@ -106,6 +118,26 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
             Route::get('reports/entries.csv', [ReportController::class, 'csv'])->middleware('throttle:10,1')->name('reports.csv');
             Route::get('reports/entries.pdf', [ReportController::class, 'pdf'])->middleware('throttle:10,1')->name('reports.pdf');
+            // ADR-0029: one entry opened over the report.
+            Route::get('reports/records/{entry}', [ReportController::class, 'record'])->whereUuid('entry')->name('reports.record');
+        });
+
+        // Investigations (ADR-0029): permission checks in App\Logbook\Investigations.
+        Route::prefix('investigations')->name('investigations.')->group(function () {
+            Route::get('/', [InvestigationController::class, 'index'])->name('index');
+            Route::get('new', [InvestigationController::class, 'create'])->name('create');
+            Route::post('/', [InvestigationController::class, 'store'])->middleware('throttle:30,1')->name('store');
+            Route::get('{investigation}', [InvestigationController::class, 'show'])->whereUuid('investigation')->name('show');
+            Route::put('{investigation}', [InvestigationController::class, 'update'])->whereUuid('investigation')->name('update');
+            Route::post('{investigation}/move', [InvestigationController::class, 'move'])->whereUuid('investigation')->name('move');
+            Route::post('{investigation}/close', [InvestigationController::class, 'close'])->whereUuid('investigation')->name('close');
+            Route::post('{investigation}/reopen', [InvestigationController::class, 'reopen'])->whereUuid('investigation')->name('reopen');
+            Route::post('{investigation}/evidence', [InvestigationController::class, 'link'])->whereUuid('investigation')->middleware('throttle:120,1')->name('evidence.store');
+            Route::post('{investigation}/evidence/{evidence}/remove', [InvestigationController::class, 'unlink'])->whereUuid(['investigation', 'evidence'])->name('evidence.remove');
+            Route::post('{investigation}/notes', [InvestigationController::class, 'note'])->whereUuid('investigation')->middleware('throttle:120,1')->name('notes.store');
+            Route::put('{investigation}/notes/{note}', [InvestigationController::class, 'revise'])->whereUuid(['investigation', 'note'])->name('notes.update');
+            Route::post('{investigation}/tasks', [InvestigationController::class, 'task'])->whereUuid('investigation')->middleware('throttle:60,1')->name('tasks.store');
+            Route::get('{investigation}/report.pdf', [InvestigationController::class, 'pdf'])->whereUuid('investigation')->middleware('throttle:10,1')->name('pdf');
         });
 
         // Operations (ADR-0026). Tasks: the assignee works them; tasks.manage gives, follows up and verifies.
@@ -162,6 +194,13 @@ Route::prefix(app(PlatformConfig::class)->path())
         Route::post('notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
         Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
         Route::put('notifications/settings', [NotificationController::class, 'settings'])->name('notifications.settings');
+
+        // Shifts (ADR-0030): read by everyone, kept by managers.
+        Route::get('shifts', [ShiftController::class, 'index'])->name('shifts.index');
+        Route::middleware('can:logbook.manage')->group(function () {
+            Route::post('shifts', [ShiftController::class, 'store'])->name('shifts.store');
+            Route::put('shifts/{shift}', [ShiftController::class, 'update'])->whereUuid('shift')->name('shifts.update');
+        });
 
         // Resources and locations: read by everyone, kept by managers.
         Route::get('resources', [ResourceController::class, 'index'])->name('resources.index');

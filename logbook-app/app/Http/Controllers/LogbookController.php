@@ -8,7 +8,9 @@ use App\Logbook\Logbooks;
 use App\Logbook\Models\AccessGrant;
 use App\Logbook\Models\Entry;
 use App\Logbook\Models\Logbook;
+use App\Logbook\Models\LogException;
 use App\Logbook\Models\LogSheet;
+use App\Logbook\Models\Task;
 use App\Models\WorkspaceMember;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -88,6 +90,14 @@ class LogbookController extends Controller
             'departments' => $manages ? Departments::options(Access::MANAGE) : [],
             'canFileUnderWorkspace' => Access::managesEverything(),
             'hasEntries' => Entry::query()->where('logbook_id', $logbook->id)->exists(),
+            'stats' => [
+                'awaiting' => Access::entries()->where('logbook_id', $logbook->id)->where('status', 'submitted')->count(),
+                'returned' => Access::entries()->where('logbook_id', $logbook->id)->where('status', 'returned')->count(),
+                'lastWeek' => Access::entries()->where('logbook_id', $logbook->id)->where('status', '!=', 'draft')->where('occurred_at', '>=', now()->subDays(7))->count(),
+                'openExceptions' => LogException::query()->where('logbook_id', $logbook->id)->whereIn('status', LogException::OPEN)->count(),
+                'seriousExceptions' => LogException::query()->where('logbook_id', $logbook->id)->whereIn('status', LogException::OPEN)->whereIn('severity', ['high', 'critical'])->count(),
+                'overdueTasks' => Task::query()->where('logbook_id', $logbook->id)->whereIn('status', Task::OPEN)->whereNotNull('due_at')->where('due_at', '<', now())->count(),
+            ],
         ]);
     }
 

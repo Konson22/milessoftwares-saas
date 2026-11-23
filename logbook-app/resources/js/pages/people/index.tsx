@@ -1,5 +1,7 @@
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
+    BookOpen,
+    Check,
     Clock,
     KeyRound,
     Mail,
@@ -16,18 +18,24 @@ import { PageHeader } from '@/components/page-header';
 import { Button } from '@miles/ui/components/ui/button';
 import { Input } from '@miles/ui/components/ui/input';
 import { Errors, SelectField, TextField } from '@/components/fields';
-import { invite } from '@/routes/people';
+import {
+    DepartmentField,
+    firstDepartment,
+    LogbookPicker,
+    MEMBERSHIP_LABELS,
+} from '@/components/people-fields';
+import type {
+    Department,
+    LogbookOption,
+    Role,
+    Scope,
+} from '@/components/people-fields';
+import { create as inviteCreate } from '@/routes/people/invite';
 import accounts from '@/routes/people/accounts';
 import { cancel as cancelInvitation } from '@/routes/people/invitations';
+import peopleLogbooks from '@/routes/people/logbooks';
 import roleRoutes from '@/routes/people/roles';
-
-type Role = {
-    key: string;
-    name: string;
-    description: string;
-    delegable: boolean;
-    assignable: boolean;
-};
+import { destroy as removeMembership } from '@/routes/logbooks/access';
 
 type Person = {
     membershipId: string;
@@ -38,14 +46,14 @@ type Person = {
     access: string;
     /** Each role once, with the departments it applies in (null: the whole workspace). */
     roles: { key: string; departments: string[] | null }[];
-};
-
-type Department = { id: string; name: string };
-
-type Scope = {
-    departments: Department[];
-    /** The manager's own role is limited to departments: no whole-workspace option. */
-    mustChoose: boolean;
+    /** The logbooks they are a member of (among those this manager looks after). */
+    logbooks: {
+        grantId: string;
+        logbookId: string;
+        name: string;
+        role: string;
+        sheet: string | null;
+    }[];
 };
 
 type Props = {
@@ -62,12 +70,14 @@ type Props = {
         invitedBy: string;
         expiresAt: string;
         roles: string[];
+        logbooks: string[];
     }[];
     departments: Department[];
     mustChooseDepartment: boolean;
+    logbooks: LogbookOption[];
 };
 
-type Panel = 'invite' | 'account' | null;
+type Panel = 'account' | null;
 
 /**
  * Logbook's people: who holds which Logbook role, invitations waiting, and
@@ -86,6 +96,7 @@ export default function People({
     invitations,
     departments,
     mustChooseDepartment,
+    logbooks,
 }: Props) {
     const scope: Scope = { departments, mustChoose: mustChooseDepartment };
     const errors = usePage().props.errors as Record<string, string>;
@@ -133,8 +144,10 @@ export default function People({
                             >
                                 <KeyRound /> Add account
                             </Button>
-                            <Button onClick={() => setPanel('invite')}>
-                                <Mail /> Invite by email
+                            <Button asChild>
+                                <Link href={inviteCreate().url}>
+                                    <Mail /> Invite by email
+                                </Link>
                             </Button>
                         </>
                     )
@@ -164,22 +177,10 @@ export default function People({
                 </div>
             )}
 
-            {panel === 'invite' && (
-                <InviteForm
-                    scope={scope}
-                    roles={assignable}
-                    firstRole={firstRole}
-                    errors={errors}
-                    busy={busy}
-                    onCancel={() => setPanel(null)}
-                    onSubmit={(data) =>
-                        post(invite().url, data, () => setPanel(null))
-                    }
-                />
-            )}
             {panel === 'account' && (
                 <AccountForm
                     scope={scope}
+                    logbooks={logbooks}
                     roles={assignable}
                     firstRole={firstRole}
                     errors={errors}
@@ -238,6 +239,19 @@ export default function People({
                                         roles={roles}
                                         roleNames={roleNames}
                                         scope={scope}
+                                        logbooks={logbooks}
+                                        onAddToLogbook={(logbookId) =>
+                                            post(peopleLogbooks.store().url, {
+                                                user_id: p.userId,
+                                                logbook_id: logbookId,
+                                            })
+                                        }
+                                        onRemoveFromLogbook={(grantId) =>
+                                            router.delete(
+                                                removeMembership(grantId).url,
+                                                { preserveScroll: true },
+                                            )
+                                        }
                                         onGive={(role, departmentId) =>
                                             post(roleRoutes.store().url, {
                                                 membership_id: p.membershipId,
@@ -301,7 +315,10 @@ export default function People({
                                                 {i.email}
                                             </span>
                                             <span className="text-xs text-muted-foreground">
-                                                {i.roles.join(', ')} · until{' '}
+                                                {i.roles.join(', ')}
+                                                {i.logbooks.length > 0 &&
+                                                    ` · ${i.logbooks.join(', ')}`}{' '}
+                                                · until{' '}
                                                 {new Date(
                                                     i.expiresAt,
                                                 ).toLocaleDateString()}
@@ -363,6 +380,9 @@ function PersonRow({
     roles,
     roleNames,
     scope,
+    logbooks,
+    onAddToLogbook,
+    onRemoveFromLogbook,
     onGive,
     onTakeBack,
 }: {
@@ -371,6 +391,9 @@ function PersonRow({
     roles: Role[];
     roleNames: Record<string, string>;
     scope: Scope;
+    logbooks: LogbookOption[];
+    onAddToLogbook: (logbookId: string) => void;
+    onRemoveFromLogbook: (grantId: string) => void;
     onGive: (role: string, departmentId: string | null) => void;
     onTakeBack: (role: string) => void;
 }) {
@@ -386,6 +409,12 @@ function PersonRow({
     const assignable = new Set(
         roles.filter((r) => r.assignable).map((r) => r.key),
     );
+    // Managers reach their departments' logbooks without being members.
+    const needsLogbooks = p.roles.some(
+        (r) => roles.find((x) => x.key === r.key)?.membership,
+    );
+    const isMember = new Set(p.logbooks.map((l) => l.logbookId));
+    const canJoin = logbooks.filter((l) => !isMember.has(l.id));
 
     return (
         <li className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
@@ -502,6 +531,58 @@ function PersonRow({
                     </span>
                 )}
             </span>
+            {!p.isOwner && needsLogbooks && (
+                <span className="flex w-full flex-wrap items-center gap-1.5 pl-11">
+                    <BookOpen
+                        className="size-3.5 text-muted-foreground"
+                        aria-hidden
+                    />
+                    {p.logbooks.length === 0 && (
+                        <span className="text-xs text-[#a4262c]">
+                            In no logbook yet: they see nothing.
+                        </span>
+                    )}
+                    {p.logbooks.map((l) => (
+                        <span
+                            key={l.grantId}
+                            className="inline-flex items-center gap-1 rounded-sm border border-[#cfe5dd] bg-[#eef8f5] py-0.5 pr-1 pl-2 text-xs"
+                            title={MEMBERSHIP_LABELS[l.role]}
+                        >
+                            {l.name}
+                            {l.sheet && (
+                                <span className="text-muted-foreground">
+                                    · {l.sheet}
+                                </span>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => onRemoveFromLogbook(l.grantId)}
+                                className="grid size-4 place-items-center rounded-sm text-muted-foreground hover:bg-[#d6ebe4] hover:text-foreground"
+                                aria-label={`Remove ${p.name} from ${l.name}`}
+                            >
+                                <X className="size-3" aria-hidden />
+                            </button>
+                        </span>
+                    ))}
+                    {canJoin.length > 0 && (
+                        <select
+                            value=""
+                            onChange={(e) =>
+                                e.target.value && onAddToLogbook(e.target.value)
+                            }
+                            aria-label={`Add ${p.name} to a logbook`}
+                            className="h-7 rounded-md border border-dashed border-[#c7c7c7] bg-card px-2 text-xs text-muted-foreground hover:border-primary hover:text-primary"
+                        >
+                            <option value="">+ Add to logbook</option>
+                            {canJoin.map((l) => (
+                                <option key={l.id} value={l.id}>
+                                    {l.name}
+                                </option>
+                            ))}
+                        </select>
+                    )}
+                </span>
+            )}
         </li>
     );
 }
@@ -575,79 +656,9 @@ function ExistingMembers({
     );
 }
 
-function InviteForm({
-    scope,
-    roles,
-    firstRole,
-    errors,
-    busy,
-    onCancel,
-    onSubmit,
-}: {
-    scope: Scope;
-    roles: Role[];
-    firstRole: string;
-    errors: Record<string, string>;
-    busy: boolean;
-    onCancel: () => void;
-    onSubmit: (data: {
-        email: string;
-        role: string;
-        department_id: string | null;
-    }) => void;
-}) {
-    const [data, setData] = useState({ email: '', role: firstRole });
-    const [department, setDepartment] = useState(firstDepartment(scope));
-
-    return (
-        <FormCard
-            error={errors.people}
-            busy={busy}
-            title="Invite by email"
-            note="They get an email with a link, and join Logbook with this role when they accept."
-            onCancel={onCancel}
-            onSubmit={() =>
-                onSubmit({ ...data, department_id: department || null })
-            }
-            submit={
-                <>
-                    <Mail /> Send invitation
-                </>
-            }
-        >
-            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_14rem]">
-                <TextField
-                    label="Email"
-                    type="email"
-                    value={data.email}
-                    onChange={(email) => setData({ ...data, email })}
-                    error={errors.email}
-                    required
-                />
-                <SelectField
-                    label="Logbook role"
-                    value={data.role}
-                    onChange={(role) => setData({ ...data, role })}
-                    options={roles.map((r) => ({
-                        value: r.key,
-                        label: r.name,
-                    }))}
-                    error={errors.role}
-                />
-                <DepartmentField
-                    scope={scope}
-                    value={department}
-                    onChange={setDepartment}
-                    error={errors.department_id}
-                    className="sm:col-span-2"
-                />
-            </div>
-        </FormCard>
-    );
-}
-
 function AccountForm({
     scope,
+    logbooks,
     roles,
     firstRole,
     errors,
@@ -656,6 +667,7 @@ function AccountForm({
     onSubmit,
 }: {
     scope: Scope;
+    logbooks: LogbookOption[];
     roles: Role[];
     firstRole: string;
     errors: Record<string, string>;
@@ -667,6 +679,7 @@ function AccountForm({
         password: string;
         role: string;
         department_id: string | null;
+        logbook_ids: string[];
     }) => void;
 }) {
     const [data, setData] = useState({
@@ -676,6 +689,8 @@ function AccountForm({
         role: firstRole,
     });
     const [department, setDepartment] = useState(firstDepartment(scope));
+    const [chosen, setChosen] = useState<string[]>([]);
+    const role = roles.find((r) => r.key === data.role);
 
     return (
         <FormCard
@@ -685,7 +700,20 @@ function AccountForm({
             note="For someone without an email, such as field staff on the phone app. Give them the username and this temporary password; they choose their own at first sign-in."
             onCancel={onCancel}
             onSubmit={() =>
-                onSubmit({ ...data, department_id: department || null })
+                onSubmit({
+                    ...data,
+                    department_id: department || null,
+                    logbook_ids: role?.membership
+                        ? chosen.filter((id) =>
+                              logbooks.some(
+                                  (l) =>
+                                      l.id === id &&
+                                      (department === '' ||
+                                          l.departmentId === department),
+                              ),
+                          )
+                        : [],
+                })
             }
             submit={
                 <>
@@ -732,55 +760,25 @@ function AccountForm({
                 <DepartmentField
                     scope={scope}
                     value={department}
-                    onChange={setDepartment}
+                    onChange={(value) => {
+                        setDepartment(value);
+                        setChosen([]);
+                    }}
                     error={errors.department_id}
                     className="sm:col-span-2"
                 />
+                <div className="sm:col-span-2">
+                    <LogbookPicker
+                        logbooks={logbooks}
+                        department={department}
+                        role={role}
+                        value={chosen}
+                        onChange={setChosen}
+                        error={errors.logbook_ids}
+                    />
+                </div>
             </div>
         </FormCard>
-    );
-}
-
-function firstDepartment(scope: Scope): string {
-    return scope.mustChoose ? (scope.departments[0]?.id ?? '') : '';
-}
-
-/**
- * Where the role applies: the whole workspace, or one department, whose
- * logbooks are then all the person reaches. Hidden when the workspace has
- * no departments and the manager may give workspace-wide roles.
- */
-function DepartmentField({
-    scope,
-    value,
-    onChange,
-    error,
-    className,
-}: {
-    scope: Scope;
-    value: string;
-    onChange: (value: string) => void;
-    error?: string;
-    className?: string;
-}) {
-    if (scope.departments.length === 0 && !scope.mustChoose) {
-        return null;
-    }
-
-    return (
-        <SelectField
-            label="Department"
-            value={value}
-            onChange={onChange}
-            empty={scope.mustChoose ? undefined : 'Whole workspace'}
-            options={scope.departments.map((d) => ({
-                value: d.id,
-                label: d.name,
-            }))}
-            error={error}
-            hint="They see only the logbooks of this department."
-            className={className}
-        />
     );
 }
 

@@ -6,7 +6,7 @@
         "kind": "standalone",
         "status": "beta"
     },
-    "version": "1.3.0",
+    "version": "1.4.0",
     "permissions": [
         {
             "key": "logbook.manage",
@@ -104,6 +104,16 @@
                 "branch",
                 "department"
             ]
+        },
+        {
+            "key": "logbook.investigations.manage",
+            "name": "Open and run investigations: link evidence, record findings, close",
+            "sensitivity": 3,
+            "scopes": [
+                "organization",
+                "branch",
+                "department"
+            ]
         }
     ],
     "roles": [
@@ -190,7 +200,8 @@
                 "logbook.view",
                 "logbook.reports.view",
                 "logbook.tasks.manage",
-                "logbook.tracks.view"
+                "logbook.tracks.view",
+                "logbook.investigations.manage"
             ]
         },
         {
@@ -211,7 +222,8 @@
                 "logbook.reports.view",
                 "logbook.audit.view",
                 "logbook.tasks.manage",
-                "logbook.tracks.view"
+                "logbook.tracks.view",
+                "logbook.investigations.manage"
             ]
         }
     ],

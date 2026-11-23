@@ -9,6 +9,7 @@ import {
     Plus,
     Trash2,
     MapPin,
+    CalendarClock,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { PageHeader } from '@/components/page-header';
@@ -38,6 +39,7 @@ import {
     formatDateTime,
     nameFor,
 } from '@/lib/logbook';
+import { index as schedulesIndex } from '@/routes/schedules';
 import { publish, show, update } from '@/routes/sheets';
 import * as draft from '@/routes/sheets/draft';
 import { useConfirm } from '@/components/dialogs';
@@ -63,6 +65,12 @@ type Props = {
     resources: ResourceOption[];
     /** GPS (ADR-0028): part of the draft, published with it. Null: no location. */
     location: LocationSettings | null;
+    /** How the sheet is recorded (ADR-0030): part of the draft too. */
+    recording: {
+        mode: RecordingMode;
+        shifts: ShiftSetting;
+        liveSchedules: boolean;
+    };
     history: {
         id: string;
         action: string;
@@ -93,6 +101,7 @@ export default function Template({
     resources,
     history,
     location: initialLocation,
+    recording: initialRecording,
 }: Props) {
     const errors = usePage().props.errors as Record<string, string>;
     const ask = useConfirm();
@@ -111,6 +120,12 @@ export default function Template({
             ? String(initialLocation.accuracy_m)
             : '',
     }));
+    const [recording, setRecording] = useState<RecordingMode>(
+        initialRecording.mode,
+    );
+    const [shifts, setShifts] = useState<ShiftSetting>(
+        initialRecording.shifts ?? 'off',
+    );
     const [preview, setPreview] = useState<Values>({});
     const publishedNames = useMemo(
         () => new Set(publishedVersion ? initial.map((f) => f.name) : []),
@@ -192,13 +207,21 @@ export default function Template({
         if (andPublish) {
             router.post(
                 publish(sheet.id).url,
-                { fields: payload(), location } as RequestPayload,
+                {
+                    fields: payload(),
+                    location,
+                    recording: { mode: recording, shifts },
+                } as RequestPayload,
                 options,
             );
         } else {
             router.put(
                 draft.save(sheet.id).url,
-                { fields: payload(), location } as RequestPayload,
+                {
+                    fields: payload(),
+                    location,
+                    recording: { mode: recording, shifts },
+                } as RequestPayload,
                 options,
             );
         }
@@ -466,6 +489,24 @@ export default function Template({
                         })}
                     </div>
                     <div className="grid content-start gap-6">
+                        <RecordingPanel
+                            value={recording}
+                            shifts={shifts}
+                            liveSchedules={initialRecording.liveSchedules}
+                            editable={editable}
+                            error={
+                                errors['recording.mode'] ??
+                                errors['recording.shifts']
+                            }
+                            onChange={(next) => {
+                                setRecording(next);
+                                setDirty(true);
+                            }}
+                            onShifts={(next) => {
+                                setShifts(next);
+                                setDirty(true);
+                            }}
+                        />
                         <LocationPanel
                             value={location}
                             editable={editable}
@@ -1112,6 +1153,100 @@ function SheetSettings({ sheet }: { sheet: Props['sheet'] }) {
                         </Button>
                     </div>
                 </form>
+            </PanelBody>
+        </Panel>
+    );
+}
+
+type RecordingMode = 'on_demand' | 'scheduled' | 'event';
+
+type ShiftSetting = 'off' | 'optional' | 'required';
+
+const RECORDING_HELP: Record<RecordingMode, string> = {
+    on_demand:
+        'People write an entry whenever they need to. No schedule, shift, trip or GPS is needed.',
+    scheduled:
+        'Entries are expected at set times. The times, who is responsible and the late window are set in Schedules; Logbook only lists what is due, never writes an entry itself.',
+    event: 'Each entry records one activity, such as a trip, a breakdown or a maintenance job. It is never scheduled.',
+};
+
+/**
+ * How entries on this sheet are recorded (ADR-0030). Part of the
+ * version: earlier entries keep the mode they were written under.
+ */
+function RecordingPanel({
+    value,
+    shifts,
+    liveSchedules,
+    editable,
+    error,
+    onChange,
+    onShifts,
+}: {
+    value: RecordingMode;
+    shifts: ShiftSetting;
+    liveSchedules: boolean;
+    editable: boolean;
+    error?: string;
+    onChange: (value: RecordingMode) => void;
+    onShifts: (value: ShiftSetting) => void;
+}) {
+    return (
+        <Panel>
+            <PanelHeader
+                title={
+                    <span className="flex items-center gap-2">
+                        <CalendarClock className="size-4" /> Recording
+                    </span>
+                }
+                description="Saved with the draft and published with it."
+            />
+            <PanelBody className="grid gap-3">
+                <SelectField
+                    label="Entries are recorded"
+                    value={value}
+                    onChange={(mode) => onChange(mode as RecordingMode)}
+                    options={[
+                        { value: 'on_demand', label: 'On demand (default)' },
+                        { value: 'scheduled', label: 'On a schedule' },
+                        { value: 'event', label: 'Per activity (event-based)' },
+                    ]}
+                    error={error}
+                />
+                <p className="text-xs text-muted-foreground">
+                    {RECORDING_HELP[value]}
+                </p>
+                {value !== 'scheduled' && liveSchedules && (
+                    <p className="rounded-md bg-[#fcefdc] px-3 py-2 text-xs text-[#8a4b00]">
+                        This sheet still has schedules. End them in Schedules
+                        before publishing it as{' '}
+                        {value === 'event' ? 'event-based' : 'on demand'}.
+                    </p>
+                )}
+                <SelectField
+                    label="Entries name the shift"
+                    value={shifts}
+                    onChange={(next) => onShifts(next as ShiftSetting)}
+                    options={[
+                        { value: 'off', label: 'No (default)' },
+                        { value: 'optional', label: 'When known' },
+                        { value: 'required', label: 'Always' },
+                    ]}
+                    hint="Shifts are kept in Shifts. The one the entry falls in is suggested."
+                />
+                {value === 'scheduled' && (
+                    <Link
+                        href={schedulesIndex()}
+                        className="text-xs font-medium text-primary hover:underline"
+                    >
+                        Set the times in Schedules
+                    </Link>
+                )}
+                {!editable && (
+                    <p className="text-xs text-muted-foreground">
+                        This sheet cannot be changed now.
+                    </p>
+                )}
             </PanelBody>
         </Panel>
     );

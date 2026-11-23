@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\PresentsWork;
 use App\Logbook\Access;
+use App\Logbook\Models\LogSheet;
 use App\Logbook\Models\Schedule;
 use App\Logbook\Models\ScheduleOccurrence;
+use App\Logbook\Recording;
 use App\Logbook\Reminders;
 use App\Logbook\Schedules;
 use App\Models\Workspace;
@@ -66,7 +68,13 @@ class ScheduleController extends Controller
             'occurrences' => $rows,
             'schedules' => Access::limit(Schedule::query(), array_keys(Access::CAPABILITIES))->with(['sheet:id,name,code', 'responsible:id,name'])
                 ->orderByDesc('active')->get()->map(fn (Schedule $s) => self::scheduleRow($s))->values(),
-            'options' => [...self::filterOptions(), 'members' => WorkspaceMember::options()],
+            'options' => [
+                ...self::filterOptions(),
+                'members' => WorkspaceMember::options(),
+                // ADR-0030: only scheduled sheets (or sheets from before recording modes) take a new schedule.
+                'schedulable' => Access::sheets()->whereNotNull('published_version_id')->with(['publishedVersion', 'draftVersion'])->get()
+                    ->filter(fn (LogSheet $s) => Recording::allowsSchedules($s))->pluck('id')->values(),
+            ],
             'canManage' => Access::manages(),
         ]);
     }
@@ -137,6 +145,7 @@ class ScheduleController extends Controller
             'dayOfMonth' => $schedule->day_of_month,
             'opensTime' => $schedule->opens_time,
             'dueTime' => $schedule->due_time,
+            'times' => Schedules::times($schedule),
             'lateMinutes' => $schedule->late_minutes,
             'timezone' => $schedule->timezone,
             'startsOn' => $schedule->starts_on->toDateString(),
@@ -172,8 +181,12 @@ class ScheduleController extends Controller
             'weekdays' => ['nullable', 'array'],
             'weekdays.*' => ['integer', 'between:1,7'],
             'day_of_month' => ['nullable', 'integer', 'between:1,31'],
-            'opens_time' => ['required', 'string'],
-            'due_time' => ['required', 'string'],
+            'opens_time' => ['required_without:times', 'nullable', 'string'],
+            'due_time' => ['required_without:times', 'nullable', 'string'],
+            // ADR-0030: several readings a day.
+            'times' => ['nullable', 'array', 'max:24'],
+            'times.*.opens' => ['required', 'string'],
+            'times.*.due' => ['required', 'string'],
             'late_minutes' => ['required', 'integer', 'between:0,10080'],
             'timezone' => ['required', 'string'],
             'starts_on' => ['required', 'date'],

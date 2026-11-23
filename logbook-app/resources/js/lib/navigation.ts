@@ -2,7 +2,9 @@ import {
     BarChart3,
     BookOpen,
     Boxes,
+    Building2,
     CalendarClock,
+    Clock3,
     ClipboardCheck,
     History,
     LayoutDashboard,
@@ -10,6 +12,7 @@ import {
     ListTodo,
     NotebookPen,
     Radio,
+    SearchCheck,
     Truck,
     TriangleAlert,
     UserCog,
@@ -17,21 +20,24 @@ import {
 import type { ShellNavItem } from '@miles/ui/shell/navigation';
 import { home } from '@/routes';
 import { index as audit } from '@/routes/audit';
+import { index as departments } from '@/routes/departments';
 import { index as entries } from '@/routes/entries';
 import { index as exceptions } from '@/routes/exceptions';
+import { index as investigations } from '@/routes/investigations';
 import { index as logbooks } from '@/routes/logbooks';
 import { index as people } from '@/routes/people';
 import { index as reports } from '@/routes/reports';
 import { index as resources } from '@/routes/resources';
 import { index as reviews } from '@/routes/reviews';
 import { index as schedules } from '@/routes/schedules';
+import { index as shifts } from '@/routes/shifts';
 import { comingSoon } from '@/routes';
 import { index as tasks } from '@/routes/tasks';
 import { index as tracks } from '@/routes/tracks';
 
 export type NavItem = ShellNavItem & {
-    /** Shown to members holding this catalog permission (or owners); null for everyone. */
-    permission: string | null;
+    /** Shown to members holding this catalog permission, or any one of a list (or owners); null for everyone. */
+    permission: string | string[] | null;
 };
 
 export type NavGroup = { title: string; items: NavItem[] };
@@ -83,6 +89,12 @@ export const navigation: NavGroup[] = [
                 permission: null,
             },
             {
+                title: 'Shifts',
+                href: shifts(),
+                icon: Clock3,
+                permission: 'logbook.manage',
+            },
+            {
                 title: 'Exceptions',
                 href: exceptions(),
                 icon: TriangleAlert,
@@ -107,9 +119,25 @@ export const navigation: NavGroup[] = [
                 permission: 'logbook.reports.view',
             },
             {
+                title: 'Investigations',
+                href: investigations(),
+                icon: SearchCheck,
+                // Investigators run them; auditors read them.
+                permission: [
+                    'logbook.investigations.manage',
+                    'logbook.audit.view',
+                ],
+            },
+            {
                 title: 'People',
                 href: people(),
                 icon: UserCog,
+                permission: 'logbook.people.manage',
+            },
+            {
+                title: 'Departments',
+                href: departments(),
+                icon: Building2,
                 permission: 'logbook.people.manage',
             },
             {
@@ -150,7 +178,11 @@ export function visibleNavigation(
         .map((group) => ({
             ...group,
             items: group.items.filter(
-                (item) => item.permission === null || can(item.permission),
+                (item) =>
+                    item.permission === null ||
+                    (Array.isArray(item.permission)
+                        ? item.permission.some(can)
+                        : can(item.permission)),
             ),
         }))
         .filter((group) => group.items.length > 0);

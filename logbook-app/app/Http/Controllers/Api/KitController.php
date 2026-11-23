@@ -9,6 +9,8 @@ use App\Logbook\Fields;
 use App\Logbook\Models\LogResource;
 use App\Logbook\Models\LogSheet;
 use App\Logbook\Models\LogSheetVersion;
+use App\Logbook\Models\Shift;
+use App\Logbook\Recording;
 use App\Logbook\Tracks;
 use App\Models\User;
 use App\Models\WorkspaceMember;
@@ -47,7 +49,7 @@ class KitController extends Controller
     public function kit(): JsonResponse
     {
         $sheets = Gate::allows('logbook.entries.create')
-            ? Access::writableSheets()->with(['logbook:id,name,icon', 'publishedVersion:id,log_sheet_id,version,published_at,location'])->orderBy('name')->get()
+            ? Access::writableSheets()->with(['logbook:id,name,icon', 'publishedVersion:id,log_sheet_id,version,published_at,location,recording'])->orderBy('name')->get()
             : collect();
 
         return response()->json([
@@ -76,6 +78,8 @@ class KitController extends Controller
                 ],
                 // GPS (ADR-0028): null when the sheet takes no location.
                 'location' => Tracks::settings($sheet->publishedVersion),
+                // ADR-0030: scheduled, event or on_demand.
+                'recording' => ['mode' => Recording::mode($sheet), 'shifts' => Recording::settings($sheet->publishedVersion)['shifts'] ?? 'off'],
             ])->values()->all(),
             // For person fields: id and name only.
             'members' => User::query()->whereIn('id', WorkspaceMember::query()->select('user_id'))->orderBy('name')->get(['id', 'name'])
@@ -83,6 +87,9 @@ class KitController extends Controller
             // For resource fields (ADR-0026 §2.10): active resources only.
             'resources' => LogResource::query()->where('active', true)->with('location.parent')->orderBy('code')->get()
                 ->map(fn (LogResource $r) => ['id' => $r->id, 'code' => $r->code, 'name' => $r->name, 'type' => $r->type, 'location' => $r->location?->path()])->values()->all(),
+            // ADR-0030: active shifts; logbook null means every logbook. Members only suggest.
+            'shifts' => Shift::query()->where('active', true)->with('members:id')->orderBy('starts_time')->get()
+                ->map(fn (Shift $s) => ['id' => $s->id, 'name' => $s->name, 'starts' => $s->starts_time, 'ends' => $s->ends_time, 'logbookId' => $s->logbook_id, 'members' => $s->members->pluck('id')->values()->all()])->values()->all(),
         ]);
     }
 

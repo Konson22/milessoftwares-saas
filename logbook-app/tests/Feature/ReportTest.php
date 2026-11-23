@@ -25,6 +25,7 @@ it('counts by status, day and contributor, without drafts', function () {
         ->where('counts.byStatus.submitted', 3)
         ->where('counts.byDay.0', ['day' => '2026-11-19', 'count' => 3])
         ->where('counts.byContributor.0', ['name' => 'Writer', 'count' => 2])
+        ->has('counts.byLogbook', 1)
         ->where('numbers', null));
 });
 

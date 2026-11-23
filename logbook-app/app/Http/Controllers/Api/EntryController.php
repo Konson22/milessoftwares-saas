@@ -15,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -88,6 +89,9 @@ class EntryController extends Controller
             'values' => ['nullable', 'array'],
             'submit' => ['boolean'],
             'occurrence_id' => ['nullable', 'uuid'],
+            // ADR-0030: newer phone builds say named or extra; older ones say nothing (matched by time).
+            'schedule_link' => ['nullable', Rule::in(['named', 'extra'])],
+            'shift_id' => ['nullable', 'uuid'],
             'location' => ['nullable', 'array'],
             'location.lat' => ['required_with:location', 'numeric', 'between:-90,90'],
             'location.lng' => ['required_with:location', 'numeric', 'between:-180,180'],
@@ -111,7 +115,7 @@ class EntryController extends Controller
             return self::refused('version_unknown', 'The template version this entry was written on is unknown.', 409);
         }
 
-        $entry = Entries::create($sheet, $user, $data['values'] ?? [], $data['occurred_at'], $data['id'], (bool) ($data['submit'] ?? false), $version, $data['occurrence_id'] ?? null, ['location' => $data['location'] ?? null, 'track_id' => $data['track_id'] ?? null, 'source' => 'phone']);
+        $entry = Entries::create($sheet, $user, $data['values'] ?? [], $data['occurred_at'], $data['id'], (bool) ($data['submit'] ?? false), $version, $data['occurrence_id'] ?? null, ['location' => $data['location'] ?? null, 'track_id' => $data['track_id'] ?? null, 'source' => 'phone'], $data['schedule_link'] ?? null, ['shift_id' => $data['shift_id'] ?? null]);
 
         return response()->json($this->entry($entry->load(['sheet', 'logbook', 'version'])), 201);
     }
@@ -131,6 +135,7 @@ class EntryController extends Controller
             'location.accuracy_m' => ['nullable', 'numeric', 'min:0'],
             'location.captured_at' => ['required_with:location', 'date'],
             'track_id' => ['nullable', 'uuid'],
+            'shift_id' => ['nullable', 'uuid'],
         ]);
         $entry = $this->own($entry);
 
@@ -146,7 +151,7 @@ class EntryController extends Controller
         }
 
         $place = $request->has('location') || $request->has('track_id') ? ['location' => $data['location'] ?? null, 'track_id' => $data['track_id'] ?? null, 'source' => 'phone'] : null;
-        $entry = Entries::update($entry, $this->user(), $data['values'] ?? [], $data['occurred_at'], $place);
+        $entry = Entries::update($entry, $this->user(), $data['values'] ?? [], $data['occurred_at'], $place, $request->has('shift_id') ? ['shift_id' => $data['shift_id'] ?? null] : []);
 
         return response()->json($this->entry($entry->load(['sheet', 'logbook', 'version'])));
     }

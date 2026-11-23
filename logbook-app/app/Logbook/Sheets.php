@@ -65,19 +65,24 @@ final class Sheets
      */
     /**
      * @param  bool  $withLocation  false: the draft keeps its location settings (ADR-0028)
+     * @param  bool  $withRecording  false: the draft keeps its recording mode (ADR-0030)
      */
-    public static function saveDraft(LogSheet $sheet, mixed $fields, User $by, mixed $location = null, bool $withLocation = false): LogSheetVersion
+    public static function saveDraft(LogSheet $sheet, mixed $fields, User $by, mixed $location = null, bool $withLocation = false, mixed $recording = null, bool $withRecording = false): LogSheetVersion
     {
         self::editable($sheet);
         $checked = Fields::check($fields);
         self::fail($checked['errors']);
         $settings = $withLocation ? Tracks::settingsInput($location) : null;
+        $mode = $withRecording ? Recording::settingsInput($recording) : null;
 
-        return DB::transaction(function () use ($sheet, $checked, $by, $settings, $withLocation) {
+        return DB::transaction(function () use ($sheet, $checked, $by, $settings, $withLocation, $mode, $withRecording) {
             $draft = self::draft($sheet, $by);
             $draft->forceFill(['fields' => $checked['fields']]);
             if ($withLocation) {
                 $draft->forceFill(['location' => $settings]);
+            }
+            if ($withRecording) {
+                $draft->forceFill(['recording' => $mode]);
             }
             $draft->save();
 
@@ -102,6 +107,7 @@ final class Sheets
             'status' => 'draft',
             'fields' => $sheet->publishedVersion->fields ?? [],
             'location' => $sheet->publishedVersion?->location,
+            'recording' => $sheet->publishedVersion?->recording,
             'created_by' => $by->id,
         ]);
         AuditTrail::record('template.draft_opened', $sheet, $by, ['version' => $draft->version]);
@@ -121,6 +127,7 @@ final class Sheets
             $checked = Fields::check($draft->fields, forPublishing: true);
             self::fail($checked['errors']);
             self::keepsNamesTyped($sheet, $checked['fields']);
+            Recording::checkPublish($sheet, $draft);
 
             $draft->forceFill([
                 'fields' => $checked['fields'],
@@ -129,7 +136,7 @@ final class Sheets
                 'published_by' => $by->id,
             ])->save();
             $sheet->forceFill(['published_version_id' => $draft->id, 'status' => 'active'])->save();
-            AuditTrail::record('template.published', $sheet, $by, ['version' => $draft->version, 'fields' => count($checked['fields']), 'location' => Tracks::settings($draft)['mode'] ?? null]);
+            AuditTrail::record('template.published', $sheet, $by, ['version' => $draft->version, 'fields' => count($checked['fields']), 'location' => Tracks::settings($draft)['mode'] ?? null, 'recording' => Recording::settings($draft)['mode'] ?? null]);
 
             return $draft;
         });
@@ -157,14 +164,21 @@ final class Sheets
     public static function duplicate(LogSheet $sheet, Logbook $into, string $name, string $code, User $by): LogSheet
     {
         $fields = $sheet->draftVersion->fields ?? $sheet->publishedVersion->fields ?? [];
+        $recording = ($sheet->draftVersion ?? $sheet->publishedVersion)?->recording;
 
-        return self::create($into, [
+        $copy = self::create($into, [
             'name' => $name,
             'code' => $code,
             'description' => $sheet->description,
             'instructions' => $sheet->instructions,
             'review_required' => $sheet->review_required,
         ], $fields, $by, 'copy of '.$sheet->code);
+        // How it is recorded comes along; its schedules do not.
+        if ($recording !== null) {
+            $copy->draftVersion()->update(['recording' => json_encode($recording)]);
+        }
+
+        return $copy;
     }
 
     public static function archive(LogSheet $sheet, User $by): void
