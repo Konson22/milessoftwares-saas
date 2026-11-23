@@ -78,9 +78,19 @@ required or optional, whether it needs review). Pick one, give it a name and cod
 the copy.
 
 - Daily Activity Log (`ACT`)
-- Generator Operation Log (`GEN`)
-- Vehicle Movement Log (`VEH`)
+- Generator Operation Log (`GEN`): recorded per activity, hour meter and fuel
+- Vehicle Movement Log (`VEH`): recorded per trip, odometer and fuel, route GPS
+- Temperature Monitoring Log (`TMP`): scheduled; set the normal range before publishing
+- Equipment Inspection Log (`INS`)
+- Equipment Maintenance Log (`MNT`)
+- Water Pump Operation Log (`PMP`): recorded per activity, hour meter
+- General Incident Report (`INC`)
 - IT Maintenance Log (`ITM`)
+
+Each names its asset in one resource field (the *main asset*, ADR-0031). The builder's **Main
+asset** panel chooses it when a sheet has several resource fields. A number field can say
+whether its readings **add up** (litres, hours) or are **never totalled** (temperatures,
+levels, pressures); by default the unit decides (°C, %, bar, psi, V… are never totalled).
 
 ## Entries
 
@@ -133,9 +143,19 @@ The **Reports** page works within the logbooks you reach.
 - **Filters:** logbook, log sheet, date range, person, status, review state and a search on
   reference or text.
 - **Counts** by status, by day and by person.
-- **Number fields:** total, average, lowest and highest of each (for example fuel used or
-  kilometres driven).
-- **Export** the filtered entries to **CSV** or **PDF**.
+- **Number fields:** average, lowest and highest of each, and a total only for readings that
+  add up (fuel used, kilometres driven; never a total of temperatures).
+- **Asset filters** (ADR-0031): asset, asset category, asset kind and location. An entry is
+  about an asset when it is its main asset or when any of its resource fields names it.
+- **By asset:** one row per asset: records, last record, readings out of range, open
+  exceptions, expected checks on time, missed, fuel estimated. A count opens those records.
+  With a log sheet chosen, its readings per asset: count, lowest, highest, average, total
+  (only where readings add up) and out of range.
+- **Scheduled compliance:** expected readings by log sheet and asset: on time, late, missed,
+  excused, awaiting review, open, completion rate. Submission timeliness is kept apart from
+  review: an entry submitted on time is on time however long its review takes.
+- **Export** the filtered entries to **CSV** or **PDF**, and the asset and compliance reports
+  to CSV or PDF. Every export says, at its head, the period and the filters it was made with.
 
 ## The web app's pages
 

@@ -14,6 +14,7 @@ use App\Logbook\Models\LogSheet;
 use App\Logbook\Models\LogSheetVersion;
 use App\Logbook\Models\Shift;
 use App\Logbook\Recording;
+use App\Logbook\SheetAssets;
 use App\Logbook\Tracks;
 use App\Models\User;
 use App\Models\WorkspaceMember;
@@ -52,8 +53,9 @@ class KitController extends Controller
     public function kit(): JsonResponse
     {
         $sheets = Gate::allows('logbook.entries.create')
-            ? Access::writableSheets()->with(['logbook:id,name,icon', 'publishedVersion:id,log_sheet_id,version,published_at,location,recording'])->orderBy('name')->get()
+            ? Access::writableSheets()->with(['logbook:id,name,icon', 'publishedVersion:id,log_sheet_id,version,published_at,location,recording,fields'])->orderBy('name')->get()
             : collect();
+        $linked = SheetAssets::linkedBySheet($sheets->pluck('id')->map(fn ($id) => (string) $id)->all());
 
         // ADR-0030: rates for the offline estimate (the server recalculates) and each meter's last end reading.
         $rates = FuelRate::query()->orderBy('effective_from')->orderBy('created_at')->get()
@@ -98,6 +100,9 @@ class KitController extends Controller
                 'location' => Tracks::settings($sheet->publishedVersion),
                 // ADR-0030: scheduled, event or on_demand.
                 'recording' => ['mode' => Recording::mode($sheet), 'shifts' => Recording::settings($sheet->publishedVersion)['shifts'] ?? 'off', 'activity' => Recording::activity($sheet->publishedVersion)],
+                // ADR-0031: the field naming the asset, and the assets the sheet records ([] = any of its type).
+                'subject' => Recording::subjectField($sheet->publishedVersion),
+                'assets' => $linked[$sheet->id] ?? [],
             ])->values()->all(),
             // For person fields: id and name only.
             'members' => User::query()->whereIn('id', WorkspaceMember::query()->select('user_id'))->orderBy('name')->get(['id', 'name'])
@@ -108,6 +113,7 @@ class KitController extends Controller
                     'fuel' => $rates->get($r->id, collect())->values()->all(),
                     'meters' => (object) ($meters[$r->id] ?? []),
                     'id' => $r->id, 'code' => $r->code, 'name' => $r->name, 'type' => $r->type, 'location' => $r->location?->path(),
+                    'kind' => $r->kind,
                 ])->values()->all(),
             // ADR-0030: active shifts; logbook null means every logbook. Members only suggest.
             'shifts' => Shift::query()->where('active', true)->with('members:id')->orderBy('starts_time')->get()
@@ -130,6 +136,7 @@ class KitController extends Controller
             'publishedAt' => self::time($version->published_at),
             'fields' => $version->fields,
             'location' => Tracks::settings($version),
+            'subject' => Recording::subjectField($version),
         ])->header('Cache-Control', 'no-store, private');
     }
 }

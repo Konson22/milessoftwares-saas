@@ -32,7 +32,7 @@ final class Recording
     /**
      * The settings sent by the template builder, checked.
      *
-     * @return array{mode: string, shifts: string, activity?: array<string, string|null>}|null null: nothing chosen (on demand, or as the sheet's schedules say)
+     * @return array{mode: string, shifts: string, subject?: string, activity?: array<string, string|null>}|null null: nothing chosen (on demand, or as the sheet's schedules say)
      */
     public static function settingsInput(mixed $input): ?array
     {
@@ -48,6 +48,10 @@ final class Recording
         }
 
         $settings = ['mode' => (string) $input['mode'], 'shifts' => (string) $shifts];
+        // ADR-0031: the resource field naming the asset an entry is about.
+        if (is_string($input['subject'] ?? null) && $input['subject'] !== '') {
+            $settings['subject'] = $input['subject'];
+        }
         $activity = self::activityInput($input['activity'] ?? null);
         if ($activity !== null) {
             $settings['activity'] = $activity;
@@ -96,6 +100,10 @@ final class Recording
      */
     public static function checkActivity(?array $settings, array $fields, string $key = 'recording.activity'): void
     {
+        $subject = $settings['subject'] ?? null;
+        if (is_string($subject) && ! collect($fields)->contains(fn (array $f) => $f['name'] === $subject && $f['type'] === 'resource')) {
+            throw ValidationException::withMessages(['recording.subject' => 'Choose a Resource field of this template as the main asset.']);
+        }
         $activity = $settings['activity'] ?? null;
         if (! is_array($activity)) {
             return;
@@ -133,6 +141,27 @@ final class Recording
             'start_field' => $name('start_field'), 'end_field' => $name('end_field'),
             'actual_field' => $name('actual_field'), 'refill_field' => $name('refill_field'),
         ];
+    }
+
+    /**
+     * The resource field naming the asset an entry is about (ADR-0031):
+     * the one the builder chose, else the fuel estimate's, else the only
+     * resource field. Null when the sheet names no asset, or several
+     * without saying which.
+     */
+    public static function subjectField(?LogSheetVersion $version): ?string
+    {
+        if ($version === null) {
+            return null;
+        }
+        $resourceFields = array_values(array_map(fn (array $f) => (string) $f['name'], array_filter($version->fields ?? [], fn (array $f) => $f['type'] === 'resource')));
+        foreach ([$version->recording['subject'] ?? null, self::activity($version)['resource_field'] ?? null] as $named) {
+            if (is_string($named) && in_array($named, $resourceFields, true)) {
+                return $named;
+            }
+        }
+
+        return count($resourceFields) === 1 ? $resourceFields[0] : null;
     }
 
     /** @return array{mode: string, shifts: string}|null */

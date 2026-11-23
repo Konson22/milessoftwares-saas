@@ -19,10 +19,7 @@
     <div class="muted">{{ $organization }} · Miles Logbook</div>
     <h1>{{ $sheet ? $sheet->code.' · '.$sheet->name : 'Log entries' }}</h1>
     <div class="muted">
-        {{ count($rows) }} {{ count($rows) === 1 ? 'entry' : 'entries' }}
-        @if (! empty($filters['from']) || ! empty($filters['to'])) · {{ $filters['from'] ?? '…' }} to {{ $filters['to'] ?? '…' }} @endif
-        @if (! empty($filters['status'])) · status {{ $filters['status'] }} @endif
-        @if (! empty($filters['q'])) · matching “{{ $filters['q'] }}” @endif
+        {{ count($rows) }} {{ count($rows) === 1 ? 'entry' : 'entries' }} · {{ implode(' · ', $applied ?? []) }}
     </div>
 
     <table>

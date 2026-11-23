@@ -119,6 +119,9 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::get('reports/entries.csv', [ReportController::class, 'csv'])->middleware('throttle:10,1')->name('reports.csv');
             Route::get('reports/entries.pdf', [ReportController::class, 'pdf'])->middleware('throttle:10,1')->name('reports.pdf');
             Route::get('reports/activities.csv', [ReportController::class, 'activitiesCsv'])->middleware('throttle:10,1')->name('reports.activities-csv');
+            // ADR-0031: the asset and compliance reports.
+            Route::get('reports/{report}.{format}', [ReportController::class, 'summaryExport'])->where(['report' => 'assets|compliance', 'format' => 'csv|pdf'])
+                ->middleware('throttle:10,1')->name('reports.summary-export');
             // ADR-0029: one entry opened over the report.
             Route::get('reports/records/{entry}', [ReportController::class, 'record'])->whereUuid('entry')->name('reports.record');
         });
@@ -203,10 +206,21 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::put('shifts/{shift}', [ShiftController::class, 'update'])->whereUuid('shift')->name('shifts.update');
         });
 
-        // Resources and locations: read by everyone, kept by managers.
+        // Resources and locations: read by everyone, kept by managers. ADR-0031: registered
+        // from asset templates, linked to the log sheets that record them.
         Route::get('resources', [ResourceController::class, 'index'])->name('resources.index');
+        Route::get('resources/templates', [ResourceController::class, 'templates'])->name('resources.templates');
         Route::get('resources/{resource}', [ResourceController::class, 'show'])->whereUuid('resource')->name('resources.show');
         Route::middleware('can:logbook.manage')->group(function () {
+            Route::get('resources/create', [ResourceController::class, 'create'])->name('resources.create');
+            Route::get('resources/{resource}/edit', [ResourceController::class, 'edit'])->whereUuid('resource')->name('resources.edit');
+            Route::post('resources/{resource}/sheets', [ResourceController::class, 'link'])->whereUuid('resource')->name('resources.sheets.store');
+            Route::delete('resources/{resource}/sheets/{sheet}', [ResourceController::class, 'unlink'])->whereUuid(['resource', 'sheet'])->name('resources.sheets.destroy');
+            Route::post('resources/{resource}/starter', [ResourceController::class, 'fromStarter'])->whereUuid('resource')->name('resources.starter');
+            Route::post('sheets/{sheet}/resources', [ResourceController::class, 'linkFromSheet'])->whereUuid('sheet')->name('sheets.resources.store');
+            Route::delete('sheets/{sheet}/resources/{resource}', [ResourceController::class, 'unlinkFromSheet'])->whereUuid(['sheet', 'resource'])->name('sheets.resources.destroy');
+            Route::post('resources/templates', [ResourceController::class, 'storeTemplate'])->name('resources.templates.store');
+            Route::put('resources/templates/{template}', [ResourceController::class, 'updateTemplate'])->whereUuid('template')->name('resources.templates.update');
             Route::post('resources', [ResourceController::class, 'store'])->name('resources.store');
             Route::put('resources/{resource}', [ResourceController::class, 'update'])->name('resources.update');
             Route::post('resources/{resource}/fuel-rates', [ResourceController::class, 'storeRate'])->whereUuid('resource')->name('resources.fuel-rates.store');

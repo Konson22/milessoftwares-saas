@@ -113,6 +113,11 @@ export function OccurrenceTable({
                             </td>
                             <td className="px-3 py-3">
                                 <Clip text={o.sheet.name} max="max-w-[13rem]" />
+                                {o.resource && (
+                                    <span className="block text-xs text-muted-foreground">
+                                        {o.resource}
+                                    </span>
+                                )}
                             </td>
                             <td className="px-3 py-3">
                                 <span className="inline-flex items-center gap-1.5">

@@ -273,14 +273,31 @@ function Control({
                     {resources
                         .filter(
                             (r) =>
-                                !field.resource_type ||
-                                r.type === field.resource_type,
+                                (!field.resource_type ||
+                                    r.type === field.resource_type) &&
+                                // ADR-0031: a sheet with linked assets offers only those.
+                                (!field.resource_ids ||
+                                    field.resource_ids.length === 0 ||
+                                    field.resource_ids.includes(r.value)),
                         )
                         .map((r) => (
                             <option key={r.value} value={r.value}>
                                 {r.label}
                             </option>
                         ))}
+                    {/* A saved choice no longer offered stays visible, never swapped for another. */}
+                    {text !== '' &&
+                        !resources.some(
+                            (r) =>
+                                r.value === text &&
+                                (!field.resource_ids ||
+                                    field.resource_ids.length === 0 ||
+                                    field.resource_ids.includes(r.value)),
+                        ) && (
+                            <option value={text} disabled>
+                                No longer offered: choose another
+                            </option>
+                        )}
                 </select>
             );
         case 'file':

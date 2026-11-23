@@ -62,8 +62,33 @@ export type ReviewRow = {
   summary: string;
 };
 
+/** ADR-0030 §4.7: the fuel calculation the server kept at submission. */
+export type ServerCalculation = {
+  method: 'distance' | 'hours';
+  measure: 'odometer' | 'hour_meter' | 'duration';
+  resource: string | null;
+  inputs: { start: number | null; end: number | null };
+  quantity: number;
+  unit: 'km' | 'h';
+  rate: { value: number; unit: string; fuel_type: string; effective_from: string } | null;
+  estimated_l: number | null;
+  actual_l: number | null;
+  refill_l: number | null;
+  variance_l: number | null;
+  variance_pct: number | null;
+  gps_km: number | null;
+  overlaps: { id: string; reference: string | null }[];
+  flags: string[];
+  phone: { estimated_l: number | null } | null;
+  calculated_at: string;
+};
+
 export type EntryDetail = ServerEntry & {
   creator: string;
+  /** ADR-0030, absent from older servers. */
+  shift?: string | null;
+  activityEntry?: { id: string; label: string } | null;
+  calculation?: ServerCalculation | null;
   canReview: boolean;
   answers: { name: string; label: string; type: string; text: string | null; unit?: string | null; outOfRange?: { direction: 'low' | 'high'; range: string } | null; files: { id: string; name: string; size: number; mime: string | null; removed: boolean }[] }[];
   reviews: { revision: number; decision: 'reviewed' | 'returned'; comment: string | null; reviewer: string; decidedAt: string | null }[];

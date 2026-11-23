@@ -171,6 +171,9 @@ trait PresentsWork
             'closesAt' => self::moment($occurrence->closes_at),
             'sheet' => ['id' => $occurrence->sheet->id, 'name' => $occurrence->sheet->name, 'code' => $occurrence->sheet->code],
             'logbook' => $occurrence->logbook->name,
+            // ADR-0031: the asset this reading is expected for.
+            'resourceId' => $occurrence->resource_id,
+            'resource' => $occurrence->resource_id !== null ? $occurrence->resource?->label() : null,
             'responsible' => $occurrence->responsible?->name,
             'entry' => $occurrence->entry !== null ? ['id' => $occurrence->entry->id, 'reference' => $occurrence->entry->reference] : null,
             'submittedAt' => self::moment($occurrence->submitted_at),

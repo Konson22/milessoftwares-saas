@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { when } from '@/components/entries';
 import { Input } from '@/components/entry-form';
+import { CalculationCard } from '@/components/recording-controls';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { Banner, Card, SectionTitle } from '@/components/ui/misc';
@@ -76,7 +77,12 @@ export default function ReviewScreen() {
               <Text className="text-sm text-slate-500">
                 Happened {when(entry.occurredAt)} · submitted {when(entry.submittedAt)} · revision {entry.revision}
               </Text>
+              {entry.activityEndedAt && <Text className="text-sm text-slate-500">Activity ended {when(entry.activityEndedAt)}</Text>}
+              {entry.shift && <Text className="text-sm text-slate-500">Shift: {entry.shift}</Text>}
+              {entry.activityEntry && <Text className="text-sm text-slate-500">Recorded during {entry.activityEntry.label}</Text>}
             </Card>
+
+            {entry.calculation && <CalculationCard calculation={entry.calculation} />}
 
             {entry.reviews.length > 0 && (
               <View className="gap-2">

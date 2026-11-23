@@ -71,6 +71,8 @@ type Props = {
         mode: RecordingMode;
         shifts: ShiftSetting;
         activity: ActivitySettings | null;
+        /** ADR-0031: the resource field naming the entry's asset. */
+        subject: string | null;
         liveSchedules: boolean;
     };
     history: {
@@ -132,6 +134,7 @@ export default function Template({
     const [shifts, setShifts] = useState<ShiftSetting>(
         initialRecording.shifts ?? 'off',
     );
+    const [subject, setSubject] = useState(initialRecording.subject ?? '');
     const [preview, setPreview] = useState<Values>({});
     const publishedNames = useMemo(
         () => new Set(publishedVersion ? initial.map((f) => f.name) : []),
@@ -220,6 +223,7 @@ export default function Template({
                         mode: recording,
                         shifts,
                         activity: activityData,
+                        subject: subject || null,
                     },
                 } as RequestPayload,
                 options,
@@ -234,6 +238,7 @@ export default function Template({
                         mode: recording,
                         shifts,
                         activity: activityData,
+                        subject: subject || null,
                     },
                 } as RequestPayload,
                 options,
@@ -521,6 +526,16 @@ export default function Template({
                                 setDirty(true);
                             }}
                         />
+                        <SubjectPanel
+                            value={subject}
+                            fields={rows}
+                            editable={editable}
+                            error={errors['recording.subject']}
+                            onChange={(next) => {
+                                setSubject(next);
+                                setDirty(true);
+                            }}
+                        />
                         <ActivityPanel
                             value={activity}
                             mode={recording}
@@ -730,7 +745,33 @@ function FieldEditor({
                         onChange={(unit) => onChange({ unit })}
                         error={e('unit')}
                     />
-                    <span className="hidden sm:block" />
+                    <SelectField
+                        label="In reports"
+                        value={
+                            row.summable === undefined
+                                ? ''
+                                : row.summable
+                                  ? 'yes'
+                                  : 'no'
+                        }
+                        onChange={(v) =>
+                            onChange({
+                                summable: v === '' ? undefined : v === 'yes',
+                            })
+                        }
+                        options={[
+                            {
+                                value: 'yes',
+                                label: 'Readings add up (litres, hours)',
+                            },
+                            {
+                                value: 'no',
+                                label: 'Never totalled (temperature, level)',
+                            },
+                        ]}
+                        empty="Decide by the unit"
+                        hint="Reports always show the average, lowest and highest; a total only for readings that add up."
+                    />
                     <TextField
                         label="Normal range: from"
                         value={row.expected_min?.toString() ?? ''}
@@ -1340,6 +1381,57 @@ const RECORDING_HELP: Record<RecordingMode, string> = {
  * How entries on this sheet are recorded (ADR-0030). Part of the
  * version: earlier entries keep the mode they were written under.
  */
+/**
+ * ADR-0031: the resource field that names the entry's asset. Entries,
+ * schedules and asset reports follow it. Empty: the fuel activity's
+ * resource field, else the only resource field.
+ */
+function SubjectPanel({
+    value,
+    fields,
+    editable,
+    error,
+    onChange,
+}: {
+    value: string;
+    fields: Row[];
+    editable: boolean;
+    error?: string;
+    onChange: (value: string) => void;
+}) {
+    const resourceFields = fields.filter((f) => f.type === 'resource');
+    if (resourceFields.length === 0) {
+        return null;
+    }
+
+    return (
+        <Panel>
+            <PanelHeader
+                title="Main asset"
+                description="The resource field each entry is about. Linked assets, per-asset schedules and asset reports use it."
+            />
+            <PanelBody>
+                <SelectField
+                    label="Entries are about"
+                    value={value}
+                    onChange={onChange}
+                    options={resourceFields.map((f) => ({
+                        value: f.name || nameFor(f.label),
+                        label: f.label || '(no label yet)',
+                    }))}
+                    empty={
+                        resourceFields.length === 1
+                            ? `Automatic (${resourceFields[0].label})`
+                            : 'Automatic'
+                    }
+                    error={error}
+                    disabled={!editable}
+                />
+            </PanelBody>
+        </Panel>
+    );
+}
+
 function RecordingPanel({
     value,
     shifts,

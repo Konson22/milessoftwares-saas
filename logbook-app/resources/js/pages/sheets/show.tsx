@@ -3,6 +3,7 @@ import {
     Archive,
     ArrowRight,
     BookOpen,
+    Boxes,
     CalendarDays,
     ClipboardCheck,
     Copy,
@@ -20,14 +21,17 @@ import { useState } from 'react';
 import { Button } from '@miles/ui/components/ui/button';
 import { ActionButton } from '@/components/actions';
 import { EntriesTable } from '@/components/entries-table';
-import { SelectField, Status, TextField } from '@/components/fields';
+import { useConfirm } from '@/components/dialogs';
+import { Check, SelectField, Status, TextField } from '@/components/fields';
 import { PageHeader } from '@/components/page-header';
 import type { EntryRow, Option } from '@/lib/logbook';
 import { formatDateTime } from '@/lib/logbook';
 import { create as newEntry, index as entries } from '@/routes/entries';
 import { index as exceptionsIndex } from '@/routes/exceptions';
 import { show as logbookShow } from '@/routes/logbooks';
+import { show as resourceShow } from '@/routes/resources';
 import { index as reviewsIndex } from '@/routes/reviews';
+import * as sheetResources from '@/routes/sheets/resources';
 import { archive, duplicate, restore, template } from '@/routes/sheets';
 import * as draft from '@/routes/sheets/draft';
 
@@ -74,6 +78,16 @@ type Props = {
     logbooks: Option[];
     /** ADR-0030: how entries on this sheet are recorded. */
     recordingMode: 'on_demand' | 'scheduled' | 'event';
+    /** ADR-0031: the field naming the asset, the assets linked, and those a manager may link. */
+    assetField: { label: string; type: string | null } | null;
+    assets: {
+        id: string;
+        label: string;
+        type: string;
+        status: string;
+        location: string | null;
+    }[];
+    assetOptions: Option[];
 };
 
 const RECORDING: Record<Props['recordingMode'], string> = {
@@ -103,6 +117,9 @@ export default function SheetShow({
     canManage,
     logbooks,
     recordingMode,
+    assetField,
+    assets,
+    assetOptions,
 }: Props) {
     const [copying, setCopying] = useState(false);
     const archived = sheet.status === 'archived';
@@ -397,6 +414,16 @@ export default function SheetShow({
                             </p>
                         </Card>
 
+                        {assetField && (
+                            <AssetsCard
+                                sheetId={sheet.id}
+                                field={assetField}
+                                assets={assets}
+                                options={assetOptions}
+                                canManage={canManage}
+                            />
+                        )}
+
                         {canManage && (
                             <Card title="Manage">
                                 <div className="grid gap-2 p-4">
@@ -462,6 +489,147 @@ export default function SheetShow({
                 </div>
             </div>
         </>
+    );
+}
+
+/**
+ * ADR-0031: the assets this sheet records. Linked: entries offer only
+ * these. None linked: any active asset of the field's category.
+ */
+function AssetsCard({
+    sheetId,
+    field,
+    assets,
+    options,
+    canManage,
+}: {
+    sheetId: string;
+    field: { label: string; type: string | null };
+    assets: Props['assets'];
+    options: Option[];
+    canManage: boolean;
+}) {
+    const errors = usePage().props.errors as Record<string, string>;
+    const confirm = useConfirm();
+    const [picked, setPicked] = useState<string[]>([]);
+    const kind = field.type ? field.type.toLowerCase() : 'resource';
+
+    return (
+        <Card title="Assets" icon={Boxes} count={assets.length}>
+            <p className="px-4 pt-3 text-xs text-muted-foreground">
+                {`Named in "${field.label}". `}
+                {assets.length === 0
+                    ? `Not limited: any active ${kind} is offered.`
+                    : 'Only these are offered on new entries.'}
+            </p>
+            {assets.length > 0 && (
+                <ul className="divide-y divide-[#ebebeb] px-4 py-2">
+                    {assets.map((a) => (
+                        <li
+                            key={a.id}
+                            className="flex items-center justify-between gap-2 py-1.5 text-sm"
+                        >
+                            <span className="min-w-0">
+                                <Link
+                                    href={resourceShow(a.id)}
+                                    className="font-medium hover:underline"
+                                >
+                                    {a.label}
+                                </Link>
+                                {a.location && (
+                                    <span className="block text-xs text-muted-foreground">
+                                        {a.location}
+                                    </span>
+                                )}
+                            </span>
+                            <span className="flex items-center gap-1">
+                                {a.status !== 'active' && (
+                                    <Status value={a.status} />
+                                )}
+                                {canManage && (
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        aria-label={`Unlink ${a.label}`}
+                                        onClick={async () => {
+                                            if (
+                                                await confirm({
+                                                    title: `Unlink ${a.label}?`,
+                                                    message:
+                                                        'Past entries keep naming it. New entries on this sheet will no longer offer it.',
+                                                    confirmLabel: 'Unlink',
+                                                })
+                                            ) {
+                                                router.delete(
+                                                    sheetResources.destroy({
+                                                        sheet: sheetId,
+                                                        resource: a.id,
+                                                    }).url,
+                                                    { preserveScroll: true },
+                                                );
+                                            }
+                                        }}
+                                    >
+                                        <X />
+                                    </Button>
+                                )}
+                            </span>
+                        </li>
+                    ))}
+                </ul>
+            )}
+            {(errors.link || errors.resource_ids) && (
+                <p className="px-4 text-xs text-destructive">
+                    {errors.link ?? errors.resource_ids}
+                </p>
+            )}
+            {canManage && options.length > 0 && (
+                <form
+                    className="grid gap-2 border-t border-[#ebebeb] p-4"
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        router.post(
+                            sheetResources.store(sheetId).url,
+                            { resource_ids: picked },
+                            {
+                                preserveScroll: true,
+                                onSuccess: () => setPicked([]),
+                            },
+                        );
+                    }}
+                >
+                    <p className="text-xs font-medium">Link assets</p>
+                    <div className="grid max-h-48 gap-1 overflow-y-auto">
+                        {options.map((o) => (
+                            <Check
+                                key={o.value}
+                                label={o.label}
+                                checked={picked.includes(o.value)}
+                                onChange={(on) =>
+                                    setPicked(
+                                        on
+                                            ? [...picked, o.value]
+                                            : picked.filter(
+                                                  (x) => x !== o.value,
+                                              ),
+                                    )
+                                }
+                            />
+                        ))}
+                    </div>
+                    <Button
+                        type="submit"
+                        size="sm"
+                        variant="outline"
+                        disabled={picked.length === 0}
+                    >
+                        {picked.length === 0
+                            ? 'Link assets'
+                            : `Link ${picked.length} ${picked.length === 1 ? 'asset' : 'assets'}`}
+                    </Button>
+                </form>
+            )}
+        </Card>
     );
 }
 

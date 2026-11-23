@@ -5,27 +5,27 @@ import { EmptyState } from '@miles/ui/components/empty-state';
 import { PageHeader } from '@/components/page-header';
 import { Panel, PanelHeader } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
-import {
-    Check,
-    SelectField,
-    Status,
-    TextArea,
-    TextField,
-} from '@/components/fields';
+import { Badge, SelectField, Status, TextField } from '@/components/fields';
 import { Toggle } from '@/components/work';
 import { useCan } from '@/lib/access';
 import * as locations from '@/routes/locations';
-import { show, store, update } from '@/routes/resources';
+import { create, edit, show, templates } from '@/routes/resources';
 
 type Resource = {
     id: string;
     code: string;
     name: string;
     type: string;
+    kind: 'asset' | 'monitored_location';
+    status: 'active' | 'inactive' | 'retired';
     description: string | null;
     locationId: string | null;
     location: string | null;
     active: boolean;
+    responsible: string | null;
+    template: string | null;
+    /** Log sheets that record it (ADR-0031). */
+    sheets: number;
     /** ADR-0030: the fuel rate in force, e.g. "12 L/100 km". */
     fuelRate: string | null;
 };
@@ -40,35 +40,58 @@ type Location = {
 
 type Props = { resources: Resource[]; locations: Location[]; types: string[] };
 
+/**
+ * The asset register (ADR-0031): equipment, vehicles and monitored places,
+ * with what records them. Registering and changing happen on their own
+ * page, from a template.
+ */
 export default function Resources({
     resources,
     locations: places,
     types,
 }: Props) {
     const manage = useCan()('logbook.manage');
-    const [editing, setEditing] = useState<string | null>(null);
+    const [q, setQ] = useState('');
+    const [type, setType] = useState('');
+    const [kind, setKind] = useState('');
+    const [status, setStatus] = useState('current');
     const placeOptions = places
         .filter((l) => l.active)
         .map((l) => ({ value: l.id, label: l.path }));
+    const needle = q.trim().toLowerCase();
+    const shown = resources.filter(
+        (r) =>
+            (needle === '' ||
+                `${r.code} ${r.name} ${r.location ?? ''} ${r.responsible ?? ''}`
+                    .toLowerCase()
+                    .includes(needle)) &&
+            (type === '' || r.type === type) &&
+            (kind === '' || r.kind === kind) &&
+            (status === 'current'
+                ? r.status !== 'retired'
+                : status === '' || r.status === status),
+    );
 
     return (
         <>
             <Head title="Resources" />
             <PageHeader
                 title="Resources and locations"
-                description="Equipment, vehicles, rooms and places that are logged, inspected and maintained."
+                actions={
+                    <>
+                        <Button asChild variant="outline" size="sm">
+                            <Link href={templates()}>Asset templates</Link>
+                        </Button>
+                        {manage && (
+                            <Button asChild size="sm">
+                                <Link href={create()}>Register an asset</Link>
+                            </Button>
+                        )}
+                    </>
+                }
             />
             {manage && (
                 <div className="mb-4 flex flex-wrap gap-2">
-                    <Toggle label="Add a resource">
-                        {(close) => (
-                            <ResourceForm
-                                places={placeOptions}
-                                types={types}
-                                onDone={close}
-                            />
-                        )}
-                    </Toggle>
                     <Toggle label="Add a location" variant="outline">
                         {(close) => (
                             <LocationForm
@@ -81,18 +104,69 @@ export default function Resources({
             )}
             <div className="grid gap-6 lg:grid-cols-3">
                 <Panel className="lg:col-span-2">
-                    <PanelHeader title={`Resources (${resources.length})`} />
-                    {resources.length === 0 ? (
-                        <EmptyState icon={Boxes} title="No resources yet">
-                            Add the generators, pumps, vehicles and rooms your
-                            teams log.
+                    <PanelHeader title={`Assets (${shown.length})`} />
+                    <div className="grid gap-3 border-b px-4 py-3 sm:grid-cols-4">
+                        <TextField
+                            label="Search"
+                            value={q}
+                            onChange={setQ}
+                            placeholder="Code, name, place"
+                        />
+                        <SelectField
+                            label="Category"
+                            value={type}
+                            onChange={setType}
+                            options={types.map((t) => ({ value: t, label: t }))}
+                            empty="All"
+                        />
+                        <SelectField
+                            label="Kind"
+                            value={kind}
+                            onChange={setKind}
+                            options={[
+                                { value: 'asset', label: 'Physical assets' },
+                                {
+                                    value: 'monitored_location',
+                                    label: 'Monitored locations',
+                                },
+                            ]}
+                            empty="All"
+                        />
+                        <SelectField
+                            label="Status"
+                            value={status}
+                            onChange={setStatus}
+                            options={[
+                                {
+                                    value: 'current',
+                                    label: 'Active and inactive',
+                                },
+                                { value: 'active', label: 'Active' },
+                                { value: 'inactive', label: 'Inactive' },
+                                { value: 'retired', label: 'Retired' },
+                            ]}
+                            empty="All"
+                        />
+                    </div>
+                    {shown.length === 0 ? (
+                        <EmptyState
+                            icon={Boxes}
+                            title={
+                                resources.length === 0
+                                    ? 'No assets yet'
+                                    : 'Nothing matches'
+                            }
+                        >
+                            {resources.length === 0
+                                ? 'Register the generators, vehicles, cold rooms and units your teams log.'
+                                : 'Change the filters to see more.'}
                         </EmptyState>
                     ) : (
                         <ul className="divide-y">
-                            {resources.map((r) => (
+                            {shown.map((r) => (
                                 <li key={r.id} className="px-4 py-3 text-sm">
                                     <div className="flex flex-wrap items-start justify-between gap-2">
-                                        <div>
+                                        <div className="min-w-0">
                                             <Link
                                                 href={show(r.id)}
                                                 className="font-medium hover:underline"
@@ -103,50 +177,41 @@ export default function Resources({
                                                 {[
                                                     r.type,
                                                     r.location,
+                                                    r.responsible &&
+                                                        `responsible ${r.responsible}`,
                                                     r.fuelRate &&
                                                         `fuel ${r.fuelRate}`,
                                                 ]
                                                     .filter(Boolean)
                                                     .join(' · ')}
                                             </p>
+                                            <p className="text-muted-foreground">
+                                                {r.sheets === 0
+                                                    ? 'Not linked to a log sheet'
+                                                    : `${r.sheets} ${r.sheets === 1 ? 'log sheet' : 'log sheets'}`}
+                                            </p>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <Status
-                                                value={
-                                                    r.active
-                                                        ? 'active'
-                                                        : 'inactive'
-                                                }
-                                            />
+                                            {r.kind ===
+                                                'monitored_location' && (
+                                                <Badge tone="info">
+                                                    Monitored location
+                                                </Badge>
+                                            )}
+                                            <Status value={r.status} />
                                             {manage && (
                                                 <Button
+                                                    asChild
                                                     size="sm"
                                                     variant="outline"
-                                                    onClick={() =>
-                                                        setEditing(
-                                                            editing === r.id
-                                                                ? null
-                                                                : r.id,
-                                                        )
-                                                    }
                                                 >
-                                                    {editing === r.id
-                                                        ? 'Close'
-                                                        : 'Change'}
+                                                    <Link href={edit(r.id)}>
+                                                        Change
+                                                    </Link>
                                                 </Button>
                                             )}
                                         </div>
                                     </div>
-                                    {editing === r.id && (
-                                        <div className="mt-3 rounded-md border p-4">
-                                            <ResourceForm
-                                                places={placeOptions}
-                                                types={types}
-                                                initial={r}
-                                                onDone={() => setEditing(null)}
-                                            />
-                                        </div>
-                                    )}
                                 </li>
                             ))}
                         </ul>
@@ -174,114 +239,6 @@ export default function Resources({
                 </Panel>
             </div>
         </>
-    );
-}
-
-function ResourceForm({
-    places,
-    types,
-    initial,
-    onDone,
-}: {
-    places: { value: string; label: string }[];
-    types: string[];
-    initial?: Resource;
-    onDone: () => void;
-}) {
-    const errors = usePage().props.errors as Record<string, string>;
-    const [data, setData] = useState({
-        code: initial?.code ?? '',
-        name: initial?.name ?? '',
-        type: initial?.type ?? '',
-        description: initial?.description ?? '',
-        location_id: initial?.locationId ?? '',
-        active: initial?.active ?? true,
-    });
-    const set = (patch: Partial<typeof data>) => setData({ ...data, ...patch });
-
-    return (
-        <form
-            className="grid gap-4 sm:grid-cols-2"
-            onSubmit={(e) => {
-                e.preventDefault();
-                router.visit(initial ? update(initial.id).url : store().url, {
-                    method: initial ? 'put' : 'post',
-                    data: { ...data, location_id: data.location_id || null },
-                    preserveScroll: true,
-                    onSuccess: onDone,
-                });
-            }}
-        >
-            <TextField
-                label="Code"
-                value={data.code}
-                onChange={(code) => set({ code })}
-                error={errors.code}
-                placeholder="GEN-01"
-                required
-            />
-            <TextField
-                label="Name"
-                value={data.name}
-                onChange={(name) => set({ name })}
-                error={errors.name}
-                placeholder="Main generator"
-                required
-            />
-            <div className="grid gap-1.5">
-                <TextField
-                    label="Type"
-                    value={data.type}
-                    onChange={(type) => set({ type })}
-                    error={errors.type}
-                    placeholder="Generator"
-                    required
-                />
-                {types.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                        {types.map((t) => (
-                            <button
-                                key={t}
-                                type="button"
-                                onClick={() => set({ type: t })}
-                                className="rounded border px-1.5 py-0.5 text-xs hover:bg-muted"
-                            >
-                                {t}
-                            </button>
-                        ))}
-                    </div>
-                )}
-            </div>
-            <SelectField
-                label="Location"
-                value={data.location_id}
-                onChange={(location_id) => set({ location_id })}
-                options={places}
-                empty="None"
-                error={errors.location_id}
-            />
-            <TextArea
-                label="Description"
-                value={data.description}
-                onChange={(description) => set({ description })}
-                className="sm:col-span-2"
-                rows={2}
-            />
-            {initial && (
-                <div className="sm:col-span-2">
-                    <Check
-                        label="Active: offered in Resource fields and on tasks"
-                        checked={data.active}
-                        onChange={(active) => set({ active })}
-                    />
-                </div>
-            )}
-            <div className="sm:col-span-2">
-                <Button type="submit">
-                    {initial ? 'Save' : 'Add resource'}
-                </Button>
-            </div>
-        </form>
     );
 }
 

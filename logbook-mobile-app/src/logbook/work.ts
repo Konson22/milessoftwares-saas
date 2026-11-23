@@ -49,6 +49,9 @@ export type Occurrence = {
   closesAt: string;
   sheet: { id: string; name: string; code: string };
   logbook: string;
+  /** ADR-0031: the asset this reading is for; null for the whole sheet. */
+  resourceId?: string | null;
+  resource?: string | null;
 };
 
 export type Notice = {

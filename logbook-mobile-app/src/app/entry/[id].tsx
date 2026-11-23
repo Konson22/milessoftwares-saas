@@ -6,13 +6,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EntryBadges, when } from '@/components/entries';
 import { EntryForm, Input } from '@/components/entry-form';
 import { LocationControl } from '@/components/location-control';
-import { ActivityEnd, EstimateCard, ReadingPicker, ShiftPicker } from '@/components/recording-controls';
+import { ActivityEnd, CalculationCard, EstimateCard, ReadingPicker, ShiftPicker } from '@/components/recording-controls';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { Banner, Card, SectionTitle } from '@/components/ui/misc';
 import { estimate, phoneCalculation, readingAt, readingChoices, recordingOf, shiftAt } from '@/logbook/activity';
+import { assetProblem, offered, readingsForAsset, subjectOf } from '@/logbook/assets';
 import { nowFor, text } from '@/logbook/fields';
 import { editable, fileCounts } from '@/logbook/sync';
+import { reviews, type EntryDetail } from '@/logbook/transport';
 import type { EntryLocation, Item, LocalFile, StoredVersion, Values } from '@/logbook/types';
 import { store, useLogbook } from '@/store/logbook';
 import { toast } from '@/store/toast';
@@ -92,7 +94,14 @@ function EditEntry({ item, version }: { item: Item; version: StoredVersion }) {
   const me = useAuth((s) => s.me?.user.id ?? null);
   const due = useWork((s) => s.due);
   const missedReadings = useWork((s) => s.missed);
-  const choices = recording?.mode === 'scheduled' || item.occurrenceId ? readingChoices([...due, ...missedReadings], item.sheet.id, item.occurrenceId ?? null) : [];
+  // ADR-0031: the asset this entry is about narrows the readings it can answer.
+  const subject = subjectOf(kit, item.sheet.id);
+  const chosenAsset = subject && typeof values[subject] === 'string' ? (values[subject] as string) : null;
+  const choices =
+    recording?.mode === 'scheduled' || item.occurrenceId
+      ? readingsForAsset(readingChoices([...due, ...missedReadings], item.sheet.id, item.occurrenceId ?? null), chosenAsset, item.occurrenceId ?? null)
+      : [];
+  const assetIssue = assetProblem(kit, item.sheet.id, version.fields, values);
   const [reading, setReading] = useState<string | null>(() => item.occurrenceId ?? (item.scheduleLink === 'extra' ? null : readingAt(choices, item.occurredAt)));
   const [extra, setExtra] = useState(item.scheduleLink === 'extra');
   const shifts = recording && recording.shifts !== 'off' ? (kit?.shifts ?? []).filter((s) => s.logbookId === null || s.logbookId === kitSheet?.logbook.id) : [];
@@ -145,6 +154,8 @@ function EditEntry({ item, version }: { item: Item; version: StoredVersion }) {
         return;
       }
       const own: Record<string, string> = {};
+      // Never sent with an asset the sheet no longer offers; never moved to another one.
+      if (assetIssue && subject) own[subject] = 'Choose an asset this log sheet records.';
       if (shifts.length > 0 && recording?.shifts === 'required' && !shiftId) own.shift_id = 'Choose the shift.';
       if (isEvent && endedIso === null) own.activity_ended_at = ended.trim() === '' ? 'Enter when the activity ended.' : 'Enter when it ended (YYYY-MM-DD HH:MM).';
       else if (isEvent && endedIso && endedIso < startedIso) own.activity_ended_at = 'The end is before the start.';
@@ -193,6 +204,7 @@ function EditEntry({ item, version }: { item: Item; version: StoredVersion }) {
             </Banner>
           )}
           {item.status === 'action_required' && item.error && !returned && <Banner tone="error">{item.error.message}</Banner>}
+          {assetIssue && <Banner tone="warning">{assetIssue}</Banner>}
 
           <View className="gap-1.5">
             <Text className="text-base font-medium text-slate-800">
@@ -289,6 +301,7 @@ function EditEntry({ item, version }: { item: Item; version: StoredVersion }) {
             errors={errors}
             members={kit?.members ?? []}
             resources={kit?.resources ?? []}
+            offeredFor={(field) => offered(kit ?? null, item.sheet.id, field)}
             files={files}
             serverFiles={item.serverFiles}
             removedFiles={removed}
@@ -348,6 +361,20 @@ function ReadEntry({ item, version }: { item: Item; version: StoredVersion | nul
   const kit = useLogbook((s) => s.kit);
   const people = Object.fromEntries([...(kit?.members ?? []).map((m) => [m.id, m.name]), ...(kit?.resources ?? []).map((r) => [r.id, `${r.code} · ${r.name}`])]);
   const files = [...item.serverFiles, ...item.files.map((f) => ({ id: f.uri, field: f.field, name: f.name, size: f.size, mime: f.mime }))];
+  // ADR-0030: the server's own fuel figure and shift, read when online. Offline, the phone's figure stays.
+  const [server, setServer] = useState<EntryDetail | null>(null);
+  useEffect(() => {
+    if (!item.serverId || item.serverStatus === 'draft') return;
+    let live = true;
+    reviews
+      .entry(item.serverId)
+      .then((e) => live && setServer(e))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [item.serverId, item.serverStatus, item.revision]);
+  const shiftName = server?.shift ?? kit?.shifts?.find((s) => s.id === item.shiftId)?.name ?? (item.shiftId ? 'recorded' : null);
 
   return (
     <View className="flex-1 bg-canvas">
@@ -376,10 +403,13 @@ function ReadEntry({ item, version }: { item: Item; version: StoredVersion | nul
           )}
           {item.trackId && <Text className="text-sm text-slate-500">Written on a recorded trip</Text>}
           {item.activityEndedAt && <Text className="text-sm text-slate-500">Activity ended {when(item.activityEndedAt)}</Text>}
-          {item.shiftId && <Text className="text-sm text-slate-500">Shift: {kit?.shifts?.find((s) => s.id === item.shiftId)?.name ?? 'recorded'}</Text>}
+          {shiftName && <Text className="text-sm text-slate-500">Shift: {shiftName}</Text>}
+          {server?.activityEntry && <Text className="text-sm text-slate-500">Recorded during {server.activityEntry.label}</Text>}
           {item.scheduleLink === 'extra' && <Text className="text-sm text-slate-500">An extra reading</Text>}
-          {item.calculation && <Text className="text-sm text-slate-500">Fuel estimated on this phone: {item.calculation.estimated_l} L (the server keeps its own figure)</Text>}
+          {item.calculation && !server?.calculation && <Text className="text-sm text-slate-500">Fuel estimated on this phone: {item.calculation.estimated_l} L (the server keeps its own figure)</Text>}
         </Card>
+
+        {server?.calculation && <CalculationCard calculation={server.calculation} />}
 
         <SectionTitle>Answers</SectionTitle>
         {!version ? (

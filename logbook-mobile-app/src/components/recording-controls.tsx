@@ -5,6 +5,7 @@ import { Choice, Input } from '@/components/entry-form';
 import { Button } from '@/components/ui/button';
 import { Card, Row } from '@/components/ui/misc';
 import type { Estimate } from '@/logbook/activity';
+import type { ServerCalculation } from '@/logbook/transport';
 import type { KitShift } from '@/logbook/types';
 import type { Occurrence } from '@/logbook/work';
 
@@ -115,6 +116,51 @@ export function EstimateCard({ estimate }: { estimate: Estimate | null }) {
       {refill !== null && <Row label="Refilled (not the fuel used)" value={litres(refill)} />}
       <Text className="text-xs text-slate-500">
         A preview from the rates on this phone. The figure kept is worked out by the server when the entry is sent. A difference is a prompt to look, not a finding.
+      </Text>
+    </Card>
+  );
+}
+
+const FLAG_TEXT: Record<string, string> = {
+  no_rate: 'No fuel rate was set for this resource at that time, so nothing was estimated.',
+  rate_method_mismatch: "The resource's rate is set for another measure, so nothing was estimated.",
+  rate_changed: 'The phone estimated with a different rate than the one in force; the figure here uses the rate in force.',
+  overlap: 'These meter readings overlap another recorded activity on the same resource. Check that the distance or hours are not counted twice.',
+};
+
+/**
+ * The fuel calculation the server kept at submission (ADR-0030 §4.7), as
+ * the web entry page shows it. A difference is not a finding.
+ */
+export function CalculationCard({ calculation: c }: { calculation: ServerCalculation }) {
+  const l = (n: number | null) => (n === null ? '—' : litres(n));
+  const reading = c.measure === 'odometer' ? 'Odometer' : c.measure === 'hour_meter' ? 'Hour meter' : null;
+  return (
+    <Card className="gap-1">
+      <Text className="text-base font-semibold text-slate-900">Fuel estimate</Text>
+      <Text className="text-sm text-slate-500">{`Worked out when recorded, ${when(c.calculated_at)}, and kept as it was.`}</Text>
+      {c.resource && <Row label="Resource" value={c.resource} />}
+      {reading && <Row label={reading} value={`${c.inputs.start ?? '—'} → ${c.inputs.end ?? '—'}`} />}
+      <Row label={c.unit === 'km' ? 'Distance' : 'Running time'} value={`${c.quantity} ${c.unit}${c.gps_km !== null ? ` (route ${c.gps_km} km)` : ''}`} />
+      <Row label="Rate used" value={c.rate ? `${c.rate.value} ${c.rate.unit}, ${c.rate.fuel_type}` : 'None'} />
+      <Row label="Estimated" value={l(c.estimated_l)} strong />
+      <Row label="Measured" value={c.actual_l === null ? 'Not recorded' : l(c.actual_l)} />
+      {c.variance_l !== null && (
+        <Row
+          label="Difference"
+          value={`${c.variance_l > 0 ? '+' : ''}${c.variance_l} L${c.variance_pct !== null ? ` (${c.variance_pct > 0 ? '+' : ''}${c.variance_pct}%)` : ''}`}
+        />
+      )}
+      {c.refill_l !== null && <Row label="Refilled (not the fuel used)" value={l(c.refill_l)} />}
+      {c.phone?.estimated_l != null && <Row label="Phone's estimate" value={l(c.phone.estimated_l)} />}
+      {c.flags.map((f) => (
+        <Text key={f} className="mt-1 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          {FLAG_TEXT[f] ?? f}
+          {f === 'overlap' && c.overlaps.length > 0 ? ` ${c.overlaps.map((o) => o.reference ?? 'a draft').join(', ')}.` : ''}
+        </Text>
+      ))}
+      <Text className="text-xs text-slate-500">
+        {"The estimate comes from the resource's rate. A difference can have many causes (load, roads, idling, a meter or rate that needs checking) and is not a finding by itself."}
       </Text>
     </Card>
   );

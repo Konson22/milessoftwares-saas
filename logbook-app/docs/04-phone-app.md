@@ -42,7 +42,11 @@ Other screens, opened on top of the menu: an entry, a review, a task and a trip.
 - Readings outside the normal range are warned about before sending, and still recorded.
 - **Photos** from the camera or gallery, and **files** from the phone, in file fields.
 - **Person** and **Resource** fields pick from the workspace's people and resources, downloaded
-  with the log sheets.
+  with the log sheets. On a sheet with linked assets (ADR-0031), its main asset field offers
+  only those, offline too; the expected readings offered are the chosen asset's and the
+  whole sheet's.
+- A draft naming an asset retired or unlinked since it was written says so, keeps its choice
+  and is not sent until another asset is chosen. The phone never swaps it for another.
 - **Location:** on log sheets that take one, **Take location** reads the phone's position once,
   with its accuracy, and warns when it is less accurate than the sheet asks. During a trip,
   the entry can be linked to it instead.

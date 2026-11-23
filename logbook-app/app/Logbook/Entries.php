@@ -78,6 +78,7 @@ final class Entries
                     'status' => 'draft',
                     'occurred_at' => CarbonImmutable::parse($occurredAt),
                     'values' => $values,
+                    'resource_id' => self::subjectOf($version, $values),
                     'created_by' => $by->id,
                     'idempotency_key' => $key,
                     'schedule_occurrence_id' => $scheduleLink === 'extra' ? null : $occurrenceId,
@@ -115,7 +116,7 @@ final class Entries
         return DB::transaction(function () use ($entry, $by, $input, $occurredAt, $place, $more) {
             $entry = self::lockForAuthor($entry, $by);
             $values = self::clean($entry->version, $input, self::files($entry), requireAll: false);
-            $entry->forceFill(['values' => $values, 'occurred_at' => CarbonImmutable::parse($occurredAt)]);
+            $entry->forceFill(['values' => $values, 'resource_id' => self::subjectOf($entry->version, $values), 'occurred_at' => CarbonImmutable::parse($occurredAt)]);
             if ($place !== null) {
                 $gps = Tracks::forEntry($entry->version, $by, $place['location'] ?? null, $place['track_id'] ?? null, $place['source'] ?? 'phone');
                 $entry->forceFill(['location' => $gps['location'], 'log_track_id' => $gps['log_track_id']]);
@@ -202,6 +203,7 @@ final class Entries
             $entry->forceFill([
                 'reference' => $reference,
                 'values' => $values,
+                'resource_id' => self::subjectOf($version, $values),
                 'revision' => $revision,
                 'review_required' => $reviewRequired,
                 'status' => $reviewRequired ? 'submitted' : 'finalized',
@@ -366,6 +368,20 @@ final class Entries
         return $names;
     }
 
+    /**
+     * The asset an entry is about (ADR-0031): the value of its version's
+     * main resource field.
+     *
+     * @param  array<string, mixed>  $values
+     */
+    public static function subjectOf(LogSheetVersion $version, array $values): ?string
+    {
+        $field = Recording::subjectField($version);
+        $id = $field === null ? null : ($values[$field] ?? null);
+
+        return is_string($id) && $id !== '' ? $id : null;
+    }
+
     private static function open(LogSheet $sheet): void
     {
         if (! $sheet->open()) {
@@ -380,13 +396,16 @@ final class Entries
      */
     private static function clean(LogSheetVersion $version, array $input, array $files, bool $requireAll): array
     {
+        // ADR-0031: the main resource field takes only the assets the sheet is linked to (any, when none).
+        $subject = Recording::subjectField($version);
+        $linked = $subject === null ? [] : SheetAssets::linkedIds($version->log_sheet_id);
         $result = Fields::clean(
             $version->fields,
             $input,
             $files,
             fn (string $id) => WorkspaceMember::query()->ofUser($id)->exists(),
             $requireAll,
-            fn (string $id, ?string $type) => LogResource::query()->whereKey($id)->where('active', true)->when($type !== null, fn ($q) => $q->where('type', $type))->exists(),
+            fn (string $id, ?string $type, string $field) => SheetAssets::allows($id, $type, $field === $subject, $linked),
         );
 
         if ($result['errors'] !== []) {

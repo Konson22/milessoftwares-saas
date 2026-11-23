@@ -6,6 +6,7 @@ use App\Logbook\Models\Concerns\TenantModel;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -78,5 +79,12 @@ class LogSheet extends Model
     public function entries(): HasMany
     {
         return $this->hasMany(Entry::class);
+    }
+
+    /** ADR-0031: the assets it records. None: any asset its resource fields allow. @return BelongsToMany<LogResource, $this> */
+    public function resources(): BelongsToMany
+    {
+        return $this->belongsToMany(LogResource::class, 'log_sheet_resources', 'log_sheet_id', 'log_resource_id')
+            ->withPivot(['id', 'organization_id', 'created_by'])->withTimestamps();
     }
 }

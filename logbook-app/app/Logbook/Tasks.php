@@ -3,6 +3,7 @@
 namespace App\Logbook;
 
 use App\Logbook\Models\Entry;
+use App\Logbook\Models\LogException;
 use App\Logbook\Models\LogResource;
 use App\Logbook\Models\LogSheet;
 use App\Logbook\Models\Reminder;
@@ -775,7 +776,10 @@ final class Tasks
         if ($exceptionId !== null && ! Exceptions::visible()->whereKey($exceptionId)->exists()) {
             $errors['exception_id'] = 'Choose an exception you can see.';
         }
-        $resourceId = self::id($data['resource_id'] ?? null);
+        // ADR-0031: a corrective task follows the asset of its exception or entry unless another is named.
+        $resourceId = self::id($data['resource_id'] ?? null)
+            ?? ($exceptionId !== null ? LogException::query()->whereKey($exceptionId)->value('resource_id') : null)
+            ?? ($entryId !== null ? Entry::query()->whereKey($entryId)->value('resource_id') : null);
         if ($resourceId !== null && ! LogResource::query()->whereKey($resourceId)->exists()) {
             $errors['resource_id'] = 'Choose a resource of this workspace.';
         }

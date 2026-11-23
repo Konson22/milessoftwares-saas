@@ -234,6 +234,11 @@ it('keeps the phone estimate as evidence and flags a different rate', function (
     $c = latestEntry()->calculation;
     expect($c['estimated_l'])->toEqual(12)->and($c['phone']['estimated_l'])->toEqual(14)->and($c['flags'])->toBe(['rate_changed']);
 
+    // The phone reads the server's figure back online, as the web entry page shows it.
+    $this->getJson($url('entries/'.latestEntry()->id))->assertOk()
+        ->assertJsonPath('calculation.estimated_l', 12)->assertJsonPath('calculation.resource', 'VEH-01 · Land Cruiser')
+        ->assertJsonPath('calculation.flags', ['rate_changed'])->assertJsonPath('shift', null)->assertJsonPath('activityEntry', null);
+
     // The kit now knows the last odometer reading.
     expect(collect($this->getJson($url('kit'))->json('resources'))->firstWhere('id', $this->vehicle->id)['meters'])->toEqual(['odometer' => 800]);
 });

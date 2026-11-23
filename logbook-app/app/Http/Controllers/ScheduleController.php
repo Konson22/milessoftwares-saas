@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\PresentsWork;
 use App\Logbook\Access;
+use App\Logbook\Models\LogResource;
 use App\Logbook\Models\LogSheet;
 use App\Logbook\Models\Schedule;
 use App\Logbook\Models\ScheduleOccurrence;
 use App\Logbook\Recording;
 use App\Logbook\Reminders;
 use App\Logbook\Schedules;
+use App\Logbook\SheetAssets;
 use App\Models\Workspace;
 use App\Models\WorkspaceMember;
 use Carbon\CarbonImmutable;
@@ -37,6 +39,7 @@ class ScheduleController extends Controller
             'logbook_id' => ['nullable', 'uuid'],
             'log_sheet_id' => ['nullable', 'uuid'],
             'responsible_id' => ['nullable', 'uuid'],
+            'resource_id' => ['nullable', 'uuid'],
             'state' => ['nullable', Rule::in(['due', 'overdue', 'upcoming', 'awaiting_review', 'completed', 'late', 'missed', 'excused'])],
         ]);
         $tz = Workspace::current()->timezone ?? 'UTC';
@@ -48,9 +51,10 @@ class ScheduleController extends Controller
             ->whereBetween('due_at', [$from->utc(), $to->utc()])
             ->when($data['logbook_id'] ?? null, fn (Builder $q, $id) => $q->where('logbook_id', $id))
             ->when($data['log_sheet_id'] ?? null, fn (Builder $q, $id) => $q->where('log_sheet_id', $id))
-            ->when($data['responsible_id'] ?? null, fn (Builder $q, $id) => $q->where('responsible_id', $id));
+            ->when($data['responsible_id'] ?? null, fn (Builder $q, $id) => $q->where('responsible_id', $id))
+            ->when($data['resource_id'] ?? null, fn (Builder $q, $id) => $q->where('resource_id', $id));
 
-        $rows = $query()->with(['sheet:id,name,code', 'logbook:id,name', 'responsible:id,name', 'entry:id,reference'])
+        $rows = $query()->with(['sheet:id,name,code', 'logbook:id,name', 'responsible:id,name', 'entry:id,reference', 'resource:id,code,name'])
             ->orderByDesc('due_at')->limit(500)->get()
             ->map(fn (ScheduleOccurrence $o) => self::occurrenceRow($o, $now))
             ->when($data['state'] ?? null, fn ($c, $state) => $c->where('state', $state))
@@ -62,16 +66,19 @@ class ScheduleController extends Controller
             'filters' => [
                 'from' => $from->toDateString(), 'to' => $to->setTimezone($tz)->toDateString(),
                 'logbook_id' => $data['logbook_id'] ?? '', 'log_sheet_id' => $data['log_sheet_id'] ?? '',
-                'responsible_id' => $data['responsible_id'] ?? '', 'state' => $data['state'] ?? '',
+                'responsible_id' => $data['responsible_id'] ?? '', 'resource_id' => $data['resource_id'] ?? '', 'state' => $data['state'] ?? '',
             ],
             'figures' => [...Schedules::figures($query(), $now), 'outstandingReviews' => $outstandingReviews],
             'occurrences' => $rows,
-            'schedules' => Access::limit(Schedule::query(), array_keys(Access::CAPABILITIES))->with(['sheet:id,name,code', 'responsible:id,name'])
+            'schedules' => Access::limit(Schedule::query(), array_keys(Access::CAPABILITIES))->with(['sheet:id,name,code', 'responsible:id,name', 'resource:id,code,name'])
                 ->orderByDesc('active')->get()->map(fn (Schedule $s) => self::scheduleRow($s))->values(),
             'options' => [
                 ...self::filterOptions(),
                 'members' => WorkspaceMember::options(),
                 // ADR-0030: only scheduled sheets (or sheets from before recording modes) take a new schedule.
+                // ADR-0031: assets a schedule may be for, by sheet (linked ones, or any of the main field's type).
+                'sheetAssets' => self::sheetAssets(),
+                'assets' => LogResource::query()->orderBy('code')->get(['id', 'code', 'name'])->map(fn (LogResource $r) => ['value' => $r->id, 'label' => $r->label()])->values(),
                 'schedulable' => Access::sheets()->whereNotNull('published_version_id')->with(['publishedVersion', 'draftVersion'])->get()
                     ->filter(fn (LogSheet $s) => Recording::allowsSchedules($s))->pluck('id')->values(),
             ],
@@ -117,6 +124,35 @@ class ScheduleController extends Controller
         return back()->with('success', 'Schedule ended. Its history stays.');
     }
 
+    /**
+     * For each schedulable sheet that names an asset: the assets a
+     * schedule may be for.
+     *
+     * @return array<string, list<array{value: string, label: string}>>
+     */
+    private static function sheetAssets(): array
+    {
+        if (! Access::manages()) {
+            return [];
+        }
+        $active = LogResource::query()->where('status', 'active')->orderBy('code')->get();
+        $out = [];
+        foreach (Access::managedLogbooks()->get() as $logbook) {
+            foreach (LogSheet::query()->where('logbook_id', $logbook->id)->whereNotNull('published_version_id')->with(['publishedVersion', 'draftVersion'])->get() as $sheet) {
+                $field = SheetAssets::subjectFieldOf($sheet);
+                if ($field === null) {
+                    continue;
+                }
+                $linked = SheetAssets::linkedIds($sheet->id);
+                $type = is_string($field['resource_type'] ?? null) && $field['resource_type'] !== '' ? mb_strtolower($field['resource_type']) : null;
+                $out[$sheet->id] = $active->filter(fn (LogResource $r) => $linked !== [] ? in_array($r->id, $linked, true) : ($type === null || mb_strtolower($r->type) === $type))
+                    ->map(fn (LogResource $r) => ['value' => $r->id, 'label' => $r->label()])->values()->all();
+            }
+        }
+
+        return $out;
+    }
+
     /** A schedule on a sheet of a logbook the member manages. */
     private function find(string $schedule): Schedule
     {
@@ -140,6 +176,8 @@ class ScheduleController extends Controller
         return [
             'id' => $schedule->id,
             'sheet' => ['id' => $schedule->sheet->id, 'name' => $schedule->sheet->name, 'code' => $schedule->sheet->code],
+            // ADR-0031: the asset whose readings it expects; null: the whole sheet.
+            'resource' => $schedule->resource !== null ? ['id' => $schedule->resource->id, 'label' => $schedule->resource->label()] : null,
             'frequency' => $schedule->frequency,
             'weekdays' => $schedule->weekdays ?? [],
             'dayOfMonth' => $schedule->day_of_month,
@@ -192,6 +230,7 @@ class ScheduleController extends Controller
             'starts_on' => ['required', 'date'],
             'ends_on' => ['nullable', 'date'],
             'responsible_id' => ['nullable', 'uuid'],
+            'resource_id' => ['nullable', 'uuid'],
             'completion' => ['required', Rule::in(['submitted', 'reviewed'])],
             'reminders' => ['nullable', 'array', 'max:6'],
             'reminders.*' => ['string', 'max:40'],

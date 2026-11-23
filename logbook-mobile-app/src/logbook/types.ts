@@ -49,6 +49,8 @@ export type KitResource = {
   name: string;
   type: string;
   location: string | null;
+  /** ADR-0031: a physical asset or a monitored location. Absent from older servers. */
+  kind?: 'asset' | 'monitored_location';
   /** ADR-0030: its fuel rates, oldest first, for the offline estimate. */
   fuel?: FuelRate[];
   /** ADR-0030: the last recorded end reading per meter. */
@@ -95,6 +97,9 @@ export type KitSheet = {
   location?: LocationSettings | null;
   /** How it is recorded (ADR-0030); absent from servers before it. */
   recording?: RecordingSettings;
+  /** ADR-0031: the resource field naming the entry's asset, and the assets linked ([] = any of its category). */
+  subject?: string | null;
+  assets?: string[];
 };
 
 export type LocationSettings = { mode: 'entry' | 'route'; required: boolean; resource_required: boolean; accuracy_m: number | null };

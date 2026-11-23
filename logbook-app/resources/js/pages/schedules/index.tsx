@@ -37,6 +37,7 @@ type Props = {
         logbook_id: string;
         log_sheet_id: string;
         responsible_id: string;
+        resource_id: string;
         state: string;
     };
     figures: {
@@ -58,6 +59,9 @@ type Props = {
         members: Option[];
         /** Sheets that may take a new schedule: scheduled ones (ADR-0030). */
         schedulable: string[];
+        /** ADR-0031: per sheet, the assets a schedule may be for. */
+        sheetAssets: Record<string, Option[]>;
+        assets: Option[];
     };
     canManage: boolean;
 };
@@ -183,6 +187,14 @@ export default function Schedules({
                             className="w-44"
                         />
                         <SelectField
+                            label="Asset"
+                            value={filters.resource_id}
+                            onChange={(resource_id) => go({ resource_id })}
+                            options={options.assets}
+                            empty="All"
+                            className="w-44"
+                        />
+                        <SelectField
                             label="State"
                             value={filters.state}
                             onChange={(state) => go({ state })}
@@ -252,6 +264,7 @@ function ScheduleItem({
                 <div>
                     <p className="font-medium">
                         {s.sheet.code} · {s.sheet.name}
+                        {s.resource && ` · ${s.resource.label}`}
                     </p>
                     <p className="text-muted-foreground">
                         {recurrenceLabel(s.frequency, s.weekdays, s.dayOfMonth)}{' '}
@@ -327,6 +340,7 @@ function NewSchedule({ options }: { options: Props['options'] }) {
                     url={store(sheet).url}
                     method="post"
                     members={options.members}
+                    assets={options.sheetAssets[sheet] ?? []}
                     onDone={() => setSheet('')}
                 />
             )}
@@ -339,12 +353,15 @@ function ScheduleForm({
     method,
     initial,
     members,
+    assets = [],
     onDone,
 }: {
     url: string;
     method: 'post' | 'put';
     initial?: ScheduleRow;
     members: Option[];
+    /** ADR-0031: assets this new schedule may be for. A schedule keeps its asset. */
+    assets?: Option[];
     onDone: () => void;
 }) {
     const errors = usePage().props.errors as Record<string, string>;
@@ -360,6 +377,7 @@ function ScheduleForm({
         starts_on: initial?.startsOn ?? new Date().toISOString().slice(0, 10),
         ends_on: initial?.endsOn ?? '',
         responsible_id: initial?.responsible?.id ?? '',
+        resource_id: initial?.resource?.id ?? '',
         completion: initial?.completion ?? 'submitted',
         reminders: initial?.reminders ?? ['due', 'after:0'],
         reminder_channels: (initial?.reminderChannels ?? null) as
@@ -378,12 +396,30 @@ function ScheduleForm({
                         ...data,
                         ends_on: data.ends_on || null,
                         responsible_id: data.responsible_id || null,
+                        resource_id: data.resource_id || null,
                     },
                     preserveScroll: true,
                     onSuccess: onDone,
                 });
             }}
         >
+            {!initial && assets.length > 0 && (
+                <SelectField
+                    label="For asset"
+                    value={data.resource_id}
+                    onChange={(resource_id) => set({ resource_id })}
+                    options={assets}
+                    empty="The whole sheet (any asset)"
+                    error={errors.resource_id}
+                    hint="One schedule per asset keeps each asset's readings apart: another asset's reading never completes it."
+                    className="sm:col-span-2"
+                />
+            )}
+            {initial?.resource && (
+                <p className="text-sm text-muted-foreground sm:col-span-2">
+                    For {initial.resource.label}. A schedule keeps its asset.
+                </p>
+            )}
             <SelectField
                 label="Expected"
                 value={data.frequency}

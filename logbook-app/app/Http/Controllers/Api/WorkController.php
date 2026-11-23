@@ -112,7 +112,7 @@ class WorkController extends Controller
     {
         $member = Member::current();
         $now = CarbonImmutable::now();
-        $with = ['sheet:id,name,code', 'logbook:id,name', 'responsible:id,name', 'entry:id,reference'];
+        $with = ['sheet:id,name,code', 'logbook:id,name', 'responsible:id,name', 'entry:id,reference', 'resource:id,code,name'];
 
         return response()->json([
             'serverTime' => $now->toIso8601String(),

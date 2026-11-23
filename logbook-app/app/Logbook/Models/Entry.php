@@ -30,6 +30,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $activity_entry_id the activity this entry belongs to
  * @property array<string, mixed>|null $calculation ADR-0030 §4.7: the snapshot made at submission (before: only the phone's figure)
  * @property string|null $meter_resource_id
+ * @property string|null $resource_id ADR-0031: the asset it is for
  * @property string|null $meter_measure
  * @property string|null $meter_start
  * @property string|null $meter_end
@@ -141,5 +142,11 @@ class Entry extends Model
     public function attachments(): HasMany
     {
         return $this->hasMany(Attachment::class, 'log_entry_id')->orderBy('created_at');
+    }
+
+    /** ADR-0031: the asset it is for, when one is named. @return BelongsTo<LogResource, $this> */
+    public function resource(): BelongsTo
+    {
+        return $this->belongsTo(LogResource::class, 'resource_id');
     }
 }

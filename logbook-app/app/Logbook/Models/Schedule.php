@@ -28,6 +28,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable $starts_on
  * @property CarbonImmutable|null $ends_on
  * @property string|null $responsible_id
+ * @property string|null $resource_id ADR-0031: the asset it is for
  * @property string $completion
  * @property list<string>|null $reminders
  * @property bool $active
@@ -94,5 +95,11 @@ class Schedule extends Model
     public function occurrences(): HasMany
     {
         return $this->hasMany(ScheduleOccurrence::class, 'schedule_id');
+    }
+
+    /** ADR-0031: the asset it is for, when one is named. @return BelongsTo<LogResource, $this> */
+    public function resource(): BelongsTo
+    {
+        return $this->belongsTo(LogResource::class, 'resource_id');
     }
 }
