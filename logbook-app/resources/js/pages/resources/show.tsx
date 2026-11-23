@@ -11,9 +11,14 @@ import {
     TextArea,
     TextField,
 } from '@/components/fields';
+import {
+    AssetOverview,
+    type AssetIdentity,
+    type AssetOperations,
+} from '@/components/asset-overview';
 import { PageHeader } from '@/components/page-header';
 import { Toggle } from '@/components/work';
-import { index as resourcesIndex } from '@/routes/resources';
+import { edit, index as resourcesIndex } from '@/routes/resources';
 import * as fuelRates from '@/routes/resources/fuel-rates';
 import * as meterEvents from '@/routes/resources/meter-events';
 
@@ -40,16 +45,8 @@ type MeterEventRow = {
     by: string;
 };
 
-type Props = {
-    resource: {
-        id: string;
-        code: string;
-        name: string;
-        type: string;
-        description: string | null;
-        location: string | null;
-        active: boolean;
-    };
+type Props = AssetOperations & {
+    resource: AssetIdentity & { active: boolean };
     currentRate: string | null;
     rates: Rate[];
     meterEvents: MeterEventRow[];
@@ -79,8 +76,11 @@ export default function ResourceShow({
     labels,
     now,
     canManage,
+    ...ops
 }: Props) {
-    const [tab, setTab] = useState<'fuel' | 'meters' | 'history'>('fuel');
+    const [tab, setTab] = useState<'overview' | 'fuel' | 'meters' | 'history'>(
+        'overview',
+    );
     const current = rates.find((r) => r.id === currentRate) ?? null;
 
     return (
@@ -102,54 +102,20 @@ export default function ResourceShow({
                             .join(' · ')}
                     </>
                 }
-                badges={
-                    <Status value={resource.active ? 'active' : 'inactive'} />
+                badges={<Status value={resource.status} />}
+                actions={
+                    canManage && (
+                        <Button asChild size="sm" variant="outline">
+                            <Link href={edit(resource.id)}>Change</Link>
+                        </Button>
+                    )
                 }
             />
-
-            <div className="mb-4 grid gap-4 sm:grid-cols-3">
-                <Panel>
-                    <PanelBody>
-                        <p className="text-xs text-muted-foreground">
-                            Fuel rate now
-                        </p>
-                        <p className="mt-1 text-xl font-semibold">
-                            {current
-                                ? `${current.rate} ${current.unit}`
-                                : 'Not set'}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                            {current
-                                ? `${labels[current.method]} · ${current.fuelType} · since ${current.effectiveFrom}`
-                                : 'No fuel is estimated for this resource.'}
-                        </p>
-                    </PanelBody>
-                </Panel>
-                <Panel>
-                    <PanelBody>
-                        <p className="text-xs text-muted-foreground">
-                            Rates on record
-                        </p>
-                        <p className="mt-1 text-xl font-semibold">
-                            {rates.length}
-                        </p>
-                    </PanelBody>
-                </Panel>
-                <Panel>
-                    <PanelBody>
-                        <p className="text-xs text-muted-foreground">
-                            Meter events
-                        </p>
-                        <p className="mt-1 text-xl font-semibold">
-                            {events.length}
-                        </p>
-                    </PanelBody>
-                </Panel>
-            </div>
 
             <div className="mb-4 flex gap-2" role="tablist">
                 {(
                     [
+                        ['overview', 'Overview'],
                         ['fuel', 'Fuel rates'],
                         ['meters', 'Meters'],
                         ['history', 'History'],
@@ -167,6 +133,56 @@ export default function ResourceShow({
                     </Button>
                 ))}
             </div>
+
+            {tab === 'overview' && (
+                <AssetOverview
+                    resource={resource}
+                    ops={ops}
+                    canManage={canManage}
+                />
+            )}
+
+            {tab === 'fuel' && (
+                <div className="mb-4 grid gap-4 sm:grid-cols-3">
+                    <Panel>
+                        <PanelBody>
+                            <p className="text-xs text-muted-foreground">
+                                Fuel rate now
+                            </p>
+                            <p className="mt-1 text-xl font-semibold">
+                                {current
+                                    ? `${current.rate} ${current.unit}`
+                                    : 'Not set'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                {current
+                                    ? `${labels[current.method]} · ${current.fuelType} · since ${current.effectiveFrom}`
+                                    : 'No fuel is estimated for this resource.'}
+                            </p>
+                        </PanelBody>
+                    </Panel>
+                    <Panel>
+                        <PanelBody>
+                            <p className="text-xs text-muted-foreground">
+                                Rates on record
+                            </p>
+                            <p className="mt-1 text-xl font-semibold">
+                                {rates.length}
+                            </p>
+                        </PanelBody>
+                    </Panel>
+                    <Panel>
+                        <PanelBody>
+                            <p className="text-xs text-muted-foreground">
+                                Meter events
+                            </p>
+                            <p className="mt-1 text-xl font-semibold">
+                                {events.length}
+                            </p>
+                        </PanelBody>
+                    </Panel>
+                </div>
+            )}
 
             {tab === 'fuel' && (
                 <Panel>

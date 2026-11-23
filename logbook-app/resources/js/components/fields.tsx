@@ -141,6 +141,7 @@ export function SelectField({
     hint,
     empty,
     className,
+    disabled,
 }: {
     label: string;
     value: string;
@@ -150,6 +151,7 @@ export function SelectField({
     hint?: ReactNode;
     empty?: string;
     className?: string;
+    disabled?: boolean;
 }) {
     const id = useId();
 
@@ -166,6 +168,7 @@ export function SelectField({
                 data-slot="select"
                 data-empty={value === '' ? true : undefined}
                 value={value}
+                disabled={disabled}
                 onChange={(e) => onChange(e.target.value)}
                 aria-invalid={error ? true : undefined}
                 className="w-full truncate pl-2.5 text-sm"

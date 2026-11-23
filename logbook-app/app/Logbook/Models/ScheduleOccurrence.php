@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonImmutable $due_at
  * @property CarbonImmutable $closes_at
  * @property string|null $responsible_id
+ * @property string|null $resource_id ADR-0031: the asset it is for
  * @property string $status
  * @property string|null $log_entry_id
  * @property CarbonImmutable|null $submitted_at
@@ -115,5 +116,11 @@ class ScheduleOccurrence extends Model
     public function responsible(): BelongsTo
     {
         return $this->belongsTo(User::class, 'responsible_id');
+    }
+
+    /** ADR-0031: the asset it is for, when one is named. @return BelongsTo<LogResource, $this> */
+    public function resource(): BelongsTo
+    {
+        return $this->belongsTo(LogResource::class, 'resource_id');
     }
 }

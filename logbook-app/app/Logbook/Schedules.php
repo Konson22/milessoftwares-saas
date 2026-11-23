@@ -3,6 +3,7 @@
 namespace App\Logbook;
 
 use App\Logbook\Models\Entry;
+use App\Logbook\Models\LogResource;
 use App\Logbook\Models\LogSheet;
 use App\Logbook\Models\Reminder;
 use App\Logbook\Models\Schedule;
@@ -35,7 +36,7 @@ use Illuminate\Validation\ValidationException;
 final class Schedules
 {
     /**
-     * @param  array<string, mixed>  $data  frequency, weekdays, day_of_month, opens_time, due_time, late_minutes, timezone, starts_on, ends_on, responsible_id, completion, reminders, active
+     * @param  array<string, mixed>  $data  frequency, weekdays, day_of_month, opens_time, due_time, late_minutes, timezone, starts_on, ends_on, responsible_id, completion, reminders, active, resource_id (ADR-0031: one asset's readings)
      */
     public static function save(LogSheet $sheet, ?Schedule $schedule, array $data, User $by): Schedule
     {
@@ -67,6 +68,20 @@ final class Schedules
                 $errors['responsible_id'] = 'Choose someone who writes entries on this log sheet.';
             }
         }
+        // ADR-0031: a schedule for one asset. Its occurrences are met only by entries naming it.
+        $resourceId = is_string($data['resource_id'] ?? null) && $data['resource_id'] !== '' ? $data['resource_id'] : ($schedule?->resource_id);
+        if ($schedule !== null && array_key_exists('resource_id', $data) && $resourceId !== $schedule->resource_id) {
+            $errors['resource_id'] = 'A schedule keeps its asset. End it and set up one for the other asset.';
+        } elseif ($resourceId !== null && $schedule === null) {
+            $resource = LogResource::query()->find($resourceId);
+            $linked = SheetAssets::linkedIds($sheet->id);
+            $why = $resource === null ? 'Choose an asset of this workspace.' : (SheetAssets::refusal($sheet, $resource)
+                ?? ($resource->status !== 'active' ? "{$resource->code} is not active." : null)
+                ?? ($linked !== [] && ! in_array($resource->id, $linked, true) ? "Link {$resource->code} to this log sheet first." : null));
+            if ($why !== null) {
+                $errors['resource_id'] = $why;
+            }
+        }
         $tokens = array_values(array_filter((array) ($data['reminders'] ?? []), fn ($t) => is_string($t) && ! str_starts_with($t, 'at:') && $t !== 'start'));
         $errors += Reminders::errors($tokens, null, CarbonImmutable::now());
         $startsOn = CarbonImmutable::parse((string) ($data['starts_on'] ?? 'today'))->toDateString();
@@ -84,8 +99,8 @@ final class Schedules
         $channels = Reminders::channelsInput($data['reminder_channels'] ?? null);
         $wantsActive = array_key_exists('active', $data) ? (bool) $data['active'] : null;
 
-        $schedule = DB::transaction(function () use ($sheet, $schedule, $data, $times, $late, $completion, $responsible, $tokens, $channels, $startsOn, $endsOn, $by) {
-            $schedule ??= new Schedule(['logbook_id' => $sheet->logbook_id, 'log_sheet_id' => $sheet->id, 'created_by' => $by->id, 'active' => true]);
+        $schedule = DB::transaction(function () use ($sheet, $schedule, $data, $times, $late, $completion, $responsible, $tokens, $channels, $startsOn, $endsOn, $by, $resourceId) {
+            $schedule ??= new Schedule(['logbook_id' => $sheet->logbook_id, 'log_sheet_id' => $sheet->id, 'created_by' => $by->id, 'active' => true, 'resource_id' => $resourceId]);
             if ($schedule->ended_at !== null) {
                 throw ValidationException::withMessages(['schedule' => 'This schedule has ended. Set up a new one instead.']);
             }
@@ -268,6 +283,7 @@ final class Schedules
                     'due_at' => $dueAt,
                     'closes_at' => $closesAt,
                     'responsible_id' => $schedule->responsible_id,
+                    'resource_id' => $schedule->resource_id,
                     'status' => 'open',
                 ]);
                 // Entries already written in the window (made offline, or early) count.
@@ -415,6 +431,7 @@ final class Schedules
             ->where('opens_at', '<=', $entry->occurred_at)
             ->where('closes_at', '>=', $entry->occurred_at)
             ->where(fn (Builder $q) => $q->whereNull('responsible_id')->orWhere('responsible_id', $entry->created_by))
+            ->where(fn (Builder $q) => self::forAsset($q, $entry->resource_id))
             ->lockForUpdate()
             ->first();
 
@@ -430,6 +447,9 @@ final class Schedules
             ->where('opens_at', '<=', $entry->occurred_at)
             ->where('closes_at', '>=', $entry->occurred_at)
             ->where(fn (Builder $q) => $q->whereNull('responsible_id')->orWhere('responsible_id', $entry->created_by))
+            ->where(fn (Builder $q) => self::forAsset($q, $entry->resource_id))
+            // The asset's own expected reading before one for the whole sheet.
+            ->orderByRaw('CASE WHEN resource_id IS NULL THEN 1 ELSE 0 END')
             ->orderBy('due_at')
             ->lockForUpdate()
             ->first();
@@ -549,11 +569,13 @@ final class Schedules
             return 'skipped: nobody responsible';
         }
         $sheet = $occurrence->sheet;
+        // ADR-0031: which asset, when the reading is for one.
+        $what = $sheet->code.($occurrence->resource_id !== null ? ' · '.(LogResource::query()->find($occurrence->resource_id)->code ?? '') : '');
         $title = match ($reminder->kind) {
-            'before' => "{$sheet->code} due in ".Reminders::relative($reminder->offset_minutes),
-            'due' => "{$sheet->code} is due now",
-            'after' => "{$sheet->code} is overdue",
-            default => "{$sheet->code} reminder",
+            'before' => "{$what} due in ".Reminders::relative($reminder->offset_minutes),
+            'due' => "{$what} is due now",
+            'after' => "{$what} is overdue",
+            default => "{$what} reminder",
         };
         $sent = Notifications::notify($occurrence->responsible_id, [
             'category' => 'schedule', 'event' => 'schedule.reminder.'.$reminder->kind, 'title' => $title,
@@ -575,7 +597,7 @@ final class Schedules
         $notice = [
             'category' => 'schedule', 'event' => 'schedule.missed',
             // Several readings a day: the title says which one.
-            'title' => "Missed: {$sheet->code} of ".$occurrence->occurs_on->format('j M')
+            'title' => "Missed: {$sheet->code}".($occurrence->resource_id !== null ? ' · '.(LogResource::query()->find($occurrence->resource_id)->code ?? '') : '').' of '.$occurrence->occurs_on->format('j M')
                 .(count(self::times($occurrence->schedule)) > 1 ? ' '.$occurrence->due_at->setTimezone($occurrence->schedule->timezone)->format('H:i') : ''),
             'body' => $sheet->name.' was due '.self::when($occurrence->due_at).' and no entry came in.',
             'subject_type' => 'occurrence', 'subject_id' => $occurrence->id, 'link' => 'schedules',
@@ -595,6 +617,7 @@ final class Schedules
             ->whereIn('status', ['submitted', 'reviewed', 'finalized', 'returned'])
             ->whereBetween('occurred_at', [$occurrence->opens_at, $occurrence->closes_at])
             ->when($occurrence->responsible_id !== null, fn (Builder $q) => $q->where('created_by', $occurrence->responsible_id))
+            ->when($occurrence->resource_id !== null, fn (Builder $q) => $q->where('resource_id', $occurrence->resource_id))
             // Only entries that did not say what they are for (ADR-0030 §4.3).
             ->whereNull('schedule_link')
             ->whereNotIn('id', ScheduleOccurrence::query()->whereNotNull('log_entry_id')->select('log_entry_id'))
@@ -602,6 +625,18 @@ final class Schedules
         if ($entry !== null) {
             self::meet($occurrence, $schedule, $entry);
         }
+    }
+
+    /**
+     * Occurrences an entry about this asset may meet: those for the whole
+     * sheet, and the asset's own. A reading for STORE-001 never meets
+     * STORE-002's expected reading (ADR-0031 §9).
+     *
+     * @param  Builder<ScheduleOccurrence>  $query
+     */
+    private static function forAsset(Builder $query, ?string $resourceId): void
+    {
+        $query->whereNull('resource_id')->when($resourceId !== null, fn (Builder $q) => $q->orWhere('resource_id', $resourceId));
     }
 
     private static function meet(ScheduleOccurrence $occurrence, Schedule $schedule, Entry $entry): void
@@ -626,6 +661,7 @@ final class Schedules
     {
         return [
             'frequency' => $schedule->frequency,
+            'resource' => $schedule->resource_id !== null ? LogResource::query()->find($schedule->resource_id)?->label() : null,
             'weekdays' => $schedule->weekdays,
             'day_of_month' => $schedule->day_of_month,
             'times' => self::times($schedule),

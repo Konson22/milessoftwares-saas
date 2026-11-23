@@ -13,7 +13,6 @@ use App\Logbook\Models\Entry;
 use App\Logbook\Models\EntryReview;
 use App\Logbook\Models\EntryRevision;
 use App\Logbook\Models\FuelRate;
-use App\Logbook\Models\LogResource;
 use App\Logbook\Models\LogSheet;
 use App\Logbook\Models\LogSheetVersion;
 use App\Logbook\Models\ScheduleOccurrence;
@@ -85,10 +84,11 @@ class EntryController extends Controller
             ...self::shiftProps($sheet->logbook_id, Recording::settings($version)['shifts'] ?? 'off', null, $this->user()->id),
             ...self::activityProps($sheet, $version, null, $request->string('activity')->toString()),
             'sheet' => $this->sheetData($sheet),
-            'fields' => $version->fields,
+            'fields' => self::formFields($version),
             'version' => $version->version,
             'entry' => null,
-            'values' => (object) Fields::defaults($version->fields),
+            // ADR-0031: a reading expected for one asset opens with that asset chosen.
+            'values' => (object) [...Fields::defaults($version->fields), ...($occurrence?->resource_id !== null && ($subject = Recording::subjectField($version)) !== null ? [$subject => $occurrence->resource_id] : [])],
             'occurredAt' => now(Workspace::current()->timezone ?? 'UTC')->format('Y-m-d\TH:i'),
             // One key per opened form: a double click or a resent request makes one entry.
             'idempotencyKey' => (string) Str::uuid7(),
@@ -106,23 +106,6 @@ class EntryController extends Controller
                 'taken' => $occurrence->log_entry_id !== null,
             ],
         ]);
-    }
-
-    /**
-     * The calculation kept at submission, with names for display. Null
-     * while only the phone's own figure is known.
-     *
-     * @param  array<string, mixed>|null  $calculation
-     * @return array<string, mixed>|null
-     */
-    private static function calculationRow(?array $calculation): ?array
-    {
-        if ($calculation === null || ! isset($calculation['method'])) {
-            return null;
-        }
-        $resource = is_string($calculation['resource_id'] ?? null) ? LogResource::query()->find($calculation['resource_id']) : null;
-
-        return [...$calculation, 'resource' => $resource?->label()];
     }
 
     /**
@@ -302,7 +285,7 @@ class EntryController extends Controller
 
         return Inertia::render('entries/form', [
             'sheet' => $this->sheetData($entry->sheet),
-            'fields' => $entry->version->fields,
+            'fields' => self::formFields($entry->version),
             'version' => $entry->version->version,
             'entry' => [
                 'id' => $entry->id, 'reference' => $entry->reference, 'status' => $entry->status, 'revision' => $entry->revision,

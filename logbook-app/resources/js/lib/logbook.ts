@@ -43,6 +43,11 @@ export type FieldDef = {
     exception_severity?: 'low' | 'medium' | 'high' | 'critical';
     /** Resource fields: only resources of this type. */
     resource_type?: string;
+    /** ADR-0031: the field naming the entry's asset, and the assets linked to the sheet. */
+    subject?: boolean;
+    resource_ids?: string[];
+    /** Readings that add up (litres, hours); levels such as temperatures do not. */
+    summable?: boolean;
 };
 
 /** A resource as pickers show it. */
@@ -170,6 +175,7 @@ const STATUS: Record<string, { label: string; tone: Tone }> = {
     missed: { label: 'Missed', tone: 'danger' },
     excused: { label: 'Excused', tone: 'neutral' },
     inactive: { label: 'Inactive', tone: 'neutral' },
+    retired: { label: 'Retired', tone: 'warning' },
     // Recurring tasks and schedules
     paused: { label: 'Paused', tone: 'warning' },
     recording: { label: 'Recording', tone: 'info' },

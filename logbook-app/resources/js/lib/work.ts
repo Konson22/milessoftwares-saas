@@ -155,6 +155,9 @@ export type OccurrenceRow = {
     /** When the entry came in, apart from what the review says. */
     timeliness: 'on_time' | 'late' | null;
     excuseReason: string | null;
+    /** ADR-0031: the asset this reading is for, if any. */
+    resourceId?: string | null;
+    resource?: string | null;
 };
 
 export type ScheduleRow = {
@@ -172,6 +175,8 @@ export type ScheduleRow = {
     startsOn: string;
     endsOn: string | null;
     responsible: { id: string; name: string } | null;
+    /** ADR-0031: the asset this schedule expects readings for. */
+    resource?: { id: string; label: string } | null;
     completion: 'submitted' | 'reviewed';
     reminders: string[];
     reminderChannels: Channel[] | null;

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Logbook\Access;
+use App\Logbook\AssetReports;
 use App\Logbook\Entries;
 use App\Logbook\Exceptions;
 use App\Logbook\Fields;
@@ -70,6 +71,11 @@ class ReportController extends Controller
             'trends' => $view === 'trends' && $sheet !== null ? Trends::forSheet($sheet, $filters) : null,
             'map' => $view === 'map' ? self::map($filters) : null,
             'activities' => $view === 'activities' ? self::activities($filters) : null,
+            // ADR-0031: by asset, measurements per asset for the chosen sheet, scheduled compliance.
+            'assets' => $view === 'assets' ? AssetReports::assets($filters) : null,
+            'measurements' => $view === 'assets' && $sheet !== null ? AssetReports::measurements($sheet, $filters) : null,
+            'compliance' => $view === 'compliance' ? AssetReports::compliance($filters) : null,
+            'applied' => Reports::describe($filters),
             'pdfLimit' => self::PDF_LIMIT,
         ]);
     }
@@ -142,7 +148,67 @@ class ReportController extends Controller
         ])->baseRoute('reports.index');
     }
 
-    public const VIEWS = ['overview', 'table', 'timeline', 'trends', 'map', 'activities'];
+    public const VIEWS = ['overview', 'table', 'timeline', 'trends', 'map', 'activities', 'assets', 'compliance'];
+
+    /**
+     * The asset or compliance report as CSV or PDF (ADR-0031 §13), with
+     * the period and filters at its head. Same rows as the page.
+     */
+    public function summaryExport(Request $request, string $report, string $format): StreamedResponse|HttpResponse
+    {
+        abort_unless(in_array($report, ['assets', 'compliance'], true) && in_array($format, ['csv', 'pdf'], true), 404);
+        $filters = $request->validate(Reports::rules());
+        $tz = Workspace::current()->timezone ?? 'UTC';
+        [$title, $columns, $rows] = $report === 'assets' ? self::assetTable($filters) : self::complianceTable($filters);
+        $applied = Reports::describe($filters);
+        $name = 'logbook-'.$report.'-'.now($tz)->format('Y-m-d');
+
+        if ($format === 'pdf') {
+            return Pdf::loadView('logbook.summary-pdf', [
+                'organization' => Workspace::current()?->display_name, 'title' => $title, 'applied' => $applied,
+                'columns' => $columns, 'rows' => $rows, 'timezone' => $tz, 'printedBy' => $this->user()->name,
+            ])->setPaper('a4', 'landscape')->download($name.'.pdf');
+        }
+
+        return response()->streamDownload(function () use ($columns, $rows, $applied, $title) {
+            $out = fopen('php://output', 'w');
+            assert($out !== false);
+            fwrite($out, "\xEF\xBB\xBF");
+            // What the export holds: the report and its filters, then the table.
+            fputcsv($out, [self::safe($title.' · '.implode(' · ', $applied))], escape: '');
+            fputcsv($out, $columns, escape: '');
+            foreach ($rows as $row) {
+                fputcsv($out, array_map(self::safe(...), $row), escape: '');
+            }
+            fclose($out);
+        }, $name.'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return array{0: string, 1: list<string>, 2: list<list<mixed>>}
+     */
+    private static function assetTable(array $filters): array
+    {
+        $report = AssetReports::assets($filters);
+
+        return ['Assets', ['Asset', 'Category', 'Kind', 'Location', 'Status', 'Records', 'Last record', 'Readings out of range', 'Open exceptions', 'Expected checks', 'On time', 'Missed', 'Fuel estimated (L)'],
+            array_map(fn (array $r) => [$r['label'], $r['type'], $r['kind'] === 'monitored_location' ? 'Monitored location' : 'Asset', $r['location'], $r['status'],
+                $r['records'], $r['lastAt'], $r['outOfRange'], $r['openExceptions'], $r['expected'], $r['onTime'], $r['missed'], $r['fuelL']], $report['rows'])];
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return array{0: string, 1: list<string>, 2: list<list<mixed>>}
+     */
+    private static function complianceTable(array $filters): array
+    {
+        $report = AssetReports::compliance($filters);
+        $line = fn (array $r, string $sheet, ?string $asset) => [$sheet, $asset ?? 'Whole sheet', $r['expected'], $r['onTime'], $r['late'], $r['missed'], $r['excused'], $r['awaitingReview'], $r['open'], $r['rate'] === null ? null : $r['rate'].'%'];
+
+        return ['Scheduled compliance', ['Log sheet', 'Asset', 'Expected', 'Submitted on time', 'Submitted late', 'Missed', 'Excused', 'Awaiting review', 'Open', 'Completion'],
+            [...array_map(fn (array $r) => $line($r, $r['sheet'], $r['resource']), $report['rows']), $line($report['totals'], 'Total', '')]];
+    }
 
     /**
      * Activities and fuel (ADR-0030 §4.9): totals by resource, operator,
@@ -206,6 +272,7 @@ class ReportController extends Controller
             'people' => array_map(fn (array $o) => ['value' => $o['value'], 'label' => preg_replace('/ \\(.*\\)$/', '', $o['label'])], WorkspaceMember::options()),
             'resources' => array_values(LogResource::query()->orderBy('code')->get()->map(fn (LogResource $r) => ['value' => $r->id, 'label' => $r->label()])->all()),
             'locations' => array_values(Location::query()->orderBy('name')->get(['id', 'name'])->map(fn (Location $l) => ['value' => $l->id, 'label' => $l->name])->all()),
+            'categories' => array_values(LogResource::query()->distinct()->orderBy('type')->pluck('type')->all()),
             'shifts' => array_values(Shift::query()->orderBy('starts_time')->get()->map(fn (Shift $s) => ['value' => $s->id, 'label' => $s->label().($s->active ? '' : ' (off)')])->all()),
         ];
     }
@@ -348,6 +415,7 @@ class ReportController extends Controller
             'organization' => Workspace::current()?->display_name,
             'sheet' => $sheet,
             'filters' => $filters,
+            'applied' => Reports::describe($filters),
             'timezone' => $tz,
             'printedBy' => $this->user()->name,
             'rows' => $entries->map(fn (Entry $e) => [

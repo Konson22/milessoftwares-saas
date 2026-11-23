@@ -52,8 +52,8 @@ final class Fields
     public const SETTINGS = [
         'text' => ['placeholder', 'max_length', 'default'],
         'textarea' => ['placeholder', 'max_length', 'default'],
-        'integer' => ['placeholder', 'min', 'max', 'expected_min', 'expected_max', 'unit', 'default', 'raise_exception', 'exception_severity'],
-        'decimal' => ['placeholder', 'min', 'max', 'expected_min', 'expected_max', 'unit', 'default', 'raise_exception', 'exception_severity'],
+        'integer' => ['placeholder', 'min', 'max', 'expected_min', 'expected_max', 'unit', 'default', 'raise_exception', 'exception_severity', 'summable'],
+        'decimal' => ['placeholder', 'min', 'max', 'expected_min', 'expected_max', 'unit', 'default', 'raise_exception', 'exception_severity', 'summable'],
         'date' => [],
         'time' => [],
         'datetime' => [],
@@ -68,6 +68,25 @@ final class Fields
     public const SEVERITIES = ['low', 'medium', 'high', 'critical'];
 
     public const NUMERIC = ['integer', 'decimal'];
+
+    /** Units whose readings never add up: a total of temperatures means nothing (ADR-0031 §11). */
+    public const LEVEL_UNITS = ['°c', '°f', 'c', 'f', 'k', '%', 'bar', 'psi', 'kpa', 'ph', 'v', 'a', 'hz', 'rpm'];
+
+    /**
+     * Whether a number field's readings may be summed: as the builder
+     * set it, otherwise not for a level (temperature, pressure, a
+     * percentage), yes for anything else.
+     *
+     * @param  array<string, mixed>  $field
+     */
+    public static function summable(array $field): bool
+    {
+        if (is_bool($field['summable'] ?? null)) {
+            return $field['summable'];
+        }
+
+        return ! in_array(mb_strtolower(trim((string) ($field['unit'] ?? ''))), self::LEVEL_UNITS, true);
+    }
 
     public const MAX_FIELDS = 60;
 
@@ -196,6 +215,10 @@ final class Fields
             if (in_array('unit', $settings, true) && is_string($field['unit'] ?? null) && trim($field['unit']) !== '') {
                 $clean['unit'] = mb_substr(trim($field['unit']), 0, 20);
             }
+            // ADR-0031: whether readings add up (litres, km) or not (a temperature, a tank level).
+            if (in_array('summable', $settings, true) && is_bool($field['summable'] ?? null)) {
+                $clean['summable'] = $field['summable'];
+            }
 
             if (in_array('choices', $settings, true)) {
                 $choices = [];
@@ -284,7 +307,7 @@ final class Fields
      * @param  array<string, mixed>  $input
      * @param  array<string, list<string>>  $files
      * @param  callable(string): bool  $isMember  whether a user id is a member of the organization
-     * @param  (callable(string, string|null): bool)|null  $isResource  whether a resource id (of an optional type) is active here
+     * @param  (callable(string, string|null, string): bool)|null  $isResource  whether a resource id (of an optional type) may be chosen in the named field
      * @return array{values: array<string, mixed>, errors: array<string, string>}
      */
     public static function clean(array $fields, array $input, array $files, callable $isMember, bool $requireAll, ?callable $isResource = null): array
@@ -312,8 +335,8 @@ final class Fields
             if ($error === null && $field['type'] === 'user' && ! $isMember((string) $value)) {
                 $error = 'Choose a member of this organization.';
             }
-            if ($error === null && $field['type'] === 'resource' && ($isResource === null || ! $isResource((string) $value, $field['resource_type'] ?? null))) {
-                $error = 'Choose an active resource of this workspace.';
+            if ($error === null && $field['type'] === 'resource' && ($isResource === null || ! $isResource((string) $value, $field['resource_type'] ?? null, $name))) {
+                $error = 'Choose an active resource of this workspace that this log sheet records.';
             }
 
             if ($error !== null) {

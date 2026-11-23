@@ -113,7 +113,7 @@ final class Exceptions
         if ($logbookId === null && ! Member::current()->can(Tasks::MANAGE)) {
             $errors['logbook_id'] = 'Choose the logbook this is about.';
         }
-        $resourceId = is_string($data['resource_id'] ?? null) && $data['resource_id'] !== '' ? $data['resource_id'] : null;
+        $resourceId = is_string($data['resource_id'] ?? null) && $data['resource_id'] !== '' ? $data['resource_id'] : ($entry?->resource_id);
         if ($resourceId !== null && ! LogResource::query()->whereKey($resourceId)->exists()) {
             $errors['resource_id'] = 'Choose a resource of this workspace.';
         }
@@ -188,6 +188,8 @@ final class Exceptions
                         'logbook_id' => $entry->logbook_id,
                         'log_sheet_id' => $entry->log_sheet_id,
                         'log_entry_id' => $entry->id,
+                        // ADR-0031: the asset the entry is about, so it shows on the asset's page and report.
+                        'resource_id' => $entry->resource_id,
                         'field' => $field['name'],
                         'field_label' => mb_substr($field['label'], 0, 160),
                         'recorded_value' => mb_substr((string) Fields::text($field, $value), 0, 500),

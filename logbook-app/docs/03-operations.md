@@ -169,13 +169,45 @@ due, and the entry written is counted against it.
 ## Resources and locations
 
 **Locations** are places, which can sit inside other locations (a site, a building, a room).
-**Resources** are the things people log against: a generator, a vehicle, a fridge, a room. Each
-has a code unique in the workspace, a name, a type, a location and an active flag.
+**Resources** (assets, ADR-0031) are the things people log against. Each has a code unique in
+the workspace, a name, a category (its type), a location, and:
 
-- Managers keep them on the **Resources** page; everyone can read them.
-- A **Resource** field on a log sheet lets people pick one; a task can be about one.
-- Inactive resources stay on old records but are not offered for new ones.
-- This is not an asset register: there are no values, depreciation or stock.
+- a **kind**: a *physical asset* (a generator, a vehicle, an air conditioner) or a *monitored
+  location* (a cold room or store that is checked; it must say where it is);
+- a **status**: active (offered), inactive (out of service for now) or retired (history only);
+- make, model, serial number, a responsible person, and **details** (rated power, tank
+  capacity…), each with a label, a value and a unit.
+
+**Registering.** Managers (`logbook.manage`) register assets on **Resources → Register an
+asset**, starting from an **asset template**: seven starters (Generator, Vehicle, Cold Storage
+Room, Air Conditioner, Refrigerator / Freezer, Water Pump, General Equipment) and the
+workspace's own. A template sets the category, kind, the details to fill, an optional fuel rate
+method, and the log sheets it suggests. The asset keeps a copy of the template as it was;
+changing a template makes a new version and never changes assets already registered.
+
+**Linking to log sheets.** A log sheet names its asset in one resource field, its *main asset*
+(chosen in the builder; otherwise the fuel activity's resource field, else the only resource
+field). Managers link assets to sheets from either side: one sheet can record many assets, and
+one asset can be recorded on many sheets. Once a sheet has linked assets, only those are
+offered on it (web and phone); with none linked, any active asset of the field's category is.
+An asset's page can also create a log sheet for it from a suggested starter and link it.
+
+**Per-asset schedules.** A schedule on a shared sheet can be for one asset: cold room 1 at 06,
+14 and 22, cold room 2 at 08 and 20. Each asset's expected readings are its own: another
+asset's entry never completes them. A schedule keeps its asset; unlinking waits for its
+schedule to end.
+
+**Every entry names its asset** (`log_entries.resource_id`, from the main asset field), and so
+do exceptions raised from it and the corrective tasks that follow them. Retired assets keep all
+of that; a draft naming an asset retired or unlinked since is refused on submit and shows why,
+and is never moved to another asset.
+
+The **asset page** shows the identity, the sheets that record it, its schedules, the last 30
+days of expected checks, the latest records, missed readings, exceptions, tasks and
+investigations, then fuel rates, meters and history.
+
+- Everyone in Logbook can read assets; only managers register, change, link or retire them.
+- This is not a finance asset register: there are no values, depreciation or stock.
 
 ## Routes
 

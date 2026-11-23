@@ -10,6 +10,9 @@ use App\Logbook\Models\Entry;
 use App\Logbook\Models\Logbook;
 use App\Logbook\Models\LogResource;
 use App\Logbook\Models\LogSheet;
+use App\Logbook\Models\LogSheetVersion;
+use App\Logbook\Recording;
+use App\Logbook\SheetAssets;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
@@ -27,6 +30,23 @@ abstract class Controller
     protected static function time(mixed $value): ?string
     {
         return $value instanceof \DateTimeInterface ? $value->format(DATE_ATOM) : null;
+    }
+
+    /**
+     * The calculation kept at submission, with names for display. Null
+     * while only the phone's own figure is known.
+     *
+     * @param  array<string, mixed>|null  $calculation
+     * @return array<string, mixed>|null
+     */
+    protected static function calculationRow(?array $calculation): ?array
+    {
+        if ($calculation === null || ! isset($calculation['method'])) {
+            return null;
+        }
+        $resource = is_string($calculation['resource_id'] ?? null) ? LogResource::query()->find($calculation['resource_id']) : null;
+
+        return [...$calculation, 'resource' => $resource?->label()];
     }
 
     /**
@@ -145,6 +165,23 @@ abstract class Controller
      *
      * @return list<array{value: string, label: string, type: string}>
      */
+    /**
+     * A version's fields for the entry form (ADR-0031): the main resource
+     * field is marked, with the assets linked to the sheet when it has
+     * links, so the form offers only those. The server checks it again.
+     *
+     * @return list<array<string, mixed>>
+     */
+    protected static function formFields(LogSheetVersion $version): array
+    {
+        $subject = Recording::subjectField($version);
+        $linked = $subject === null ? [] : SheetAssets::linkedIds($version->log_sheet_id);
+
+        return array_values(array_map(fn (array $f) => $f['name'] === $subject
+            ? [...$f, 'subject' => true, ...($linked !== [] ? ['resource_ids' => $linked] : [])]
+            : $f, $version->fields));
+    }
+
     protected static function resourceOptions(): array
     {
         return array_values(LogResource::query()->where('active', true)->orderBy('code')->get(['id', 'code', 'name', 'type'])

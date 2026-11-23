@@ -55,7 +55,7 @@ class HomeController extends Controller
             'overdueTasks' => Tasks::visible($member)->whereIn('status', Task::OPEN)->where('due_at', '<', $nowAt)
                 ->when(! $member->can(Tasks::MANAGE), fn ($q) => $q->where('assignee_id', $member->id))->count(),
             'toVerify' => $member->can(Tasks::MANAGE) ? Tasks::visible($member)->where('status', 'awaiting_verification')->where('assignee_id', '!=', $member->id)->count() : null,
-            'due' => Schedules::dueFor($member, $nowAt->endOfDay())->with(['sheet:id,name,code', 'logbook:id,name', 'responsible:id,name', 'entry:id,reference'])
+            'due' => Schedules::dueFor($member, $nowAt->endOfDay())->with(['sheet:id,name,code', 'logbook:id,name', 'responsible:id,name', 'entry:id,reference', 'resource:id,code,name'])
                 ->limit(8)->get()->map(fn (ScheduleOccurrence $o) => self::occurrenceRow($o, $nowAt))->values(),
             'missedThisWeek' => Schedules::visible($member)->where('status', 'missed')->where('due_at', '>=', $nowAt->subDays(7))->count(),
             'openExceptions' => Exceptions::visible($member)->whereIn('status', LogException::OPEN)->count(),
@@ -66,7 +66,7 @@ class HomeController extends Controller
                 ->filter(fn (array $row) => $row['dueAt'] !== null)->sortBy('dueAt')->take(5)->values(),
             'myMissed' => Schedules::visible($member)->where('status', 'missed')->where('due_at', '>=', $nowAt->subDays(7))
                 ->where(fn ($q) => $q->whereNull('responsible_id')->orWhere('responsible_id', $member->id))
-                ->with(['sheet:id,name,code', 'logbook:id,name', 'responsible:id,name', 'entry:id,reference'])
+                ->with(['sheet:id,name,code', 'logbook:id,name', 'responsible:id,name', 'entry:id,reference', 'resource:id,code,name'])
                 ->orderByDesc('due_at')->limit(5)->get()->map(fn (ScheduleOccurrence $o) => self::occurrenceRow($o, $nowAt))->values(),
             'returned' => Entry::query()->where('created_by', $me)->where('status', 'returned')->with('sheet:id,name,code')
                 ->orderByDesc('updated_at')->limit(5)->get()

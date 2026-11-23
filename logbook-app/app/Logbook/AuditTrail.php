@@ -2,6 +2,7 @@
 
 namespace App\Logbook;
 
+use App\Logbook\Models\AssetTemplate;
 use App\Logbook\Models\AuditEvent;
 use App\Logbook\Models\Entry;
 use App\Logbook\Models\Investigation;
@@ -45,6 +46,7 @@ final class AuditTrail
             $subject instanceof LogException => ['exception', $subject->reference.' · '.$subject->title, $subject->logbook_id],
             $subject instanceof LogResource => ['resource', $subject->label(), null],
             $subject instanceof Location => ['location', $subject->name, null],
+            $subject instanceof AssetTemplate => ['asset_template', 'Asset template · '.$subject->name, null],
             $subject instanceof Shift => ['shift', $subject->label(), $subject->logbook_id],
             $subject instanceof Investigation => ['investigation', $subject->reference.' · '.$subject->title, $subject->logbook_id],
             $subject instanceof Track => ['track', 'Route · '.$subject->user->name.' · '.$subject->started_at->format('Y-m-d H:i'), $subject->logbook_id],

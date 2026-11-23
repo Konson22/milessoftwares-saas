@@ -120,7 +120,7 @@ it('never changes a published version, even directly in the database', function 
 
 it('copies a starter template as a draft to change and publish', function () {
     $this->get(p("logbooks/{$this->logbook->id}/starters"))->assertOk()
-        ->assertInertia(fn ($page) => $page->has('templates', 4));
+        ->assertInertia(fn ($page) => $page->has('templates', 9));
 
     $this->post(p("logbooks/{$this->logbook->id}/starters"), ['template' => 'vehicle_movement', 'name' => 'Fleet trips', 'code' => 'veh'])
         ->assertSessionHasNoErrors();
@@ -129,13 +129,18 @@ it('copies a starter template as a draft to change and publish', function () {
     inTenant(function () use ($sheet) {
         expect($sheet->status)->toBe('draft')
             ->and($sheet->name)->toBe('Fleet trips')
-            ->and($sheet->draftVersion->fields)->toHaveCount(11);
+            ->and($sheet->draftVersion->fields)->toHaveCount(9)
+            // ADR-0031: the vehicle is a registered asset, recorded per trip with a fuel estimate.
+            ->and($sheet->draftVersion->fields[0]['type'])->toBe('resource')
+            ->and($sheet->draftVersion->recording['mode'])->toBe('event')
+            ->and($sheet->draftVersion->recording['activity']['measure'])->toBe('odometer');
     });
     $this->post(p("sheets/{$sheet->id}/publish"))->assertSessionHasNoErrors();
     expect(inTenant(fn () => $sheet->fresh()->status))->toBe('active');
 
     // Every starter is valid as given.
-    foreach (['daily_activity' => 'ACT', 'generator_operation' => 'GENR', 'it_maintenance' => 'ITM'] as $key => $code) {
+    foreach (['daily_activity' => 'ACT', 'generator_operation' => 'GENR', 'it_maintenance' => 'ITM', 'temperature_monitoring' => 'TMP', 'equipment_inspection' => 'INS',
+        'equipment_maintenance' => 'MNT', 'water_pump_operation' => 'PMP', 'incident_report' => 'INC'] as $key => $code) {
         $this->post(p("logbooks/{$this->logbook->id}/starters"), ['template' => $key, 'name' => $key, 'code' => $code])->assertSessionHasNoErrors();
         $starter = inTenant(fn () => LogSheet::query()->where('code', $code)->sole());
         $this->post(p("sheets/{$starter->id}/publish"))->assertSessionHasNoErrors();

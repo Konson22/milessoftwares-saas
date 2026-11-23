@@ -22,6 +22,8 @@ type Props = {
   members: { id: string; name: string }[];
   /** Active resources, for resource fields. */
   resources?: KitResource[];
+  /** ADR-0031: the assets a resource field offers on this sheet; defaults to its category. */
+  offeredFor?: (field: FieldDef) => KitResource[];
   files: LocalFile[];
   serverFiles: ServerFile[];
   removedFiles: string[];
@@ -56,7 +58,7 @@ export function EntryForm(props: Props) {
   );
 }
 
-function Answer({ field, value, members, resources = [], files, serverFiles, removedFiles, fileMaxKb, filesPerField, onChange, onAddFile, onRemoveFile, onError }: Props & { field: FieldDef; value: unknown }) {
+function Answer({ field, value, members, resources = [], offeredFor, files, serverFiles, removedFiles, fileMaxKb, filesPerField, onChange, onAddFile, onRemoveFile, onError }: Props & { field: FieldDef; value: unknown }) {
   const set = (v: unknown) => onChange(field.name, v === '' ? undefined : v);
 
   switch (field.type) {
@@ -154,9 +156,10 @@ function Answer({ field, value, members, resources = [], files, serverFiles, rem
       return (
         <PersonPicker
           value={typeof value === 'string' ? value : null}
-          members={resources
-            .filter((r) => !field.resource_type || r.type === field.resource_type)
-            .map((r) => ({ id: r.id, name: `${r.code} · ${r.name}${r.location ? ` (${r.location})` : ''}` }))}
+          members={(offeredFor ? offeredFor(field) : resources.filter((r) => !field.resource_type || r.type === field.resource_type)).map((r) => ({
+            id: r.id,
+            name: `${r.code} · ${r.name}${r.location ? ` (${r.location})` : ''}`,
+          }))}
           label={field.label}
           onChange={set}
           noun="resource"
@@ -285,7 +288,7 @@ function PersonPicker({
         className="min-h-12 flex-row items-center gap-3 rounded-xl border border-slate-300 bg-white px-3">
         <Ionicons name={noun === 'person' ? 'person-outline' : 'cube-outline'} size={20} color={colors.muted} />
         <Text className={`flex-1 text-base ${chosen ? 'text-slate-900' : 'text-slate-400'}`}>
-          {chosen?.name ?? (value ? (noun === 'person' ? 'Someone not on this phone' : 'A resource no longer active') : `Choose a ${noun}`)}
+          {chosen?.name ?? (value ? (noun === 'person' ? 'Someone not on this phone' : 'No longer offered here: choose another') : `Choose a ${noun}`)}
         </Text>
         {value && (
           <Pressable accessibilityRole="button" accessibilityLabel="Clear" hitSlop={8} onPress={() => onChange(undefined)}>

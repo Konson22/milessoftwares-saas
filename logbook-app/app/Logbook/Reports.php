@@ -60,6 +60,9 @@ final class Reports
             // ADR-0030: the shift the entry was recorded in.
             'shift' => ['nullable', 'uuid'],
             'mode' => ['nullable', Rule::in(Recording::MODES)],
+            // ADR-0031: the asset's category and kind.
+            'category' => ['nullable', 'string', 'max:48'],
+            'kind' => ['nullable', Rule::in(LogResource::KINDS)],
         ];
     }
 
@@ -84,8 +87,11 @@ final class Reports
             ->when($filters['from'] ?? null, fn (Builder $q, $d) => $q->where($dateColumn, '>=', CarbonImmutable::parse($d, $tz)->startOfDay()->utc()))
             ->when($filters['to'] ?? null, fn (Builder $q, $d) => $q->where($dateColumn, '<', CarbonImmutable::parse($d, $tz)->addDay()->startOfDay()->utc()))
             ->when($filters['person'] ?? null, fn (Builder $q, $id) => self::relatedTo($q, (string) $id, (string) ($filters['relation'] ?? 'any')))
-            ->when($filters['resource'] ?? null, fn (Builder $q, $id) => self::naming($q, [(string) $id]))
-            ->when($filters['location'] ?? null, fn (Builder $q, $id) => self::naming($q, self::resourcesAt((string) $id)))
+            // ADR-0031: the entry's own asset, or an asset named in any of its resource fields.
+            ->when($filters['resource'] ?? null, fn (Builder $q, $id) => self::aboutAssets($q, [(string) $id]))
+            ->when($filters['location'] ?? null, fn (Builder $q, $id) => self::aboutAssets($q, self::resourcesAt((string) $id)))
+            ->when($filters['category'] ?? null, fn (Builder $q, $type) => $q->whereIn('resource_id', LogResource::query()->whereRaw('lower(type) = ?', [mb_strtolower((string) $type)])->select('id')))
+            ->when($filters['kind'] ?? null, fn (Builder $q, $kind) => $q->whereIn('resource_id', LogResource::query()->where('kind', $kind)->select('id')))
             ->when($filters['flag'] ?? null, fn (Builder $q, $flag) => $q->whereExists(function ($sub) use ($flag) {
                 $sub->selectRaw('1')->from('log_exceptions')
                     ->whereColumn('log_exceptions.log_entry_id', 'log_entries.id')
@@ -150,16 +156,18 @@ final class Reports
      * Sheets::keepsNamesTyped).
      *
      * @param  array<string, mixed>  $filters
-     * @return list<array{name: string, label: string, count: int, sum: float, average: float|null, min: float|null, max: float|null}>|null
+     * @return list<array{name: string, label: string, count: int, sum: float|null, average: float|null, min: float|null, max: float|null}>|null
      */
     public static function numbers(LogSheet $sheet, array $filters): ?array
     {
         $versions = LogSheetVersion::query()->where('log_sheet_id', $sheet->id)->where('status', 'published')->orderBy('version')->get();
         $numeric = [];
+        $summable = [];
         foreach ($versions as $version) {
             foreach ($version->fields as $field) {
                 if (in_array($field['type'], Fields::NUMERIC, true)) {
                     $numeric[$field['name']] = $field['label'];
+                    $summable[$field['name']] = Fields::summable($field);
                 }
             }
         }
@@ -189,7 +197,8 @@ final class Reports
                 'name' => $name,
                 'label' => $numeric[$name],
                 'count' => $s['count'],
-                'sum' => round($s['sum'], 6),
+                // ADR-0031: no total for readings that do not add up (a temperature, a level).
+                'sum' => $summable[$name] ? round($s['sum'], 6) : null,
                 'average' => $s['count'] > 0 ? round($s['sum'] / $s['count'], 4) : null,
                 'min' => $s['min'],
                 'max' => $s['max'],
@@ -229,6 +238,58 @@ final class Reports
      * @param  Builder<Entry>  $query
      * @param  list<string>  $ids
      */
+    /**
+     * Entries about one of these assets: their own asset (resource_id),
+     * or one named in another resource field.
+     *
+     * @param  Builder<Entry>  $query
+     * @param  list<string>  $ids
+     */
+    private static function aboutAssets(Builder $query, array $ids): void
+    {
+        $query->where(fn (Builder $w) => $w->whereIn('resource_id', $ids === [] ? ['00000000-0000-0000-0000-000000000000'] : $ids)->orWhere(fn (Builder $n) => self::naming($n, $ids)));
+    }
+
+    /**
+     * The filters applied, in words, for the head of an export: what the
+     * reader is looking at.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return list<string>
+     */
+    public static function describe(array $filters): array
+    {
+        $out = [];
+        if (! empty($filters['from']) || ! empty($filters['to'])) {
+            $out[] = ($filters['basis'] ?? 'occurred') === 'submitted' ? 'Submitted ' : 'Occurred ';
+            $out[array_key_last($out)] .= ($filters['from'] ?? '…').' to '.($filters['to'] ?? '…');
+        } else {
+            $out[] = 'All dates';
+        }
+        $name = fn (string $class, string $id, string $column = 'name') => $class::query()->whereKey($id)->value($column);
+        foreach ([
+            'logbook' => fn ($id) => 'Logbook: '.$name(Logbook::class, $id),
+            'sheet' => fn ($id) => 'Log sheet: '.$name(LogSheet::class, $id, 'code'),
+            'resource' => fn ($id) => 'Asset: '.LogResource::query()->find($id)?->label(),
+            'category' => fn ($v) => 'Category: '.$v,
+            'kind' => fn ($v) => $v === 'monitored_location' ? 'Monitored locations' : 'Physical assets',
+            'location' => fn ($id) => 'Location: '.$name(Location::class, $id),
+            'person' => fn ($id) => 'Person: '.$name(User::class, $id).(($filters['relation'] ?? 'any') !== 'any' ? ' ('.$filters['relation'].')' : ''),
+            'shift' => fn ($id) => 'Shift: '.$name(Models\Shift::class, $id),
+            'status' => fn ($v) => 'Status: '.$v,
+            'review' => fn ($v) => 'Review: '.str_replace('_', ' ', $v),
+            'flag' => fn ($v) => 'Only: '.str_replace('_', ' ', $v),
+            'mode' => fn ($v) => 'Recorded: '.(Recording::LABELS[$v] ?? $v),
+            'q' => fn ($v) => 'Matching “'.$v.'”',
+        ] as $key => $text) {
+            if (($filters[$key] ?? null) !== null && $filters[$key] !== '') {
+                $out[] = $text($filters[$key]);
+            }
+        }
+
+        return $out;
+    }
+
     private static function naming(Builder $query, array $ids): void
     {
         if ($ids === []) {

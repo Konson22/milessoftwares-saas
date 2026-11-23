@@ -74,6 +74,11 @@ class EntryController extends Controller
                 'reviewer' => $r->reviewer_name,
                 'decidedAt' => self::time($r->decided_at),
             ])->values()->all(),
+            // ADR-0030: what the web entry page shows, read online on the phone.
+            'shift' => $entry->shift?->label(),
+            'activityEntry' => ($parent = $entry->activity_entry_id !== null ? Access::entries()->with('sheet:id,name')->find($entry->activity_entry_id) : null) === null
+                ? null : ['id' => $parent->id, 'label' => ($parent->reference ?? 'Draft').' · '.$parent->sheet->name],
+            'calculation' => self::calculationRow($entry->calculation),
             'canReview' => $entry->status === 'submitted' && $entry->created_by !== $this->user()->id
                 && Access::reachesSheet($entry->sheet, 'review'),
         ]);
@@ -302,6 +307,8 @@ class EntryController extends Controller
             'trackId' => $entry->log_track_id,
             // ADR-0030: so a phone correcting an entry keeps its shift and activity.
             'shiftId' => $entry->shift_id,
+            // ADR-0031: the asset the entry is about.
+            'resourceId' => $entry->resource_id,
             'activityStartedAt' => self::time($entry->activity_started_at),
             'activityEndedAt' => self::time($entry->activity_ended_at),
             'files' => $entry->attachments()->whereNull('removed_at')->get()->map(fn (Attachment $a) => self::file($a))->values()->all(),

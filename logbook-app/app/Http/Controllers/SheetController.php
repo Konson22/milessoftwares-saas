@@ -8,10 +8,12 @@ use App\Logbook\Models\AuditEvent;
 use App\Logbook\Models\Entry;
 use App\Logbook\Models\Logbook;
 use App\Logbook\Models\LogException;
+use App\Logbook\Models\LogResource;
 use App\Logbook\Models\LogSheet;
 use App\Logbook\Models\LogSheetVersion;
 use App\Logbook\Recording;
 use App\Logbook\References;
+use App\Logbook\SheetAssets;
 use App\Logbook\Sheets;
 use App\Logbook\StarterTemplates;
 use App\Logbook\Tracks;
@@ -46,11 +48,34 @@ class SheetController extends Controller
             ])->values(),
             'stats' => self::sheetStats($sheet),
             'recordingMode' => Recording::mode($sheet),
+            ...self::assetLinks($sheet),
             'canWrite' => Access::writableSheets()->whereKey($sheet->id)->exists(),
             'canManage' => Access::managedLogbooks()->whereKey($sheet->logbook_id)->exists(),
             'logbooks' => Access::manages() ? Access::managedLogbooks()->where('status', 'active')->orderBy('name')->get(['id', 'name'])
                 ->map(fn (Logbook $l) => ['value' => $l->id, 'label' => $l->name]) : [],
         ]);
+    }
+
+    /**
+     * The assets the sheet records (ADR-0031 §6), and those a manager may
+     * still link: active, of the main field's type.
+     *
+     * @return array<string, mixed>
+     */
+    private static function assetLinks(LogSheet $sheet): array
+    {
+        $field = SheetAssets::subjectFieldOf($sheet);
+        $linked = $sheet->resources()->with('location.parent')->orderBy('code')->get();
+        $canManage = Access::managedLogbooks()->whereKey($sheet->logbook_id)->exists();
+        $type = is_string($field['resource_type'] ?? null) && $field['resource_type'] !== '' ? mb_strtolower($field['resource_type']) : null;
+
+        return [
+            'assetField' => $field === null ? null : ['label' => $field['label'], 'type' => $field['resource_type'] ?? null],
+            'assets' => $linked->map(fn (LogResource $r) => ['id' => $r->id, 'label' => $r->label(), 'type' => $r->type, 'status' => $r->status, 'location' => $r->location?->path()])->values(),
+            'assetOptions' => ! $canManage || $field === null ? [] : LogResource::query()->where('status', 'active')->whereNotIn('id', $linked->pluck('id'))
+                ->when($type !== null, fn ($q) => $q->whereRaw('lower(type) = ?', [$type]))->orderBy('code')->get()
+                ->map(fn (LogResource $r) => ['value' => $r->id, 'label' => $r->label()])->values(),
+        ];
     }
 
     /** The template builder: the draft (or a copy of the published version) and a preview. */
@@ -65,7 +90,7 @@ class SheetController extends Controller
             // GPS (ADR-0028): part of the version, so it is published with the fields.
             'location' => Tracks::settings($draft ?? $sheet->publishedVersion),
             // How the sheet is recorded (ADR-0030): also part of the version.
-            'recording' => ['mode' => Recording::mode($sheet, $draft ?? $sheet->publishedVersion), 'shifts' => Recording::settings($draft ?? $sheet->publishedVersion)['shifts'] ?? 'off', 'activity' => Recording::activity($draft ?? $sheet->publishedVersion), 'liveSchedules' => Recording::hasLiveSchedules($sheet)],
+            'recording' => ['mode' => Recording::mode($sheet, $draft ?? $sheet->publishedVersion), 'shifts' => Recording::settings($draft ?? $sheet->publishedVersion)['shifts'] ?? 'off', 'activity' => Recording::activity($draft ?? $sheet->publishedVersion), 'subject' => ($draft ?? $sheet->publishedVersion)?->recording['subject'] ?? null, 'liveSchedules' => Recording::hasLiveSchedules($sheet)],
             'draftVersion' => $draft?->version,
             'publishedVersion' => $sheet->publishedVersion?->version,
             'types' => collect(Fields::TYPES)->map(fn ($label, $value) => ['value' => $value, 'label' => $label, 'settings' => Fields::SETTINGS[$value]])->values(),
@@ -94,6 +119,9 @@ class SheetController extends Controller
             'templates' => collect(StarterTemplates::all())->map(fn ($t, $key) => [
                 'key' => $key, 'name' => $t['name'], 'code' => $t['code'], 'description' => $t['description'],
                 'reviewRequired' => $t['review_required'],
+                'mode' => $t['recording']['mode'] ?? 'on_demand',
+                'fuel' => isset($t['recording']['activity']),
+                'gps' => isset($t['location']),
                 'fields' => array_map(fn ($f) => [
                     'label' => $f['label'], 'kind' => $f['type'], 'type' => Fields::TYPES[$f['type']], 'required' => $f['required'],
                     'choices' => array_column($f['choices'] ?? [], 'label'),
@@ -116,6 +144,10 @@ class SheetController extends Controller
             'description' => $template['description'],
             'review_required' => $template['review_required'],
         ], $template['fields'], $this->user(), 'starter '.$data['template']);
+        // ADR-0031: how the starter suggests recording it comes along, as a draft to change.
+        if (isset($template['recording']) || isset($template['location'])) {
+            Sheets::saveDraft($sheet, $template['fields'], $this->user(), $template['location'] ?? null, isset($template['location']), $template['recording'] ?? null, isset($template['recording']));
+        }
 
         return to_route('sheets.template', $sheet->id)->with('success', 'Copied from the starter template. Change anything, then publish.');
     }

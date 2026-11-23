@@ -2,6 +2,8 @@ import { Head, router, usePage } from '@inertiajs/react';
 import {
     BarChart3,
     BookOpen,
+    Boxes,
+    CalendarCheck,
     CalendarClock,
     CheckCheck,
     ClipboardCheck,
@@ -34,6 +36,16 @@ import {
 import type { FilterOptions, Filters } from '@/components/entries-table';
 import { EntryFilters } from '@/components/entries-table';
 import type { ActivitiesData } from '@/components/activities-view';
+import type {
+    AssetRow,
+    ComplianceData,
+    MeasurementGroup,
+} from '@/components/asset-reports';
+import {
+    AssetsView,
+    ComplianceView,
+    MeasurementsView,
+} from '@/components/asset-reports';
 import { ActivitiesView } from '@/components/activities-view';
 import { Errors, SelectField } from '@/components/fields';
 import type { Issues } from '@/components/issues-table';
@@ -52,7 +64,13 @@ import {
     TrendsView,
 } from '@/components/report-views';
 import { formatDate } from '@/lib/logbook';
-import { activitiesCsv, csv, index, pdf } from '@/routes/reports';
+import {
+    activitiesCsv,
+    csv,
+    index,
+    pdf,
+    summaryExport,
+} from '@/routes/reports';
 
 type Count = { name: string; count: number };
 
@@ -67,9 +85,19 @@ type ReportFilters = Filters & {
     mode?: string;
     location?: string;
     flag?: string;
+    category?: string;
+    kind?: string;
 };
 
-type View = 'overview' | 'table' | 'timeline' | 'trends' | 'map' | 'activities';
+type View =
+    | 'overview'
+    | 'table'
+    | 'timeline'
+    | 'trends'
+    | 'map'
+    | 'activities'
+    | 'assets'
+    | 'compliance';
 
 type Props = {
     filters: ReportFilters;
@@ -79,12 +107,19 @@ type Props = {
         resources: Option[];
         shifts: Option[];
         locations: Option[];
+        categories: string[];
     };
     table: TableData | null;
     timeline: { events: TimelineEvent[]; truncated: boolean } | null;
     trends: TrendSeries[] | null;
     map: MapData | null;
     activities: ActivitiesData | null;
+    /** ADR-0031: by asset, readings per asset, scheduled compliance. */
+    assets: { rows: AssetRow[]; truncated: boolean } | null;
+    measurements: MeasurementGroup[] | null;
+    compliance: ComplianceData | null;
+    /** The filters applied, in words: what exports say at their head. */
+    applied: string[];
     counts: {
         total: number;
         byStatus: Record<string, number>;
@@ -98,7 +133,8 @@ type Props = {
               name: string;
               label: string;
               count: number;
-              sum: number;
+              /** Null for readings that do not add up (temperatures, levels). */
+              sum: number | null;
               average: number | null;
               min: number | null;
               max: number | null;
@@ -163,6 +199,8 @@ const FILTER_KEYS = [
     'flag',
     'shift',
     'mode',
+    'category',
+    'kind',
 ] as const;
 
 const VIEWS: {
@@ -176,6 +214,8 @@ const VIEWS: {
     { key: 'trends', label: 'Trends', icon: LineChart },
     { key: 'map', label: 'Map', icon: MapIcon },
     { key: 'activities', label: 'Activities and fuel', icon: Fuel },
+    { key: 'assets', label: 'By asset', icon: Boxes },
+    { key: 'compliance', label: 'Scheduled compliance', icon: CalendarCheck },
 ];
 
 const number = (n: number | null) =>
@@ -227,6 +267,9 @@ export default function Reports({
     trends,
     map,
     activities,
+    assets,
+    measurements,
+    compliance,
     options,
     counts,
     issues,
@@ -281,6 +324,40 @@ export default function Reports({
                                     <FileSpreadsheet /> Export activities
                                 </a>
                             </Button>
+                        )}
+                        {(view === 'assets' || view === 'compliance') && (
+                            <>
+                                <Button asChild variant="outline">
+                                    <a
+                                        href={
+                                            summaryExport(
+                                                { report: view, format: 'csv' },
+                                                { query },
+                                            ).url
+                                        }
+                                    >
+                                        <FileSpreadsheet />{' '}
+                                        {view === 'assets'
+                                            ? 'Assets CSV'
+                                            : 'Compliance CSV'}
+                                    </a>
+                                </Button>
+                                <Button asChild variant="outline">
+                                    <a
+                                        href={
+                                            summaryExport(
+                                                { report: view, format: 'pdf' },
+                                                { query },
+                                            ).url
+                                        }
+                                    >
+                                        <FileDown />{' '}
+                                        {view === 'assets'
+                                            ? 'Assets PDF'
+                                            : 'Compliance PDF'}
+                                    </a>
+                                </Button>
+                            </>
                         )}
                         <Button asChild variant="outline">
                             <a href={csv({ query }).url}>
@@ -503,6 +580,36 @@ export default function Reports({
                                     empty="Any resource"
                                 />
                                 <SelectField
+                                    label="Asset category"
+                                    value={filters.category ?? ''}
+                                    onChange={(category) =>
+                                        go({ category: category || undefined })
+                                    }
+                                    options={options.categories.map((c) => ({
+                                        value: c,
+                                        label: c,
+                                    }))}
+                                    empty="Any category"
+                                />
+                                <SelectField
+                                    label="Asset kind"
+                                    value={filters.kind ?? ''}
+                                    onChange={(kind) =>
+                                        go({ kind: kind || undefined })
+                                    }
+                                    options={[
+                                        {
+                                            value: 'asset',
+                                            label: 'Physical assets',
+                                        },
+                                        {
+                                            value: 'monitored_location',
+                                            label: 'Monitored locations',
+                                        },
+                                    ]}
+                                    empty="Any kind"
+                                />
+                                <SelectField
                                     label="Location"
                                     value={filters.location ?? ''}
                                     onChange={(location) =>
@@ -577,6 +684,37 @@ export default function Reports({
                 {view === 'map' && map && <MapView map={map} />}
                 {view === 'activities' && activities && (
                     <ActivitiesView data={activities} />
+                )}
+                {view === 'assets' && assets && (
+                    <>
+                        <AssetsView
+                            data={assets}
+                            onAsset={(resource) =>
+                                router.get(index().url, {
+                                    ...query,
+                                    resource,
+                                    view: 'table',
+                                })
+                            }
+                        />
+                        <MeasurementsView
+                            groups={measurements}
+                            sheetChosen={sheet !== null}
+                        />
+                    </>
+                )}
+                {view === 'compliance' && compliance && (
+                    <ComplianceView
+                        data={compliance}
+                        onRow={(sheetId, resourceId) =>
+                            router.get(index().url, {
+                                ...query,
+                                sheet: sheetId,
+                                ...(resourceId ? { resource: resourceId } : {}),
+                                view: 'table',
+                            })
+                        }
+                    />
                 )}
 
                 {view === 'overview' && <Figures counts={counts} />}
