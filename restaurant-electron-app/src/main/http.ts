@@ -11,12 +11,19 @@ const TIMEOUT_MS = 15_000;
  * DNS, a timeout) comes back as offline.
  */
 export async function apiRequest(request: ApiRequest, retried = false): Promise<ApiResponse> {
+  let base: string;
+  try {
+    base = workspaceUrl(request.workspace);
+  } catch {
+    return { offline: false, status: 400, json: { message: 'Not a workspace address.' } };
+  }
+
   const headers: Record<string, string> = { ...request.headers };
   const token = await accessToken(retried);
   if (token) headers.Authorization = `Bearer ${token}`;
   if (request.branchId) headers['X-Branch-Id'] = request.branchId;
 
-  const response = await send(`${workspaceUrl(request.workspace)}/${PRODUCT_PATH}/api/${request.path.replace(/^\//, '')}`, request.method, headers, request.body);
+  const response = await send(`${base}/${PRODUCT_PATH}/api/${request.path.replace(/^\//, '')}`, request.method, headers, request.body);
 
   if (!response.offline && response.status === 401 && !retried && response.json?.code === 'invalid_token') {
     return apiRequest(request, true);

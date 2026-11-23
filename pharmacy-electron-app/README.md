@@ -147,10 +147,10 @@ With central-app and pharmacy-app running behind Apache
 
 ```
 VITE_API_MODE=live
-VITE_AUTH_URL=http://auth.milesoftwares.localhost
+VITE_AUTH_URL=http://auth.tatook.localhost
 VITE_CLIENT_ID=<PLATFORM_MOBILE_CLIENT_ID from pharmacy-app/.env>
 VITE_OAUTH_PORT=48217
-VITE_WORKSPACE_URL=http://{workspace}.milesoftwares.localhost
+VITE_WORKSPACE_URL=http://{workspace}.tatook.localhost
 VITE_PRODUCT_PATH=pharmacy
 ```
 
@@ -193,7 +193,7 @@ The demo (mock) mode is a pharmacy only.
 | `VITE_AUTH_URL` | The platform's sign-in host |
 | `VITE_CLIENT_ID` | The desktop client's id (the pharmacy's mobile client) |
 | `VITE_OAUTH_PORT` | The loopback port of the redirect URI (48217) |
-| `VITE_WORKSPACE_URL` | `https://{workspace}.milesoftwares.com` |
+| `VITE_WORKSPACE_URL` | `https://{workspace}.milessoftwares.com` |
 | `VITE_PRODUCT_PATH` | `pharmacy` |
 | `VITE_RETAIL_CLIENT_ID` | The shop's mobile client; empty: pharmacy only |
 | `VITE_RETAIL_PATH` | `retail` |

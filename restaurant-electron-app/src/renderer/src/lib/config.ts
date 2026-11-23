@@ -2,7 +2,7 @@
 
 const env = import.meta.env;
 
-const WORKSPACE_URL = (env.VITE_WORKSPACE_URL ?? 'https://{workspace}.milesoftwares.com').replace(/\/$/, '');
+const WORKSPACE_URL = (env.VITE_WORKSPACE_URL ?? 'https://{workspace}.milessoftwares.com').replace(/\/$/, '');
 const PRODUCT_PATH = (env.VITE_PRODUCT_PATH ?? 'restaurant').replace(/^\/|\/$/g, '');
 
 export function workspaceUrl(workspace: string): string {

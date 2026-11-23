@@ -8,7 +8,7 @@ import { createBusiness, slugAvailability } from '@/lib/api/platform';
 import { PRODUCTS, workspaceUrl } from '@/lib/config';
 import { useAuth } from '@/store/auth';
 
-/** ".milesoftwares.com", as the workspace address ends. */
+/** ".milessoftwares.com", as the workspace address ends. */
 const ROOT = new URL(workspaceUrl('x')).host.slice(1);
 
 /** As the web's "New business": the name, lowercased, dashes for the rest. */

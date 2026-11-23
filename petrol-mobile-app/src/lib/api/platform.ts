@@ -21,7 +21,7 @@ export interface BusinessChoice {
 export interface NewBusiness {
   display_name: string;
   legal_name: string;
-  /** The workspace address: <slug>.tatook.com. */
+  /** The workspace address: <slug>.milessoftwares.com. */
   slug: string;
   country_code: string;
   default_currency: string;

@@ -9,7 +9,8 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "autoIncrement": true
     },
     "production": {
       "autoIncrement": true
@@ -18,7 +19,7 @@
   "submit": {
     "production": {
       "android": {
-        "serviceAccountKeyPath": "C:/Users/konak/Downloads/milesoftwares-4209776fb798.json",
+        "serviceAccountKeyPath": "C:/Users/konak/Downloads/milesoftwares-798ef97caa67.json",
         "track": "internal"
       }
     }

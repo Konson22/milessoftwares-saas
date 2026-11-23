@@ -7,7 +7,7 @@ const env = import.meta.env;
 /** "mock" runs a demo pharmacy inside the app; "live" talks to the workspace. */
 export const API_MODE: 'mock' | 'live' = env.VITE_API_MODE === 'live' ? 'live' : 'mock';
 
-const WORKSPACE_URL = (env.VITE_WORKSPACE_URL ?? 'https://{workspace}.milesoftwares.com').replace(/\/$/, '');
+const WORKSPACE_URL = (env.VITE_WORKSPACE_URL ?? 'https://{workspace}.milessoftwares.com').replace(/\/$/, '');
 
 const trim = (path: string) => path.replace(/^\/|\/$/g, '');
 
