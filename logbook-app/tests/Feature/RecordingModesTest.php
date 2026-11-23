@@ -7,6 +7,7 @@ use App\Logbook\Models\LogSheetVersion;
 use App\Logbook\Models\Schedule;
 use App\Logbook\Recording;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 
 /*
@@ -49,11 +50,20 @@ it('keeps different recording modes side by side in one logbook, on the one entr
 
     // Every mode writes the same entries: draft, submit, reference, revision.
     as_($this->team['writer'], 'logbook_contributor');
-    foreach ([$operation, $breakdown, $notes] as $sheet) {
-        writeEntry($sheet)->assertSessionHasNoErrors();
-    }
+    writeEntry($operation)->assertSessionHasNoErrors();
+    writeEntry($notes)->assertSessionHasNoErrors();
+    // An event is recorded once it has ended (ADR-0030 §4.4); a client that sends no start is not held to it.
+    $this->post(p('entries'), [
+        'sheet_id' => $breakdown->id, 'occurred_at' => '2026-11-19T08:30', 'activity_started_at' => '2026-11-19T08:30',
+        'values' => generatorValues(), 'idempotency_key' => (string) Str::uuid7(), 'submit' => true,
+    ])->assertSessionHasErrors('activity_ended_at');
+    writeEntry($breakdown)->assertSessionHasNoErrors();
+    $this->post(p('entries'), [
+        'sheet_id' => $breakdown->id, 'occurred_at' => '2026-11-19T08:30', 'activity_started_at' => '2026-11-19T08:30', 'activity_ended_at' => '2026-11-19T09:15',
+        'values' => generatorValues(), 'idempotency_key' => (string) Str::uuid7(), 'submit' => true,
+    ])->assertSessionHasNoErrors();
     $entries = inTenant(fn () => Entry::query()->orderBy('reference')->get());
-    expect($entries->pluck('status')->unique()->all())->toBe(['finalized'])
+    expect($entries)->toHaveCount(4)->and($entries->pluck('status')->unique()->all())->toBe(['finalized'])
         ->and($entries->pluck('revision')->unique()->all())->toBe([1]);
 
     $this->get(p("sheets/{$breakdown->id}"))->assertInertia(fn ($page) => $page->where('recordingMode', 'event'));
@@ -111,7 +121,7 @@ it('sends each sheet\'s mode to the phone', function () {
     test()->actingAsAppMember('acme', rolePermissions('logbook_contributor'), user: $this->team['writer']);
     Cache::flush();
     $kit = $this->getJson($this->workspaceUrl('acme', 'api/v1/kit'))->assertOk()->json('sheets');
-    expect(collect($kit)->firstWhere('id', $sheet->id)['recording'])->toBe(['mode' => 'event', 'shifts' => 'off']);
+    expect(collect($kit)->firstWhere('id', $sheet->id)['recording'])->toBe(['mode' => 'event', 'shifts' => 'off', 'activity' => null]);
 });
 
 it('lets only managers set how a sheet is recorded', function () {

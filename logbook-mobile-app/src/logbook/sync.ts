@@ -1,3 +1,4 @@
+import { activityBody } from './activity';
 import { clean, defaults } from './fields';
 import type { EntryLocation, Item, Kit, KitSheet, LocalFile, LogbookStore, Review, ServerFile, ServerStatus, StoredVersion, Values } from './types';
 
@@ -56,13 +57,17 @@ export type ServerEntry = {
   values: Values;
   files: (ServerFile & { sha256: string | null })[];
   lastReview: Review | null;
+  /** ADR-0030; absent from servers before it. */
+  shiftId?: string | null;
+  activityStartedAt?: string | null;
+  activityEndedAt?: string | null;
 };
 
 export interface Transport {
   kit(): Promise<Kit>;
   version(id: string): Promise<StoredVersion>;
-  create(body: { id: string; sheet_id: string; version_id: string; occurred_at: string; values: Values; submit: boolean; occurrence_id?: string | null } & Place): Promise<ServerEntry>;
-  update(id: string, body: { base_revision: number; occurred_at: string; values: Values } & Place): Promise<ServerEntry>;
+  create(body: { id: string; sheet_id: string; version_id: string; occurred_at: string; values: Values; submit: boolean; occurrence_id?: string | null } & Place & Record<string, unknown>): Promise<ServerEntry>;
+  update(id: string, body: { base_revision: number; occurred_at: string; values: Values } & Place & Record<string, unknown>): Promise<ServerEntry>;
   upload(id: string, file: LocalFile): Promise<{ id: string }>;
   removeFile(id: string): Promise<void>;
   submit(id: string, revision: number): Promise<ServerEntry>;
@@ -203,9 +208,9 @@ export async function syncOne(store: LogbookStore, transport: Transport, files: 
     // 1. The entry on the server, with the phone's values.
     let entry: ServerEntry;
     if (item.serverId === null) {
-      entry = await transport.create({ id: item.id, sheet_id: item.sheet.id, version_id: item.versionId, occurred_at: item.occurredAt, values: plain(item.values), submit: false, occurrence_id: item.occurrenceId ?? null, ...place(item) });
+      entry = await transport.create({ id: item.id, sheet_id: item.sheet.id, version_id: item.versionId, occurred_at: item.occurredAt, values: plain(item.values), submit: false, occurrence_id: item.scheduleLink === 'extra' ? null : (item.occurrenceId ?? null), ...place(item), ...activityBody(item) });
     } else {
-      entry = await transport.update(item.serverId, { base_revision: item.revision, occurred_at: item.occurredAt, values: plain(item.values), ...place(item) });
+      entry = await transport.update(item.serverId, { base_revision: item.revision, occurred_at: item.occurredAt, values: plain(item.values), ...place(item), ...activityBody(item) });
     }
     await save({ ...item, serverId: entry.id });
 
@@ -273,6 +278,10 @@ function fromServer(item: Item, entry: ServerEntry): Item {
     files: [],
     removedFiles: [],
     serverFiles: entry.files.map(({ id, field, name, size, mime }) => ({ id, field, name, size, mime })),
+    // ADR-0030: only when the server says; the phone's own otherwise.
+    ...(entry.shiftId !== undefined ? { shiftId: entry.shiftId } : {}),
+    ...(entry.activityStartedAt !== undefined ? { activityStartedAt: entry.activityStartedAt } : {}),
+    ...(entry.activityEndedAt !== undefined ? { activityEndedAt: entry.activityEndedAt } : {}),
   };
 }
 

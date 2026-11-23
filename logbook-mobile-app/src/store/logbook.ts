@@ -41,7 +41,10 @@ interface LogbookState {
   /** A new draft; from a reminder, for its expected entry (one draft per expected entry). */
   start(sheet: KitSheet, options?: { occurrenceId?: string }): Promise<Item>;
   /** Keeps what was typed. A returned entry being corrected becomes a draft until it is sent again. */
-  saveDraft(item: Item, changes: { values: Values; occurredAt: string; files: LocalFile[]; removedFiles: string[]; location?: Item['location']; trackId?: Item['trackId'] }): Promise<Item>;
+  saveDraft(
+    item: Item,
+    changes: { values: Values; occurredAt: string; files: LocalFile[]; removedFiles: string[] } & Partial<Pick<Item, 'location' | 'trackId' | 'occurrenceId' | 'scheduleLink' | 'shiftId' | 'activityStartedAt' | 'activityEndedAt' | 'calculation'>>,
+  ): Promise<Item>;
   finish(item: Item): Promise<Record<string, string>>;
   discardDraft(item: Item): Promise<void>;
 }

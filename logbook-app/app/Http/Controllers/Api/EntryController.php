@@ -92,6 +92,14 @@ class EntryController extends Controller
             // ADR-0030: newer phone builds say named or extra; older ones say nothing (matched by time).
             'schedule_link' => ['nullable', Rule::in(['named', 'extra'])],
             'shift_id' => ['nullable', 'uuid'],
+            'activity_started_at' => ['nullable', 'date'],
+            'activity_ended_at' => ['nullable', 'date'],
+            'activity_entry_id' => ['nullable', 'uuid'],
+            'calculation' => ['nullable', 'array'],
+            'calculation.estimated_l' => ['nullable', 'numeric'],
+            'calculation.rate_id' => ['nullable', 'uuid'],
+            'calculation.rate' => ['nullable', 'numeric'],
+            'calculation.quantity' => ['nullable', 'numeric'],
             'location' => ['nullable', 'array'],
             'location.lat' => ['required_with:location', 'numeric', 'between:-90,90'],
             'location.lng' => ['required_with:location', 'numeric', 'between:-180,180'],
@@ -115,9 +123,31 @@ class EntryController extends Controller
             return self::refused('version_unknown', 'The template version this entry was written on is unknown.', 409);
         }
 
-        $entry = Entries::create($sheet, $user, $data['values'] ?? [], $data['occurred_at'], $data['id'], (bool) ($data['submit'] ?? false), $version, $data['occurrence_id'] ?? null, ['location' => $data['location'] ?? null, 'track_id' => $data['track_id'] ?? null, 'source' => 'phone'], $data['schedule_link'] ?? null, ['shift_id' => $data['shift_id'] ?? null]);
+        $entry = Entries::create($sheet, $user, $data['values'] ?? [], $data['occurred_at'], $data['id'], (bool) ($data['submit'] ?? false), $version, $data['occurrence_id'] ?? null, ['location' => $data['location'] ?? null, 'track_id' => $data['track_id'] ?? null, 'source' => 'phone'], $data['schedule_link'] ?? null, ['shift_id' => $data['shift_id'] ?? null, ...self::activityMore($request, $data)]);
 
         return response()->json($this->entry($entry->load(['sheet', 'logbook', 'version'])), 201);
+    }
+
+    /**
+     * The activity fields the phone sent (ADR-0030), with its own estimate
+     * kept as evidence only.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private static function activityMore(Request $request, array $data): array
+    {
+        $out = [];
+        foreach (['activity_started_at', 'activity_ended_at', 'activity_entry_id'] as $key) {
+            if ($request->has($key)) {
+                $out[$key] = $data[$key] ?? null;
+            }
+        }
+        if (is_array($data['calculation'] ?? null)) {
+            $out['phone_calculation'] = $data['calculation'];
+        }
+
+        return $out;
     }
 
     /**
@@ -136,6 +166,14 @@ class EntryController extends Controller
             'location.captured_at' => ['required_with:location', 'date'],
             'track_id' => ['nullable', 'uuid'],
             'shift_id' => ['nullable', 'uuid'],
+            'activity_started_at' => ['nullable', 'date'],
+            'activity_ended_at' => ['nullable', 'date'],
+            'activity_entry_id' => ['nullable', 'uuid'],
+            'calculation' => ['nullable', 'array'],
+            'calculation.estimated_l' => ['nullable', 'numeric'],
+            'calculation.rate_id' => ['nullable', 'uuid'],
+            'calculation.rate' => ['nullable', 'numeric'],
+            'calculation.quantity' => ['nullable', 'numeric'],
         ]);
         $entry = $this->own($entry);
 
@@ -151,7 +189,7 @@ class EntryController extends Controller
         }
 
         $place = $request->has('location') || $request->has('track_id') ? ['location' => $data['location'] ?? null, 'track_id' => $data['track_id'] ?? null, 'source' => 'phone'] : null;
-        $entry = Entries::update($entry, $this->user(), $data['values'] ?? [], $data['occurred_at'], $place, $request->has('shift_id') ? ['shift_id' => $data['shift_id'] ?? null] : []);
+        $entry = Entries::update($entry, $this->user(), $data['values'] ?? [], $data['occurred_at'], $place, [...($request->has('shift_id') ? ['shift_id' => $data['shift_id'] ?? null] : []), ...self::activityMore($request, $data)]);
 
         return response()->json($this->entry($entry->load(['sheet', 'logbook', 'version'])));
     }
@@ -262,6 +300,10 @@ class EntryController extends Controller
             'values' => (object) $entry->values,
             'location' => $entry->location,
             'trackId' => $entry->log_track_id,
+            // ADR-0030: so a phone correcting an entry keeps its shift and activity.
+            'shiftId' => $entry->shift_id,
+            'activityStartedAt' => self::time($entry->activity_started_at),
+            'activityEndedAt' => self::time($entry->activity_ended_at),
             'files' => $entry->attachments()->whereNull('removed_at')->get()->map(fn (Attachment $a) => self::file($a))->values()->all(),
             'lastReview' => $latest instanceof EntryReview ? [
                 'revision' => $latest->revision,

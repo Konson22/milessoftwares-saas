@@ -6,15 +6,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EntryBadges, when } from '@/components/entries';
 import { EntryForm, Input } from '@/components/entry-form';
 import { LocationControl } from '@/components/location-control';
+import { ActivityEnd, EstimateCard, ReadingPicker, ShiftPicker } from '@/components/recording-controls';
 import { ScreenHeader } from '@/components/screen-header';
 import { Button } from '@/components/ui/button';
 import { Banner, Card, SectionTitle } from '@/components/ui/misc';
+import { estimate, phoneCalculation, readingAt, readingChoices, recordingOf, shiftAt } from '@/logbook/activity';
 import { nowFor, text } from '@/logbook/fields';
 import { editable, fileCounts } from '@/logbook/sync';
 import type { EntryLocation, Item, LocalFile, StoredVersion, Values } from '@/logbook/types';
 import { store, useLogbook } from '@/store/logbook';
 import { toast } from '@/store/toast';
+import { useAuth } from '@/store/auth';
 import { useTrips } from '@/store/trips';
+import { useWork } from '@/store/work';
 
 /** "YYYY-MM-DD HH:MM" on the phone's clock, to and from the ISO time kept. */
 const localTime = (iso: string) => nowFor('datetime', new Date(iso)).replace('T', ' ');
@@ -81,6 +85,29 @@ function EditEntry({ item, version }: { item: Item; version: StoredVersion }) {
   // A new entry on the trip's own sheet is linked to it unless the person unticks it.
   const [trackId, setTrackId] = useState<string | null>(() => item.trackId ?? (trip && item.serverId === null && trip.sheet.id === item.sheet.id && item.trackId === undefined ? trip.id : null));
   const place = settings ? { location, trackId } : {};
+
+  // ADR-0030: how the sheet is recorded. Absent from older servers: nothing new is shown or sent.
+  const recording = recordingOf(kit, item.sheet.id);
+  const kitSheet = kit?.sheets.find((s) => s.id === item.sheet.id);
+  const me = useAuth((s) => s.me?.user.id ?? null);
+  const due = useWork((s) => s.due);
+  const missedReadings = useWork((s) => s.missed);
+  const choices = recording?.mode === 'scheduled' || item.occurrenceId ? readingChoices([...due, ...missedReadings], item.sheet.id, item.occurrenceId ?? null) : [];
+  const [reading, setReading] = useState<string | null>(() => item.occurrenceId ?? (item.scheduleLink === 'extra' ? null : readingAt(choices, item.occurredAt)));
+  const [extra, setExtra] = useState(item.scheduleLink === 'extra');
+  const shifts = recording && recording.shifts !== 'off' ? (kit?.shifts ?? []).filter((s) => s.logbookId === null || s.logbookId === kitSheet?.logbook.id) : [];
+  const [shiftId, setShiftId] = useState<string | null>(() => item.shiftId ?? (shifts.length > 0 ? shiftAt(shifts, kitSheet?.logbook.id ?? null, item.occurredAt, me) : null));
+  const isEvent = recording?.mode === 'event';
+  const [ended, setEnded] = useState(item.activityEndedAt ? localTime(item.activityEndedAt) : '');
+  const startedIso = parseLocal(occurred) ?? item.occurredAt;
+  const endedIso = ended.trim() === '' ? null : parseLocal(ended);
+  const preview = recording?.activity ? estimate(recording.activity, kit?.resources ?? [], values, startedIso, endedIso) : null;
+  const recorded = (): Partial<Item> => ({
+    ...(choices.length > 0 || item.occurrenceId ? { occurrenceId: extra ? null : reading, scheduleLink: extra ? ('extra' as const) : reading ? ('named' as const) : null } : {}),
+    ...(shifts.length > 0 ? { shiftId } : {}),
+    ...(isEvent ? { activityStartedAt: startedIso, activityEndedAt: endedIso } : {}),
+    ...(recording?.activity ? { calculation: phoneCalculation(preview) } : {}),
+  });
   const latest = useRef(item);
   useEffect(() => {
     latest.current = item;
@@ -91,11 +118,11 @@ function EditEntry({ item, version }: { item: Item; version: StoredVersion }) {
   useEffect(() => {
     if (!dirty.current) return;
     const timer = setTimeout(() => {
-      void saveDraft(latest.current, { values, files, removedFiles: removed, occurredAt: parseLocal(occurred) ?? latest.current.occurredAt, ...place });
+      void saveDraft(latest.current, { values, files, removedFiles: removed, occurredAt: parseLocal(occurred) ?? latest.current.occurredAt, ...place, ...recorded() });
     }, 600);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [values, files, removed, occurred, saveDraft, location, trackId]);
+  }, [values, files, removed, occurred, saveDraft, location, trackId, reading, extra, shiftId, ended]);
   const touch = () => {
     dirty.current = true;
   };
@@ -106,7 +133,7 @@ function EditEntry({ item, version }: { item: Item; version: StoredVersion }) {
       setErrors((e) => ({ ...e, occurred_at: 'Enter when it happened (YYYY-MM-DD HH:MM).' }));
       return null;
     }
-    return saveDraft(latest.current, { values, files, removedFiles: removed, occurredAt, ...place });
+    return saveDraft(latest.current, { values, files, removedFiles: removed, occurredAt, ...place, ...recorded() });
   };
 
   const send = async () => {
@@ -115,6 +142,17 @@ function EditEntry({ item, version }: { item: Item; version: StoredVersion }) {
       if (settings?.required && !location && !trackId) {
         setErrors((e) => ({ ...e, location: settings.mode === 'route' ? 'Take the location, or link the entry to the trip in progress.' : 'Take the location for this entry.' }));
         toast('This sheet needs a location.', 'error');
+        return;
+      }
+      const own: Record<string, string> = {};
+      if (shifts.length > 0 && recording?.shifts === 'required' && !shiftId) own.shift_id = 'Choose the shift.';
+      if (isEvent && endedIso === null) own.activity_ended_at = ended.trim() === '' ? 'Enter when the activity ended.' : 'Enter when it ended (YYYY-MM-DD HH:MM).';
+      else if (isEvent && endedIso && endedIso < startedIso) own.activity_ended_at = 'The end is before the start.';
+      if (preview?.endBelowStart && recording?.activity?.end_field) own[recording.activity.end_field] = 'The end reading is below the start.';
+      if (Object.keys(own).length > 0) {
+        await save();
+        setErrors((e) => ({ ...e, ...own }));
+        toast('Some answers need attention.', 'error');
         return;
       }
       const saved = await save();
@@ -185,6 +223,46 @@ function EditEntry({ item, version }: { item: Item; version: StoredVersion }) {
             {errors.occurred_at ? <Text className="text-sm text-red-700">{errors.occurred_at}</Text> : null}
           </View>
 
+          {isEvent && (
+            <ActivityEnd
+              started={occurred}
+              value={ended}
+              error={errors.activity_ended_at}
+              onChange={(t) => {
+                touch();
+                setEnded(t);
+                setErrors(({ activity_ended_at: _gone, ...rest }) => rest);
+              }}
+            />
+          )}
+
+          {choices.length > 0 && (
+            <ReadingPicker
+              choices={choices}
+              value={reading}
+              extra={extra}
+              onChange={(next) => {
+                touch();
+                setReading(next.occurrenceId);
+                setExtra(next.extra);
+              }}
+            />
+          )}
+
+          {shifts.length > 0 && (
+            <ShiftPicker
+              shifts={shifts}
+              value={shiftId}
+              required={recording?.shifts === 'required'}
+              error={errors.shift_id}
+              onChange={(id) => {
+                touch();
+                setShiftId(id);
+                setErrors(({ shift_id: _gone, ...rest }) => rest);
+              }}
+            />
+          )}
+
           {settings && (
             <LocationControl
               settings={settings}
@@ -241,6 +319,8 @@ function EditEntry({ item, version }: { item: Item; version: StoredVersion }) {
             onError={(message) => toast(message, 'error')}
           />
 
+          <EstimateCard estimate={preview} />
+
           <Text className="text-xs text-slate-500">
             {Object.values(counts).reduce((a, b) => a + b, 0)} files · saved on this phone as you type
           </Text>
@@ -295,6 +375,10 @@ function ReadEntry({ item, version }: { item: Item; version: StoredVersion | nul
             </Text>
           )}
           {item.trackId && <Text className="text-sm text-slate-500">Written on a recorded trip</Text>}
+          {item.activityEndedAt && <Text className="text-sm text-slate-500">Activity ended {when(item.activityEndedAt)}</Text>}
+          {item.shiftId && <Text className="text-sm text-slate-500">Shift: {kit?.shifts?.find((s) => s.id === item.shiftId)?.name ?? 'recorded'}</Text>}
+          {item.scheduleLink === 'extra' && <Text className="text-sm text-slate-500">An extra reading</Text>}
+          {item.calculation && <Text className="text-sm text-slate-500">Fuel estimated on this phone: {item.calculation.estimated_l} L (the server keeps its own figure)</Text>}
         </Card>
 
         <SectionTitle>Answers</SectionTitle>

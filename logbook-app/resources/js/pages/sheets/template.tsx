@@ -10,6 +10,7 @@ import {
     Trash2,
     MapPin,
     CalendarClock,
+    Fuel,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { PageHeader } from '@/components/page-header';
@@ -69,6 +70,7 @@ type Props = {
     recording: {
         mode: RecordingMode;
         shifts: ShiftSetting;
+        activity: ActivitySettings | null;
         liveSchedules: boolean;
     };
     history: {
@@ -123,6 +125,10 @@ export default function Template({
     const [recording, setRecording] = useState<RecordingMode>(
         initialRecording.mode,
     );
+    const [activity, setActivity] = useState<ActivitySettings>(
+        () => initialRecording.activity ?? NO_ACTIVITY,
+    );
+    const activityData = activity.measure === '' ? null : activity;
     const [shifts, setShifts] = useState<ShiftSetting>(
         initialRecording.shifts ?? 'off',
     );
@@ -210,7 +216,11 @@ export default function Template({
                 {
                     fields: payload(),
                     location,
-                    recording: { mode: recording, shifts },
+                    recording: {
+                        mode: recording,
+                        shifts,
+                        activity: activityData,
+                    },
                 } as RequestPayload,
                 options,
             );
@@ -220,7 +230,11 @@ export default function Template({
                 {
                     fields: payload(),
                     location,
-                    recording: { mode: recording, shifts },
+                    recording: {
+                        mode: recording,
+                        shifts,
+                        activity: activityData,
+                    },
                 } as RequestPayload,
                 options,
             );
@@ -504,6 +518,17 @@ export default function Template({
                             }}
                             onShifts={(next) => {
                                 setShifts(next);
+                                setDirty(true);
+                            }}
+                        />
+                        <ActivityPanel
+                            value={activity}
+                            mode={recording}
+                            fields={rows}
+                            editable={editable}
+                            error={errors['recording.activity']}
+                            onChange={(next) => {
+                                setActivity(next);
                                 setDirty(true);
                             }}
                         />
@@ -1161,6 +1186,147 @@ function SheetSettings({ sheet }: { sheet: Props['sheet'] }) {
 type RecordingMode = 'on_demand' | 'scheduled' | 'event';
 
 type ShiftSetting = 'off' | 'optional' | 'required';
+
+/** ADR-0030 §4.7: what an entry's activity measures, for the fuel estimate. */
+type ActivitySettings = {
+    resource_field: string;
+    measure: '' | 'odometer' | 'hour_meter' | 'duration';
+    start_field: string | null;
+    end_field: string | null;
+    actual_field: string | null;
+    refill_field: string | null;
+};
+
+const NO_ACTIVITY: ActivitySettings = {
+    resource_field: '',
+    measure: '',
+    start_field: null,
+    end_field: null,
+    actual_field: null,
+    refill_field: null,
+};
+
+function ActivityPanel({
+    value,
+    mode,
+    fields,
+    editable,
+    error,
+    onChange,
+}: {
+    value: ActivitySettings;
+    mode: RecordingMode;
+    fields: { name: string; label: string; type: string }[];
+    editable: boolean;
+    error?: string;
+    onChange: (value: ActivitySettings) => void;
+}) {
+    const set = (patch: Partial<ActivitySettings>) =>
+        onChange({ ...value, ...patch });
+    const named = fields.filter((f) => f.name !== '');
+    const option = (f: { name: string; label: string }) => ({
+        value: f.name,
+        label: f.label || f.name,
+    });
+    const resources = named.filter((f) => f.type === 'resource').map(option);
+    const numbers = named
+        .filter((f) => f.type === 'integer' || f.type === 'decimal')
+        .map(option);
+    const pick = (key: keyof ActivitySettings) => (next: string) =>
+        set({ [key]: next === '' ? null : next } as Partial<ActivitySettings>);
+
+    return (
+        <Panel>
+            <PanelHeader
+                title={
+                    <span className="flex items-center gap-2">
+                        <Fuel className="size-4" /> Fuel estimate
+                    </span>
+                }
+                description="Optional. Estimates fuel from the resource's rate in force when the activity started. Saved with the draft."
+            />
+            <PanelBody className="grid gap-3">
+                <SelectField
+                    label="Measured by"
+                    value={value.measure}
+                    onChange={(measure) =>
+                        set({ measure: measure as ActivitySettings['measure'] })
+                    }
+                    options={[
+                        { value: 'odometer', label: 'Odometer (km)' },
+                        { value: 'hour_meter', label: 'Hour meter (h)' },
+                        ...(mode === 'event'
+                            ? [
+                                  {
+                                      value: 'duration',
+                                      label: 'Start and end times (h)',
+                                  },
+                              ]
+                            : []),
+                    ]}
+                    empty="No fuel estimate"
+                    error={error}
+                />
+                {value.measure !== '' && (
+                    <>
+                        <SelectField
+                            label="Resource field"
+                            value={value.resource_field}
+                            onChange={(resource_field) =>
+                                set({ resource_field })
+                            }
+                            options={resources}
+                            empty={
+                                resources.length === 0
+                                    ? 'Add a Resource field first'
+                                    : 'Choose…'
+                            }
+                        />
+                        {value.measure !== 'duration' && (
+                            <>
+                                <SelectField
+                                    label="Start reading"
+                                    value={value.start_field ?? ''}
+                                    onChange={pick('start_field')}
+                                    options={numbers}
+                                    empty="Choose a number field…"
+                                />
+                                <SelectField
+                                    label="End reading"
+                                    value={value.end_field ?? ''}
+                                    onChange={pick('end_field')}
+                                    options={numbers}
+                                    empty="Choose a number field…"
+                                />
+                            </>
+                        )}
+                        <SelectField
+                            label="Fuel measured (litres, optional)"
+                            value={value.actual_field ?? ''}
+                            onChange={pick('actual_field')}
+                            options={numbers}
+                            empty="Not recorded"
+                            hint="The fuel actually used, from a flow meter or a dip. Compared with the estimate."
+                        />
+                        <SelectField
+                            label="Refill (litres, optional)"
+                            value={value.refill_field ?? ''}
+                            onChange={pick('refill_field')}
+                            options={numbers}
+                            empty="Not recorded"
+                            hint="Shown beside the estimate; never taken as the fuel used."
+                        />
+                    </>
+                )}
+                {!editable && (
+                    <p className="text-xs text-muted-foreground">
+                        This sheet cannot be changed now.
+                    </p>
+                )}
+            </PanelBody>
+        </Panel>
+    );
+}
 
 const RECORDING_HELP: Record<RecordingMode, string> = {
     on_demand:

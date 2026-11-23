@@ -96,7 +96,7 @@ export function useOpenRecord() {
         });
 }
 
-function Shell({
+export function Shell({
     title,
     icon: Icon,
     note,

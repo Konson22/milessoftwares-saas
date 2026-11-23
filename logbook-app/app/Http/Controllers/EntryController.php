@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Logbook\Access;
 use App\Logbook\Attachments;
+use App\Logbook\Calculations;
 use App\Logbook\Entries;
 use App\Logbook\Fields;
 use App\Logbook\Models\Attachment;
@@ -11,7 +12,10 @@ use App\Logbook\Models\AuditEvent;
 use App\Logbook\Models\Entry;
 use App\Logbook\Models\EntryReview;
 use App\Logbook\Models\EntryRevision;
+use App\Logbook\Models\FuelRate;
+use App\Logbook\Models\LogResource;
 use App\Logbook\Models\LogSheet;
+use App\Logbook\Models\LogSheetVersion;
 use App\Logbook\Models\ScheduleOccurrence;
 use App\Logbook\Recording;
 use App\Logbook\Reports;
@@ -79,6 +83,7 @@ class EntryController extends Controller
             'scheduled' => $scheduled,
             'readings' => $scheduled ? self::openReadings($sheet, $this->user()->id) : [],
             ...self::shiftProps($sheet->logbook_id, Recording::settings($version)['shifts'] ?? 'off', null, $this->user()->id),
+            ...self::activityProps($sheet, $version, null, $request->string('activity')->toString()),
             'sheet' => $this->sheetData($sheet),
             'fields' => $version->fields,
             'version' => $version->version,
@@ -101,6 +106,47 @@ class EntryController extends Controller
                 'taken' => $occurrence->log_entry_id !== null,
             ],
         ]);
+    }
+
+    /**
+     * The calculation kept at submission, with names for display. Null
+     * while only the phone's own figure is known.
+     *
+     * @param  array<string, mixed>|null  $calculation
+     * @return array<string, mixed>|null
+     */
+    private static function calculationRow(?array $calculation): ?array
+    {
+        if ($calculation === null || ! isset($calculation['method'])) {
+            return null;
+        }
+        $resource = is_string($calculation['resource_id'] ?? null) ? LogResource::query()->find($calculation['resource_id']) : null;
+
+        return [...$calculation, 'resource' => $resource?->label()];
+    }
+
+    /**
+     * The activity part of the form (ADR-0030 §4.4, §4.7): the mode, what
+     * is measured, the rates for a live estimate (the server works it out
+     * again at submission), the start and end, and the activity it belongs to.
+     *
+     * @return array<string, mixed>
+     */
+    private static function activityProps(LogSheet $sheet, LogSheetVersion $version, ?Entry $entry, ?string $parentId): array
+    {
+        $tz = Workspace::current()->timezone ?? 'UTC';
+        $activity = Recording::activity($version);
+        $parentId = ($entry !== null ? $entry->activity_entry_id : null) ?? (Str::isUuid((string) $parentId) ? $parentId : null);
+        $parent = $parentId !== null ? Access::entries()->whereKey($parentId)->where('logbook_id', $sheet->logbook_id)->with('sheet:id,code,name')->first() : null;
+
+        return [
+            'recordingMode' => Recording::mode($sheet, $version),
+            'activity' => $activity,
+            'fuelRates' => $activity === null ? (object) [] : (object) FuelRate::query()->orderBy('effective_from')->orderBy('created_at')->get()
+                ->groupBy('log_resource_id')->map(fn ($rows) => $rows->map(fn (FuelRate $f) => Calculations::rateSnapshot($f) + ['method' => $f->method])->values())->all(),
+            'activityEndedAt' => $entry?->activity_ended_at?->setTimezone($tz)->format('Y-m-d\TH:i'),
+            'activityEntry' => $parent === null ? null : ['id' => $parent->id, 'label' => ($parent->reference ?? 'Draft').' · '.$parent->sheet->name],
+        ];
     }
 
     /**
@@ -155,6 +201,9 @@ class EntryController extends Controller
             // ADR-0030: the form always says, for a reading or an extra one.
             'schedule_link' => ['nullable', Rule::in(['named', 'extra'])],
             'shift_id' => ['nullable', 'uuid'],
+            'activity_started_at' => ['nullable', 'date'],
+            'activity_ended_at' => ['nullable', 'date'],
+            'activity_entry_id' => ['nullable', 'uuid'],
             'location' => ['nullable', 'array'],
             'location.lat' => ['required_with:location', 'numeric', 'between:-90,90'],
             'location.lng' => ['required_with:location', 'numeric', 'between:-180,180'],
@@ -162,7 +211,7 @@ class EntryController extends Controller
             'location.captured_at' => ['required_with:location', 'date'],
         ]);
         $sheet = Access::writableSheets()->whereKey((string) $data['sheet_id'])->firstOrFail();
-        $entry = Entries::create($sheet, $this->user(), $data['values'], $this->occurredAt($data['occurred_at']), $data['idempotency_key'] ?? null, (bool) ($data['submit'] ?? false), occurrenceId: $data['schedule_occurrence_id'] ?? null, place: ['location' => $data['location'] ?? null, 'source' => 'browser'], scheduleLink: $data['schedule_link'] ?? null, more: ['shift_id' => $data['shift_id'] ?? null]);
+        $entry = Entries::create($sheet, $this->user(), $data['values'], $this->occurredAt($data['occurred_at']), $data['idempotency_key'] ?? null, (bool) ($data['submit'] ?? false), occurrenceId: $data['schedule_occurrence_id'] ?? null, place: ['location' => $data['location'] ?? null, 'source' => 'browser'], scheduleLink: $data['schedule_link'] ?? null, more: ['shift_id' => $data['shift_id'] ?? null, ...$this->activityMore($request, $data)]);
 
         return $entry->status === 'draft'
             ? to_route('entries.edit', $entry->id)->with('success', 'Draft saved. Add files or finish it later.')
@@ -217,6 +266,14 @@ class EntryController extends Controller
                 'answers' => self::answers($entry->version->fields, $entry->values, $files),
                 'location' => $entry->location,
                 'shift' => $entry->shift?->label(),
+                // ADR-0030: the activity, what it belongs to, and the calculation it was recorded with.
+                'activityStartedAt' => self::time($entry->activity_started_at),
+                'activityEndedAt' => self::time($entry->activity_ended_at),
+                'activityEntry' => ($parent = $entry->activity_entry_id !== null ? Access::entries()->with('sheet:id,name')->find($entry->activity_entry_id) : null) === null
+                    ? null : ['id' => $parent->id, 'label' => ($parent->reference ?? 'Draft').' · '.$parent->sheet->name],
+                'related' => Access::entries()->where('activity_entry_id', $entry->id)->with('sheet:id,name')->orderBy('occurred_at')->limit(50)->get()
+                    ->map(fn (Entry $e) => ['id' => $e->id, 'label' => ($e->reference ?? 'Draft').' · '.$e->sheet->name, 'occurredAt' => self::time($e->occurred_at), 'status' => $e->status])->values(),
+                'calculation' => self::calculationRow($entry->calculation),
                 // The route it was written on, when the viewer may see that route.
                 'track' => $entry->log_track_id !== null && Tracks::visible()->whereKey($entry->log_track_id)->exists() ? $entry->log_track_id : null,
             ],
@@ -257,6 +314,7 @@ class EntryController extends Controller
             'locationSettings' => Tracks::settings($entry->version),
             'location' => $entry->location,
             ...self::shiftProps($entry->logbook_id, Shifts::setting($entry), $entry->shift_id, $this->user()->id),
+            ...self::activityProps($entry->sheet, $entry->version, $entry, null),
             'members' => WorkspaceMember::options(),
             'resources' => self::resourceOptions(),
             'files' => (object) $files->groupBy('field')->map(fn ($group) => $group->map(fn (Attachment $a) => [
@@ -273,6 +331,9 @@ class EntryController extends Controller
             'values' => ['present', 'array'],
             'submit' => ['boolean'],
             'shift_id' => ['nullable', 'uuid'],
+            'activity_started_at' => ['nullable', 'date'],
+            'activity_ended_at' => ['nullable', 'date'],
+            'activity_entry_id' => ['nullable', 'uuid'],
             'location' => ['nullable', 'array'],
             'location.lat' => ['required_with:location', 'numeric', 'between:-90,90'],
             'location.lng' => ['required_with:location', 'numeric', 'between:-180,180'],
@@ -281,7 +342,7 @@ class EntryController extends Controller
         ]);
         // Sent only when the form shows location: otherwise the entry keeps what it has.
         $place = $request->has('location') ? ['location' => $data['location'] ?? null, 'track_id' => $entry->log_track_id, 'source' => $entry->location['source'] ?? 'browser'] : null;
-        $entry = Entries::update($entry, $this->user(), $data['values'], $this->occurredAt($data['occurred_at']), $place, $request->has('shift_id') ? ['shift_id' => $data['shift_id'] ?? null] : []);
+        $entry = Entries::update($entry, $this->user(), $data['values'], $this->occurredAt($data['occurred_at']), $place, [...($request->has('shift_id') ? ['shift_id' => $data['shift_id'] ?? null] : []), ...$this->activityMore($request, $data)]);
 
         if ($data['submit'] ?? false) {
             $entry = Entries::submit($entry, $this->user());
@@ -369,6 +430,27 @@ class EntryController extends Controller
             'id' => $sheet->id, 'name' => $sheet->name, 'code' => $sheet->code, 'instructions' => $sheet->instructions,
             'reviewRequired' => $sheet->review_required, 'logbook' => ['id' => $sheet->logbook_id, 'name' => $sheet->logbook->name],
         ];
+    }
+
+    /**
+     * The activity fields the form sent (ADR-0030 §4.4), times in UTC.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, string|null>
+     */
+    private function activityMore(Request $request, array $data): array
+    {
+        $out = [];
+        foreach (['activity_started_at', 'activity_ended_at'] as $key) {
+            if ($request->has($key)) {
+                $out[$key] = ($data[$key] ?? null) ? $this->occurredAt($data[$key]) : null;
+            }
+        }
+        if ($request->has('activity_entry_id')) {
+            $out['activity_entry_id'] = $data['activity_entry_id'] ?? null;
+        }
+
+        return $out;
     }
 
     /** A local date-time from the form, in the workspace time zone. */

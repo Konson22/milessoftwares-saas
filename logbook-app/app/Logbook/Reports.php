@@ -59,6 +59,7 @@ final class Reports
             'flag' => ['nullable', Rule::in(self::FLAGS)],
             // ADR-0030: the shift the entry was recorded in.
             'shift' => ['nullable', 'uuid'],
+            'mode' => ['nullable', Rule::in(Recording::MODES)],
         ];
     }
 
@@ -93,6 +94,7 @@ final class Reports
                     ->when($flag === 'open_exceptions', fn ($w) => $w->whereIn('log_exceptions.status', LogException::OPEN));
             }))
             ->when($filters['shift'] ?? null, fn (Builder $q, $id) => $q->where('shift_id', $id))
+            ->when($filters['mode'] ?? null, fn (Builder $q, $mode) => $q->whereIn('log_sheet_id', Recording::sheetIdsInMode((string) $mode)))
             ->when($filters['creator'] ?? null, fn (Builder $q, $id) => $q->where('created_by', $id))
             ->when(($filters['mine'] ?? false) == true, fn (Builder $q) => $q->where('created_by', auth()->id()))
             ->when($filters['status'] ?? null, fn (Builder $q, $s) => $q->where('status', $s))

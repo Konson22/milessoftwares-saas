@@ -25,6 +25,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable $occurred_at
  * @property string|null $schedule_occurrence_id
  * @property string|null $shift_id ADR-0030: the shift it was recorded in
+ * @property CarbonImmutable|null $activity_started_at ADR-0030 §4.4
+ * @property CarbonImmutable|null $activity_ended_at
+ * @property string|null $activity_entry_id the activity this entry belongs to
+ * @property array<string, mixed>|null $calculation ADR-0030 §4.7: the snapshot made at submission (before: only the phone's figure)
+ * @property string|null $meter_resource_id
+ * @property string|null $meter_measure
+ * @property string|null $meter_start
+ * @property string|null $meter_end
  * @property-read Shift|null $shift
  * @property 'named'|'extra'|null $schedule_link ADR-0030: what the author said it is for; null from older clients
  * @property string|null $log_track_id
@@ -67,6 +75,11 @@ class Entry extends Model
             'occurred_at' => 'immutable_datetime',
             'submitted_at' => 'immutable_datetime',
             'reviewed_at' => 'immutable_datetime',
+            'activity_started_at' => 'immutable_datetime',
+            'activity_ended_at' => 'immutable_datetime',
+            'calculation' => 'array',
+            'meter_start' => 'decimal:1',
+            'meter_end' => 'decimal:1',
         ];
     }
 

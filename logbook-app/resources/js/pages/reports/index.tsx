@@ -17,6 +17,7 @@ import {
     Table2,
     Undo2,
     Users,
+    Fuel,
 } from 'lucide-react';
 import type { ComponentType, ReactNode } from 'react';
 import { useState } from 'react';
@@ -32,6 +33,8 @@ import {
 } from '@miles/ui/components/ui/table';
 import type { FilterOptions, Filters } from '@/components/entries-table';
 import { EntryFilters } from '@/components/entries-table';
+import type { ActivitiesData } from '@/components/activities-view';
+import { ActivitiesView } from '@/components/activities-view';
 import { Errors, SelectField } from '@/components/fields';
 import type { Issues } from '@/components/issues-table';
 import { IssuesTable } from '@/components/issues-table';
@@ -49,7 +52,7 @@ import {
     TrendsView,
 } from '@/components/report-views';
 import { formatDate } from '@/lib/logbook';
-import { csv, index, pdf } from '@/routes/reports';
+import { activitiesCsv, csv, index, pdf } from '@/routes/reports';
 
 type Count = { name: string; count: number };
 
@@ -61,11 +64,12 @@ type ReportFilters = Filters & {
     basis?: string;
     resource?: string;
     shift?: string;
+    mode?: string;
     location?: string;
     flag?: string;
 };
 
-type View = 'overview' | 'table' | 'timeline' | 'trends' | 'map';
+type View = 'overview' | 'table' | 'timeline' | 'trends' | 'map' | 'activities';
 
 type Props = {
     filters: ReportFilters;
@@ -80,6 +84,7 @@ type Props = {
     timeline: { events: TimelineEvent[]; truncated: boolean } | null;
     trends: TrendSeries[] | null;
     map: MapData | null;
+    activities: ActivitiesData | null;
     counts: {
         total: number;
         byStatus: Record<string, number>;
@@ -157,6 +162,7 @@ const FILTER_KEYS = [
     'location',
     'flag',
     'shift',
+    'mode',
 ] as const;
 
 const VIEWS: {
@@ -169,6 +175,7 @@ const VIEWS: {
     { key: 'timeline', label: 'Timeline', icon: CalendarClock },
     { key: 'trends', label: 'Trends', icon: LineChart },
     { key: 'map', label: 'Map', icon: MapIcon },
+    { key: 'activities', label: 'Activities and fuel', icon: Fuel },
 ];
 
 const number = (n: number | null) =>
@@ -219,6 +226,7 @@ export default function Reports({
     timeline,
     trends,
     map,
+    activities,
     options,
     counts,
     issues,
@@ -267,6 +275,13 @@ export default function Reports({
                 title="Reports"
                 actions={
                     <>
+                        {view === 'activities' && (
+                            <Button asChild variant="outline">
+                                <a href={activitiesCsv({ query }).url}>
+                                    <FileSpreadsheet /> Export activities
+                                </a>
+                            </Button>
+                        )}
                         <Button asChild variant="outline">
                             <a href={csv({ query }).url}>
                                 <FileSpreadsheet /> Export CSV
@@ -445,6 +460,28 @@ export default function Reports({
                                     ]}
                                     empty="When it happened"
                                 />
+                                <SelectField
+                                    label="Recorded"
+                                    value={filters.mode ?? ''}
+                                    onChange={(mode) =>
+                                        go({ mode: mode || undefined })
+                                    }
+                                    options={[
+                                        {
+                                            value: 'scheduled',
+                                            label: 'On a schedule',
+                                        },
+                                        {
+                                            value: 'event',
+                                            label: 'Per activity',
+                                        },
+                                        {
+                                            value: 'on_demand',
+                                            label: 'On demand',
+                                        },
+                                    ]}
+                                    empty="Any way"
+                                />
                                 {options.shifts.length > 0 && (
                                     <SelectField
                                         label="Shift"
@@ -538,6 +575,9 @@ export default function Reports({
                     <TrendsView trends={trends} sheetChosen={sheet !== null} />
                 )}
                 {view === 'map' && map && <MapView map={map} />}
+                {view === 'activities' && activities && (
+                    <ActivitiesView data={activities} />
+                )}
 
                 {view === 'overview' && <Figures counts={counts} />}
 

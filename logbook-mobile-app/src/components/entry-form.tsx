@@ -366,7 +366,7 @@ function bound(v: string | number | undefined): number | null {
   return v === undefined || v === '' || Number.isNaN(Number(v)) ? null : Number(v);
 }
 
-function Choice({ label, selected, round, onPress }: { label: string; selected: boolean; round?: boolean; onPress: () => void }) {
+export function Choice({ label, selected, round, onPress }: { label: string; selected: boolean; round?: boolean; onPress: () => void }) {
   return (
     <Pressable
       accessibilityRole={round ? 'radio' : 'checkbox'}

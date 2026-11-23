@@ -6,6 +6,7 @@ use App\Logbook\Access;
 use App\Logbook\Entries;
 use App\Logbook\Exceptions;
 use App\Logbook\Fields;
+use App\Logbook\FuelReports;
 use App\Logbook\Investigations;
 use App\Logbook\Issues;
 use App\Logbook\Member;
@@ -68,6 +69,7 @@ class ReportController extends Controller
             'timeline' => $view === 'timeline' ? Timeline::build($filters) : null,
             'trends' => $view === 'trends' && $sheet !== null ? Trends::forSheet($sheet, $filters) : null,
             'map' => $view === 'map' ? self::map($filters) : null,
+            'activities' => $view === 'activities' ? self::activities($filters) : null,
             'pdfLimit' => self::PDF_LIMIT,
         ]);
     }
@@ -105,6 +107,13 @@ class ReportController extends Controller
                 'location' => $entry->location,
                 'track' => $entry->log_track_id !== null && Tracks::visible()->whereKey($entry->log_track_id)->exists() ? $entry->log_track_id : null,
                 'logbookId' => $entry->logbook_id,
+                // ADR-0030: the activity and the calculation kept at its last submission.
+                'activityStartedAt' => self::time($entry->activity_started_at),
+                'activityEndedAt' => self::time($entry->activity_ended_at),
+                'shift' => $entry->shift?->label(),
+                'calculation' => is_array($entry->calculation) && isset($entry->calculation['method'])
+                    ? [...$entry->calculation, 'resource' => is_string($entry->calculation['resource_id'] ?? null) ? LogResource::query()->find($entry->calculation['resource_id'])?->label() : null]
+                    : null,
             ],
             'resources' => LogResource::query()->whereIn('id', $resourceIds)->get()->map(fn (LogResource $r) => ['id' => $r->id, 'label' => $r->label()])->values(),
             'revisions' => $entry->revisions()->with('submitter:id,name')->get()->map(fn (EntryRevision $r) => [
@@ -133,7 +142,58 @@ class ReportController extends Controller
         ])->baseRoute('reports.index');
     }
 
-    public const VIEWS = ['overview', 'table', 'timeline', 'trends', 'map'];
+    public const VIEWS = ['overview', 'table', 'timeline', 'trends', 'map', 'activities'];
+
+    /**
+     * Activities and fuel (ADR-0030 §4.9): totals by resource, operator,
+     * shift and month, and the activities themselves, newest first.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array<string, mixed>
+     */
+    private static function activities(array $filters): array
+    {
+        $page = FuelReports::query($filters)->with(['sheet:id,name,code', 'creator:id,name', 'shift:id,name'])
+            ->reorder()->orderByDesc('activity_started_at')->orderByDesc('occurred_at')->paginate(50)->withQueryString();
+        [$resources, $exceptions] = FuelReports::lookups($page->items());
+
+        return [
+            'summary' => FuelReports::summary($filters),
+            'rows' => $page->through(fn (Entry $e) => FuelReports::row($e, $resources, $exceptions)),
+        ];
+    }
+
+    /** The filtered activities as CSV: one line per entry, its kept calculation. */
+    public function activitiesCsv(Request $request): StreamedResponse
+    {
+        $filters = $request->validate(Reports::rules());
+        $tz = Workspace::current()->timezone ?? 'UTC';
+        $query = FuelReports::query($filters)->with(['logbook:id,name', 'sheet:id,name,code', 'creator:id,name', 'shift:id,name']);
+
+        return response()->streamDownload(function () use ($query, $tz) {
+            $out = fopen('php://output', 'w');
+            assert($out !== false);
+            fwrite($out, "\xEF\xBB\xBF");
+            fputcsv($out, ['Reference', 'Logbook', 'Log sheet', 'Resource', 'Operator', 'Shift', 'Started', 'Ended', 'Duration (h)', 'Quantity', 'Unit',
+                'Rate', 'Rate unit', 'Estimated (L)', 'Fuel measured (L)', 'Difference from estimate (L)', 'Difference (%)', 'Refill (L)', 'Route (km)', 'Notes', 'Exceptions', 'Status'], escape: '');
+            $query->reorder()->orderBy('activity_started_at')->orderBy('occurred_at')->orderBy('id')->chunk(500, function ($entries) use ($out, $tz) {
+                [$resources, $exceptions] = FuelReports::lookups($entries);
+                foreach ($entries as $e) {
+                    /** @var Entry $e */
+                    $row = FuelReports::row($e, $resources, $exceptions);
+                    $rate = $e->calculation['rate'] ?? null;
+                    $local = fn (?string $t) => $t === null ? null : CarbonImmutable::parse($t)->setTimezone($tz)->format('Y-m-d H:i');
+                    fputcsv($out, array_map(self::safe(...), [
+                        $row['reference'], $e->logbook->name, $row['sheet'], $row['resource'], $row['operator'], $row['shift'],
+                        $local($row['startedAt']), $local($row['endedAt']), $row['durationH'], $row['quantity'], $row['unit'],
+                        $rate['value'] ?? null, $rate['unit'] ?? null, $row['estimatedL'], $row['actualL'], $row['varianceL'], $row['variancePct'],
+                        $row['refillL'], $row['gpsKm'], implode('; ', $row['flags']), $row['exceptions'], $row['status'],
+                    ]), escape: '');
+                }
+            });
+            fclose($out);
+        }, 'logbook-activities-'.now($tz)->format('Y-m-d').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
 
     /**
      * People, items and places to filter by: only what this workspace has.

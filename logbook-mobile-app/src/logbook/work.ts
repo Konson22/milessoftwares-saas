@@ -43,6 +43,8 @@ export type Task = {
 export type Occurrence = {
   id: string;
   state: string;
+  /** Absent from servers before ADR-0027 rows carried it. */
+  opensAt?: string;
   dueAt: string;
   closesAt: string;
   sheet: { id: string; name: string; code: string };

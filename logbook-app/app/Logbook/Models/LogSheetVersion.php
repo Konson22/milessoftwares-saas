@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * every entry written against it is read through it.
  *
  * @property array{mode: string, required: bool, resource_required: bool, accuracy_m: int|null}|null $location
- * @property array{mode?: string, shifts?: string}|null $recording ADR-0030: null before it existed
+ * @property array{mode?: string, shifts?: string, activity?: array<string, string|null>}|null $recording ADR-0030: null before it existed
  * @property string $id
  * @property string $organization_id
  * @property string $log_sheet_id
