@@ -22,6 +22,10 @@ import {
     TextArea,
     TextField,
 } from '@/components/fields';
+import {
+    CalculationPanel,
+    type Calculation,
+} from '@/components/fuel-calculation';
 import type { EntryRow } from '@/lib/logbook';
 import { formatDateTime } from '@/lib/logbook';
 import { show as attachmentShow } from '@/routes/attachments';
@@ -72,6 +76,10 @@ type Props = {
         } | null;
         track: string | null;
         logbookId: string;
+        activityStartedAt: string | null;
+        activityEndedAt: string | null;
+        shift: string | null;
+        calculation: Calculation | null;
     };
     resources: { id: string; label: string }[];
     revisions: {
@@ -264,6 +272,18 @@ export default function Record(props: Props) {
                         ))}
                     </dl>
                 </Section>
+
+                {(entry.activityEndedAt || entry.shift) && (
+                    <p className="text-sm text-muted-foreground">
+                        {entry.activityEndedAt &&
+                            `Activity ${formatDateTime(entry.activityStartedAt ?? entry.occurredAt)} to ${formatDateTime(entry.activityEndedAt)}`}
+                        {entry.activityEndedAt && entry.shift && ' · '}
+                        {entry.shift && `Shift: ${entry.shift}`}
+                    </p>
+                )}
+                {entry.calculation && (
+                    <CalculationPanel calculation={entry.calculation} />
+                )}
 
                 {entry.location?.lat !== undefined && (
                     <Section title="Where it was written" icon={MapPin}>

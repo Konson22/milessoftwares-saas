@@ -9,10 +9,14 @@ import { Detail, Errors, Status, TextArea } from '@/components/fields';
 import type { Answer, EntryRow } from '@/lib/logbook';
 import { action, fileSize, formatDateTime } from '@/lib/logbook';
 import { show as attachment } from '@/routes/attachments';
-import { destroy, edit, pdf } from '@/routes/entries';
+import { destroy, edit, pdf, show as entryPage } from '@/routes/entries';
 import { decide } from '@/routes/reviews';
 import { show as sheetShow } from '@/routes/sheets';
 import type { EntryLocation } from '@/lib/tracks';
+import {
+    CalculationPanel,
+    type Calculation,
+} from '@/components/fuel-calculation';
 import { show as trackPage } from '@/routes/tracks';
 
 type Props = {
@@ -27,6 +31,16 @@ type Props = {
         location: EntryLocation | null;
         track: string | null;
         shift?: string | null;
+        activityStartedAt?: string | null;
+        activityEndedAt?: string | null;
+        activityEntry?: { id: string; label: string } | null;
+        related?: {
+            id: string;
+            label: string;
+            occurredAt: string;
+            status: string;
+        }[];
+        calculation?: Calculation | null;
     };
     revisions: {
         revision: number;
@@ -150,6 +164,28 @@ export default function EntryShow({
                                             ? '—'
                                             : 'Not reviewed yet'}
                                 </Detail>
+                                {entry.activityEndedAt && (
+                                    <Detail label="Activity">
+                                        {formatDateTime(
+                                            entry.activityStartedAt ??
+                                                entry.occurredAt,
+                                        )}{' '}
+                                        to{' '}
+                                        {formatDateTime(entry.activityEndedAt)}
+                                    </Detail>
+                                )}
+                                {entry.activityEntry && (
+                                    <Detail label="Part of">
+                                        <Link
+                                            href={entryPage(
+                                                entry.activityEntry.id,
+                                            )}
+                                            className="text-primary hover:underline"
+                                        >
+                                            {entry.activityEntry.label}
+                                        </Link>
+                                    </Detail>
+                                )}
                                 {entry.shift && (
                                     <Detail label="Shift">{entry.shift}</Detail>
                                 )}
@@ -192,6 +228,37 @@ export default function EntryShow({
                             <Answers answers={entry.answers} />
                         </PanelBody>
                     </Panel>
+
+                    {entry.calculation && (
+                        <CalculationPanel calculation={entry.calculation} />
+                    )}
+
+                    {(entry.related?.length ?? 0) > 0 && (
+                        <Panel>
+                            <PanelHeader
+                                title="Recorded during this activity"
+                                description="Separate entries that belong to it."
+                            />
+                            <ul className="divide-y">
+                                {entry.related!.map((r) => (
+                                    <li
+                                        key={r.id}
+                                        className="flex items-center justify-between gap-2 px-4 py-2 text-sm"
+                                    >
+                                        <Link
+                                            href={entryPage(r.id)}
+                                            className="hover:underline"
+                                        >
+                                            {r.label}
+                                        </Link>
+                                        <span className="text-muted-foreground">
+                                            {formatDateTime(r.occurredAt)}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </Panel>
+                    )}
 
                     {revisions.length > 1 && (
                         <Panel>

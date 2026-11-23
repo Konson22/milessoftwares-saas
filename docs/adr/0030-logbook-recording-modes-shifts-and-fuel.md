@@ -145,6 +145,30 @@ An event sheet's entry is started as a draft ("Start trip") and ended later. New
 - Phase 1: `log_sheet_versions.recording` json (`mode`, later `shifts`). Tests in RecordingModesTest.
 - Phase 2: `log_schedules.times` and `log_schedule_occurrences.slot`, with the unique key on schedule, day and slot. `log_entries.schedule_link` is named, extra or null; null keeps the legacy time match. The entry form has a reading picker and the schedule form a times editor. Tests in ScheduledReadingsTest.
 - Phase 3: `log_shifts` and `log_shift_members`, plus `shift_id` on entries and revisions. The template sets off, optional or always. The form suggests a shift from the time, then the person's linked shift. Report filter by shift; shifts in the phone kit. Tests in ShiftsTest.
+- Phase 4 (built 2026-11-23, not yet deployed):
+  - Tables: `log_resource_fuel_rates` and `log_resource_meter_events`. Both are append-only, with pgsql triggers and CHECKs.
+  - `App\Logbook\Fuel` provides `addRate`, `rateAt` (latest `effective_from` at or before the moment; with the same start, the later row wins), `addMeterEvent` and `meterEventBefore`.
+  - Resource page `resources/{id}` with Fuel rates, Meters and History tabs. The list shows the rate in force.
+  - Tests in FuelSettingsTest.
+- Phase 5 (built 2026-11-23, not yet deployed):
+  - `recording.activity` names the resource field, the measure (odometer, hour_meter, or duration for event sheets only) and the start, end, actual and refill number fields. It is checked against the template on save and on publish.
+  - Entries and revisions gain `activity_started_at`, `activity_ended_at`, `activity_entry_id` and `calculation`. Entries also get `meter_resource_id`, `meter_measure`, `meter_start` and `meter_end`, set at submit for plain SQL checks.
+  - `App\Logbook\Calculations::atSubmit` refuses an end reading below the start, and a start below the last recorded end unless a meter event since then explains it. Overlapping ranges since the last meter event are flagged `overlap`. The rate used is the one in force at the activity's start. Other flags: `no_rate`, `rate_method_mismatch`, and `rate_changed` (the phone's rate differs; the phone's figure is kept under `phone`).
+  - Event sheets need an end before submit, only when the client sends a start. Older phones send none and record as before.
+  - Web: template "Fuel estimate" panel; entry form "When did it end?" and a live preview; entry page "Fuel estimate" panel, "Part of" and "Recorded during this activity" (`?activity=` on the new-entry link).
+  - Kit: per resource `fuel` (rate history) and `meters` (last end reading per measure); `recording.activity` per sheet.
+  - Tests in FuelCalculationTest, also run on local PostgreSQL.
+- Phase 6 (built 2026-11-23, not yet deployed):
+  - Reports filter `mode` (via `Recording::sheetIdsInMode`; sheets from before recording modes count as scheduled while a schedule runs) and `shift`.
+  - New view "Activities and fuel": tiles, totals by resource, operator, shift and month, and a paginated activity table that opens the record panel. Totals come from `App\Logbook\FuelReports` over each entry's own calculation, one per entry. Estimated, measured and refilled litres are separate totals; the difference covers only entries with both figures. The summary is capped at 20,000 entries and says so when cut.
+  - The record panel shows the activity, shift and calculation. The calculation component is shared with the entry page.
+  - Export `reports/activities.csv` with the same filters.
+  - Tests in FuelReportsTest, also run on local PostgreSQL.
+- Phase 7 (built 2026-11-23, not on a device, needs an EAS build):
+  - logbook-mobile-app `src/logbook/activity.ts` (no React Native): rate in force, offline estimate (km × rate ÷ 100, h × rate, duration), end-below-start and below-last-reading warnings, shift suggestion (overnight, logbook, member fallback), expected readings for a sheet and the one whose window holds the time, and `activityBody` (only fields the item has, so older items send exactly what they did).
+  - Entry screen: "When did it end?" for event sheets (a draft while the activity goes on, badge "Activity going on"), "Which reading is this?" with an extra-reading choice (sends `schedule_link`; extra sends no occurrence), shift picker (required per sheet), and the fuel estimate as a preview. The phone's figure is sent as evidence; the server's is kept.
+  - The API entry JSON now carries `shiftId`, `activityStartedAt` and `activityEndedAt`, so a phone correcting an entry keeps them.
+  - Jest: activity.test.ts (15 tests); mobile suite 48 passed. Server suite 246 passed, 2 skipped.
 
 ## 10. Testing and deployment requirements
 - Every test listed in the brief, in Pest per phase.

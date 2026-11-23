@@ -118,6 +118,7 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
             Route::get('reports/entries.csv', [ReportController::class, 'csv'])->middleware('throttle:10,1')->name('reports.csv');
             Route::get('reports/entries.pdf', [ReportController::class, 'pdf'])->middleware('throttle:10,1')->name('reports.pdf');
+            Route::get('reports/activities.csv', [ReportController::class, 'activitiesCsv'])->middleware('throttle:10,1')->name('reports.activities-csv');
             // ADR-0029: one entry opened over the report.
             Route::get('reports/records/{entry}', [ReportController::class, 'record'])->whereUuid('entry')->name('reports.record');
         });
@@ -204,9 +205,12 @@ Route::prefix(app(PlatformConfig::class)->path())
 
         // Resources and locations: read by everyone, kept by managers.
         Route::get('resources', [ResourceController::class, 'index'])->name('resources.index');
+        Route::get('resources/{resource}', [ResourceController::class, 'show'])->whereUuid('resource')->name('resources.show');
         Route::middleware('can:logbook.manage')->group(function () {
             Route::post('resources', [ResourceController::class, 'store'])->name('resources.store');
             Route::put('resources/{resource}', [ResourceController::class, 'update'])->name('resources.update');
+            Route::post('resources/{resource}/fuel-rates', [ResourceController::class, 'storeRate'])->whereUuid('resource')->name('resources.fuel-rates.store');
+            Route::post('resources/{resource}/meter-events', [ResourceController::class, 'storeMeterEvent'])->whereUuid('resource')->name('resources.meter-events.store');
             Route::post('locations', [ResourceController::class, 'storeLocation'])->name('locations.store');
             Route::put('locations/{location}', [ResourceController::class, 'updateLocation'])->name('locations.update');
         });

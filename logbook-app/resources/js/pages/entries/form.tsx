@@ -61,7 +61,94 @@ type Props = {
     shiftSetting?: 'off' | 'optional' | 'required';
     shifts?: ShiftOption[];
     shiftId?: string | null;
+    /** ADR-0030 §4.4, §4.7: the activity and its fuel estimate. */
+    recordingMode?: 'on_demand' | 'scheduled' | 'event';
+    activity?: ActivitySettings | null;
+    fuelRates?: Record<string, FuelRateRow[]>;
+    activityEndedAt?: string | null;
+    activityEntry?: { id: string; label: string } | null;
 };
+
+type ActivitySettings = {
+    resource_field: string;
+    measure: 'odometer' | 'hour_meter' | 'duration';
+    start_field: string | null;
+    end_field: string | null;
+    actual_field: string | null;
+    refill_field: string | null;
+};
+
+type FuelRateRow = {
+    id: string;
+    value: number;
+    unit: string;
+    method: 'distance' | 'hours';
+    effective_from: string;
+};
+
+/**
+ * The estimate as the server will work it out at submission: the rate in
+ * force when the activity started, km × rate ÷ 100 or h × rate. Shown
+ * only as a preview.
+ */
+function previewEstimate(
+    activity: ActivitySettings,
+    rates: Record<string, FuelRateRow[]>,
+    values: Values,
+    startedAt: string,
+    endedAt: string,
+) {
+    const num = (field: string | null) => {
+        const v = field ? values[field] : undefined;
+        return v === undefined || v === null || v === '' || isNaN(Number(v))
+            ? null
+            : Number(v);
+    };
+    const resourceId = values[activity.resource_field];
+    if (typeof resourceId !== 'string' || resourceId === '') {
+        return null;
+    }
+    let quantity: number | null;
+    if (activity.measure === 'duration') {
+        const ms = new Date(endedAt).getTime() - new Date(startedAt).getTime();
+        quantity = endedAt && ms >= 0 ? Math.round(ms / 36000) / 100 : null;
+    } else {
+        const start = num(activity.start_field);
+        const end = num(activity.end_field);
+        quantity =
+            start !== null && end !== null
+                ? Math.round((end - start) * 10) / 10
+                : null;
+    }
+    const method = activity.measure === 'odometer' ? 'distance' : 'hours';
+    const at = new Date(startedAt).getTime();
+    const rate =
+        (rates[resourceId] ?? [])
+            .filter((r) => new Date(r.effective_from).getTime() <= at)
+            .at(-1) ?? null;
+    const estimated =
+        quantity !== null && quantity >= 0 && rate && rate.method === method
+            ? Math.round(
+                  (method === 'distance'
+                      ? (quantity * rate.value) / 100
+                      : quantity * rate.value) * 100,
+              ) / 100
+            : null;
+    const actual = num(activity.actual_field);
+    return {
+        quantity,
+        unit: method === 'distance' ? 'km' : 'h',
+        rate,
+        mismatch: rate !== null && rate.method !== method,
+        estimated,
+        actual,
+        refill: num(activity.refill_field),
+        difference:
+            estimated !== null && actual !== null
+                ? Math.round((actual - estimated) * 100) / 100
+                : null,
+    };
+}
 
 type ShiftOption = {
     value: string;
@@ -122,6 +209,11 @@ export default function EntryForm({
     shiftSetting = 'off',
     shifts = [],
     shiftId = null,
+    recordingMode = 'on_demand',
+    activity = null,
+    fuelRates = {},
+    activityEndedAt = null,
+    activityEntry = null,
     members,
     resources,
     files,
@@ -144,6 +236,21 @@ export default function EntryForm({
     );
     const [shiftTouched, setShiftTouched] = useState(shiftId !== null);
     const shiftData = shiftSetting === 'off' ? {} : { shift_id: shift || null };
+    // ADR-0030 §4.4: an event runs from "when it happened" to its end.
+    const isEvent = recordingMode === 'event';
+    const [endedAt, setEndedAt] = useState(activityEndedAt ?? '');
+    const activityData = {
+        ...(isEvent
+            ? {
+                  activity_started_at: occurredAt,
+                  activity_ended_at: endedAt || null,
+              }
+            : {}),
+        ...(activityEntry ? { activity_entry_id: activityEntry.id } : {}),
+    };
+    const estimate = activity
+        ? previewEstimate(activity, fuelRates, values, occurredAt, endedAt)
+        : null;
     // Only on sheets that take a location; otherwise nothing is sent.
     const placeData = locationSettings ? { location: place } : {};
     const ask = useConfirm();
@@ -175,6 +282,7 @@ export default function EntryForm({
             submit,
             ...placeData,
             ...shiftData,
+            ...activityData,
         };
         const options = {
             preserveScroll: true,
@@ -206,6 +314,7 @@ export default function EntryForm({
                           }),
                     ...placeData,
                     ...shiftData,
+                    ...activityData,
                 } as RequestPayload,
                 options,
             );
@@ -344,8 +453,17 @@ export default function EntryForm({
                     <Panel>
                         <PanelBody className="grid gap-5">
                             <Errors errors={generalErrors} />
+                            {activityEntry && (
+                                <p className="text-sm text-muted-foreground">
+                                    Part of {activityEntry.label}
+                                </p>
+                            )}
                             <Field
-                                label="When did this happen?"
+                                label={
+                                    isEvent
+                                        ? 'When did it start?'
+                                        : 'When did this happen?'
+                                }
                                 error={errors.occurred_at}
                                 hint="The time of the activity itself, not when you write it."
                             >
@@ -364,6 +482,22 @@ export default function EntryForm({
                                     required
                                 />
                             </Field>
+                            {isEvent && (
+                                <Field
+                                    label="When did it end?"
+                                    error={errors.activity_ended_at}
+                                    hint="Leave empty while it is still going on, and save a draft. It is recorded once it has ended."
+                                >
+                                    <Input
+                                        type="datetime-local"
+                                        value={endedAt}
+                                        onChange={(e) =>
+                                            setEndedAt(e.target.value)
+                                        }
+                                        className="max-w-xs"
+                                    />
+                                </Field>
+                            )}
                             <EntryFields
                                 fields={fields}
                                 values={values}
@@ -378,6 +512,7 @@ export default function EntryForm({
                             />
                         </PanelBody>
                     </Panel>
+                    {estimate && <EstimatePreview estimate={estimate} />}
                     <div className="flex flex-wrap items-center gap-2">
                         <Button disabled={busy} onClick={() => send(true)}>
                             {sheet.reviewRequired
@@ -608,5 +743,85 @@ function ReadingPicker({
                 </p>
             )}
         </fieldset>
+    );
+}
+
+function EstimatePreview({
+    estimate,
+}: {
+    estimate: NonNullable<ReturnType<typeof previewEstimate>>;
+}) {
+    const litres = (n: number | null) => (n === null ? '—' : `${n} L`);
+
+    return (
+        <Panel>
+            <PanelBody className="grid gap-2 text-sm">
+                <p className="font-medium">Fuel estimate (preview)</p>
+                <dl className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+                    <div className="flex justify-between gap-2">
+                        <dt className="text-muted-foreground">
+                            {estimate.unit === 'km'
+                                ? 'Distance'
+                                : 'Running time'}
+                        </dt>
+                        <dd>
+                            {estimate.quantity === null
+                                ? '—'
+                                : `${estimate.quantity} ${estimate.unit}`}
+                        </dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                        <dt className="text-muted-foreground">Rate</dt>
+                        <dd>
+                            {estimate.rate
+                                ? `${estimate.rate.value} ${estimate.rate.unit}`
+                                : 'Not set for this resource'}
+                        </dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                        <dt className="text-muted-foreground">Estimated</dt>
+                        <dd className="font-medium">
+                            {litres(estimate.estimated)}
+                        </dd>
+                    </div>
+                    {estimate.actual !== null && (
+                        <div className="flex justify-between gap-2">
+                            <dt className="text-muted-foreground">
+                                Fuel measured
+                            </dt>
+                            <dd>{litres(estimate.actual)}</dd>
+                        </div>
+                    )}
+                    {estimate.difference !== null && (
+                        <div className="flex justify-between gap-2">
+                            <dt className="text-muted-foreground">
+                                Difference from estimate
+                            </dt>
+                            <dd>
+                                {estimate.difference > 0 ? '+' : ''}
+                                {estimate.difference} L
+                            </dd>
+                        </div>
+                    )}
+                    {estimate.refill !== null && (
+                        <div className="flex justify-between gap-2">
+                            <dt className="text-muted-foreground">Refill</dt>
+                            <dd>{litres(estimate.refill)}</dd>
+                        </div>
+                    )}
+                </dl>
+                {estimate.mismatch && (
+                    <p className="text-xs text-muted-foreground">
+                        This resource's rate is set for another measure, so no
+                        estimate is made.
+                    </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                    Worked out again when the entry is recorded, with the rate
+                    in force when the activity started. An estimate, not a
+                    measurement.
+                </p>
+            </PanelBody>
+        </Panel>
     );
 }

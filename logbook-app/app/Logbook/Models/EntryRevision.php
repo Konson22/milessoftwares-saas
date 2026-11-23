@@ -19,6 +19,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property array<string, mixed> $values
  * @property string $submitted_by
  * @property CarbonImmutable $submitted_at
+ * @property CarbonImmutable|null $activity_started_at
+ * @property CarbonImmutable|null $activity_ended_at
+ * @property string|null $activity_entry_id
+ * @property array<string, mixed>|null $calculation
  * @property-read LogSheetVersion $version
  * @property-read User $submitter
  */
@@ -34,7 +38,7 @@ class EntryRevision extends Model
 
     protected function casts(): array
     {
-        return ['values' => 'array', 'location' => 'array', 'revision' => 'integer', 'occurred_at' => 'immutable_datetime', 'submitted_at' => 'immutable_datetime'];
+        return ['values' => 'array', 'location' => 'array', 'revision' => 'integer', 'occurred_at' => 'immutable_datetime', 'submitted_at' => 'immutable_datetime', 'activity_started_at' => 'immutable_datetime', 'activity_ended_at' => 'immutable_datetime', 'calculation' => 'array'];
     }
 
     /** @return BelongsTo<LogSheetVersion, $this> */

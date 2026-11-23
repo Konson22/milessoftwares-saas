@@ -1,4 +1,4 @@
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Boxes } from 'lucide-react';
 import { useState } from 'react';
 import { EmptyState } from '@miles/ui/components/empty-state';
@@ -15,7 +15,7 @@ import {
 import { Toggle } from '@/components/work';
 import { useCan } from '@/lib/access';
 import * as locations from '@/routes/locations';
-import { store, update } from '@/routes/resources';
+import { show, store, update } from '@/routes/resources';
 
 type Resource = {
     id: string;
@@ -26,6 +26,8 @@ type Resource = {
     locationId: string | null;
     location: string | null;
     active: boolean;
+    /** ADR-0030: the fuel rate in force, e.g. "12 L/100 km". */
+    fuelRate: string | null;
 };
 
 type Location = {
@@ -91,11 +93,19 @@ export default function Resources({
                                 <li key={r.id} className="px-4 py-3 text-sm">
                                     <div className="flex flex-wrap items-start justify-between gap-2">
                                         <div>
-                                            <p className="font-medium">
+                                            <Link
+                                                href={show(r.id)}
+                                                className="font-medium hover:underline"
+                                            >
                                                 {r.code} · {r.name}
-                                            </p>
+                                            </Link>
                                             <p className="text-muted-foreground">
-                                                {[r.type, r.location]
+                                                {[
+                                                    r.type,
+                                                    r.location,
+                                                    r.fuelRate &&
+                                                        `fuel ${r.fuelRate}`,
+                                                ]
                                                     .filter(Boolean)
                                                     .join(' · ')}
                                             </p>

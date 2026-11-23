@@ -43,7 +43,7 @@ final class Entries
      * @param  array<string, mixed>  $input
      * @param  array{location?: array<string, mixed>|null, track_id?: string|null, source?: string}  $place  GPS (ADR-0028): kept only on sheets that take it
      * @param  'named'|'extra'|null  $scheduleLink  ADR-0030 §4.3: for the occurrence named, an extra reading, or (older clients) not said
-     * @param  array{shift_id?: string|null}  $more  ADR-0030: the shift it was recorded in
+     * @param  array{shift_id?: string|null, activity_started_at?: string|null, activity_ended_at?: string|null, activity_entry_id?: string|null, phone_calculation?: array<string, mixed>|null}  $more  ADR-0030: the shift, the activity's start and end, the activity it belongs to, the phone's own estimate
      */
     public static function create(LogSheet $sheet, User $by, array $input, string $occurredAt, ?string $key, bool $submit, ?LogSheetVersion $version = null, ?string $occurrenceId = null, array $place = [], ?string $scheduleLink = null, array $more = []): Entry
     {
@@ -61,6 +61,7 @@ final class Entries
         $values = self::clean($version, $input, [], requireAll: $submit);
         $gps = Tracks::forEntry($version, $by, $place['location'] ?? null, $place['track_id'] ?? null, $place['source'] ?? 'phone');
         $shiftId = Shifts::forEntry(Recording::settings($version)['shifts'] ?? 'off', $sheet->logbook_id, $more['shift_id'] ?? null);
+        $activity = self::activityInput($more, $sheet->logbook_id, null);
 
         try {
             // The expected entry it was written for (opened from a reminder): kept only if it is
@@ -69,7 +70,7 @@ final class Entries
                 ? $occurrenceId : null;
             $scheduleLink = in_array($scheduleLink, ['named', 'extra'], true) ? $scheduleLink : null;
 
-            return DB::transaction(function () use ($sheet, $version, $by, $values, $occurredAt, $key, $submit, $occurrenceId, $gps, $scheduleLink, $shiftId) {
+            return DB::transaction(function () use ($sheet, $version, $by, $values, $occurredAt, $key, $submit, $occurrenceId, $gps, $scheduleLink, $shiftId, $activity) {
                 $entry = Entry::query()->create([
                     'logbook_id' => $sheet->logbook_id,
                     'log_sheet_id' => $sheet->id,
@@ -82,6 +83,7 @@ final class Entries
                     'schedule_occurrence_id' => $scheduleLink === 'extra' ? null : $occurrenceId,
                     'schedule_link' => $scheduleLink,
                     'shift_id' => $shiftId,
+                    ...$activity,
                     'location' => $gps['location'],
                     'log_track_id' => $gps['log_track_id'],
                 ]);
@@ -106,7 +108,7 @@ final class Entries
      *
      * @param  array<string, mixed>  $input
      * @param  array{location?: array<string, mixed>|null, track_id?: string|null, source?: string}|null  $place  null: the location stays as it is
-     * @param  array{shift_id?: string|null}  $more  a key left out keeps what the entry has
+     * @param  array{shift_id?: string|null, activity_started_at?: string|null, activity_ended_at?: string|null, activity_entry_id?: string|null, phone_calculation?: array<string, mixed>|null}  $more  a key left out keeps what the entry has
      */
     public static function update(Entry $entry, User $by, array $input, string $occurredAt, ?array $place = null, array $more = []): Entry
     {
@@ -121,10 +123,51 @@ final class Entries
             if (array_key_exists('shift_id', $more)) {
                 $entry->forceFill(['shift_id' => Shifts::forEntry(Shifts::setting($entry), $entry->logbook_id, $more['shift_id'])]);
             }
+            $entry->forceFill(self::activityInput($more, $entry->logbook_id, $entry));
             $entry->save();
 
             return $entry;
         });
+    }
+
+    /**
+     * The activity fields sent (ADR-0030 §4.4): checked, as columns. A key
+     * left out is left as it is.
+     *
+     * @param  array<string, mixed>  $more
+     * @return array<string, mixed>
+     */
+    private static function activityInput(array $more, string $logbookId, ?Entry $entry): array
+    {
+        $out = [];
+        foreach (['activity_started_at', 'activity_ended_at'] as $key) {
+            if (array_key_exists($key, $more)) {
+                $out[$key] = is_string($more[$key]) && $more[$key] !== '' ? CarbonImmutable::parse($more[$key]) : null;
+            }
+        }
+        $started = array_key_exists('activity_started_at', $out) ? $out['activity_started_at'] : $entry?->activity_started_at;
+        $ended = array_key_exists('activity_ended_at', $out) ? $out['activity_ended_at'] : $entry?->activity_ended_at;
+        if ($started !== null && $ended !== null && $ended->lessThan($started)) {
+            throw ValidationException::withMessages(['activity_ended_at' => 'The end is before the start.']);
+        }
+        if (array_key_exists('activity_entry_id', $more)) {
+            $id = $more['activity_entry_id'];
+            if ($id !== null && $id !== '' && ($id === $entry?->id || ! is_string($id) || ! Entry::query()->whereKey($id)->where('logbook_id', $logbookId)->exists())) {
+                throw ValidationException::withMessages(['activity_entry_id' => 'Choose an activity of this logbook.']);
+            }
+            $out['activity_entry_id'] = $id === '' ? null : $id;
+        }
+        if (array_key_exists('phone_calculation', $more) && is_array($more['phone_calculation'])) {
+            $p = $more['phone_calculation'];
+            $out['calculation'] = ['phone' => [
+                'estimated_l' => is_numeric($p['estimated_l'] ?? null) ? (float) $p['estimated_l'] : null,
+                'rate_id' => is_string($p['rate_id'] ?? null) ? $p['rate_id'] : null,
+                'rate' => is_numeric($p['rate'] ?? null) ? (float) $p['rate'] : null,
+                'quantity' => is_numeric($p['quantity'] ?? null) ? (float) $p['quantity'] : null,
+            ]];
+        }
+
+        return $out;
     }
 
     public static function submit(Entry $entry, User $by): Entry
@@ -141,6 +184,16 @@ final class Entries
             $values = self::clean($version, $entry->values, self::files($entry), requireAll: true);
             Tracks::checkRequired($entry);
             Shifts::checkRequired($entry);
+            // ADR-0030: an event is recorded once it has ended; its fuel estimate is worked out now.
+            // Clients that send no start (phone builds from before) record as they always did.
+            if (Recording::mode($sheet, $version) === 'event' && $entry->activity_started_at !== null && $entry->activity_ended_at === null) {
+                throw ValidationException::withMessages(['activity_ended_at' => 'Give the time the activity ended before recording it.']);
+            }
+            $entry->values = $values;
+            if (Recording::activity($version) !== null || Recording::mode($sheet, $version) === 'event') {
+                $entry->activity_started_at ??= $entry->occurred_at;
+            }
+            $calculated = Calculations::atSubmit($entry);
             $first = $entry->revision === 0;
             $reference = $entry->reference ?? References::next($sheet->code);
             $revision = $entry->revision + 1;
@@ -154,6 +207,8 @@ final class Entries
                 'status' => $reviewRequired ? 'submitted' : 'finalized',
                 'submitted_at' => now(),
                 'search_text' => Fields::searchText($reference, $version->fields, $values, self::people($version->fields, $values)),
+                'calculation' => $calculated['calculation'] ?? ($entry->calculation === null ? null : ['phone' => $entry->calculation['phone'] ?? null]),
+                ...$calculated['meter'],
             ])->save();
 
             EntryRevision::query()->create([
@@ -164,6 +219,10 @@ final class Entries
                 'values' => $values,
                 'location' => $entry->location,
                 'shift_id' => $entry->shift_id,
+                'activity_started_at' => $entry->activity_started_at,
+                'activity_ended_at' => $entry->activity_ended_at,
+                'activity_entry_id' => $entry->activity_entry_id,
+                'calculation' => $entry->calculation,
                 'submitted_by' => $by->id,
                 'submitted_at' => now(),
             ]);

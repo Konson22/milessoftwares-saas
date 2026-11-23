@@ -32,7 +32,7 @@ final class Recording
     /**
      * The settings sent by the template builder, checked.
      *
-     * @return array{mode: string, shifts: string}|null null: nothing chosen (on demand, or as the sheet's schedules say)
+     * @return array{mode: string, shifts: string, activity?: array<string, string|null>}|null null: nothing chosen (on demand, or as the sheet's schedules say)
      */
     public static function settingsInput(mixed $input): ?array
     {
@@ -47,7 +47,92 @@ final class Recording
             throw ValidationException::withMessages(['recording.shifts' => 'Choose whether entries name a shift: no, optionally, or always.']);
         }
 
-        return ['mode' => (string) $input['mode'], 'shifts' => (string) $shifts];
+        $settings = ['mode' => (string) $input['mode'], 'shifts' => (string) $shifts];
+        $activity = self::activityInput($input['activity'] ?? null);
+        if ($activity !== null) {
+            $settings['activity'] = $activity;
+        }
+
+        return $settings;
+    }
+
+    /**
+     * The activity measured on an entry, for the fuel estimate (ADR-0030
+     * §4.7): the resource field, how the quantity is read, and which
+     * number fields hold the readings, the fuel measured and the refill.
+     * Field names are checked against the template by checkActivity().
+     *
+     * @return array{resource_field: string, measure: string, start_field: string|null, end_field: string|null, actual_field: string|null, refill_field: string|null}|null
+     */
+    private static function activityInput(mixed $input): ?array
+    {
+        if (! is_array($input) || in_array($input['measure'] ?? null, [null, ''], true)) {
+            return null;
+        }
+        if (! in_array($input['measure'], self::MEASURES, true)) {
+            throw ValidationException::withMessages(['recording.activity' => 'Choose an odometer, an hour meter or the recorded duration.']);
+        }
+        $name = fn (string $key) => is_string($input[$key] ?? null) && $input[$key] !== '' ? $input[$key] : null;
+
+        return [
+            'resource_field' => (string) $name('resource_field'),
+            'measure' => (string) $input['measure'],
+            'start_field' => $input['measure'] === 'duration' ? null : $name('start_field'),
+            'end_field' => $input['measure'] === 'duration' ? null : $name('end_field'),
+            'actual_field' => $name('actual_field'),
+            'refill_field' => $name('refill_field'),
+        ];
+    }
+
+    /** How an activity's quantity is read. */
+    public const MEASURES = ['odometer', 'hour_meter', 'duration'];
+
+    /**
+     * The activity settings agree with the template's fields: a resource
+     * field, number fields for the readings, nothing used twice.
+     *
+     * @param  array<string, mixed>|null  $settings
+     * @param  list<array<string, mixed>>  $fields
+     */
+    public static function checkActivity(?array $settings, array $fields, string $key = 'recording.activity'): void
+    {
+        $activity = $settings['activity'] ?? null;
+        if (! is_array($activity)) {
+            return;
+        }
+        $types = collect($fields)->mapWithKeys(fn (array $f) => [$f['name'] => $f['type']])->all();
+        $number = fn (?string $n) => $n !== null && in_array($types[$n] ?? null, ['integer', 'decimal'], true);
+        $error = match (true) {
+            ($types[$activity['resource_field']] ?? null) !== 'resource' => 'Choose the Resource field the activity is about.',
+            $activity['measure'] === 'duration' && ($settings['mode'] ?? null) !== 'event' => 'Only event-based sheets have a start and an end to measure.',
+            $activity['measure'] !== 'duration' && (! $number($activity['start_field']) || ! $number($activity['end_field'])) => 'Choose the number fields for the start and end readings.',
+            $activity['measure'] !== 'duration' && $activity['start_field'] === $activity['end_field'] => 'The start and end readings need two different fields.',
+            $activity['actual_field'] !== null && ! $number($activity['actual_field']) => 'The fuel measured must be a number field.',
+            $activity['refill_field'] !== null && ! $number($activity['refill_field']) => 'The refill must be a number field.',
+            count(array_filter([$activity['start_field'], $activity['end_field'], $activity['actual_field'], $activity['refill_field']])) !== count(array_unique(array_filter([$activity['start_field'], $activity['end_field'], $activity['actual_field'], $activity['refill_field']]))) => 'Each reading needs its own field.',
+            default => null,
+        };
+        if ($error !== null) {
+            throw ValidationException::withMessages([$key => $error]);
+        }
+    }
+
+    /**
+     * @return array{resource_field: string, measure: string, start_field: string|null, end_field: string|null, actual_field: string|null, refill_field: string|null}|null
+     */
+    public static function activity(?LogSheetVersion $version): ?array
+    {
+        $activity = $version?->recording['activity'] ?? null;
+        if (! is_array($activity) || ! in_array($activity['measure'] ?? null, self::MEASURES, true)) {
+            return null;
+        }
+        $name = fn (string $key) => is_string($activity[$key] ?? null) ? $activity[$key] : null;
+
+        return [
+            'resource_field' => (string) $name('resource_field'), 'measure' => (string) $activity['measure'],
+            'start_field' => $name('start_field'), 'end_field' => $name('end_field'),
+            'actual_field' => $name('actual_field'), 'refill_field' => $name('refill_field'),
+        ];
     }
 
     /** @return array{mode: string, shifts: string}|null */
@@ -95,6 +180,21 @@ final class Recording
                 'recording.mode' => self::LABELS[$mode].' sheets have no schedule. End this sheet\'s schedules first, or keep it scheduled.',
             ]);
         }
+    }
+
+    /**
+     * The sheets recorded in a mode, as their published version says (or,
+     * from before ADR-0030, as their running schedules say).
+     *
+     * @return list<string>
+     */
+    public static function sheetIdsInMode(string $mode): array
+    {
+        $scheduled = array_flip(Schedule::query()->whereNull('ended_at')->distinct()->pluck('log_sheet_id')->all());
+
+        return array_values(LogSheet::query()->with('publishedVersion:id,recording')->get(['id', 'published_version_id'])
+            ->filter(fn (LogSheet $s) => (self::settings($s->publishedVersion)['mode'] ?? (isset($scheduled[$s->id]) ? 'scheduled' : 'on_demand')) === $mode)
+            ->pluck('id')->all());
     }
 
     public static function hasLiveSchedules(LogSheet $sheet): bool

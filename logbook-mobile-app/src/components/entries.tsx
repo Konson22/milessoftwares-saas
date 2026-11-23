@@ -53,6 +53,7 @@ export function EntryBadges({ item }: { item: Item }) {
     <View className="flex-row flex-wrap items-center gap-1.5">
       <Badge label={sending} tone={sendingTone} a11y={`Sending: ${sending}`} />
       {review && item.status === 'synced' && <Badge label={review[0]} tone={review[1]} a11y={`Review: ${review[0]}`} />}
+      {item.status === 'draft' && item.activityStartedAt && !item.activityEndedAt && <Badge label="Activity going on" tone="blue" a11y="The activity has started and not ended" />}
     </View>
   );
 }

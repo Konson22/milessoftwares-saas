@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Logbook\Access;
 use App\Logbook\Attachments;
+use App\Logbook\Calculations;
 use App\Logbook\Fields;
+use App\Logbook\Models\Entry;
+use App\Logbook\Models\FuelRate;
 use App\Logbook\Models\LogResource;
 use App\Logbook\Models\LogSheet;
 use App\Logbook\Models\LogSheetVersion;
@@ -52,6 +55,21 @@ class KitController extends Controller
             ? Access::writableSheets()->with(['logbook:id,name,icon', 'publishedVersion:id,log_sheet_id,version,published_at,location,recording'])->orderBy('name')->get()
             : collect();
 
+        // ADR-0030: rates for the offline estimate (the server recalculates) and each meter's last end reading.
+        $rates = FuelRate::query()->orderBy('effective_from')->orderBy('created_at')->get()
+            ->groupBy('log_resource_id')->map(fn ($rows) => $rows->map(fn (FuelRate $f) => Calculations::rateSnapshot($f) + ['method' => $f->method]));
+        $meters = [];
+        $latest = Entry::query()->whereNotNull('meter_resource_id')->where('status', '!=', 'draft')
+            ->groupBy('meter_resource_id', 'meter_measure')
+            ->selectRaw('meter_resource_id as resource_id, meter_measure as measure, max(activity_started_at) as last_at');
+        foreach (Entry::query()->where('status', '!=', 'draft')
+            ->joinSub($latest, 'latest', fn ($j) => $j->on('log_entries.meter_resource_id', '=', 'latest.resource_id')
+                ->on('log_entries.meter_measure', '=', 'latest.measure')->on('log_entries.activity_started_at', '=', 'latest.last_at'))
+            ->orderBy('log_entries.meter_end')
+            ->get(['log_entries.meter_resource_id', 'log_entries.meter_measure', 'log_entries.meter_end']) as $e) {
+            $meters[(string) $e->meter_resource_id][(string) $e->meter_measure] = (float) $e->meter_end;
+        }
+
         return response()->json([
             'serverTime' => now()->toIso8601String(),
             'can' => [
@@ -79,14 +97,18 @@ class KitController extends Controller
                 // GPS (ADR-0028): null when the sheet takes no location.
                 'location' => Tracks::settings($sheet->publishedVersion),
                 // ADR-0030: scheduled, event or on_demand.
-                'recording' => ['mode' => Recording::mode($sheet), 'shifts' => Recording::settings($sheet->publishedVersion)['shifts'] ?? 'off'],
+                'recording' => ['mode' => Recording::mode($sheet), 'shifts' => Recording::settings($sheet->publishedVersion)['shifts'] ?? 'off', 'activity' => Recording::activity($sheet->publishedVersion)],
             ])->values()->all(),
             // For person fields: id and name only.
             'members' => User::query()->whereIn('id', WorkspaceMember::query()->select('user_id'))->orderBy('name')->get(['id', 'name'])
                 ->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name])->values()->all(),
             // For resource fields (ADR-0026 §2.10): active resources only.
             'resources' => LogResource::query()->where('active', true)->with('location.parent')->orderBy('code')->get()
-                ->map(fn (LogResource $r) => ['id' => $r->id, 'code' => $r->code, 'name' => $r->name, 'type' => $r->type, 'location' => $r->location?->path()])->values()->all(),
+                ->map(fn (LogResource $r) => [
+                    'fuel' => $rates->get($r->id, collect())->values()->all(),
+                    'meters' => (object) ($meters[$r->id] ?? []),
+                    'id' => $r->id, 'code' => $r->code, 'name' => $r->name, 'type' => $r->type, 'location' => $r->location?->path(),
+                ])->values()->all(),
             // ADR-0030: active shifts; logbook null means every logbook. Members only suggest.
             'shifts' => Shift::query()->where('active', true)->with('members:id')->orderBy('starts_time')->get()
                 ->map(fn (Shift $s) => ['id' => $s->id, 'name' => $s->name, 'starts' => $s->starts_time, 'ends' => $s->ends_time, 'logbookId' => $s->logbook_id, 'members' => $s->members->pluck('id')->values()->all()])->values()->all(),

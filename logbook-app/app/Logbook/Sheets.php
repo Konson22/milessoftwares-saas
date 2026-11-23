@@ -74,6 +74,9 @@ final class Sheets
         self::fail($checked['errors']);
         $settings = $withLocation ? Tracks::settingsInput($location) : null;
         $mode = $withRecording ? Recording::settingsInput($recording) : null;
+        if ($withRecording) {
+            Recording::checkActivity($mode, $checked['fields']);
+        }
 
         return DB::transaction(function () use ($sheet, $checked, $by, $settings, $withLocation, $mode, $withRecording) {
             $draft = self::draft($sheet, $by);
@@ -128,6 +131,7 @@ final class Sheets
             self::fail($checked['errors']);
             self::keepsNamesTyped($sheet, $checked['fields']);
             Recording::checkPublish($sheet, $draft);
+            Recording::checkActivity($draft->recording, $checked['fields']);
 
             $draft->forceFill([
                 'fields' => $checked['fields'],

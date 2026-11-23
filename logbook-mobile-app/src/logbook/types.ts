@@ -43,7 +43,34 @@ export type FieldDef = {
 };
 
 /** A resource from the kit (ADR-0026 §2.10). */
-export type KitResource = { id: string; code: string; name: string; type: string; location: string | null };
+export type KitResource = {
+  id: string;
+  code: string;
+  name: string;
+  type: string;
+  location: string | null;
+  /** ADR-0030: its fuel rates, oldest first, for the offline estimate. */
+  fuel?: FuelRate[];
+  /** ADR-0030: the last recorded end reading per meter. */
+  meters?: Partial<Record<'odometer' | 'hour_meter', number>>;
+};
+
+export type FuelRate = { id: string; value: number; unit: string; method: 'distance' | 'hours'; fuel_type: string; effective_from: string };
+
+/** ADR-0030 §4.5: an operational shift; logbookId null means every logbook. */
+export type KitShift = { id: string; name: string; starts: string; ends: string; logbookId: string | null; members: string[] };
+
+/** ADR-0030 §4.7: what an entry's activity measures, for the fuel estimate. */
+export type ActivitySettings = {
+  resource_field: string;
+  measure: 'odometer' | 'hour_meter' | 'duration';
+  start_field: string | null;
+  end_field: string | null;
+  actual_field: string | null;
+  refill_field: string | null;
+};
+
+export type RecordingSettings = { mode: 'on_demand' | 'scheduled' | 'event'; shifts: 'off' | 'optional' | 'required'; activity?: ActivitySettings | null };
 
 export type Values = Record<string, unknown>;
 
@@ -66,6 +93,8 @@ export type KitSheet = {
   version: { id: string | null; version: number | null };
   /** GPS for the published version (ADR-0028); null or absent: no location. */
   location?: LocationSettings | null;
+  /** How it is recorded (ADR-0030); absent from servers before it. */
+  recording?: RecordingSettings;
 };
 
 export type LocationSettings = { mode: 'entry' | 'route'; required: boolean; resource_required: boolean; accuracy_m: number | null };
@@ -81,6 +110,8 @@ export type Kit = {
   members: { id: string; name: string }[];
   /** Absent from servers before ADR-0026. */
   resources?: KitResource[];
+  /** ADR-0030; absent from servers before it. */
+  shifts?: KitShift[];
 };
 
 /** A file kept on the phone until the server has it. */
@@ -150,6 +181,17 @@ export type Item = {
   /** GPS (ADR-0028): the location taken for it, and the route it was written on. */
   location?: EntryLocation | null;
   trackId?: string | null;
+  /** ADR-0030 §4.3: for the reading named (occurrenceId), or an extra one. Absent on older items. */
+  scheduleLink?: 'named' | 'extra' | null;
+  /** ADR-0030 §4.5: the shift it was recorded in. */
+  shiftId?: string | null;
+  /** ADR-0030 §4.4: an activity's start and end (ISO); no end yet means still going on. */
+  activityStartedAt?: string | null;
+  activityEndedAt?: string | null;
+  /** The activity this entry was recorded during. */
+  activityEntryId?: string | null;
+  /** The phone's own estimate, sent as evidence only. */
+  calculation?: { estimated_l: number; rate_id: string | null; rate: number | null; quantity: number | null } | null;
 };
 
 /** Everything the phone keeps, behind one interface (SQLCipher on the phone, memory in tests). */
