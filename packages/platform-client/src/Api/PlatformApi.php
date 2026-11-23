@@ -377,6 +377,46 @@ final class PlatformApi
     }
 
     /**
+     * Adds a department to the workspace as the acting member (an
+     * administrator, or this application's people manager for the whole
+     * workspace). The organization's cached structure is dropped.
+     *
+     * @return array{id: string, name: string, code: string}
+     *
+     * @throws PlatformRefused with the errors by field (name taken, not allowed...)
+     * @throws NotVisible
+     * @throws PlatformUnavailable
+     */
+    public function createDepartment(string $organizationId, string $actorUserId, string $name): array
+    {
+        $data = $this->send('post', '/api/v1/people/departments', 'members.write', [
+            'organization_id' => $organizationId,
+            'actor_user_id' => $actorUserId,
+            'name' => $name,
+        ]);
+        $this->forget($organizationId);
+
+        return ['id' => (string) ($data['id'] ?? ''), 'name' => (string) ($data['name'] ?? $name), 'code' => (string) ($data['code'] ?? '')];
+    }
+
+    /**
+     * Renames a department, on the same terms as createDepartment().
+     *
+     * @throws PlatformRefused
+     * @throws NotVisible
+     * @throws PlatformUnavailable
+     */
+    public function renameDepartment(string $organizationId, string $actorUserId, string $departmentId, string $name): void
+    {
+        $this->send('put', '/api/v1/people/departments/'.rawurlencode($departmentId), 'members.write', [
+            'organization_id' => $organizationId,
+            'actor_user_id' => $actorUserId,
+            'name' => $name,
+        ]);
+        $this->forget($organizationId);
+    }
+
+    /**
      * @throws PlatformRefused
      * @throws NotVisible when the invitation proposes none of this application's roles
      * @throws PlatformUnavailable
@@ -468,7 +508,11 @@ final class PlatformApi
         $request = $this->request()->withToken($this->serviceToken($scope));
 
         try {
-            $response = $method === 'get' ? $request->get($path) : $request->asJson()->post($path, $body);
+            $response = match ($method) {
+                'get' => $request->get($path),
+                'put' => $request->asJson()->put($path, $body),
+                default => $request->asJson()->post($path, $body),
+            };
         } catch (ConnectionException $e) {
             throw new PlatformUnavailable("Platform unreachable: {$e->getMessage()}", previous: $e);
         }
