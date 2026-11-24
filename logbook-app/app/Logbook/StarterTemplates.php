@@ -75,21 +75,23 @@ final class StarterTemplates
             'vehicle_movement' => [
                 'name' => 'Vehicle Movement Log',
                 'code' => 'VEH',
-                'description' => 'Every trip: driver, route, odometer and purpose.',
+                'description' => 'Every trip by the driver assigned to the vehicle: start, stops, odometer, fuel and purpose.',
                 'review_required' => true,
                 'asset_types' => ['vehicle'],
-                'recording' => ['mode' => 'event', 'shifts' => 'off', 'subject' => 'vehicle', 'activity' => [
+                // ADR-0032: the driver is the author, records only vehicles assigned to them, and each stop.
+                'recording' => ['mode' => 'event', 'shifts' => 'off', 'subject' => 'vehicle', 'stops' => 'optional', 'assigned_only' => true, 'activity' => [
                     'resource_field' => 'vehicle', 'measure' => 'odometer', 'start_field' => 'start_mileage', 'end_field' => 'end_mileage',
                     'actual_field' => null, 'refill_field' => 'fuel_added',
                 ]],
                 'location' => ['mode' => 'route', 'required' => false, 'resource_required' => false],
                 'fields' => [
                     $asset('vehicle', 'Vehicle', 'Vehicle'),
-                    ['name' => 'driver', 'label' => 'Driver', 'type' => 'user', 'required' => true],
                     $text('origin', 'Origin', true, 'text'),
                     $text('destination', 'Destination', true, 'text'),
                     ['name' => 'start_mileage', 'label' => 'Odometer at start', 'type' => 'integer', 'required' => true, 'min' => 0, 'unit' => 'km'],
                     ['name' => 'end_mileage', 'label' => 'Odometer at end', 'type' => 'integer', 'required' => true, 'min' => 0, 'unit' => 'km'],
+                    $status('fuel_start', 'Fuel gauge at start', ['Full', 'Three quarters', 'Half', 'Quarter', 'Reserve'], true),
+                    $status('fuel_end', 'Fuel gauge at end', ['Full', 'Three quarters', 'Half', 'Quarter', 'Reserve'], false),
                     ['name' => 'fuel_added', 'label' => 'Fuel added (refill)', 'type' => 'decimal', 'required' => false, 'min' => '0', 'unit' => 'L'],
                     $text('purpose', 'Purpose', true),
                     $text('remarks', 'Remarks'),

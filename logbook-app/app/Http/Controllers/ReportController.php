@@ -22,8 +22,10 @@ use App\Logbook\Models\LogSheet;
 use App\Logbook\Models\Shift;
 use App\Logbook\Models\Task;
 use App\Logbook\Models\Track;
+use App\Logbook\Recording;
 use App\Logbook\Reports;
 use App\Logbook\ResourceCategories;
+use App\Logbook\Stops;
 use App\Logbook\Tasks;
 use App\Logbook\Timeline;
 use App\Logbook\Tracks;
@@ -228,6 +230,39 @@ class ReportController extends Controller
             'summary' => FuelReports::summary($filters),
             'rows' => $page->through(fn (Entry $e) => FuelReports::row($e, $resources, $exceptions)),
         ];
+    }
+
+    /**
+     * ADR-0032 §5: the stops of the filtered trips as CSV, one line per
+     * stop, with the distance from the previous point.
+     */
+    public function stopsCsv(Request $request): StreamedResponse
+    {
+        $filters = $request->validate(Reports::rules());
+        $tz = Workspace::current()->timezone ?? 'UTC';
+        $query = Reports::query($filters)->whereNotNull('stops')->with(['logbook:id,name', 'sheet:id,name,code', 'creator:id,name', 'resource:id,code,name', 'version:id,recording,fields']);
+
+        return response()->streamDownload(function () use ($query) {
+            $out = fopen('php://output', 'w');
+            assert($out !== false);
+            fwrite($out, 'ï»¿');
+            fputcsv($out, ['Reference', 'Logbook', 'Log sheet', 'Vehicle', 'Driver', 'Stop', 'Place', 'Purpose', 'Arrived', 'Left', 'Minutes', 'Odometer (km)', 'From previous (km)', 'Latitude', 'Longitude', 'Note', 'Status'], escape: '');
+            $query->reorder()->orderBy('activity_started_at')->orderBy('occurred_at')->orderBy('id')->chunk(500, function ($entries) use ($out) {
+                foreach ($entries as $e) {
+                    /** @var Entry $e */
+                    $activity = Recording::activity($e->version);
+                    $start = $activity !== null && $activity['measure'] === 'odometer' && is_numeric($e->values[$activity['start_field']] ?? null) ? (float) $e->values[$activity['start_field']] : null;
+                    foreach (Stops::display($e->stops, $start) as $i => $s) {
+                        fputcsv($out, array_map(self::safe(...), [
+                            $e->reference, $e->logbook->name, $e->sheet->code.' · '.$e->sheet->name, $e->resource?->label(), $e->creator->name,
+                            $i + 1, $s['place'], $s['purpose'], $s['arrivedAt'], $s['departedAt'], $s['minutes'], $s['odometer'], $s['legKm'],
+                            $s['pin']['lat'] ?? null, $s['pin']['lng'] ?? null, $s['note'], $e->status,
+                        ]), escape: '');
+                    }
+                }
+            });
+            fclose($out);
+        }, 'logbook-stops-'.now($tz)->format('Y-m-d').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     /** The filtered activities as CSV: one line per entry, its kept calculation. */

@@ -74,6 +74,13 @@ export function EntryFields({
                             files={files?.[field.name]}
                             entryId={entryId}
                         />
+                        {field.assigned_only && (
+                            <p className="text-xs text-muted-foreground">
+                                {(field.resource_ids ?? []).length === 0
+                                    ? 'Nothing is assigned to you on this day. A manager assigns vehicles and other assets.'
+                                    : 'Only what is assigned to you on this day.'}
+                            </p>
+                        )}
                         {field.help && (
                             <p className="text-xs text-muted-foreground">
                                 {field.help}
@@ -274,10 +281,7 @@ function Control({
                         .filter(
                             (r) =>
                                 resourceMatches(r, field.resource_type) &&
-                                // ADR-0031: a sheet with linked assets offers only those.
-                                (!field.resource_ids ||
-                                    field.resource_ids.length === 0 ||
-                                    field.resource_ids.includes(r.value)),
+                                offered(field, r.value),
                         )
                         .map((r) => (
                             <option key={r.value} value={r.value}>
@@ -287,11 +291,7 @@ function Control({
                     {/* A saved choice no longer offered stays visible, never swapped for another. */}
                     {text !== '' &&
                         !resources.some(
-                            (r) =>
-                                r.value === text &&
-                                (!field.resource_ids ||
-                                    field.resource_ids.length === 0 ||
-                                    field.resource_ids.includes(r.value)),
+                            (r) => r.value === text && offered(field, r.value),
                         ) && (
                             <option value={text} disabled>
                                 No longer offered: choose another
@@ -516,6 +516,23 @@ function NumberInput({
                 </p>
             )}
         </div>
+    );
+}
+
+/**
+ * ADR-0031: a sheet with linked assets offers only those. ADR-0032: an
+ * "assigned only" sheet offers only the author's assigned assets, and
+ * nothing when none is assigned.
+ */
+function offered(field: FieldDef, id: string): boolean {
+    if (field.assigned_only) {
+        return (field.resource_ids ?? []).includes(id);
+    }
+
+    return (
+        !field.resource_ids ||
+        field.resource_ids.length === 0 ||
+        field.resource_ids.includes(id)
     );
 }
 

@@ -46,6 +46,8 @@ export type FieldDef = {
     /** ADR-0031: the field naming the entry's asset, and the assets linked to the sheet. */
     subject?: boolean;
     resource_ids?: string[];
+    /** ADR-0032: resource_ids are the assets assigned to the author that day (none: nothing to choose). */
+    assigned_only?: boolean;
     /** Readings that add up (litres, hours); levels such as temperatures do not. */
     summable?: boolean;
 };
@@ -253,6 +255,11 @@ const ACTIONS: Record<string, string> = {
     'occurrence.missed': 'an expected entry was missed',
     'resource.created': 'added the resource',
     'resource.updated': 'changed the resource',
+    'resource.assigned': 'assigned the asset',
+    'resource.assignment_ended': 'ended an assignment',
+    'resource.assignment_cancelled': 'cancelled an assignment',
+    'dispatch.planned': 'planned the trip',
+    'dispatch.cancelled': 'cancelled the trip',
     'location.created': 'added the location',
     'location.updated': 'changed the location',
 };

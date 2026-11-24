@@ -73,6 +73,10 @@ type Props = {
         activity: ActivitySettings | null;
         /** ADR-0031: the resource field naming the entry's asset. */
         subject: string | null;
+        /** ADR-0032: only the people the asset is assigned to record it. */
+        assignedOnly: boolean;
+        /** ADR-0032 §5: whether trips record their stops (event sheets only). */
+        stops: StopsSetting;
         liveSchedules: boolean;
     };
     history: {
@@ -135,6 +139,12 @@ export default function Template({
         initialRecording.shifts ?? 'off',
     );
     const [subject, setSubject] = useState(initialRecording.subject ?? '');
+    const [stops, setStops] = useState<StopsSetting>(
+        initialRecording.stops ?? 'off',
+    );
+    const [assignedOnly, setAssignedOnly] = useState(
+        initialRecording.assignedOnly ?? false,
+    );
     const [preview, setPreview] = useState<Values>({});
     const publishedNames = useMemo(
         () => new Set(publishedVersion ? initial.map((f) => f.name) : []),
@@ -224,6 +234,8 @@ export default function Template({
                         shifts,
                         activity: activityData,
                         subject: subject || null,
+                        assigned_only: assignedOnly,
+                        stops: recording === 'event' ? stops : 'off',
                     },
                 } as RequestPayload,
                 options,
@@ -239,6 +251,8 @@ export default function Template({
                         shifts,
                         activity: activityData,
                         subject: subject || null,
+                        assigned_only: assignedOnly,
+                        stops: recording === 'event' ? stops : 'off',
                     },
                 } as RequestPayload,
                 options,
@@ -515,8 +529,14 @@ export default function Template({
                             editable={editable}
                             error={
                                 errors['recording.mode'] ??
-                                errors['recording.shifts']
+                                errors['recording.shifts'] ??
+                                errors['recording.stops']
                             }
+                            stops={stops}
+                            onStops={(next) => {
+                                setStops(next);
+                                setDirty(true);
+                            }}
                             onChange={(next) => {
                                 setRecording(next);
                                 setDirty(true);
@@ -530,9 +550,17 @@ export default function Template({
                             value={subject}
                             fields={rows}
                             editable={editable}
-                            error={errors['recording.subject']}
+                            error={
+                                errors['recording.subject'] ??
+                                errors['recording.assigned_only']
+                            }
                             onChange={(next) => {
                                 setSubject(next);
+                                setDirty(true);
+                            }}
+                            assignedOnly={assignedOnly}
+                            onAssignedOnly={(next) => {
+                                setAssignedOnly(next);
                                 setDirty(true);
                             }}
                         />
@@ -1392,12 +1420,16 @@ function SubjectPanel({
     editable,
     error,
     onChange,
+    assignedOnly,
+    onAssignedOnly,
 }: {
     value: string;
     fields: Row[];
     editable: boolean;
     error?: string;
     onChange: (value: string) => void;
+    assignedOnly: boolean;
+    onAssignedOnly: (value: boolean) => void;
 }) {
     const resourceFields = fields.filter((f) => f.type === 'resource');
     if (resourceFields.length === 0) {
@@ -1427,10 +1459,32 @@ function SubjectPanel({
                     error={error}
                     disabled={!editable}
                 />
+                <div className="mt-3 grid gap-1">
+                    {editable ? (
+                        <Check
+                            label="Only people the asset is assigned to can record it"
+                            checked={assignedOnly}
+                            onChange={onAssignedOnly}
+                        />
+                    ) : (
+                        <p className="text-sm">
+                            {assignedOnly
+                                ? 'Only people the asset is assigned to can record it.'
+                                : 'Anyone who writes on this sheet can choose the asset.'}
+                        </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                        Managers assign vehicles and other assets on the asset's
+                        page. A driver then sees only the vehicles assigned to
+                        them that day.
+                    </p>
+                </div>
             </PanelBody>
         </Panel>
     );
 }
+
+type StopsSetting = 'off' | 'optional' | 'required';
 
 function RecordingPanel({
     value,
@@ -1440,7 +1494,11 @@ function RecordingPanel({
     error,
     onChange,
     onShifts,
+    stops,
+    onStops,
 }: {
+    stops: StopsSetting;
+    onStops: (value: StopsSetting) => void;
     value: RecordingMode;
     shifts: ShiftSetting;
     liveSchedules: boolean;
@@ -1492,6 +1550,19 @@ function RecordingPanel({
                     ]}
                     hint="Shifts are kept in Shifts. The one the entry falls in is suggested."
                 />
+                {value === 'event' && (
+                    <SelectField
+                        label="Trips record their stops"
+                        value={stops}
+                        onChange={(next) => onStops(next as StopsSetting)}
+                        options={[
+                            { value: 'off', label: 'No (default)' },
+                            { value: 'optional', label: 'When there are any' },
+                            { value: 'required', label: 'At least one stop' },
+                        ]}
+                        hint="Each stop: place, arrival and departure, odometer, purpose and an optional location, checked against the trip's start, end and readings."
+                    />
+                )}
                 {value === 'scheduled' && (
                     <Link
                         href={schedulesIndex()}

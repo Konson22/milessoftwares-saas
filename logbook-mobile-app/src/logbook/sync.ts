@@ -1,4 +1,5 @@
 import { activityBody } from './activity';
+import type { Stop } from './vehicle-trips';
 import { clean, defaults } from './fields';
 import type { EntryLocation, Item, Kit, KitSheet, LocalFile, LogbookStore, Review, ServerFile, ServerStatus, StoredVersion, Values } from './types';
 
@@ -61,6 +62,8 @@ export type ServerEntry = {
   shiftId?: string | null;
   activityStartedAt?: string | null;
   activityEndedAt?: string | null;
+  /** ADR-0032; absent from servers before it. */
+  stops?: Stop[];
 };
 
 export interface Transport {
@@ -282,6 +285,8 @@ function fromServer(item: Item, entry: ServerEntry): Item {
     ...(entry.shiftId !== undefined ? { shiftId: entry.shiftId } : {}),
     ...(entry.activityStartedAt !== undefined ? { activityStartedAt: entry.activityStartedAt } : {}),
     ...(entry.activityEndedAt !== undefined ? { activityEndedAt: entry.activityEndedAt } : {}),
+    // ADR-0032: the server's stops once it has them (an empty list stays absent on sheets without stops).
+    ...(entry.stops !== undefined && (entry.stops.length > 0 || item.stops !== undefined) ? { stops: entry.stops } : {}),
   };
 }
 

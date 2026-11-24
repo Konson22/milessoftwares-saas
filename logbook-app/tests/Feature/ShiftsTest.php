@@ -155,7 +155,7 @@ it('takes the shift from phones and gives phones the shifts', function () {
     Cache::flush();
     $kit = $this->getJson($url('kit'))->assertOk();
     expect($kit->json('shifts.0.id'))->toBe($night->id)->and($kit->json('shifts.0.members'))->toBe([$this->team['writer']->id]);
-    expect(collect($kit->json('sheets'))->firstWhere('id', $sheet->id)['recording'])->toBe(['mode' => 'on_demand', 'shifts' => 'required', 'activity' => null]);
+    expect(collect($kit->json('sheets'))->firstWhere('id', $sheet->id)['recording'])->toBe(['mode' => 'on_demand', 'shifts' => 'required', 'activity' => null, 'stops' => 'off']);
 
     $this->postJson($url('entries'), [
         'id' => (string) Str::uuid7(), 'sheet_id' => $sheet->id, 'version_id' => $sheet->published_version_id,

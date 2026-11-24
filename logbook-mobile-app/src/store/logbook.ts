@@ -7,6 +7,7 @@ import { anythingDue, finalize, newItem, pullChanges, purgeOld, refreshKit, retr
 import { api } from '@/logbook/transport';
 import type { Item, Kit, KitSheet, LocalFile, Values } from '@/logbook/types';
 import { uuidv7 } from '@/logbook/uuid';
+import type { Dispatch } from '@/logbook/vehicle-trips';
 
 /*
  * The screens' view of the phone's entries. All state lives in the
@@ -39,11 +40,11 @@ interface LogbookState {
   syncDue(): Promise<void>;
   retryFailed(): Promise<number>;
   /** A new draft; from a reminder, for its expected entry (one draft per expected entry). */
-  start(sheet: KitSheet, options?: { occurrenceId?: string }): Promise<Item>;
+  start(sheet: KitSheet, options?: { occurrenceId?: string; dispatch?: Dispatch }): Promise<Item>;
   /** Keeps what was typed. A returned entry being corrected becomes a draft until it is sent again. */
   saveDraft(
     item: Item,
-    changes: { values: Values; occurredAt: string; files: LocalFile[]; removedFiles: string[] } & Partial<Pick<Item, 'location' | 'trackId' | 'occurrenceId' | 'scheduleLink' | 'shiftId' | 'activityStartedAt' | 'activityEndedAt' | 'calculation'>>,
+    changes: { values: Values; occurredAt: string; files: LocalFile[]; removedFiles: string[] } & Partial<Pick<Item, 'location' | 'trackId' | 'occurrenceId' | 'scheduleLink' | 'shiftId' | 'activityStartedAt' | 'activityEndedAt' | 'calculation' | 'stops'>>,
   ): Promise<Item>;
   finish(item: Item): Promise<Record<string, string>>;
   discardDraft(item: Item): Promise<void>;
@@ -167,9 +168,17 @@ export const useLogbook = create<LogbookState>((set, get) => ({
     // The same reminder tapped twice opens the draft already begun for it.
     const begun = options.occurrenceId ? items.find((i) => i.occurrenceId === options.occurrenceId && i.status === 'draft') : undefined;
     if (begun) return begun;
+    // ADR-0032: one entry per planned trip; starting it again opens that one.
+    const trip = options.dispatch ? items.find((i) => i.dispatchId === options.dispatch?.id) : undefined;
+    if (trip) return trip;
     const version = await store.version(scope, sheet.version.id);
     if (!version) throw new Error('This log sheet is not on the phone yet. Connect, then open Sync and update the sheets.');
-    const item = newItem(uuidv7(Date.now(), (n) => Crypto.getRandomBytes(n)), scope, sheet, version, new Date(), options.occurrenceId ?? null);
+    const made = newItem(uuidv7(Date.now(), (n) => Crypto.getRandomBytes(n)), scope, sheet, version, new Date(), options.occurrenceId ?? null);
+    // From a planned trip: its vehicle chosen, and the trip named so the server links them.
+    const item: Item =
+      options.dispatch && sheet.subject
+        ? { ...made, dispatchId: options.dispatch.id, values: { ...made.values, [sheet.subject]: options.dispatch.resourceId } }
+        : made;
     await store.saveItem(item);
     await get().reload();
     return item;

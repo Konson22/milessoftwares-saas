@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Logbook\Access;
+use App\Logbook\Assignments;
 use App\Logbook\Fields;
 use App\Logbook\Models\AuditEvent;
 use App\Logbook\Models\Entry;
@@ -17,6 +18,7 @@ use App\Logbook\ResourceCategories;
 use App\Logbook\SheetAssets;
 use App\Logbook\Sheets;
 use App\Logbook\StarterTemplates;
+use App\Logbook\Stops;
 use App\Logbook\Tracks;
 use App\Models\WorkspaceMember;
 use Illuminate\Http\RedirectResponse;
@@ -90,7 +92,7 @@ class SheetController extends Controller
             // GPS (ADR-0028): part of the version, so it is published with the fields.
             'location' => Tracks::settings($draft ?? $sheet->publishedVersion),
             // How the sheet is recorded (ADR-0030): also part of the version.
-            'recording' => ['mode' => Recording::mode($sheet, $draft ?? $sheet->publishedVersion), 'shifts' => Recording::settings($draft ?? $sheet->publishedVersion)['shifts'] ?? 'off', 'activity' => Recording::activity($draft ?? $sheet->publishedVersion), 'subject' => ($draft ?? $sheet->publishedVersion)?->recording['subject'] ?? null, 'liveSchedules' => Recording::hasLiveSchedules($sheet)],
+            'recording' => ['mode' => Recording::mode($sheet, $draft ?? $sheet->publishedVersion), 'shifts' => Recording::settings($draft ?? $sheet->publishedVersion)['shifts'] ?? 'off', 'activity' => Recording::activity($draft ?? $sheet->publishedVersion), 'subject' => ($draft ?? $sheet->publishedVersion)?->recording['subject'] ?? null, 'assignedOnly' => Assignments::required($draft ?? $sheet->publishedVersion), 'stops' => Stops::setting($draft ?? $sheet->publishedVersion), 'liveSchedules' => Recording::hasLiveSchedules($sheet)],
             'draftVersion' => $draft?->version,
             'publishedVersion' => $sheet->publishedVersion?->version,
             'types' => collect(Fields::TYPES)->map(fn ($label, $value) => ['value' => $value, 'label' => $label, 'settings' => Fields::SETTINGS[$value]])->values(),

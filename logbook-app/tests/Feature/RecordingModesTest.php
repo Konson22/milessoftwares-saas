@@ -121,7 +121,7 @@ it('sends each sheet\'s mode to the phone', function () {
     test()->actingAsAppMember('acme', rolePermissions('logbook_contributor'), user: $this->team['writer']);
     Cache::flush();
     $kit = $this->getJson($this->workspaceUrl('acme', 'api/v1/kit'))->assertOk()->json('sheets');
-    expect(collect($kit)->firstWhere('id', $sheet->id)['recording'])->toBe(['mode' => 'event', 'shifts' => 'off', 'activity' => null]);
+    expect(collect($kit)->firstWhere('id', $sheet->id)['recording'])->toBe(['mode' => 'event', 'shifts' => 'off', 'activity' => null, 'stops' => 'off']);
 });
 
 it('lets only managers set how a sheet is recorded', function () {

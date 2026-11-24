@@ -119,6 +119,9 @@ export function activityBody(item: Item): Record<string, unknown> {
   if (item.activityEndedAt !== undefined) body.activity_ended_at = item.activityEndedAt;
   if (item.activityEntryId) body.activity_entry_id = item.activityEntryId;
   if (item.calculation) body.calculation = item.calculation;
+  // ADR-0032: the planned trip (only when the entry is made) and the trip's stops.
+  if (item.dispatchId && item.serverId === null) body.dispatch_id = item.dispatchId;
+  if (item.stops !== undefined) body.stops = item.stops;
   return body;
 }
 

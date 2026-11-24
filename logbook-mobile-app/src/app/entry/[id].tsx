@@ -8,6 +8,7 @@ import { EntryForm, Input } from '@/components/entry-form';
 import { LocationControl } from '@/components/location-control';
 import { ActivityEnd, CalculationCard, EstimateCard, ReadingPicker, ShiftPicker } from '@/components/recording-controls';
 import { ScreenHeader } from '@/components/screen-header';
+import { TripStops } from '@/components/trip-stops';
 import { Button } from '@/components/ui/button';
 import { Banner, Card, SectionTitle } from '@/components/ui/misc';
 import { estimate, phoneCalculation, readingAt, readingChoices, recordingOf, shiftAt } from '@/logbook/activity';
@@ -21,6 +22,7 @@ import { toast } from '@/store/toast';
 import { useAuth } from '@/store/auth';
 import { useTrips } from '@/store/trips';
 import { useWork } from '@/store/work';
+import { assignedOnly, dispatchOf, legs, localDay, stopProblems, stopsSetting, type Stop } from '@/logbook/vehicle-trips';
 
 /** "YYYY-MM-DD HH:MM" on the phone's clock, to and from the ISO time kept. */
 const localTime = (iso: string) => nowFor('datetime', new Date(iso)).replace('T', ' ');
@@ -101,21 +103,29 @@ function EditEntry({ item, version }: { item: Item; version: StoredVersion }) {
     recording?.mode === 'scheduled' || item.occurrenceId
       ? readingsForAsset(readingChoices([...due, ...missedReadings], item.sheet.id, item.occurrenceId ?? null), chosenAsset, item.occurrenceId ?? null)
       : [];
-  const assetIssue = assetProblem(kit, item.sheet.id, version.fields, values);
-  const [reading, setReading] = useState<string | null>(() => item.occurrenceId ?? (item.scheduleLink === 'extra' ? null : readingAt(choices, item.occurredAt)));
-  const [extra, setExtra] = useState(item.scheduleLink === 'extra');
-  const shifts = recording && recording.shifts !== 'off' ? (kit?.shifts ?? []).filter((s) => s.logbookId === null || s.logbookId === kitSheet?.logbook.id) : [];
-  const [shiftId, setShiftId] = useState<string | null>(() => item.shiftId ?? (shifts.length > 0 ? shiftAt(shifts, kitSheet?.logbook.id ?? null, item.occurredAt, me) : null));
   const isEvent = recording?.mode === 'event';
   const [ended, setEnded] = useState(item.activityEndedAt ? localTime(item.activityEndedAt) : '');
   const startedIso = parseLocal(occurred) ?? item.occurredAt;
   const endedIso = ended.trim() === '' ? null : parseLocal(ended);
+  // ADR-0032: on an "assigned only" sheet, the vehicles assigned to the driver on the trip's day.
+  const tripDay = assignedOnly(kit, item.sheet.id) ? localDay(startedIso) : undefined;
+  const assetIssue = assetProblem(kit, item.sheet.id, version.fields, values, tripDay);
+  const plannedTrip = dispatchOf(kit, item.dispatchId);
+  const stopsOn = isEvent ? stopsSetting(kit, item.sheet.id) : 'off';
+  const [stops, setStops] = useState<Stop[]>(item.stops ?? []);
+  const reading_ = (field: string | null | undefined) => (field && values[field] !== undefined && values[field] !== '' && !Number.isNaN(Number(values[field])) ? Number(values[field]) : null);
+  const odometer = recording?.activity?.measure === 'odometer' ? { start: reading_(recording.activity.start_field), end: reading_(recording.activity.end_field) } : { start: null, end: null };
+  const [reading, setReading] = useState<string | null>(() => item.occurrenceId ?? (item.scheduleLink === 'extra' ? null : readingAt(choices, item.occurredAt)));
+  const [extra, setExtra] = useState(item.scheduleLink === 'extra');
+  const shifts = recording && recording.shifts !== 'off' ? (kit?.shifts ?? []).filter((s) => s.logbookId === null || s.logbookId === kitSheet?.logbook.id) : [];
+  const [shiftId, setShiftId] = useState<string | null>(() => item.shiftId ?? (shifts.length > 0 ? shiftAt(shifts, kitSheet?.logbook.id ?? null, item.occurredAt, me) : null));
   const preview = recording?.activity ? estimate(recording.activity, kit?.resources ?? [], values, startedIso, endedIso) : null;
   const recorded = (): Partial<Item> => ({
     ...(choices.length > 0 || item.occurrenceId ? { occurrenceId: extra ? null : reading, scheduleLink: extra ? ('extra' as const) : reading ? ('named' as const) : null } : {}),
     ...(shifts.length > 0 ? { shiftId } : {}),
     ...(isEvent ? { activityStartedAt: startedIso, activityEndedAt: endedIso } : {}),
     ...(recording?.activity ? { calculation: phoneCalculation(preview) } : {}),
+    ...(stopsOn !== 'off' ? { stops } : {}),
   });
   const latest = useRef(item);
   useEffect(() => {
@@ -131,7 +141,7 @@ function EditEntry({ item, version }: { item: Item; version: StoredVersion }) {
     }, 600);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [values, files, removed, occurred, saveDraft, location, trackId, reading, extra, shiftId, ended]);
+  }, [values, files, removed, occurred, saveDraft, location, trackId, reading, extra, shiftId, ended, stops]);
   const touch = () => {
     dirty.current = true;
   };
@@ -160,6 +170,8 @@ function EditEntry({ item, version }: { item: Item; version: StoredVersion }) {
       if (isEvent && endedIso === null) own.activity_ended_at = ended.trim() === '' ? 'Enter when the activity ended.' : 'Enter when it ended (YYYY-MM-DD HH:MM).';
       else if (isEvent && endedIso && endedIso < startedIso) own.activity_ended_at = 'The end is before the start.';
       if (preview?.endBelowStart && recording?.activity?.end_field) own[recording.activity.end_field] = 'The end reading is below the start.';
+      // ADR-0032 §5: the server's stop checks, done here so they can be fixed offline.
+      Object.assign(own, stopProblems(stops, { startedAt: startedIso, endedAt: endedIso, odometerStart: odometer.start, odometerEnd: odometer.end }, stopsOn));
       if (Object.keys(own).length > 0) {
         await save();
         setErrors((e) => ({ ...e, ...own }));
@@ -205,6 +217,13 @@ function EditEntry({ item, version }: { item: Item; version: StoredVersion }) {
           )}
           {item.status === 'action_required' && item.error && !returned && <Banner tone="error">{item.error.message}</Banner>}
           {assetIssue && <Banner tone="warning">{assetIssue}</Banner>}
+          {plannedTrip && (
+            <Banner tone="info">
+              Planned trip: {plannedTrip.resource ?? 'the vehicle'} on {plannedTrip.day}
+              {plannedTrip.time ? ` at ${plannedTrip.time}` : ''}
+              {[plannedTrip.destination, plannedTrip.purpose].filter(Boolean).length ? ` · ${[plannedTrip.destination, plannedTrip.purpose].filter(Boolean).join(' · ')}` : ''}. Record it with this vehicle.
+            </Banner>
+          )}
 
           <View className="gap-1.5">
             <Text className="text-base font-medium text-slate-800">
@@ -301,7 +320,7 @@ function EditEntry({ item, version }: { item: Item; version: StoredVersion }) {
             errors={errors}
             members={kit?.members ?? []}
             resources={kit?.resources ?? []}
-            offeredFor={(field) => offered(kit ?? null, item.sheet.id, field)}
+            offeredFor={(field) => offered(kit ?? null, item.sheet.id, field, tripDay)}
             files={files}
             serverFiles={item.serverFiles}
             removedFiles={removed}
@@ -331,6 +350,20 @@ function EditEntry({ item, version }: { item: Item; version: StoredVersion }) {
             }}
             onError={(message) => toast(message, 'error')}
           />
+
+          {stopsOn !== 'off' && (
+            <TripStops
+              stops={stops}
+              required={stopsOn === 'required'}
+              odometerStart={odometer.start}
+              errors={errors}
+              onChange={(next) => {
+                touch();
+                setStops(next);
+                setErrors((e) => Object.fromEntries(Object.entries(e).filter(([k]) => !k.startsWith('stops'))));
+              }}
+            />
+          )}
 
           <EstimateCard estimate={preview} />
 
@@ -411,6 +444,8 @@ function ReadEntry({ item, version }: { item: Item; version: StoredVersion | nul
 
         {server?.calculation && <CalculationCard calculation={server.calculation} />}
 
+        {(item.stops ?? []).length > 0 && <StopsRead stops={item.stops ?? []} />}
+
         <SectionTitle>Answers</SectionTitle>
         {!version ? (
           <Banner tone="info">The template of this entry is not on this phone. Its answers are on the web.</Banner>
@@ -430,5 +465,32 @@ function ReadEntry({ item, version }: { item: Item; version: StoredVersion | nul
         )}
       </ScrollView>
     </View>
+  );
+}
+
+/** ADR-0032 §5: the trip's stops, read only. */
+function StopsRead({ stops }: { stops: Stop[] }) {
+  const km = legs(stops, null);
+  return (
+    <>
+      <SectionTitle>Stops ({stops.length})</SectionTitle>
+      <Card className="gap-3">
+        {stops.map((s, i) => (
+          <View key={i} className="gap-0.5">
+            <Text className="text-base font-medium text-slate-900">
+              {i + 1}. {s.place}
+              {s.purpose ? ` · ${s.purpose}` : ''}
+            </Text>
+            <Text className="text-sm text-slate-500">
+              {when(s.arrived_at)}
+              {s.departed_at ? ` to ${when(s.departed_at)}` : ''}
+              {s.odometer !== null ? ` · ${s.odometer} km` : ''}
+              {km[i] !== null && i > 0 ? ` · ${km[i]} km from the previous stop` : ''}
+              {s.note ? ` · ${s.note}` : ''}
+            </Text>
+          </View>
+        ))}
+      </Card>
+    </>
   );
 }

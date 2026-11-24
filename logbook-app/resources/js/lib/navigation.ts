@@ -12,6 +12,7 @@ import {
     ListTodo,
     NotebookPen,
     Radio,
+    Route,
     SearchCheck,
     Truck,
     TriangleAlert,
@@ -34,6 +35,7 @@ import { index as shifts } from '@/routes/shifts';
 import { comingSoon } from '@/routes';
 import { index as tasks } from '@/routes/tasks';
 import { index as tracks } from '@/routes/tracks';
+import { index as trips } from '@/routes/trips';
 
 export type NavItem = ShellNavItem & {
     /** Shown to members holding this catalog permission, or any one of a list (or owners); null for everyone. */
@@ -81,6 +83,13 @@ export const navigation: NavGroup[] = [
                 href: tasks(),
                 icon: ListTodo,
                 permission: null,
+            },
+            {
+                // ADR-0032: planned trips; managers plan, drivers start them.
+                title: 'Trips',
+                href: trips(),
+                icon: Route,
+                permission: ['logbook.manage', 'logbook.entries.create'],
             },
             {
                 title: 'Schedules',

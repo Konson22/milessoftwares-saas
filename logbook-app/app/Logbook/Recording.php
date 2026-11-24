@@ -32,7 +32,7 @@ final class Recording
     /**
      * The settings sent by the template builder, checked.
      *
-     * @return array{mode: string, shifts: string, subject?: string, activity?: array<string, string|null>}|null null: nothing chosen (on demand, or as the sheet's schedules say)
+     * @return array{mode: string, shifts: string, subject?: string, activity?: array<string, string|null>, assigned_only?: true}|null null: nothing chosen (on demand, or as the sheet's schedules say)
      */
     public static function settingsInput(mixed $input): ?array
     {
@@ -55,6 +55,18 @@ final class Recording
         $activity = self::activityInput($input['activity'] ?? null);
         if ($activity !== null) {
             $settings['activity'] = $activity;
+        }
+        // ADR-0032 §5: the points a trip stopped at.
+        $stops = $input['stops'] ?? 'off';
+        if (! in_array($stops, Stops::SETTINGS, true)) {
+            throw ValidationException::withMessages(['recording.stops' => 'Choose whether trips record their stops: no, optionally, or always.']);
+        }
+        if ($stops !== 'off') {
+            $settings['stops'] = (string) $stops;
+        }
+        // ADR-0032: only the people the asset is assigned to may record it.
+        if (filter_var($input['assigned_only'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+            $settings['assigned_only'] = true;
         }
 
         return $settings;
@@ -103,6 +115,12 @@ final class Recording
         $subject = $settings['subject'] ?? null;
         if (is_string($subject) && ! collect($fields)->contains(fn (array $f) => $f['name'] === $subject && $f['type'] === 'resource')) {
             throw ValidationException::withMessages(['recording.subject' => 'Choose a Resource field of this template as the main asset.']);
+        }
+        if (($settings['stops'] ?? 'off') !== 'off' && ($settings['mode'] ?? null) !== 'event') {
+            throw ValidationException::withMessages(['recording.stops' => 'Only event-based sheets (a trip with a start and an end) record stops.']);
+        }
+        if (($settings['assigned_only'] ?? false) === true && self::subjectFieldOf($settings, $fields) === null) {
+            throw ValidationException::withMessages(['recording.assigned_only' => 'Only assigned people can record an asset the sheet names: add a Resource field and choose it as the main asset.']);
         }
         $activity = $settings['activity'] ?? null;
         if (! is_array($activity)) {
@@ -156,6 +174,24 @@ final class Recording
         }
         $resourceFields = array_values(array_map(fn (array $f) => (string) $f['name'], array_filter($version->fields ?? [], fn (array $f) => $f['type'] === 'resource')));
         foreach ([$version->recording['subject'] ?? null, self::activity($version)['resource_field'] ?? null] as $named) {
+            if (is_string($named) && in_array($named, $resourceFields, true)) {
+                return $named;
+            }
+        }
+
+        return count($resourceFields) === 1 ? $resourceFields[0] : null;
+    }
+
+    /**
+     * subjectField() for settings not saved yet.
+     *
+     * @param  array<string, mixed>  $settings
+     * @param  list<array<string, mixed>>  $fields
+     */
+    private static function subjectFieldOf(array $settings, array $fields): ?string
+    {
+        $resourceFields = array_values(array_map(fn (array $f) => (string) $f['name'], array_filter($fields, fn (array $f) => $f['type'] === 'resource')));
+        foreach ([$settings['subject'] ?? null, $settings['activity']['resource_field'] ?? null] as $named) {
             if (is_string($named) && in_array($named, $resourceFields, true)) {
                 return $named;
             }

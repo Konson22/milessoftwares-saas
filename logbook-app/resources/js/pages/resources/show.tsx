@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Fuel, Gauge } from 'lucide-react';
+import { Fuel, Gauge, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import { EmptyState } from '@miles/ui/components/empty-state';
 import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
@@ -19,6 +19,7 @@ import {
 import { PageHeader } from '@/components/page-header';
 import { Toggle } from '@/components/work';
 import { edit, index as resourcesIndex } from '@/routes/resources';
+import * as assignmentRoutes from '@/routes/resources/assignments';
 import * as fuelRates from '@/routes/resources/fuel-rates';
 import * as meterEvents from '@/routes/resources/meter-events';
 
@@ -45,7 +46,23 @@ type MeterEventRow = {
     by: string;
 };
 
+type Assignment = {
+    id: string;
+    user: string;
+    userId: string;
+    from: string;
+    to: string | null;
+    note: string | null;
+    by: string;
+    endedAt: string | null;
+    state: 'current' | 'upcoming' | 'over' | 'cancelled';
+};
+
 type Props = AssetOperations & {
+    /** ADR-0032: who the asset is assigned to (a vehicle's drivers). */
+    assignments: Assignment[];
+    members: { value: string; label: string }[];
+    today: string;
     resource: AssetIdentity & { active: boolean };
     currentRate: string | null;
     rates: Rate[];
@@ -76,11 +93,15 @@ export default function ResourceShow({
     labels,
     now,
     canManage,
+    assignments,
+    members,
+    today,
     ...ops
 }: Props) {
-    const [tab, setTab] = useState<'overview' | 'fuel' | 'meters' | 'history'>(
-        'overview',
-    );
+    const [tab, setTab] = useState<
+        'overview' | 'assigned' | 'fuel' | 'meters' | 'history'
+    >('overview');
+    const isVehicle = resource.category === 'Vehicles';
     const current = rates.find((r) => r.id === currentRate) ?? null;
 
     return (
@@ -116,6 +137,7 @@ export default function ResourceShow({
                 {(
                     [
                         ['overview', 'Overview'],
+                        ['assigned', isVehicle ? 'Drivers' : 'Assigned to'],
                         ['fuel', 'Fuel rates'],
                         ['meters', 'Meters'],
                         ['history', 'History'],
@@ -140,6 +162,98 @@ export default function ResourceShow({
                     ops={ops}
                     canManage={canManage}
                 />
+            )}
+
+            {tab === 'assigned' && (
+                <Panel>
+                    <PanelHeader
+                        title={isVehicle ? 'Drivers' : 'Assigned to'}
+                        description="On sheets set to assigned only, a person records this asset only on the days it is assigned to them. Only managers assign."
+                    />
+                    {canManage && resource.status !== 'retired' && (
+                        <div className="border-b px-4 py-3">
+                            <Toggle
+                                label={
+                                    isVehicle
+                                        ? 'Assign a driver'
+                                        : 'Assign a person'
+                                }
+                            >
+                                {(close) => (
+                                    <AssignForm
+                                        resourceId={resource.id}
+                                        members={members}
+                                        today={today}
+                                        onDone={close}
+                                    />
+                                )}
+                            </Toggle>
+                        </div>
+                    )}
+                    {assignments.length === 0 ? (
+                        <EmptyState
+                            icon={UserRound}
+                            title="Not assigned to anyone"
+                        >
+                            {canManage
+                                ? 'Assign it to the people who use it.'
+                                : 'A manager assigns it.'}
+                        </EmptyState>
+                    ) : (
+                        <ul className="divide-y">
+                            {assignments.map((a) => (
+                                <li
+                                    key={a.id}
+                                    className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm"
+                                >
+                                    <div>
+                                        <p className="flex items-center gap-2 font-medium">
+                                            {a.user}
+                                            <Badge>
+                                                {ASSIGNMENT_STATES[a.state]}
+                                            </Badge>
+                                        </p>
+                                        <p className="text-muted-foreground">
+                                            {a.state === 'cancelled'
+                                                ? `Was to start ${a.from}`
+                                                : a.to
+                                                  ? `${a.from} to ${a.to}`
+                                                  : `From ${a.from}, until ended`}
+                                            {a.note ? ` · ${a.note}` : ''} ·
+                                            assigned by {a.by}
+                                        </p>
+                                    </div>
+                                    {canManage &&
+                                        (a.state === 'current' ||
+                                            a.state === 'upcoming') &&
+                                        a.endedAt === null && (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() =>
+                                                    router.post(
+                                                        assignmentRoutes.end({
+                                                            resource:
+                                                                resource.id,
+                                                            assignment: a.id,
+                                                        }).url,
+                                                        {},
+                                                        {
+                                                            preserveScroll: true,
+                                                        },
+                                                    )
+                                                }
+                                            >
+                                                {a.state === 'upcoming'
+                                                    ? 'Cancel'
+                                                    : 'End today'}
+                                            </Button>
+                                        )}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </Panel>
             )}
 
             {tab === 'fuel' && (
@@ -330,6 +444,84 @@ export default function ResourceShow({
                 </Panel>
             )}
         </>
+    );
+}
+
+const ASSIGNMENT_STATES: Record<Assignment['state'], string> = {
+    current: 'Current',
+    upcoming: 'Upcoming',
+    over: 'Over',
+    cancelled: 'Cancelled',
+};
+
+function AssignForm({
+    resourceId,
+    members,
+    today,
+    onDone,
+}: {
+    resourceId: string;
+    members: { value: string; label: string }[];
+    today: string;
+    onDone: () => void;
+}) {
+    const errors = usePage().props.errors as Record<string, string>;
+    const [data, setData] = useState({
+        user_id: '',
+        starts_on: today,
+        ends_on: '',
+        note: '',
+    });
+    const set = (patch: Partial<typeof data>) => setData({ ...data, ...patch });
+
+    return (
+        <form
+            className="grid gap-4 sm:grid-cols-2"
+            onSubmit={(e) => {
+                e.preventDefault();
+                router.post(assignmentRoutes.store(resourceId).url, data, {
+                    preserveScroll: true,
+                    onSuccess: onDone,
+                });
+            }}
+        >
+            <SelectField
+                label="Person"
+                value={data.user_id}
+                onChange={(user_id) => set({ user_id })}
+                options={members}
+                empty="Choose a person…"
+                error={errors.user_id}
+            />
+            <TextField
+                label="First day"
+                type="date"
+                value={data.starts_on}
+                onChange={(starts_on) => set({ starts_on })}
+                error={errors.starts_on}
+            />
+            <TextField
+                label="Last day (optional)"
+                type="date"
+                value={data.ends_on}
+                onChange={(ends_on) => set({ ends_on })}
+                error={errors.ends_on}
+                hint="Leave empty to keep it until ended."
+            />
+            <TextArea
+                label="Note (optional)"
+                value={data.note}
+                onChange={(note) => set({ note })}
+                error={errors.note}
+                className="sm:col-span-2"
+            />
+            <div className="flex gap-2 sm:col-span-2">
+                <Button type="submit">Assign</Button>
+                <Button type="button" variant="ghost" onClick={onDone}>
+                    Cancel
+                </Button>
+            </div>
+        </form>
     );
 }
 

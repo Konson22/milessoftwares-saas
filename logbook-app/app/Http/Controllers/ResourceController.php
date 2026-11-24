@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Logbook\Access;
 use App\Logbook\AssetTemplates;
+use App\Logbook\Assignments;
 use App\Logbook\AuditTrail;
 use App\Logbook\Exceptions;
 use App\Logbook\Fields;
@@ -19,6 +20,7 @@ use App\Logbook\Models\LogException;
 use App\Logbook\Models\LogResource;
 use App\Logbook\Models\LogSheet;
 use App\Logbook\Models\MeterEvent;
+use App\Logbook\Models\ResourceAssignment;
 use App\Logbook\Models\ResourceCategory;
 use App\Logbook\Models\Schedule;
 use App\Logbook\Models\ScheduleOccurrence;
@@ -169,6 +171,22 @@ class ResourceController extends Controller
             'history' => AuditEvent::query()->where('subject_type', 'resource')->where('subject_id', $resource->id)
                 ->orderByDesc('created_at')->limit(50)->get()
                 ->map(fn (AuditEvent $e) => ['id' => $e->id, 'action' => $e->action, 'user' => $e->user_name, 'at' => $local($e->created_at)])->values(),
+            // ADR-0032: who the asset is assigned to, latest first; ended ones stay listed.
+            'assignments' => ResourceAssignment::query()->where('log_resource_id', $resource->id)->with(['user:id,name', 'creator:id,name'])
+                ->orderByRaw('ended_at is not null')->orderByDesc('starts_on')->orderByDesc('created_at')->limit(100)->get()
+                ->map(fn (ResourceAssignment $a) => [
+                    'id' => $a->id, 'user' => $a->user->name, 'userId' => $a->user_id,
+                    'from' => $a->starts_on->toDateString(), 'to' => $a->ends_on?->toDateString(), 'note' => $a->note,
+                    'by' => $a->creator->name, 'endedAt' => $local($a->ended_at),
+                    'state' => match (true) {
+                        $a->ends_on !== null && $a->ends_on->lessThan($a->starts_on) => 'cancelled',
+                        $a->ends_on !== null && $a->ends_on->toDateString() < Assignments::today() => 'over',
+                        $a->starts_on->toDateString() > Assignments::today() => 'upcoming',
+                        default => 'current',
+                    },
+                ])->values(),
+            'members' => Gate::allows('logbook.manage') ? WorkspaceMember::options() : [],
+            'today' => Assignments::today(),
             'labels' => Fuel::LABELS,
             'now' => CarbonImmutable::now($tz)->format('Y-m-d\TH:i'),
             'canManage' => Gate::allows('logbook.manage'),
@@ -185,6 +203,27 @@ class ResourceController extends Controller
         $rate = Fuel::addRate($resource, $data, $this->user());
 
         return back()->with('success', "Fuel rate {$rate->rate} {$rate->unit()} added.");
+    }
+
+    public function assign(Request $request, string $resource): RedirectResponse
+    {
+        $resource = LogResource::query()->findOrFail($resource);
+        $data = $request->validate([
+            'user_id' => ['required', 'string'], 'starts_on' => ['nullable', 'string'], 'ends_on' => ['nullable', 'string'],
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+        $assignment = Assignments::assign($resource, $data, $this->user());
+
+        return back()->with('success', "{$resource->code} assigned to {$assignment->user->name}.");
+    }
+
+    public function endAssignment(string $resource, string $assignment): RedirectResponse
+    {
+        $resource = LogResource::query()->findOrFail($resource);
+        $assignment = ResourceAssignment::query()->where('log_resource_id', $resource->id)->findOrFail($assignment);
+        Assignments::end($assignment, $this->user());
+
+        return back()->with('success', 'Assignment ended.');
     }
 
     public function storeMeterEvent(Request $request, string $resource): RedirectResponse

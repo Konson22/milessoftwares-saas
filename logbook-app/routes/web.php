@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\DispatchController;
 use App\Http\Controllers\EntryController;
 use App\Http\Controllers\ExceptionController;
 use App\Http\Controllers\HomeController;
@@ -119,6 +120,7 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::get('reports/entries.csv', [ReportController::class, 'csv'])->middleware('throttle:10,1')->name('reports.csv');
             Route::get('reports/entries.pdf', [ReportController::class, 'pdf'])->middleware('throttle:10,1')->name('reports.pdf');
             Route::get('reports/activities.csv', [ReportController::class, 'activitiesCsv'])->middleware('throttle:10,1')->name('reports.activities-csv');
+            Route::get('reports/stops.csv', [ReportController::class, 'stopsCsv'])->middleware('throttle:10,1')->name('reports.stops-csv');
             // ADR-0031: the asset and compliance reports.
             Route::get('reports/{report}.{format}', [ReportController::class, 'summaryExport'])->where(['report' => 'assets|compliance', 'format' => 'csv|pdf'])
                 ->middleware('throttle:10,1')->name('reports.summary-export');
@@ -199,6 +201,13 @@ Route::prefix(app(PlatformConfig::class)->path())
         Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
         Route::put('notifications/settings', [NotificationController::class, 'settings'])->name('notifications.settings');
 
+        // Planned trips (ADR-0032): managers plan and cancel; drivers see and start their own.
+        Route::get('trips', [DispatchController::class, 'index'])->name('trips.index');
+        Route::middleware('can:logbook.manage')->group(function () {
+            Route::post('trips', [DispatchController::class, 'store'])->name('trips.store');
+            Route::post('trips/{dispatch}/cancel', [DispatchController::class, 'cancel'])->whereUuid('dispatch')->name('trips.cancel');
+        });
+
         // Shifts (ADR-0030): read by everyone, kept by managers.
         Route::get('shifts', [ShiftController::class, 'index'])->name('shifts.index');
         Route::middleware('can:logbook.manage')->group(function () {
@@ -227,6 +236,8 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::put('resources/{resource}', [ResourceController::class, 'update'])->name('resources.update');
             Route::post('resources/{resource}/fuel-rates', [ResourceController::class, 'storeRate'])->whereUuid('resource')->name('resources.fuel-rates.store');
             Route::post('resources/{resource}/meter-events', [ResourceController::class, 'storeMeterEvent'])->whereUuid('resource')->name('resources.meter-events.store');
+            Route::post('resources/{resource}/assignments', [ResourceController::class, 'assign'])->whereUuid('resource')->name('resources.assignments.store');
+            Route::post('resources/{resource}/assignments/{assignment}/end', [ResourceController::class, 'endAssignment'])->whereUuid(['resource', 'assignment'])->name('resources.assignments.end');
             Route::post('locations', [ResourceController::class, 'storeLocation'])->name('locations.store');
             Route::put('locations/{location}', [ResourceController::class, 'updateLocation'])->name('locations.update');
         });

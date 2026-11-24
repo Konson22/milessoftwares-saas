@@ -1,6 +1,6 @@
 import type { RequestPayload } from '@inertiajs/core';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { AlertTriangle, CalendarClock, MapPin } from 'lucide-react';
+import { AlertTriangle, CalendarClock, MapPin, Route } from 'lucide-react';
 import { useState } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
@@ -9,6 +9,7 @@ import { Input } from '@miles/ui/components/ui/input';
 import { ActionButton } from '@/components/actions';
 import type { Values } from '@/components/entry-fields';
 import { EntryFields } from '@/components/entry-fields';
+import { StopsEditor, type StopInput } from '@/components/trip-stops';
 import { Errors, Field, SelectField, Status } from '@/components/fields';
 import type { FieldDef, FileRef, Option, ResourceOption } from '@/lib/logbook';
 import { formatDateTime } from '@/lib/logbook';
@@ -48,6 +49,15 @@ type Props = {
         /** Already answered by another entry. */
         taken: boolean;
     } | null;
+    /** ADR-0032: the planned trip this entry records, when started from it. */
+    dispatch?: {
+        id: string;
+        day: string;
+        time: string | null;
+        destination: string | null;
+        purpose: string | null;
+        resource: string | null;
+    } | null;
     /** ADR-0030: a scheduled sheet; the author says which reading this is. */
     scheduled?: boolean;
     readings?: Reading[];
@@ -66,6 +76,9 @@ type Props = {
     activity?: ActivitySettings | null;
     fuelRates?: Record<string, FuelRateRow[]>;
     activityEndedAt?: string | null;
+    /** ADR-0032 §5: whether trips on this sheet record stops, and the stops so far. */
+    stopsSetting?: 'off' | 'optional' | 'required';
+    stops?: StopInput[];
     activityEntry?: { id: string; label: string } | null;
 };
 
@@ -202,6 +215,7 @@ export default function EntryForm({
     occurredAt: initialOccurredAt,
     idempotencyKey,
     occurrence = null,
+    dispatch = null,
     scheduled = false,
     readings = [],
     locationSettings = null,
@@ -213,6 +227,8 @@ export default function EntryForm({
     activity = null,
     fuelRates = {},
     activityEndedAt = null,
+    stopsSetting = 'off',
+    stops: initialStops = [],
     activityEntry = null,
     members,
     resources,
@@ -239,6 +255,18 @@ export default function EntryForm({
     // ADR-0030 §4.4: an event runs from "when it happened" to its end.
     const isEvent = recordingMode === 'event';
     const [endedAt, setEndedAt] = useState(activityEndedAt ?? '');
+    const [stops, setStops] = useState<StopInput[]>(initialStops);
+    // Sent only by sheets that record stops; otherwise the entry keeps none.
+    const stopsData =
+        stopsSetting === 'off'
+            ? {}
+            : {
+                  stops: stops.map((s) => ({
+                      ...s,
+                      departed_at: s.departed_at || null,
+                      odometer: s.odometer === '' ? null : s.odometer,
+                  })),
+              };
     const activityData = {
         ...(isEvent
             ? {
@@ -283,6 +311,7 @@ export default function EntryForm({
             ...placeData,
             ...shiftData,
             ...activityData,
+            ...stopsData,
         };
         const options = {
             preserveScroll: true,
@@ -299,6 +328,7 @@ export default function EntryForm({
                     submit,
                     sheet_id: sheet.id,
                     idempotency_key: idempotencyKey,
+                    ...(dispatch ? { dispatch_id: dispatch.id } : {}),
                     ...(scheduled
                         ? {
                               schedule_link:
@@ -315,6 +345,7 @@ export default function EntryForm({
                     ...placeData,
                     ...shiftData,
                     ...activityData,
+                    ...stopsData,
                 } as RequestPayload,
                 options,
             );
@@ -392,6 +423,27 @@ export default function EntryForm({
                             onChange={setReading}
                             takenNote={occurrence?.taken ?? false}
                         />
+                    )}
+                    {!entry && dispatch && (
+                        <div className="flex gap-3 rounded-md border border-sky-300 bg-sky-50 p-4 text-sm text-sky-900">
+                            <Route className="size-5 shrink-0" />
+                            <div>
+                                <p className="font-medium">
+                                    Planned trip: {dispatch.resource} on{' '}
+                                    {dispatch.day}
+                                    {dispatch.time
+                                        ? ` at ${dispatch.time}`
+                                        : ''}
+                                </p>
+                                <p className="mt-1 text-xs">
+                                    {[dispatch.destination, dispatch.purpose]
+                                        .filter(Boolean)
+                                        .join(' · ') ||
+                                        'No destination given.'}{' '}
+                                    Record it with this vehicle.
+                                </p>
+                            </div>
+                        </div>
                     )}
                     {!entry && !scheduled && occurrence && (
                         <div className="flex gap-3 rounded-md border border-sky-300 bg-sky-50 p-4 text-sm text-sky-900">
@@ -512,6 +564,14 @@ export default function EntryForm({
                             />
                         </PanelBody>
                     </Panel>
+                    {stopsSetting !== 'off' && (
+                        <StopsEditor
+                            stops={stops}
+                            onChange={setStops}
+                            required={stopsSetting === 'required'}
+                            errors={errors}
+                        />
+                    )}
                     {estimate && <EstimatePreview estimate={estimate} />}
                     <div className="flex flex-wrap items-center gap-2">
                         <Button disabled={busy} onClick={() => send(true)}>

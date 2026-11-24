@@ -1,5 +1,11 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { FileDown, Paperclip, Pencil, TriangleAlert } from 'lucide-react';
+import {
+    FileDown,
+    Paperclip,
+    Pencil,
+    Route,
+    TriangleAlert,
+} from 'lucide-react';
 import { useState } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
@@ -18,8 +24,20 @@ import {
     type Calculation,
 } from '@/components/fuel-calculation';
 import { show as trackPage } from '@/routes/tracks';
+import { StopsTimeline, type StopRow } from '@/components/trip-stops';
 
 type Props = {
+    /** ADR-0032 §5: the points the trip stopped at. */
+    stops: StopRow[];
+    /** ADR-0032: the planned trip this entry records. */
+    dispatch: {
+        day: string;
+        time: string | null;
+        destination: string | null;
+        purpose: string | null;
+        resource: string | null;
+        status: string;
+    } | null;
     entry: EntryRow & {
         version: number;
         latestVersion: number | null;
@@ -64,6 +82,8 @@ type Props = {
 };
 
 export default function EntryShow({
+    stops,
+    dispatch,
     entry,
     revisions,
     reviews,
@@ -126,6 +146,25 @@ export default function EntryShow({
 
             <div className="grid gap-6 lg:grid-cols-3">
                 <div className="grid content-start gap-6 lg:col-span-2">
+                    {dispatch && (
+                        <div className="flex gap-3 rounded-md border border-sky-300 bg-sky-50 p-4 text-sm text-sky-900">
+                            <Route className="size-5 shrink-0" />
+                            <div>
+                                <p className="font-medium">
+                                    Planned trip: {dispatch.resource} on{' '}
+                                    {dispatch.day}
+                                    {dispatch.time
+                                        ? ` at ${dispatch.time}`
+                                        : ''}
+                                </p>
+                                <p className="mt-1 text-xs">
+                                    {[dispatch.destination, dispatch.purpose]
+                                        .filter(Boolean)
+                                        .join(' · ') || 'No destination given.'}
+                                </p>
+                            </div>
+                        </div>
+                    )}
                     {can.review && (
                         <ReviewForm
                             entryId={entry.id}
@@ -229,6 +268,7 @@ export default function EntryShow({
                         </PanelBody>
                     </Panel>
 
+                    {stops.length > 0 && <StopsTimeline stops={stops} />}
                     {entry.calculation && (
                         <CalculationPanel calculation={entry.calculation} />
                     )}
