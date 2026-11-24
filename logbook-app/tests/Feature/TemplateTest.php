@@ -129,11 +129,15 @@ it('copies a starter template as a draft to change and publish', function () {
     inTenant(function () use ($sheet) {
         expect($sheet->status)->toBe('draft')
             ->and($sheet->name)->toBe('Fleet trips')
-            ->and($sheet->draftVersion->fields)->toHaveCount(9)
+            ->and($sheet->draftVersion->fields)->toHaveCount(10)
             // ADR-0031: the vehicle is a registered asset, recorded per trip with a fuel estimate.
             ->and($sheet->draftVersion->fields[0]['type'])->toBe('resource')
             ->and($sheet->draftVersion->recording['mode'])->toBe('event')
-            ->and($sheet->draftVersion->recording['activity']['measure'])->toBe('odometer');
+            ->and($sheet->draftVersion->recording['activity']['measure'])->toBe('odometer')
+            // ADR-0032: assigned drivers only, with stops; the driver is the author, not a field.
+            ->and($sheet->draftVersion->recording['stops'])->toBe('optional')
+            ->and($sheet->draftVersion->recording['assigned_only'])->toBeTrue()
+            ->and(collect($sheet->draftVersion->fields)->pluck('name'))->not->toContain('driver');
     });
     $this->post(p("sheets/{$sheet->id}/publish"))->assertSessionHasNoErrors();
     expect(inTenant(fn () => $sheet->fresh()->status))->toBe('active');

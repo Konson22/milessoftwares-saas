@@ -12,6 +12,7 @@ import { Banner, Card, CountBadge, IconTile, ListGroup, ListItem, QuickAction } 
 import { colors } from '@/lib/theme';
 import { buckets } from '@/logbook/sync';
 import type { KitSheet } from '@/logbook/types';
+import { tripsToDo, type Dispatch } from '@/logbook/vehicle-trips';
 import { useAuth } from '@/store/auth';
 import { useLogbook } from '@/store/logbook';
 import { toast } from '@/store/toast';
@@ -53,6 +54,21 @@ export default function HomeScreen() {
   const attention = [...b.returned, ...b.refused, ...b.drafts].sort((x, y) => y.updatedAt.localeCompare(x.updatedAt)).slice(0, 5);
   const shortcuts = (kit?.sheets ?? []).filter((s) => s.version.id && downloaded.includes(s.version.id)).slice(0, 4);
   const [opening, setOpening] = useState<string | null>(null);
+  // ADR-0032: trips a manager planned for this driver, not begun on this phone.
+  const planned = canWrite ? tripsToDo(kit, items) : [];
+
+  const startTrip = (d: Dispatch) => {
+    const sheet = (kit?.sheets ?? []).find((s) => s.id === d.sheetId);
+    if (!sheet) {
+      toast('The log sheet of this trip is not on this phone. Connect, then update the sheets.', 'error');
+      return;
+    }
+    setOpening(d.id);
+    start(sheet, { dispatch: d })
+      .then((item) => router.push({ pathname: '/entry/[id]', params: { id: item.id } }))
+      .catch((e: unknown) => toast(e instanceof Error ? e.message : 'Could not start the trip.', 'error'))
+      .finally(() => setOpening(null));
+  };
 
   const write = (sheet: KitSheet) => {
     setOpening(sheet.id);
@@ -145,6 +161,28 @@ export default function HomeScreen() {
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.white} />
             </Pressable>
+          )}
+
+          {planned.length > 0 && (
+            <ListGroup title="Planned trips">
+              {planned.map((d) => (
+                <ListItem
+                  key={d.id}
+                  icon="car"
+                  color="orange"
+                  title={d.resource ?? 'Vehicle'}
+                  detail={[`${d.day}${d.time ? ` ${d.time}` : ''}`, d.destination, d.purpose].filter(Boolean).join(' · ')}
+                  onPress={opening ? undefined : () => startTrip(d)}
+                  chevron={false}
+                  a11y={`Start the trip with ${d.resource ?? 'the vehicle'}`}
+                  right={
+                    <View className="rounded-full bg-brand-600 px-3 py-1.5">
+                      <Text className="text-sm font-semibold text-white">{opening === d.id ? 'Opening…' : 'Start'}</Text>
+                    </View>
+                  }
+                />
+              ))}
+            </ListGroup>
           )}
 
           {canWrite && shortcuts.length > 0 && (

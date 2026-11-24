@@ -1,3 +1,5 @@
+import type { Assignment, Dispatch, Stop } from '@/logbook/vehicle-trips';
+
 /*
  * What the phone keeps (ADR-0025 §8). Every record carries its scope,
  * "workspace|user": another person signing in on the same phone sees none
@@ -74,7 +76,13 @@ export type ActivitySettings = {
   refill_field: string | null;
 };
 
-export type RecordingSettings = { mode: 'on_demand' | 'scheduled' | 'event'; shifts: 'off' | 'optional' | 'required'; activity?: ActivitySettings | null };
+export type RecordingSettings = {
+  mode: 'on_demand' | 'scheduled' | 'event';
+  shifts: 'off' | 'optional' | 'required';
+  activity?: ActivitySettings | null;
+  /** ADR-0032 §5: whether trips record their stops; absent from older servers. */
+  stops?: 'off' | 'optional' | 'required';
+};
 
 export type Values = Record<string, unknown>;
 
@@ -102,6 +110,8 @@ export type KitSheet = {
   /** ADR-0031: the resource field naming the entry's asset, and the assets linked ([] = any of its category). */
   subject?: string | null;
   assets?: string[];
+  /** ADR-0032: only assets assigned to the person on the day may be recorded. */
+  assignedOnly?: boolean;
 };
 
 export type LocationSettings = { mode: 'entry' | 'route'; required: boolean; resource_required: boolean; accuracy_m: number | null };
@@ -119,6 +129,9 @@ export type Kit = {
   resources?: KitResource[];
   /** ADR-0030; absent from servers before it. */
   shifts?: KitShift[];
+  /** ADR-0032: the person's assignments not over yet, and their planned trips still to record. */
+  assignments?: Assignment[];
+  dispatches?: Dispatch[];
 };
 
 /** A file kept on the phone until the server has it. */
@@ -199,6 +212,9 @@ export type Item = {
   activityEntryId?: string | null;
   /** The phone's own estimate, sent as evidence only. */
   calculation?: { estimated_l: number; rate_id: string | null; rate: number | null; quantity: number | null } | null;
+  /** ADR-0032: the planned trip this entry records, and the points the trip stopped at. */
+  dispatchId?: string | null;
+  stops?: Stop[];
 };
 
 /** Everything the phone keeps, behind one interface (SQLCipher on the phone, memory in tests). */

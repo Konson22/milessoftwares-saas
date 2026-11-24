@@ -38,7 +38,7 @@ class EntryRevision extends Model
 
     protected function casts(): array
     {
-        return ['values' => 'array', 'location' => 'array', 'revision' => 'integer', 'occurred_at' => 'immutable_datetime', 'submitted_at' => 'immutable_datetime', 'activity_started_at' => 'immutable_datetime', 'activity_ended_at' => 'immutable_datetime', 'calculation' => 'array'];
+        return ['values' => 'array', 'location' => 'array', 'revision' => 'integer', 'occurred_at' => 'immutable_datetime', 'submitted_at' => 'immutable_datetime', 'activity_started_at' => 'immutable_datetime', 'activity_ended_at' => 'immutable_datetime', 'calculation' => 'array', 'stops' => 'array'];
     }
 
     /** @return BelongsTo<LogSheetVersion, $this> */

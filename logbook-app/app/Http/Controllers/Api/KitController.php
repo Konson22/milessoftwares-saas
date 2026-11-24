@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Logbook\Access;
+use App\Logbook\Assignments;
 use App\Logbook\Attachments;
 use App\Logbook\Calculations;
+use App\Logbook\Dispatches;
 use App\Logbook\Fields;
 use App\Logbook\Models\Entry;
 use App\Logbook\Models\FuelRate;
@@ -15,6 +17,7 @@ use App\Logbook\Models\LogSheetVersion;
 use App\Logbook\Models\Shift;
 use App\Logbook\Recording;
 use App\Logbook\SheetAssets;
+use App\Logbook\Stops;
 use App\Logbook\Tracks;
 use App\Models\User;
 use App\Models\WorkspaceMember;
@@ -99,11 +102,17 @@ class KitController extends Controller
                 // GPS (ADR-0028): null when the sheet takes no location.
                 'location' => Tracks::settings($sheet->publishedVersion),
                 // ADR-0030: scheduled, event or on_demand.
-                'recording' => ['mode' => Recording::mode($sheet), 'shifts' => Recording::settings($sheet->publishedVersion)['shifts'] ?? 'off', 'activity' => Recording::activity($sheet->publishedVersion)],
+                'recording' => ['mode' => Recording::mode($sheet), 'shifts' => Recording::settings($sheet->publishedVersion)['shifts'] ?? 'off', 'activity' => Recording::activity($sheet->publishedVersion), 'stops' => Stops::setting($sheet->publishedVersion)],
                 // ADR-0031: the field naming the asset, and the assets the sheet records ([] = any of its type).
                 'subject' => Recording::subjectField($sheet->publishedVersion),
                 'assets' => $linked[$sheet->id] ?? [],
+                // ADR-0032: only assets assigned to the person on the day (see `assignments`).
+                'assignedOnly' => Assignments::required($sheet->publishedVersion),
             ])->values()->all(),
+            // ADR-0032: the person's assignments that are not over; the phone checks the day offline.
+            'assignments' => Assignments::currentFor($this->user()->id),
+            // ADR-0032 §4: the person's planned trips still to record.
+            'dispatches' => Dispatches::openFor($this->user()->id),
             // For person fields: id and name only.
             'members' => User::query()->whereIn('id', WorkspaceMember::query()->select('user_id'))->orderBy('name')->get(['id', 'name'])
                 ->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name])->values()->all(),

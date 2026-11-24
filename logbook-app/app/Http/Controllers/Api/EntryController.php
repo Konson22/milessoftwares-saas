@@ -10,6 +10,7 @@ use App\Logbook\Models\Attachment;
 use App\Logbook\Models\Entry;
 use App\Logbook\Models\EntryReview;
 use App\Logbook\Models\LogSheetVersion;
+use App\Logbook\Stops;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -94,12 +95,16 @@ class EntryController extends Controller
             'values' => ['nullable', 'array'],
             'submit' => ['boolean'],
             'occurrence_id' => ['nullable', 'uuid'],
+            // ADR-0032: the planned trip it records.
+            'dispatch_id' => ['nullable', 'uuid'],
             // ADR-0030: newer phone builds say named or extra; older ones say nothing (matched by time).
             'schedule_link' => ['nullable', Rule::in(['named', 'extra'])],
             'shift_id' => ['nullable', 'uuid'],
             'activity_started_at' => ['nullable', 'date'],
             'activity_ended_at' => ['nullable', 'date'],
             'activity_entry_id' => ['nullable', 'uuid'],
+            // ADR-0032 §5: the trip's stops, times with their offset.
+            'stops' => ['nullable', 'array'],
             'calculation' => ['nullable', 'array'],
             'calculation.estimated_l' => ['nullable', 'numeric'],
             'calculation.rate_id' => ['nullable', 'uuid'],
@@ -128,7 +133,7 @@ class EntryController extends Controller
             return self::refused('version_unknown', 'The template version this entry was written on is unknown.', 409);
         }
 
-        $entry = Entries::create($sheet, $user, $data['values'] ?? [], $data['occurred_at'], $data['id'], (bool) ($data['submit'] ?? false), $version, $data['occurrence_id'] ?? null, ['location' => $data['location'] ?? null, 'track_id' => $data['track_id'] ?? null, 'source' => 'phone'], $data['schedule_link'] ?? null, ['shift_id' => $data['shift_id'] ?? null, ...self::activityMore($request, $data)]);
+        $entry = Entries::create($sheet, $user, $data['values'] ?? [], $data['occurred_at'], $data['id'], (bool) ($data['submit'] ?? false), $version, $data['occurrence_id'] ?? null, ['location' => $data['location'] ?? null, 'track_id' => $data['track_id'] ?? null, 'source' => 'phone'], $data['schedule_link'] ?? null, ['shift_id' => $data['shift_id'] ?? null, 'dispatch_id' => $data['dispatch_id'] ?? null, ...self::activityMore($request, $data)]);
 
         return response()->json($this->entry($entry->load(['sheet', 'logbook', 'version'])), 201);
     }
@@ -150,6 +155,9 @@ class EntryController extends Controller
         }
         if (is_array($data['calculation'] ?? null)) {
             $out['phone_calculation'] = $data['calculation'];
+        }
+        if ($request->has('stops')) {
+            $out['stops'] = Stops::input($request->input('stops'), localTimes: false);
         }
 
         return $out;
@@ -174,6 +182,8 @@ class EntryController extends Controller
             'activity_started_at' => ['nullable', 'date'],
             'activity_ended_at' => ['nullable', 'date'],
             'activity_entry_id' => ['nullable', 'uuid'],
+            // ADR-0032 §5: the trip's stops, times with their offset.
+            'stops' => ['nullable', 'array'],
             'calculation' => ['nullable', 'array'],
             'calculation.estimated_l' => ['nullable', 'numeric'],
             'calculation.rate_id' => ['nullable', 'uuid'],
@@ -311,6 +321,7 @@ class EntryController extends Controller
             'resourceId' => $entry->resource_id,
             'activityStartedAt' => self::time($entry->activity_started_at),
             'activityEndedAt' => self::time($entry->activity_ended_at),
+            'stops' => $entry->stops ?? [],
             'files' => $entry->attachments()->whereNull('removed_at')->get()->map(fn (Attachment $a) => self::file($a))->values()->all(),
             'lastReview' => $latest instanceof EntryReview ? [
                 'revision' => $latest->revision,

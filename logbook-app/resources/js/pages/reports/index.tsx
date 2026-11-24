@@ -67,6 +67,7 @@ import { formatDate } from '@/lib/logbook';
 import {
     activitiesCsv,
     csv,
+    stopsCsv,
     index,
     pdf,
     summaryExport,
@@ -322,6 +323,13 @@ export default function Reports({
                             <Button asChild variant="outline">
                                 <a href={activitiesCsv({ query }).url}>
                                     <FileSpreadsheet /> Export activities
+                                </a>
+                            </Button>
+                        )}
+                        {view === 'activities' && (
+                            <Button asChild variant="outline">
+                                <a href={stopsCsv({ query }).url}>
+                                    <FileSpreadsheet /> Export stops
                                 </a>
                             </Button>
                         )}

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Logbook\Access;
+use App\Logbook\Assignments;
 use App\Logbook\Entries;
 use App\Logbook\Fields;
 use App\Logbook\Models\Attachment;
@@ -172,13 +173,19 @@ abstract class Controller
      *
      * @return list<array<string, mixed>>
      */
-    protected static function formFields(LogSheetVersion $version): array
+    protected static function formFields(LogSheetVersion $version, ?string $userId = null, ?string $day = null): array
     {
         $subject = Recording::subjectField($version);
         $linked = $subject === null ? [] : SheetAssets::linkedIds($version->log_sheet_id);
+        // ADR-0032: an "assigned only" sheet offers the author only the assets assigned to them that day.
+        $assigned = $subject !== null && $userId !== null && Assignments::required($version)
+            ? Assignments::assetIdsFor($userId, $day ?? Assignments::today()) : null;
+        if ($assigned !== null && $linked !== []) {
+            $assigned = array_values(array_intersect($assigned, $linked));
+        }
 
         return array_values(array_map(fn (array $f) => $f['name'] === $subject
-            ? [...$f, 'subject' => true, ...($linked !== [] ? ['resource_ids' => $linked] : [])]
+            ? [...$f, 'subject' => true, ...($linked !== [] ? ['resource_ids' => $linked] : []), ...($assigned !== null ? ['resource_ids' => $assigned, 'assigned_only' => true] : [])]
             : $f, $version->fields));
     }
 

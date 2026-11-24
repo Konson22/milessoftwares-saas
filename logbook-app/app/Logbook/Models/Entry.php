@@ -31,6 +31,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property array<string, mixed>|null $calculation ADR-0030 §4.7: the snapshot made at submission (before: only the phone's figure)
  * @property string|null $meter_resource_id
  * @property string|null $resource_id ADR-0031: the asset it is for
+ * @property string|null $dispatch_id ADR-0032: the planned trip it records
+ * @property list<array<string, mixed>>|null $stops ADR-0032 §5: the points the trip stopped at
  * @property string|null $meter_measure
  * @property string|null $meter_start
  * @property string|null $meter_end
@@ -79,6 +81,7 @@ class Entry extends Model
             'activity_started_at' => 'immutable_datetime',
             'activity_ended_at' => 'immutable_datetime',
             'calculation' => 'array',
+            'stops' => 'array',
             'meter_start' => 'decimal:1',
             'meter_end' => 'decimal:1',
         ];

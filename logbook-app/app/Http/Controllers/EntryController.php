@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Logbook\Access;
+use App\Logbook\Assignments;
 use App\Logbook\Attachments;
 use App\Logbook\Calculations;
+use App\Logbook\Dispatches;
 use App\Logbook\Entries;
 use App\Logbook\Fields;
 use App\Logbook\Models\Attachment;
 use App\Logbook\Models\AuditEvent;
+use App\Logbook\Models\Dispatch;
 use App\Logbook\Models\Entry;
 use App\Logbook\Models\EntryReview;
 use App\Logbook\Models\EntryRevision;
@@ -20,6 +23,7 @@ use App\Logbook\Recording;
 use App\Logbook\Reports;
 use App\Logbook\Schedules;
 use App\Logbook\Shifts;
+use App\Logbook\Stops;
 use App\Logbook\Tracks;
 use App\Models\Workspace;
 use App\Models\WorkspaceMember;
@@ -70,6 +74,12 @@ class EntryController extends Controller
         $sheet = Access::writableSheets()->findOrFail($sheetId);
         $version = $sheet->publishedVersion;
         abort_if($version === null, 404);
+        // ADR-0032: started from a planned trip, the driver's own and still open.
+        $dispatchId = $request->string('dispatch')->toString();
+        $dispatch = Str::isUuid($dispatchId)
+            ? Dispatch::query()->with('resource:id,code,name')->whereKey($dispatchId)->where('log_sheet_id', $sheet->id)
+                ->where('user_id', $this->user()->id)->whereIn('status', ['planned'])->first()
+            : null;
         // Opened from a reminder: the expected entry this one is for.
         $occurrenceId = $request->string('occurrence')->toString();
         $occurrence = Str::isUuid($occurrenceId)
@@ -84,11 +94,16 @@ class EntryController extends Controller
             ...self::shiftProps($sheet->logbook_id, Recording::settings($version)['shifts'] ?? 'off', null, $this->user()->id),
             ...self::activityProps($sheet, $version, null, $request->string('activity')->toString()),
             'sheet' => $this->sheetData($sheet),
-            'fields' => self::formFields($version),
+            'fields' => self::formFields($version, $this->user()->id),
             'version' => $version->version,
             'entry' => null,
             // ADR-0031: a reading expected for one asset opens with that asset chosen.
-            'values' => (object) [...Fields::defaults($version->fields), ...($occurrence?->resource_id !== null && ($subject = Recording::subjectField($version)) !== null ? [$subject => $occurrence->resource_id] : [])],
+            'values' => (object) [
+                ...Fields::defaults($version->fields),
+                ...($occurrence?->resource_id !== null && ($subject = Recording::subjectField($version)) !== null ? [$subject => $occurrence->resource_id] : []),
+                ...($dispatch !== null && ($subject = Recording::subjectField($version)) !== null ? [$subject => $dispatch->log_resource_id] : []),
+            ],
+            'dispatch' => $dispatch === null ? null : Dispatches::row($dispatch),
             'occurredAt' => now(Workspace::current()->timezone ?? 'UTC')->format('Y-m-d\TH:i'),
             // One key per opened form: a double click or a resent request makes one entry.
             'idempotencyKey' => (string) Str::uuid7(),
@@ -129,6 +144,9 @@ class EntryController extends Controller
                 ->groupBy('log_resource_id')->map(fn ($rows) => $rows->map(fn (FuelRate $f) => Calculations::rateSnapshot($f) + ['method' => $f->method])->values())->all(),
             'activityEndedAt' => $entry?->activity_ended_at?->setTimezone($tz)->format('Y-m-d\TH:i'),
             'activityEntry' => $parent === null ? null : ['id' => $parent->id, 'label' => ($parent->reference ?? 'Draft').' · '.$parent->sheet->name],
+            // ADR-0032 §5: the trip's stops, as the form edits them.
+            'stopsSetting' => Stops::setting($version),
+            'stops' => Stops::forForm($entry?->stops),
         ];
     }
 
@@ -187,6 +205,8 @@ class EntryController extends Controller
             'activity_started_at' => ['nullable', 'date'],
             'activity_ended_at' => ['nullable', 'date'],
             'activity_entry_id' => ['nullable', 'uuid'],
+            'dispatch_id' => ['nullable', 'uuid'],
+            'stops' => ['nullable', 'array'],
             'location' => ['nullable', 'array'],
             'location.lat' => ['required_with:location', 'numeric', 'between:-90,90'],
             'location.lng' => ['required_with:location', 'numeric', 'between:-180,180'],
@@ -194,7 +214,7 @@ class EntryController extends Controller
             'location.captured_at' => ['required_with:location', 'date'],
         ]);
         $sheet = Access::writableSheets()->whereKey((string) $data['sheet_id'])->firstOrFail();
-        $entry = Entries::create($sheet, $this->user(), $data['values'], $this->occurredAt($data['occurred_at']), $data['idempotency_key'] ?? null, (bool) ($data['submit'] ?? false), occurrenceId: $data['schedule_occurrence_id'] ?? null, place: ['location' => $data['location'] ?? null, 'source' => 'browser'], scheduleLink: $data['schedule_link'] ?? null, more: ['shift_id' => $data['shift_id'] ?? null, ...$this->activityMore($request, $data)]);
+        $entry = Entries::create($sheet, $this->user(), $data['values'], $this->occurredAt($data['occurred_at']), $data['idempotency_key'] ?? null, (bool) ($data['submit'] ?? false), occurrenceId: $data['schedule_occurrence_id'] ?? null, place: ['location' => $data['location'] ?? null, 'source' => 'browser'], scheduleLink: $data['schedule_link'] ?? null, more: ['shift_id' => $data['shift_id'] ?? null, 'dispatch_id' => $data['dispatch_id'] ?? null, ...$this->activityMore($request, $data)]);
 
         return $entry->status === 'draft'
             ? to_route('entries.edit', $entry->id)->with('success', 'Draft saved. Add files or finish it later.')
@@ -238,6 +258,11 @@ class EntryController extends Controller
             && Gate::allows('logbook.entries.review') && Access::reachesSheet($entry->sheet, 'review');
 
         return Inertia::render('entries/show', [
+            // ADR-0032 §5: the points the trip stopped at, with the distance of each leg.
+            'stops' => Stops::display($entry->stops, ($a = Recording::activity($entry->version)) !== null && $a['measure'] === 'odometer' && is_numeric($entry->values[$a['start_field']] ?? null) ? (float) $entry->values[$a['start_field']] : null),
+            // ADR-0032: the planned trip it records.
+            'dispatch' => $entry->dispatch_id === null ? null
+                : (($d = Dispatch::query()->with(['resource:id,code,name', 'sheet:id,name,code'])->find($entry->dispatch_id)) !== null ? Dispatches::row($d) : null),
             'entry' => [
                 ...self::entryRow($entry),
                 'version' => $entry->version->version,
@@ -285,7 +310,7 @@ class EntryController extends Controller
 
         return Inertia::render('entries/form', [
             'sheet' => $this->sheetData($entry->sheet),
-            'fields' => self::formFields($entry->version),
+            'fields' => self::formFields($entry->version, $this->user()->id, Assignments::localDay($entry->activity_started_at ?? $entry->occurred_at)),
             'version' => $entry->version->version,
             'entry' => [
                 'id' => $entry->id, 'reference' => $entry->reference, 'status' => $entry->status, 'revision' => $entry->revision,
@@ -317,6 +342,7 @@ class EntryController extends Controller
             'activity_started_at' => ['nullable', 'date'],
             'activity_ended_at' => ['nullable', 'date'],
             'activity_entry_id' => ['nullable', 'uuid'],
+            'stops' => ['nullable', 'array'],
             'location' => ['nullable', 'array'],
             'location.lat' => ['required_with:location', 'numeric', 'between:-90,90'],
             'location.lng' => ['required_with:location', 'numeric', 'between:-180,180'],
@@ -431,6 +457,10 @@ class EntryController extends Controller
         }
         if ($request->has('activity_entry_id')) {
             $out['activity_entry_id'] = $data['activity_entry_id'] ?? null;
+        }
+        // ADR-0032 §5: the form sends workspace-local times.
+        if ($request->has('stops')) {
+            $out['stops'] = Stops::input($request->input('stops'), localTimes: true);
         }
 
         return $out;

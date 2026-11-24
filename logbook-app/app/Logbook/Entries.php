@@ -62,6 +62,9 @@ final class Entries
         $gps = Tracks::forEntry($version, $by, $place['location'] ?? null, $place['track_id'] ?? null, $place['source'] ?? 'phone');
         $shiftId = Shifts::forEntry(Recording::settings($version)['shifts'] ?? 'off', $sheet->logbook_id, $more['shift_id'] ?? null);
         $activity = self::activityInput($more, $sheet->logbook_id, null);
+        $dispatchId = is_string($more['dispatch_id'] ?? null) && $more['dispatch_id'] !== '' ? $more['dispatch_id'] : null;
+        // ADR-0032 §5: kept only on sheets that record stops.
+        $stops = Stops::setting($version) === 'off' ? null : (($more['stops'] ?? []) ?: null);
 
         try {
             // The expected entry it was written for (opened from a reminder): kept only if it is
@@ -70,7 +73,9 @@ final class Entries
                 ? $occurrenceId : null;
             $scheduleLink = in_array($scheduleLink, ['named', 'extra'], true) ? $scheduleLink : null;
 
-            return DB::transaction(function () use ($sheet, $version, $by, $values, $occurredAt, $key, $submit, $occurrenceId, $gps, $scheduleLink, $shiftId, $activity) {
+            return DB::transaction(function () use ($sheet, $version, $by, $values, $occurredAt, $key, $submit, $occurrenceId, $gps, $scheduleLink, $shiftId, $activity, $dispatchId, $stops) {
+                // ADR-0032 §4: the planned trip this entry records (the driver's own, still open).
+                $dispatch = $dispatchId !== null ? Dispatches::forNewEntry($dispatchId, $sheet, $by) : null;
                 $entry = Entry::query()->create([
                     'logbook_id' => $sheet->logbook_id,
                     'log_sheet_id' => $sheet->id,
@@ -87,8 +92,13 @@ final class Entries
                     ...$activity,
                     'location' => $gps['location'],
                     'log_track_id' => $gps['log_track_id'],
+                    'dispatch_id' => $dispatch?->id,
+                    'stops' => $stops,
                 ]);
                 AuditTrail::record('entry.created', $entry, $by, ['version' => $version->version]);
+                if ($dispatch !== null) {
+                    Dispatches::started($dispatch, $entry);
+                }
 
                 return $submit ? self::submit($entry, $by) : $entry;
             });
@@ -125,6 +135,10 @@ final class Entries
                 $entry->forceFill(['shift_id' => Shifts::forEntry(Shifts::setting($entry), $entry->logbook_id, $more['shift_id'])]);
             }
             $entry->forceFill(self::activityInput($more, $entry->logbook_id, $entry));
+            // ADR-0032 §5: sent only by forms that show stops; otherwise kept as they are.
+            if (array_key_exists('stops', $more) && Stops::setting($entry->version) !== 'off') {
+                $entry->forceFill(['stops' => $more['stops'] ?: null]);
+            }
             $entry->save();
 
             return $entry;
@@ -185,6 +199,10 @@ final class Entries
             $values = self::clean($version, $entry->values, self::files($entry), requireAll: true);
             Tracks::checkRequired($entry);
             Shifts::checkRequired($entry);
+            // ADR-0032: on an "assigned only" sheet the asset must be the author's on the day it started.
+            Assignments::check($version, $values, $entry->created_by, $entry->activity_started_at ?? $entry->occurred_at);
+            Dispatches::check($entry, $values);
+            Stops::check($entry, $values);
             // ADR-0030: an event is recorded once it has ended; its fuel estimate is worked out now.
             // Clients that send no start (phone builds from before) record as they always did.
             if (Recording::mode($sheet, $version) === 'event' && $entry->activity_started_at !== null && $entry->activity_ended_at === null) {
@@ -225,6 +243,7 @@ final class Entries
                 'activity_ended_at' => $entry->activity_ended_at,
                 'activity_entry_id' => $entry->activity_entry_id,
                 'calculation' => $entry->calculation,
+                'stops' => $entry->stops,
                 'submitted_by' => $by->id,
                 'submitted_at' => now(),
             ]);
@@ -236,6 +255,7 @@ final class Entries
 
             // Operations (ADR-0026): the schedule it meets, the exceptions its answers raise, who to tell.
             Schedules::entrySubmitted($entry);
+            Dispatches::finished($entry);
             Exceptions::fromSubmission($entry);
             Notifications::later(self::class, 'notifySubmitted', [$entry->id, $by->id]);
 
@@ -299,6 +319,7 @@ final class Entries
             }
             $paths = array_values(array_map(strval(...), $entry->attachments()->pluck('path')->all()));
             AuditTrail::record('entry.discarded', $entry, $by);
+            Dispatches::reopened($entry);
             $entry->attachments()->delete();
             $entry->delete();
 
