@@ -2,7 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Logbook\Assignments;
 use App\Logbook\AuditTrail;
+use App\Logbook\Dispatches;
 use App\Logbook\Entries;
 use App\Logbook\Models\Entry;
 use App\Logbook\Models\Location;
@@ -16,6 +18,7 @@ use App\Logbook\Models\TaskSeries;
 use App\Logbook\References;
 use App\Logbook\Schedules;
 use App\Logbook\Sheets;
+use App\Logbook\Stops;
 use App\Logbook\Tracks;
 use App\Models\User;
 use App\Models\WorkspaceMember;
@@ -91,6 +94,9 @@ class SeedDemoData extends Command
 
     /** @var list<Entry> */
     private array $toReview = [];
+
+    /** @var array<string, int> Each vehicle's odometer, carried from trip to trip. */
+    private array $odometers = ['SSD-101A' => 48210, 'SSD-214B' => 61340, 'SSD-330C' => 23780];
 
     public function handle(CurrentTenant $tenant): int
     {
@@ -170,6 +176,7 @@ class SeedDemoData extends Command
         $this->line('Logbooks and log sheets…');
         $this->logbooksAndSheets();
         $this->schedules($start);
+        $this->assignments($start);
 
         $this->line('Entries and routes, day by day…');
         for ($day = $start; $day->lte($today); $day = $day->addDay()) {
@@ -181,6 +188,8 @@ class SeedDemoData extends Command
             $this->output->write('.');
         }
         $this->newLine();
+
+        $this->plannedTrips($today);
 
         $this->line('Reviews, tasks, exceptions and notifications…');
         $this->reviews($today);
@@ -325,7 +334,12 @@ class SeedDemoData extends Command
             ['name' => 'odometer_start', 'label' => 'Odometer at start', 'type' => 'integer', 'required' => true, 'min' => '0', 'unit' => 'km'],
             ['name' => 'odometer_end', 'label' => 'Odometer at end', 'type' => 'integer', 'required' => true, 'min' => '0', 'unit' => 'km'],
             ['name' => 'passengers', 'label' => 'Passengers', 'type' => 'integer', 'required' => false, 'min' => '0', 'max' => '20'],
-        ], ['mode' => 'route', 'required' => false, 'resource_required' => true, 'accuracy_m' => 50]);
+            ['name' => 'fuel_added', 'label' => 'Fuel added (refill)', 'type' => 'decimal', 'required' => false, 'min' => '0', 'unit' => 'L'],
+        ], ['mode' => 'route', 'required' => false, 'resource_required' => true, 'accuracy_m' => 50], [
+            // ADR-0032: a trip with its start and end, only by assigned drivers, with its stops.
+            'mode' => 'event', 'shifts' => 'off', 'subject' => 'vehicle', 'assigned_only' => true, 'stops' => 'optional',
+            'activity' => ['resource_field' => 'vehicle', 'measure' => 'odometer', 'start_field' => 'odometer_start', 'end_field' => 'odometer_end', 'actual_field' => null, 'refill_field' => 'fuel_added'],
+        ]);
     }
 
     private function logbook(string $name, string $description, string $icon): Logbook
@@ -343,12 +357,12 @@ class SeedDemoData extends Command
      * @param  list<array<string, mixed>>  $fields
      * @param  array<string, mixed>|null  $location
      */
-    private function sheet(string $logbook, string $code, string $name, bool $review, array $fields, ?array $location = null): void
+    private function sheet(string $logbook, string $code, string $name, bool $review, array $fields, ?array $location = null, ?array $recording = null): void
     {
         Auth::setUser($this->owner);
         $sheet = Sheets::create($this->logbooks[$logbook], ['name' => $name, 'code' => $code, 'review_required' => $review], $fields, $this->owner, 'demo');
-        if ($location !== null) {
-            Sheets::saveDraft($sheet, $fields, $this->owner, $location, withLocation: true);
+        if ($location !== null || $recording !== null) {
+            Sheets::saveDraft($sheet, $fields, $this->owner, $location, $location !== null, $recording, $recording !== null);
         }
         Sheets::publish($sheet->fresh(), $this->owner);
         $this->sheets[$code] = $sheet->fresh(['publishedVersion']);
@@ -469,7 +483,7 @@ class SeedDemoData extends Command
                 if (($i === 1 && $n % 2 === 0) || ! $past($hour + 3, 0)) {
                     continue;
                 }
-                $this->trip($trip, $day->setTime($hour, 5 + $n % 20), $n);
+                $this->trip($trip, $day->setTime($hour, 5 + $n % 20), $n, planned: $i === 0);
             }
         }
     }
@@ -480,15 +494,15 @@ class SeedDemoData extends Command
      * @param  array<string, mixed>  $values
      * @param  array<string, mixed>  $place
      */
-    private function entry(string $code, ?string $who, CarbonImmutable $at, array $values, bool $draft = false, array $place = []): ?Entry
+    private function entry(string $code, ?string $who, CarbonImmutable $at, array $values, bool $draft = false, array $place = [], array $more = [], ?CarbonImmutable $writtenAt = null): ?Entry
     {
         $user = $who === null ? $this->owner : $this->people[$who];
         $sheet = $this->sheets[$code];
-        $this->at($at->addMinutes(4));
+        $this->at($writtenAt ?? $at->addMinutes(4));
         Auth::setUser($user);
         $occurrence = DB::table('log_schedule_occurrences')->where('log_sheet_id', $sheet->id)
             ->where('opens_at', '<=', $at->utc())->where('closes_at', '>=', $at->utc())->value('id');
-        $entry = Entries::create($sheet, $user, array_filter($values, fn ($v) => $v !== null), $at->utc()->toIso8601String(), (string) Str::uuid7(), ! $draft, null, $occurrence, $place);
+        $entry = Entries::create($sheet, $user, array_filter($values, fn ($v) => $v !== null), $at->utc()->toIso8601String(), (string) Str::uuid7(), ! $draft, null, $occurrence, $place, null, $more);
         if (! $draft && $sheet->review_required) {
             $this->toReview[] = $entry;
         }
@@ -497,14 +511,26 @@ class SeedDemoData extends Command
     }
 
     /**
-     * A trip: the route recorded on the driver's phone, then the movement entry written on it.
+     * A trip: planned by the manager or not, the route recorded on the driver's phone, then
+     * the movement entry written on it with its start, end and stops (ADR-0032).
      *
      * @param  array{0: string, 1: string, 2: string, 3: string, 4: string, 5: int}  $trip
      */
-    private function trip(array $trip, CarbonImmutable $start, int $n): void
+    private function trip(array $trip, CarbonImmutable $start, int $n, bool $planned = false): void
     {
         [$who, $vehicle, $from, $to, $purpose, $passengers] = $trip;
         $driver = $this->people[$who];
+        $dispatch = null;
+        if ($planned) {
+            $this->at($start->subMinutes(90));
+            // Demo drivers are unknown to Central: the driver check reads the seeding's open permissions.
+            Auth::setUser($driver);
+            $dispatch = Dispatches::plan($this->sheets['VML'], [
+                'resource_id' => $this->resources[$vehicle]->id, 'user_id' => $driver->id,
+                'planned_on' => $start->toDateString(), 'planned_time' => $start->format('H').':00',
+                'destination' => self::PLACE_NAMES[$to], 'purpose' => $purpose,
+            ], $this->owner);
+        }
         $waypoints = self::ROUTES[$from.'>'.$to];
         $points = $this->path($waypoints, $start, $n);
         $endAt = CarbonImmutable::createFromTimestamp(end($points)['t'], 'UTC');
@@ -530,22 +556,80 @@ class SeedDemoData extends Command
         ]);
         Tracks::upsert($driver, ['id' => $id, 'status' => 'ended', 'ended_at' => $endAt->toIso8601String()]);
 
-        $odometer = 48210 + $n * 37;
         $track->refresh();
         $last = end($points);
-        $this->entry('VML', $who, $endAt->setTimezone($this->tz), [
+        $odometer = $this->odometers[$vehicle];
+        $km = max(1, (int) round($track->distance_m / 1000));
+        $this->odometers[$vehicle] = $odometer + $km + 2 + $n % 5;
+
+        // Stops: one on the way, then the destination (still there when the trip is written).
+        $mid = $points[intdiv(count($points), 2)];
+        $midAt = CarbonImmutable::createFromTimestamp($mid['t'], 'UTC');
+        $leftMid = $midAt->addMinutes(4)->min($endAt->subMinutes(2));
+        [$stopName, $stopPurpose] = self::STOPS[$from.'>'.$to][$n % 2];
+        $stops = Stops::input([
+            [
+                'place' => $stopName, 'purpose' => $stopPurpose, 'arrived_at' => $midAt->toIso8601String(), 'departed_at' => $leftMid->toIso8601String(),
+                'odometer' => $odometer + intdiv($km, 2), 'pin' => ['lat' => $mid['lat'], 'lng' => $mid['lng'], 'accuracy_m' => 9],
+            ],
+            [
+                'place' => self::PLACE_NAMES[$to], 'purpose' => 'Arrived', 'arrived_at' => $endAt->subMinute()->toIso8601String(), 'departed_at' => null,
+                'odometer' => $odometer + $km, 'pin' => ['lat' => $last['lat'], 'lng' => $last['lng'], 'accuracy_m' => 7],
+            ],
+        ], localTimes: false);
+
+        $this->entry('VML', $who, $start, [
             'vehicle' => $this->resources[$vehicle]->id,
             'from' => self::PLACE_NAMES[$from],
             'to' => self::PLACE_NAMES[$to],
             'purpose' => $purpose,
             'odometer_start' => (string) $odometer,
-            'odometer_end' => (string) ($odometer + max(1, (int) round($track->distance_m / 1000))),
+            'odometer_end' => (string) ($odometer + $km),
             'passengers' => (string) $passengers,
+            'fuel_added' => $n % 5 === 2 ? (string) (35 + $n % 20) : null,
         ], place: [
             'location' => ['lat' => $last['lat'], 'lng' => $last['lng'], 'accuracy_m' => 8, 'captured_at' => $endAt->toIso8601String()],
             'track_id' => $id,
             'source' => 'phone',
-        ]);
+        ], more: array_filter([
+            'activity_started_at' => $start->utc()->toIso8601String(),
+            'activity_ended_at' => $endAt->toIso8601String(),
+            'stops' => $stops,
+            'dispatch_id' => $dispatch?->id,
+        ]), writtenAt: $endAt->addMinutes(4));
+    }
+
+    /** Standing assignments from the first day: each driver has their vehicles (ADR-0032). */
+    private function assignments(CarbonImmutable $start): void
+    {
+        $this->at($start->setTime(7, 30));
+        Auth::setUser($this->owner);
+        foreach ([['peter', 'SSD-101A'], ['peter', 'SSD-214B'], ['samuel', 'SSD-330C'], ['samuel', 'SSD-214B']] as [$who, $vehicle]) {
+            Assignments::assign($this->resources[$vehicle], [
+                'user_id' => $this->people[$who]->id, 'starts_on' => $start->toDateString(), 'note' => 'Regular driver',
+            ], $this->owner);
+        }
+    }
+
+    /** Trips planned ahead for the next days, and one cancelled. */
+    private function plannedTrips(CarbonImmutable $today): void
+    {
+        $this->at($this->realNow->subMinutes(20));
+        Auth::setUser($this->owner);
+        $plan = function (string $who, string $vehicle, int $days, string $time, string $to, string $purpose) use ($today) {
+            Auth::setUser($this->people[$who]); // see trip(): demo drivers are unknown to Central
+
+            return Dispatches::plan($this->sheets['VML'], [
+                'resource_id' => $this->resources[$vehicle]->id, 'user_id' => $this->people[$who]->id,
+                'planned_on' => $today->addDays($days)->toDateString(), 'planned_time' => $time,
+                'destination' => self::PLACE_NAMES[$to], 'purpose' => $purpose,
+            ], $this->owner);
+        };
+        $plan('peter', 'SSD-101A', 1, '08:00', 'field', 'Staff to the field office');
+        $plan('samuel', 'SSD-330C', 1, '13:30', 'hospital', 'Patient follow-up at Juba Teaching Hospital');
+        $plan('peter', 'SSD-214B', 2, '09:00', 'airport', 'Airport drop-off: visiting team');
+        $cancelled = $plan('samuel', 'SSD-214B', 2, '14:00', 'market', 'Supplies from Konyo Konyo market');
+        Dispatches::cancel($cancelled, 'Supplies delivered by the vendor instead.', $this->owner);
     }
 
     /**
@@ -594,6 +678,14 @@ class SeedDemoData extends Command
         'hospital' => 'Juba Teaching Hospital',
         'airport' => 'Juba International Airport',
         'market' => 'Konyo Konyo Market',
+    ];
+
+    /** Places stopped at on the way, two per route: [place, purpose]. */
+    private const STOPS = [
+        'compound>field' => [['Gudele fuel station', 'Fuel'], ['Rejaf police checkpoint', 'Checkpoint']],
+        'clinic>hospital' => [['Jebel market pharmacy', 'Medicines pick-up'], ['Custom roundabout', 'Picked up a nurse']],
+        'compound>airport' => [['Hai Cinema fuel station', 'Fuel'], ['Ministries roundabout', 'Picked up a visitor']],
+        'compound>market' => [['Munuki bank branch', 'Cash for supplies'], ['Hai Malakal hardware', 'Spare parts']],
     ];
 
     /** Rough road waypoints around Juba, [lat, lng]. */
