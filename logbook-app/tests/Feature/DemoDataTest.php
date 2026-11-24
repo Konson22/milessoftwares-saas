@@ -1,6 +1,8 @@
 <?php
 
+use App\Logbook\Models\Dispatch;
 use App\Logbook\Models\Entry;
+use App\Logbook\Models\ResourceAssignment;
 use App\Logbook\Models\Track;
 use Miles\PlatformClient\Tenancy\CurrentTenant;
 
@@ -15,6 +17,15 @@ it('seeds a workspace with demo data once, through the domain rules', function (
     inTenant(function () {
         expect(Entry::query()->whereNotNull('reference')->count())->toBeGreaterThan(5)
             ->and(Track::query()->where('status', 'ended')->where('distance_m', '>', 1000)->exists())->toBeTrue();
+        // ADR-0032: drivers assigned, trips planned (done, ahead, cancelled), trips with their stops.
+        expect(ResourceAssignment::query()->count())->toBe(4)
+            ->and(Dispatch::query()->where('status', 'planned')->count())->toBe(3)
+            ->and(Dispatch::query()->where('status', 'cancelled')->count())->toBe(1)
+            ->and(Entry::query()->whereNotNull('stops')->whereNotNull('activity_ended_at')->exists())->toBeTrue();
+        $done = Dispatch::query()->where('status', 'done')->first();
+        if ($done !== null) {
+            expect(Entry::query()->whereKey($done->log_entry_id)->value('dispatch_id'))->toBe($done->id);
+        }
     });
 
     // The dashboard's charts read it: two weeks of days, the week's schedules, open work by status.
