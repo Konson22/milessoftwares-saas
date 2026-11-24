@@ -184,8 +184,8 @@ abstract class Controller
 
     protected static function resourceOptions(): array
     {
-        return array_values(LogResource::query()->where('active', true)->orderBy('code')->get(['id', 'code', 'name', 'type'])
-            ->map(fn (LogResource $r) => ['value' => $r->id, 'label' => $r->label(), 'type' => $r->type])->all());
+        return array_values(LogResource::query()->where('active', true)->with('category:id,name')->orderBy('code')->get(['id', 'code', 'name', 'type', 'category_id'])
+            ->map(fn (LogResource $r) => ['value' => $r->id, 'label' => $r->label(), 'type' => $r->type, 'category' => $r->category?->name])->all());
     }
 
     /**

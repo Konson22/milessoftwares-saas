@@ -97,7 +97,7 @@ export default function ResourceShow({
                             Resources
                         </Link>{' '}
                         ·{' '}
-                        {[resource.type, resource.location]
+                        {[resource.category, resource.type, resource.location]
                             .filter(Boolean)
                             .join(' · ')}
                     </>

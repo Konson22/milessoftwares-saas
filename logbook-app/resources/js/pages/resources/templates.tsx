@@ -14,11 +14,12 @@ import { PageHeader } from '@/components/page-header';
 import { Toggle } from '@/components/work';
 import { create, index as resourcesIndex } from '@/routes/resources';
 import * as templateRoutes from '@/routes/resources/templates';
-import type { AssetTemplate } from './form';
+import type { AssetTemplate, CategoryOption } from './form';
 
 type Props = {
     templates: AssetTemplate[];
     starters: { value: string; label: string }[];
+    categories: CategoryOption[];
     canManage: boolean;
 };
 
@@ -30,11 +31,15 @@ type Props = {
 export default function AssetTemplates({
     templates,
     starters,
+    categories,
     canManage,
 }: Props) {
     const [editing, setEditing] = useState<string | null>(null);
     const starterName = Object.fromEntries(
         starters.map((s) => [s.value, s.label]),
+    );
+    const categoryName = Object.fromEntries(
+        categories.map((c) => [c.value, c.label]),
     );
 
     return (
@@ -52,7 +57,11 @@ export default function AssetTemplates({
                 <div className="mb-4">
                     <Toggle label="New template">
                         {(close) => (
-                            <TemplateForm starters={starters} onDone={close} />
+                            <TemplateForm
+                                starters={starters}
+                                categories={categories}
+                                onDone={close}
+                            />
                         )}
                     </Toggle>
                 </div>
@@ -84,6 +93,8 @@ export default function AssetTemplates({
                                     </p>
                                     <p className="text-muted-foreground">
                                         {[
+                                            t.categoryId &&
+                                                categoryName[t.categoryId],
                                             t.type,
                                             t.description,
                                             t.fuel &&
@@ -154,6 +165,7 @@ export default function AssetTemplates({
                                 <div className="mt-3 rounded-md border p-4">
                                     <TemplateForm
                                         starters={starters}
+                                        categories={categories}
                                         initial={t}
                                         onDone={() => setEditing(null)}
                                     />
@@ -169,16 +181,19 @@ export default function AssetTemplates({
 
 function TemplateForm({
     starters,
+    categories,
     initial,
     onDone,
 }: {
     starters: { value: string; label: string }[];
+    categories: CategoryOption[];
     initial?: AssetTemplate;
     onDone: () => void;
 }) {
     const errors = usePage().props.errors as Record<string, string>;
     const [data, setData] = useState({
         name: initial?.name ?? '',
+        category_id: initial?.categoryId ?? '',
         type: initial?.type ?? '',
         kind: initial?.kind ?? 'asset',
         description: initial?.description ?? '',
@@ -204,6 +219,7 @@ function TemplateForm({
                 e.preventDefault();
                 const payload = {
                     name: data.name,
+                    category_id: data.category_id || null,
                     type: data.type,
                     kind: data.kind,
                     description: data.description,
@@ -239,8 +255,18 @@ function TemplateForm({
                 placeholder="Vaccine fridge"
                 required
             />
-            <TextField
+            <SelectField
                 label="Category given to assets"
+                value={data.category_id}
+                onChange={(category_id) => set({ category_id })}
+                options={categories
+                    .filter((c) => c.active || c.value === data.category_id)
+                    .map((c) => ({ value: c.value, label: c.label }))}
+                empty="From the type"
+                error={errors.category_id}
+            />
+            <TextField
+                label="Type given to assets"
                 value={data.type}
                 onChange={(type) => set({ type })}
                 error={errors.type}

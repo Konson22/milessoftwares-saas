@@ -273,8 +273,7 @@ function Control({
                     {resources
                         .filter(
                             (r) =>
-                                (!field.resource_type ||
-                                    r.type === field.resource_type) &&
+                                resourceMatches(r, field.resource_type) &&
                                 // ADR-0031: a sheet with linked assets offers only those.
                                 (!field.resource_ids ||
                                     field.resource_ids.length === 0 ||
@@ -518,4 +517,14 @@ function NumberInput({
             )}
         </div>
     );
+}
+
+/** A resource field asks for a type, or for a whole category by its name. */
+function resourceMatches(r: ResourceOption, wanted?: string): boolean {
+    if (!wanted) {
+        return true;
+    }
+    const w = wanted.trim().toLowerCase();
+
+    return r.type.toLowerCase() === w || (r.category ?? '').toLowerCase() === w;
 }

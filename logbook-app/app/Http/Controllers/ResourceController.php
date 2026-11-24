@@ -19,10 +19,12 @@ use App\Logbook\Models\LogException;
 use App\Logbook\Models\LogResource;
 use App\Logbook\Models\LogSheet;
 use App\Logbook\Models\MeterEvent;
+use App\Logbook\Models\ResourceCategory;
 use App\Logbook\Models\Schedule;
 use App\Logbook\Models\ScheduleOccurrence;
 use App\Logbook\Models\Task;
 use App\Logbook\Recording;
+use App\Logbook\ResourceCategories;
 use App\Logbook\Schedules;
 use App\Logbook\SheetAssets;
 use App\Logbook\Sheets;
@@ -62,17 +64,34 @@ class ResourceController extends Controller
             ->selectRaw('log_resource_id, count(*) as n')->groupBy('log_resource_id')->pluck('n', 'log_resource_id');
 
         return Inertia::render('resources/index', [
-            'resources' => LogResource::query()->with(['location.parent', 'responsible:id,name'])
+            'resources' => LogResource::query()->with(['location.parent', 'responsible:id,name', 'category:id,name'])
                 ->orderByRaw("CASE status WHEN 'active' THEN 0 WHEN 'inactive' THEN 1 ELSE 2 END")->orderBy('code')->get()
                 ->map(fn (LogResource $r) => [
                     'id' => $r->id, 'code' => $r->code, 'name' => $r->name, 'type' => $r->type, 'kind' => $r->kind, 'status' => $r->status,
+                    'categoryId' => $r->category_id, 'category' => $r->category?->name,
                     'description' => $r->description, 'locationId' => $r->location_id, 'location' => $r->location?->path(), 'active' => $r->active,
                     'responsible' => $r->responsible?->name, 'template' => $r->template['name'] ?? null, 'sheets' => (int) ($sheets[$r->id] ?? 0),
                     'fuelRate' => ($rate = $rates->get($r->id)) !== null ? (float) $rate->rate.' '.$rate->unit() : null,
                 ])->values(),
             'locations' => $locations->map(fn (Location $l) => ['id' => $l->id, 'name' => $l->name, 'path' => $l->path(), 'parentId' => $l->parent_id, 'active' => $l->active])->values(),
-            'types' => LogResource::query()->distinct()->orderBy('type')->pluck('type'),
+            'categories' => self::categoryRows(),
         ]);
+    }
+
+    /**
+     * The workspace's categories with how many current assets each holds.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function categoryRows(): array
+    {
+        $counts = LogResource::query()->where('status', '!=', 'retired')->toBase()
+            ->selectRaw('category_id, count(*) as n')->groupBy('category_id')->pluck('n', 'category_id');
+
+        return ResourceCategories::all()->map(fn (ResourceCategory $c) => [
+            'id' => $c->id, 'name' => $c->name, 'description' => $c->description, 'types' => $c->types ?? [],
+            'active' => $c->active, 'assets' => (int) ($counts[$c->id] ?? 0),
+        ])->values()->all();
     }
 
     /** Registering an asset (ADR-0031 §5): a template first, then its details. */
@@ -91,6 +110,7 @@ class ResourceController extends Controller
         return Inertia::render('resources/form', [
             'resource' => $resource === null ? null : [
                 'id' => $resource->id, 'code' => $resource->code, 'name' => $resource->name, 'type' => $resource->type, 'kind' => $resource->kind,
+                'categoryId' => $resource->category_id,
                 'status' => $resource->status, 'description' => $resource->description, 'locationId' => $resource->location_id,
                 'manufacturer' => $resource->manufacturer, 'model' => $resource->model, 'serialNumber' => $resource->serial_number,
                 'responsibleId' => $resource->responsible_id,
@@ -102,7 +122,10 @@ class ResourceController extends Controller
             'locations' => Location::query()->with('parent.parent')->where('active', true)->orderBy('name')->get()
                 ->map(fn (Location $l) => ['value' => $l->id, 'label' => $l->path()])->values(),
             'members' => WorkspaceMember::options(),
-            'types' => LogResource::query()->distinct()->orderBy('type')->pluck('type'),
+            'categories' => ResourceCategories::options(),
+            // Types already used, per category: offered next to the category's suggested ones.
+            'usedTypes' => (object) LogResource::query()->whereNotNull('category_id')->distinct()->orderBy('type')->get(['category_id', 'type'])
+                ->groupBy('category_id')->map(fn ($rows) => $rows->pluck('type')->values())->all(),
             'now' => CarbonImmutable::now(Workspace::current()->timezone ?? 'UTC')->format('Y-m-d\TH:i'),
         ]);
     }
@@ -113,7 +136,7 @@ class ResourceController extends Controller
      */
     public function show(string $resource): Response
     {
-        $resource = LogResource::query()->with(['location.parent', 'responsible:id,name'])->findOrFail($resource);
+        $resource = LogResource::query()->with(['location.parent', 'responsible:id,name', 'category:id,name'])->findOrFail($resource);
         $tz = Workspace::current()->timezone ?? 'UTC';
         $local = fn ($t) => $t?->setTimezone($tz)->format('Y-m-d H:i');
         $rates = FuelRate::query()->where('log_resource_id', $resource->id)->with('creator:id,name')
@@ -123,6 +146,7 @@ class ResourceController extends Controller
         return Inertia::render('resources/show', [
             'resource' => [
                 'id' => $resource->id, 'code' => $resource->code, 'name' => $resource->name, 'type' => $resource->type,
+                'category' => $resource->category?->name,
                 'description' => $resource->description, 'location' => $resource->location?->path(), 'active' => $resource->active,
                 'kind' => $resource->kind, 'status' => $resource->status, 'manufacturer' => $resource->manufacturer, 'model' => $resource->model,
                 'serialNumber' => $resource->serial_number, 'responsible' => $resource->responsible?->name,
@@ -198,7 +222,7 @@ class ResourceController extends Controller
         $resource = LogResource::query()->findOrFail($resource);
         $data = $this->resourceInput($request, $resource);
         DB::transaction(function () use ($data, $resource) {
-            $tracked = ['code', 'name', 'type', 'kind', 'status', 'location_id', 'manufacturer', 'model', 'serial_number', 'responsible_id'];
+            $tracked = ['code', 'name', 'category_id', 'type', 'kind', 'status', 'location_id', 'manufacturer', 'model', 'serial_number', 'responsible_id'];
             $before = $resource->only($tracked);
             $resource->update($data);
             $after = $resource->only($tracked);
@@ -294,6 +318,7 @@ class ResourceController extends Controller
         return Inertia::render('resources/templates', [
             'templates' => AssetTemplates::all(withInactive: true),
             'starters' => collect(StarterTemplates::all())->map(fn ($t, $key) => ['value' => $key, 'label' => $t['name']])->values(),
+            'categories' => ResourceCategories::options(),
             'canManage' => Gate::allows('logbook.manage'),
         ]);
     }
@@ -310,6 +335,22 @@ class ResourceController extends Controller
         $template = AssetTemplates::save(AssetTemplate::query()->findOrFail($template), $request->all(), $this->user());
 
         return back()->with('success', "Template {$template->name} saved (version {$template->version}). Assets registered before keep the version they were made with.");
+    }
+
+    // ---- Asset categories ----
+
+    public function storeCategory(Request $request): RedirectResponse
+    {
+        $category = ResourceCategories::save(null, $request->all(), $this->user());
+
+        return back()->with('success', "Category {$category->name} added.");
+    }
+
+    public function updateCategory(Request $request, string $category): RedirectResponse
+    {
+        $category = ResourceCategories::save(ResourceCategory::query()->findOrFail($category), $request->all(), $this->user());
+
+        return back()->with('success', "Category {$category->name} saved.");
     }
 
     /**
@@ -416,6 +457,7 @@ class ResourceController extends Controller
             'code' => ['required', 'string', 'max:32', 'regex:/^[A-Z0-9][A-Z0-9-]*$/', Rule::unique('log_resources', 'code')->where('organization_id', $organizationId)->ignore($resource?->id)],
             'name' => ['required', 'string', 'max:120'],
             'type' => ['required', 'string', 'max:48'],
+            'category_id' => ['nullable', 'uuid', Rule::exists('log_resource_categories', 'id')->where('organization_id', $organizationId)],
             'kind' => ['nullable', Rule::in(LogResource::KINDS)],
             'status' => ['nullable', Rule::in(LogResource::STATUSES)],
             'description' => ['nullable', 'string', 'max:2000'],
@@ -439,7 +481,14 @@ class ResourceController extends Controller
         if ($kind === 'monitored_location' && ($data['location_id'] ?? null) === null) {
             throw ValidationException::withMessages(['location_id' => 'Choose the location this monitored place is.']);
         }
-        $out = ['code' => $data['code'], 'name' => $data['name'], 'type' => $data['type'], 'kind' => $kind];
+        $out = ['code' => $data['code'], 'name' => $data['name'], 'type' => trim($data['type']), 'kind' => $kind];
+        // A category chosen is kept. None chosen: a new asset takes the one its type falls in
+        // (LogResource::creating), a changed one keeps its own.
+        if (($data['category_id'] ?? null) !== null) {
+            $out['category_id'] = $data['category_id'];
+        } elseif ($resource !== null && $resource->category_id === null) {
+            $out['category_id'] = ResourceCategories::guess($data['type'])?->id;
+        }
         foreach (['description', 'location_id', 'manufacturer', 'model', 'serial_number', 'responsible_id'] as $key) {
             $value = $data[$key] ?? null;
             $out[$key] = is_string($value) && trim($value) !== '' ? trim($value) : null;

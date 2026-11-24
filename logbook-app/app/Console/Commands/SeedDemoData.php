@@ -243,14 +243,14 @@ class SeedDemoData extends Command
         }
 
         foreach ([
-            ['GEN-01', 'Main Compound Generator (50 kVA)', 'Generator', 'compound'],
-            ['GEN-02', 'Clinic Generator (20 kVA)', 'Generator', 'clinic'],
-            ['SSD-101A', 'Land Cruiser', 'Vehicle', 'compound'],
-            ['SSD-214B', 'Toyota Hilux', 'Vehicle', 'compound'],
-            ['SSD-330C', 'Land Cruiser Ambulance', 'Vehicle', 'clinic'],
-            ['FRG-01', 'Vaccine Fridge', 'Cold chain', 'clinic'],
-            ['WT-01', 'Water Tank (10,000 L)', 'Water', 'compound'],
-            ['UPS-01', 'Server Room UPS', 'IT equipment', 'compound'],
+            ['GEN-01', 'Main Compound Generator (50 kVA)', 'Diesel generator', 'compound'],
+            ['GEN-02', 'Clinic Generator (20 kVA)', 'Diesel generator', 'clinic'],
+            ['SSD-101A', 'Land Cruiser', 'Car', 'compound'],
+            ['SSD-214B', 'Toyota Hilux', 'Pickup', 'compound'],
+            ['SSD-330C', 'Land Cruiser Ambulance', 'Ambulance', 'clinic'],
+            ['FRG-01', 'Vaccine Fridge', 'Vaccine fridge', 'clinic'],
+            ['WT-01', 'Water Tank (10,000 L)', 'Water tank', 'compound'],
+            ['UPS-01', 'Server Room UPS', 'UPS', 'compound'],
         ] as [$code, $name, $type, $place]) {
             $resource = LogResource::query()->create([
                 'code' => $code, 'name' => $name, 'type' => $type, 'location_id' => $this->places[$place]->id, 'active' => true,
@@ -274,7 +274,7 @@ class SeedDemoData extends Command
         ];
 
         $this->sheet('generators', 'GEN', 'Generator Daily Operation', true, [
-            ['name' => 'generator', 'label' => 'Generator', 'type' => 'resource', 'required' => true, 'resource_type' => 'Generator'],
+            ['name' => 'generator', 'label' => 'Generator', 'type' => 'resource', 'required' => true, 'resource_type' => 'Generators'],
             ['name' => 'running_hours', 'label' => 'Running hours', 'type' => 'decimal', 'required' => true, 'min' => '0', 'max' => '24', 'expected_max' => '16', 'unit' => 'hours', 'raise_exception' => true, 'exception_severity' => 'medium'],
             ['name' => 'fuel_used', 'label' => 'Fuel used', 'type' => 'decimal', 'required' => true, 'min' => '0', 'expected_max' => '60', 'unit' => 'litres', 'raise_exception' => true, 'exception_severity' => 'medium'],
             ['name' => 'status', 'label' => 'Status', 'type' => 'select_one', 'required' => true, 'choices' => self::choices(['running' => 'Running', 'standby' => 'Standby', 'stopped' => 'Stopped', 'fault' => 'Fault']), 'exception_values' => ['fault'], 'exception_severity' => 'high'],
@@ -283,14 +283,14 @@ class SeedDemoData extends Command
         ]);
 
         $this->sheet('clinic', 'FRG', 'Fridge Temperature', true, [
-            ['name' => 'fridge', 'label' => 'Fridge', 'type' => 'resource', 'required' => true, 'resource_type' => 'Cold chain'],
+            ['name' => 'fridge', 'label' => 'Fridge', 'type' => 'resource', 'required' => true, 'resource_type' => 'Vaccine fridge'],
             ['name' => 'temperature', 'label' => 'Temperature', 'type' => 'decimal', 'required' => true, 'min' => '-30', 'max' => '40', 'expected_min' => '2', 'expected_max' => '8', 'unit' => '°C', 'raise_exception' => true, 'exception_severity' => 'high'],
             ['name' => 'door_sealed', 'label' => 'Door seal intact', 'type' => 'yes_no', 'required' => true, 'exception_values' => ['no'], 'exception_severity' => 'medium'],
             ['name' => 'notes', 'label' => 'Notes', 'type' => 'textarea', 'required' => false],
         ]);
 
         $this->sheet('facilities', 'WTL', 'Water Tank Level', false, [
-            ['name' => 'tank', 'label' => 'Tank', 'type' => 'resource', 'required' => true, 'resource_type' => 'Water'],
+            ['name' => 'tank', 'label' => 'Tank', 'type' => 'resource', 'required' => true, 'resource_type' => 'Water tank'],
             ['name' => 'level', 'label' => 'Level', 'type' => 'integer', 'required' => true, 'min' => '0', 'max' => '100', 'expected_min' => '25', 'unit' => '%', 'raise_exception' => true, 'exception_severity' => 'medium'],
             ['name' => 'refilled', 'label' => 'Refilled today', 'type' => 'yes_no', 'required' => false],
         ]);
@@ -311,14 +311,14 @@ class SeedDemoData extends Command
         ]);
 
         $this->sheet('it', 'ITC', 'IT Equipment Check', false, [
-            ['name' => 'ups', 'label' => 'UPS', 'type' => 'resource', 'required' => true, 'resource_type' => 'IT equipment'],
+            ['name' => 'ups', 'label' => 'UPS', 'type' => 'resource', 'required' => true, 'resource_type' => 'UPS'],
             ['name' => 'ups_ok', 'label' => 'UPS on battery test passed', 'type' => 'yes_no', 'required' => true, 'exception_values' => ['no'], 'exception_severity' => 'medium'],
             ['name' => 'network_ok', 'label' => 'Internet and Wi-Fi working', 'type' => 'yes_no', 'required' => true],
             ['name' => 'notes', 'label' => 'Notes', 'type' => 'textarea', 'required' => false],
         ]);
 
         $this->sheet('drivers', 'VML', 'Vehicle Movement Log', true, [
-            ['name' => 'vehicle', 'label' => 'Vehicle', 'type' => 'resource', 'required' => true, 'resource_type' => 'Vehicle'],
+            ['name' => 'vehicle', 'label' => 'Vehicle', 'type' => 'resource', 'required' => true, 'resource_type' => 'Vehicles'],
             ['name' => 'from', 'label' => 'From', 'type' => 'text', 'required' => true, 'max_length' => 120],
             ['name' => 'to', 'label' => 'To', 'type' => 'text', 'required' => true, 'max_length' => 120],
             ['name' => 'purpose', 'label' => 'Purpose', 'type' => 'text', 'required' => true, 'max_length' => 200],

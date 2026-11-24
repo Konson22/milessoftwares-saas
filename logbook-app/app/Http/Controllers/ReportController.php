@@ -23,6 +23,7 @@ use App\Logbook\Models\Shift;
 use App\Logbook\Models\Task;
 use App\Logbook\Models\Track;
 use App\Logbook\Reports;
+use App\Logbook\ResourceCategories;
 use App\Logbook\Tasks;
 use App\Logbook\Timeline;
 use App\Logbook\Tracks;
@@ -272,7 +273,7 @@ class ReportController extends Controller
             'people' => array_map(fn (array $o) => ['value' => $o['value'], 'label' => preg_replace('/ \\(.*\\)$/', '', $o['label'])], WorkspaceMember::options()),
             'resources' => array_values(LogResource::query()->orderBy('code')->get()->map(fn (LogResource $r) => ['value' => $r->id, 'label' => $r->label()])->all()),
             'locations' => array_values(Location::query()->orderBy('name')->get(['id', 'name'])->map(fn (Location $l) => ['value' => $l->id, 'label' => $l->name])->all()),
-            'categories' => array_values(LogResource::query()->distinct()->orderBy('type')->pluck('type')->all()),
+            'categories' => array_map(fn (array $c) => ['value' => $c['value'], 'label' => $c['label']], ResourceCategories::options()),
             'shifts' => array_values(Shift::query()->orderBy('starts_time')->get()->map(fn (Shift $s) => ['value' => $s->id, 'label' => $s->label().($s->active ? '' : ' (off)')])->all()),
         ];
     }

@@ -48,6 +48,8 @@ export type KitResource = {
   code: string;
   name: string;
   type: string;
+  /** Its category (Vehicles, Generators...). Absent from older servers. */
+  category?: string | null;
   location: string | null;
   /** ADR-0031: a physical asset or a monitored location. Absent from older servers. */
   kind?: 'asset' | 'monitored_location';

@@ -828,13 +828,13 @@ function FieldEditor({
             )}
             {settings.includes('resource_type') && (
                 <TextField
-                    label="Resource type (optional)"
+                    label="Resource type or category (optional)"
                     value={row.resource_type ?? ''}
                     onChange={(resource_type) =>
                         onChange({ resource_type: resource_type || undefined })
                     }
                     error={e('resource_type')}
-                    hint="Only resources of this type are offered, such as Generator."
+                    hint="Only resources of this type or category are offered, such as Car or Vehicles."
                 />
             )}
             <ExceptionRule

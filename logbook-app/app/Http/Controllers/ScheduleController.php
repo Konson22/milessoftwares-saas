@@ -10,6 +10,7 @@ use App\Logbook\Models\Schedule;
 use App\Logbook\Models\ScheduleOccurrence;
 use App\Logbook\Recording;
 use App\Logbook\Reminders;
+use App\Logbook\ResourceCategories;
 use App\Logbook\Schedules;
 use App\Logbook\SheetAssets;
 use App\Models\Workspace;
@@ -144,8 +145,8 @@ class ScheduleController extends Controller
                     continue;
                 }
                 $linked = SheetAssets::linkedIds($sheet->id);
-                $type = is_string($field['resource_type'] ?? null) && $field['resource_type'] !== '' ? mb_strtolower($field['resource_type']) : null;
-                $out[$sheet->id] = $active->filter(fn (LogResource $r) => $linked !== [] ? in_array($r->id, $linked, true) : ($type === null || mb_strtolower($r->type) === $type))
+                $type = is_string($field['resource_type'] ?? null) ? $field['resource_type'] : null;
+                $out[$sheet->id] = $active->filter(fn (LogResource $r) => $linked !== [] ? in_array($r->id, $linked, true) : ResourceCategories::matches($r, $type))
                     ->map(fn (LogResource $r) => ['value' => $r->id, 'label' => $r->label()])->values()->all();
             }
         }

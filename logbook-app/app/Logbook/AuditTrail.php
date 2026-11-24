@@ -11,6 +11,7 @@ use App\Logbook\Models\Logbook;
 use App\Logbook\Models\LogException;
 use App\Logbook\Models\LogResource;
 use App\Logbook\Models\LogSheet;
+use App\Logbook\Models\ResourceCategory;
 use App\Logbook\Models\Schedule;
 use App\Logbook\Models\ScheduleOccurrence;
 use App\Logbook\Models\Shift;
@@ -47,6 +48,7 @@ final class AuditTrail
             $subject instanceof LogResource => ['resource', $subject->label(), null],
             $subject instanceof Location => ['location', $subject->name, null],
             $subject instanceof AssetTemplate => ['asset_template', 'Asset template · '.$subject->name, null],
+            $subject instanceof ResourceCategory => ['resource_category', 'Asset category · '.$subject->name, null],
             $subject instanceof Shift => ['shift', $subject->label(), $subject->logbook_id],
             $subject instanceof Investigation => ['investigation', $subject->reference.' · '.$subject->title, $subject->logbook_id],
             $subject instanceof Track => ['track', 'Route · '.$subject->user->name.' · '.$subject->started_at->format('Y-m-d H:i'), $subject->logbook_id],

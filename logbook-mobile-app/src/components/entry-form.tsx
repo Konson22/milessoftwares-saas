@@ -4,6 +4,7 @@ import { Image, Pressable, Text, TextInput, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Sheet } from '@/components/ui/sheet';
+import { matchesType } from '@/logbook/assets';
 import { chooseDocument, choosePhoto, takePhoto } from '@/logbook/capture';
 import { nowFor, visible } from '@/logbook/fields';
 import type { FieldDef, KitResource, LocalFile, ServerFile, Values } from '@/logbook/types';
@@ -156,7 +157,7 @@ function Answer({ field, value, members, resources = [], offeredFor, files, serv
       return (
         <PersonPicker
           value={typeof value === 'string' ? value : null}
-          members={(offeredFor ? offeredFor(field) : resources.filter((r) => !field.resource_type || r.type === field.resource_type)).map((r) => ({
+          members={(offeredFor ? offeredFor(field) : resources.filter((r) => matchesType(r, field.resource_type))).map((r) => ({
             id: r.id,
             name: `${r.code} · ${r.name}${r.location ? ` (${r.location})` : ''}`,
           }))}

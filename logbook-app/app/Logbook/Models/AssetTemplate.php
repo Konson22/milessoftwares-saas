@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $organization_id
  * @property string $name
  * @property string $type
+ * @property string|null $category_id
  * @property string $kind
  * @property string|null $description
  * @property list<array{name: string, label: string, type: string, unit?: string|null}>|null $fields

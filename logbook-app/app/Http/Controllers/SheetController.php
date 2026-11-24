@@ -13,6 +13,7 @@ use App\Logbook\Models\LogSheet;
 use App\Logbook\Models\LogSheetVersion;
 use App\Logbook\Recording;
 use App\Logbook\References;
+use App\Logbook\ResourceCategories;
 use App\Logbook\SheetAssets;
 use App\Logbook\Sheets;
 use App\Logbook\StarterTemplates;
@@ -67,13 +68,12 @@ class SheetController extends Controller
         $field = SheetAssets::subjectFieldOf($sheet);
         $linked = $sheet->resources()->with('location.parent')->orderBy('code')->get();
         $canManage = Access::managedLogbooks()->whereKey($sheet->logbook_id)->exists();
-        $type = is_string($field['resource_type'] ?? null) && $field['resource_type'] !== '' ? mb_strtolower($field['resource_type']) : null;
+        $type = is_string($field['resource_type'] ?? null) && $field['resource_type'] !== '' ? $field['resource_type'] : null;
 
         return [
             'assetField' => $field === null ? null : ['label' => $field['label'], 'type' => $field['resource_type'] ?? null],
             'assets' => $linked->map(fn (LogResource $r) => ['id' => $r->id, 'label' => $r->label(), 'type' => $r->type, 'status' => $r->status, 'location' => $r->location?->path()])->values(),
-            'assetOptions' => ! $canManage || $field === null ? [] : LogResource::query()->where('status', 'active')->whereNotIn('id', $linked->pluck('id'))
-                ->when($type !== null, fn ($q) => $q->whereRaw('lower(type) = ?', [$type]))->orderBy('code')->get()
+            'assetOptions' => ! $canManage || $field === null ? [] : ResourceCategories::matching(LogResource::query()->where('status', 'active')->whereNotIn('id', $linked->pluck('id')), $type)->orderBy('code')->get()
                 ->map(fn (LogResource $r) => ['value' => $r->id, 'label' => $r->label()])->values(),
         ];
     }
