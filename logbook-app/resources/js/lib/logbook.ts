@@ -41,7 +41,7 @@ export type FieldDef = {
     /** Answers that open an exception (yes/no or single choice). */
     exception_values?: string[];
     exception_severity?: 'low' | 'medium' | 'high' | 'critical';
-    /** Resource fields: only resources of this type. */
+    /** Resource fields: only resources of this type, or of the category with this name. */
     resource_type?: string;
     /** ADR-0031: the field naming the entry's asset, and the assets linked to the sheet. */
     subject?: boolean;
@@ -51,7 +51,10 @@ export type FieldDef = {
 };
 
 /** A resource as pickers show it. */
-export type ResourceOption = Option & { type: string };
+export type ResourceOption = Option & {
+    type: string;
+    category?: string | null;
+};
 
 /** Field types a later field's condition can name. */
 export const CONDITIONAL_TYPES: FieldType[] = [

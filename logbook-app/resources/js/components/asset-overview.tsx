@@ -19,6 +19,7 @@ export type AssetIdentity = {
     code: string;
     name: string;
     type: string;
+    category: string | null;
     kind: 'asset' | 'monitored_location';
     status: 'active' | 'inactive' | 'retired';
     description: string | null;

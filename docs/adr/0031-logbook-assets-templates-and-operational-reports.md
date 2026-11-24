@@ -85,3 +85,13 @@ the links.
 - No PDF of the readings-per-asset table (the CSV and PDF exports cover the asset and compliance tables).
 - No bulk import of assets.
 - The phone was type-checked and unit-tested, not run on a device; an EAS build is needed.
+
+## Addendum (2026-11-23): asset categories
+
+Assets now sit in a **category** (Vehicles, Generators, Power and solar, Cooling and cold chain, Water, IT equipment, Medical equipment, Buildings and rooms, Other equipment) above their **type** (Car, Pickup, Ambulance, Diesel generator…).
+
+- `log_resource_categories` per workspace, started from `App\Logbook\ResourceCategories::DEFAULTS` the first time Logbook needs them. Each category lists suggested types. Managers (`logbook.manage`) add, rename and switch categories off. Categories are never deleted, so assets keep theirs.
+- `log_resources.category_id` and `log_asset_templates.category_id`. If no category is chosen, an asset or template takes the one its type falls in (word match, else Other equipment). Starter templates name a default category key.
+- A resource field's `resource_type` matches the asset's type **or** its category's name, so a field asking for `Vehicles` offers every car, pickup and ambulance. This applies to entry validation, sheet links, schedules, the web form and the phone (phones built before this only match the type).
+- The report category filter takes a category id. Older links that pass a type still work.
+- Migration `2026_11_25_100000_add_resource_categories` is additive and backfills existing workspaces.

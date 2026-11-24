@@ -82,7 +82,7 @@ final class SheetAssets
             return 'This log sheet names no asset. Add a Resource field to its template and choose it as the main asset.';
         }
         $type = $field['resource_type'] ?? null;
-        if (is_string($type) && $type !== '' && mb_strtolower($type) !== mb_strtolower($resource->type)) {
+        if (is_string($type) && ! ResourceCategories::matches($resource, $type)) {
             return "This log sheet records {$type} assets; {$resource->code} is a {$resource->type}.";
         }
 
@@ -136,7 +136,6 @@ final class SheetAssets
             return false;
         }
 
-        return LogResource::query()->whereKey($resourceId)->where('active', true)
-            ->when($type !== null && $type !== '', fn ($q) => $q->whereRaw('lower(type) = ?', [mb_strtolower((string) $type)]))->exists();
+        return ResourceCategories::matching(LogResource::query()->whereKey($resourceId)->where('active', true), $type)->exists();
     }
 }

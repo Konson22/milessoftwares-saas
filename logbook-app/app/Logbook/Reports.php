@@ -9,10 +9,12 @@ use App\Logbook\Models\LogException;
 use App\Logbook\Models\LogResource;
 use App\Logbook\Models\LogSheet;
 use App\Logbook\Models\LogSheetVersion;
+use App\Logbook\Models\ResourceCategory;
 use App\Models\User;
 use App\Models\Workspace;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
@@ -90,7 +92,7 @@ final class Reports
             // ADR-0031: the entry's own asset, or an asset named in any of its resource fields.
             ->when($filters['resource'] ?? null, fn (Builder $q, $id) => self::aboutAssets($q, [(string) $id]))
             ->when($filters['location'] ?? null, fn (Builder $q, $id) => self::aboutAssets($q, self::resourcesAt((string) $id)))
-            ->when($filters['category'] ?? null, fn (Builder $q, $type) => $q->whereIn('resource_id', LogResource::query()->whereRaw('lower(type) = ?', [mb_strtolower((string) $type)])->select('id')))
+            ->when($filters['category'] ?? null, fn (Builder $q, $category) => $q->whereIn('resource_id', ResourceCategories::filter(LogResource::query(), (string) $category)->select('id')))
             ->when($filters['kind'] ?? null, fn (Builder $q, $kind) => $q->whereIn('resource_id', LogResource::query()->where('kind', $kind)->select('id')))
             ->when($filters['flag'] ?? null, fn (Builder $q, $flag) => $q->whereExists(function ($sub) use ($flag) {
                 $sub->selectRaw('1')->from('log_exceptions')
@@ -271,7 +273,7 @@ final class Reports
             'logbook' => fn ($id) => 'Logbook: '.$name(Logbook::class, $id),
             'sheet' => fn ($id) => 'Log sheet: '.$name(LogSheet::class, $id, 'code'),
             'resource' => fn ($id) => 'Asset: '.LogResource::query()->find($id)?->label(),
-            'category' => fn ($v) => 'Category: '.$v,
+            'category' => fn ($v) => 'Category: '.(Str::isUuid((string) $v) ? (ResourceCategory::query()->whereKey($v)->value('name') ?? $v) : $v),
             'kind' => fn ($v) => $v === 'monitored_location' ? 'Monitored locations' : 'Physical assets',
             'location' => fn ($id) => 'Location: '.$name(Location::class, $id),
             'person' => fn ($id) => 'Person: '.$name(User::class, $id).(($filters['relation'] ?? 'any') !== 'any' ? ' ('.$filters['relation'].')' : ''),

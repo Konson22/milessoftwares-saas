@@ -108,12 +108,12 @@ class KitController extends Controller
             'members' => User::query()->whereIn('id', WorkspaceMember::query()->select('user_id'))->orderBy('name')->get(['id', 'name'])
                 ->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name])->values()->all(),
             // For resource fields (ADR-0026 §2.10): active resources only.
-            'resources' => LogResource::query()->where('active', true)->with('location.parent')->orderBy('code')->get()
+            'resources' => LogResource::query()->where('active', true)->with(['location.parent', 'category:id,name'])->orderBy('code')->get()
                 ->map(fn (LogResource $r) => [
                     'fuel' => $rates->get($r->id, collect())->values()->all(),
                     'meters' => (object) ($meters[$r->id] ?? []),
                     'id' => $r->id, 'code' => $r->code, 'name' => $r->name, 'type' => $r->type, 'location' => $r->location?->path(),
-                    'kind' => $r->kind,
+                    'kind' => $r->kind, 'category' => $r->category?->name,
                 ])->values()->all(),
             // ADR-0030: active shifts; logbook null means every logbook. Members only suggest.
             'shifts' => Shift::query()->where('active', true)->with('members:id')->orderBy('starts_time')->get()

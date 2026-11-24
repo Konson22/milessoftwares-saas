@@ -15,12 +15,19 @@ export function subjectOf(kit: Kit | null, sheetId: string): string | null {
   return kit?.sheets.find((s) => s.id === sheetId)?.subject ?? null;
 }
 
+/** A resource field asks for a type, or for a whole category by its name. */
+export function matchesType(r: KitResource, wanted?: string): boolean {
+  if (!wanted) return true;
+  const w = wanted.trim().toLowerCase();
+  return r.type.toLowerCase() === w || (r.category ?? '').toLowerCase() === w;
+}
+
 /** The assets a resource field offers on this sheet. */
 export function offered(kit: Kit | null, sheetId: string, field: FieldDef): KitResource[] {
   const sheet = kit?.sheets.find((s) => s.id === sheetId);
   const linked = field.name === sheet?.subject ? (sheet?.assets ?? []) : [];
   return (kit?.resources ?? []).filter(
-    (r) => (!field.resource_type || r.type.toLowerCase() === field.resource_type.toLowerCase()) && (linked.length === 0 || linked.includes(r.id)),
+    (r) => matchesType(r, field.resource_type) && (linked.length === 0 || linked.includes(r.id)),
   );
 }
 

@@ -25,6 +25,15 @@ const reading = (id: string, resourceId: string | null): Occurrence => ({
 });
 
 describe('assets on the phone (ADR-0031)', () => {
+  it('offers every asset of a category when the field asks for the category by name', () => {
+    const car: KitResource = { ...room('car', 'Car'), category: 'Vehicles' };
+    const pickup: KitResource = { ...room('pickup', 'Pickup'), category: 'Vehicles' };
+    const gen: KitResource = { ...room('gen', 'Diesel generator'), category: 'Generators' };
+    const field: FieldDef = { ...unit, resource_type: 'vehicles' };
+    expect(offered(kit([], [car, pickup, gen]), 's1', field).map((r) => r.id)).toEqual(['car', 'pickup']);
+    expect(offered(kit([], [car, pickup, gen]), 's1', { ...unit, resource_type: 'Car' }).map((r) => r.id)).toEqual(['car']);
+  });
+
   it('offers any asset of the category until the sheet has links, then only the linked ones', () => {
     const all = [room('a'), room('b'), room('p', 'Water pump')];
     expect(offered(kit([], all), 's1', unit).map((r) => r.id)).toEqual(['a', 'b']);

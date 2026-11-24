@@ -3,6 +3,7 @@
 namespace App\Logbook\Models;
 
 use App\Logbook\Models\Concerns\TenantModel;
+use App\Logbook\ResourceCategories;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,7 +18,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property string $organization_id
  * @property string $code
  * @property string $name
- * @property string $type the category (Generator, Vehicle...)
+ * @property string $type the finer kind within its category (Car, Pickup, Diesel generator...)
+ * @property string|null $category_id the broad group (Vehicles, Generators...)
  * @property string $kind asset or monitored_location
  * @property string $status active, inactive or retired
  * @property string|null $description
@@ -29,6 +31,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property array<string, mixed>|null $metadata
  * @property array<string, mixed>|null $template the template as it was at registration
  * @property bool $active true only while status is active
+ * @property-read ResourceCategory|null $category
  * @property-read Location|null $location
  * @property-read User|null $responsible
  */
@@ -54,6 +57,10 @@ class LogResource extends Model
     protected static function booted(): void
     {
         // `active` is what entry forms and older code read: it follows the status.
+        // Every asset sits in a category: the one its type falls in, unless one is chosen.
+        static::creating(function (LogResource $resource) {
+            $resource->category_id ??= ResourceCategories::guess($resource->type)?->id;
+        });
         static::saving(function (LogResource $resource) {
             if ($resource->isDirty('status')) {
                 $resource->active = $resource->status === 'active';
@@ -61,6 +68,12 @@ class LogResource extends Model
                 $resource->status = $resource->active ? 'active' : ($resource->status === 'retired' ? 'retired' : 'inactive');
             }
         });
+    }
+
+    /** @return BelongsTo<ResourceCategory, $this> */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(ResourceCategory::class, 'category_id');
     }
 
     /** @return BelongsTo<Location, $this> */

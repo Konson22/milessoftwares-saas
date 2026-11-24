@@ -220,6 +220,8 @@ Route::prefix(app(PlatformConfig::class)->path())
             Route::post('sheets/{sheet}/resources', [ResourceController::class, 'linkFromSheet'])->whereUuid('sheet')->name('sheets.resources.store');
             Route::delete('sheets/{sheet}/resources/{resource}', [ResourceController::class, 'unlinkFromSheet'])->whereUuid(['sheet', 'resource'])->name('sheets.resources.destroy');
             Route::post('resources/templates', [ResourceController::class, 'storeTemplate'])->name('resources.templates.store');
+            Route::post('resources/categories', [ResourceController::class, 'storeCategory'])->name('resources.categories.store');
+            Route::put('resources/categories/{category}', [ResourceController::class, 'updateCategory'])->whereUuid('category')->name('resources.categories.update');
             Route::put('resources/templates/{template}', [ResourceController::class, 'updateTemplate'])->whereUuid('template')->name('resources.templates.update');
             Route::post('resources', [ResourceController::class, 'store'])->name('resources.store');
             Route::put('resources/{resource}', [ResourceController::class, 'update'])->name('resources.update');

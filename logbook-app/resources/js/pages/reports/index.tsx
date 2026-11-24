@@ -107,7 +107,7 @@ type Props = {
         resources: Option[];
         shifts: Option[];
         locations: Option[];
-        categories: string[];
+        categories: Option[];
     };
     table: TableData | null;
     timeline: { events: TimelineEvent[]; truncated: boolean } | null;
@@ -585,10 +585,7 @@ export default function Reports({
                                     onChange={(category) =>
                                         go({ category: category || undefined })
                                     }
-                                    options={options.categories.map((c) => ({
-                                        value: c,
-                                        label: c,
-                                    }))}
+                                    options={options.categories}
                                     empty="Any category"
                                 />
                                 <SelectField

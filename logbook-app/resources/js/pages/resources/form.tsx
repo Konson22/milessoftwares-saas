@@ -13,6 +13,16 @@ import {
     update,
 } from '@/routes/resources';
 
+export type CategoryOption = {
+    value: string;
+    label: string;
+    active: boolean;
+    /** Types suggested in it (Car, Pickup...). */
+    types: string[];
+    /** The default it started as (vehicles, generators...), null for the workspace's own. */
+    key: string | null;
+};
+
 export type AssetTemplate = {
     key: string;
     id: string | null;
@@ -21,6 +31,8 @@ export type AssetTemplate = {
     active: boolean;
     name: string;
     type: string;
+    /** The workspace category new assets go in. */
+    categoryId: string | null;
     kind: 'asset' | 'monitored_location';
     description: string;
     fields: { name: string; label: string; type: string; unit?: string }[];
@@ -37,6 +49,7 @@ type Props = {
         code: string;
         name: string;
         type: string;
+        categoryId: string | null;
         kind: 'asset' | 'monitored_location';
         status: 'active' | 'inactive' | 'retired';
         description: string | null;
@@ -57,7 +70,9 @@ type Props = {
     chosen: string;
     locations: { value: string; label: string }[];
     members: { value: string; label: string }[];
-    types: string[];
+    categories: CategoryOption[];
+    /** Types already used, by category id. */
+    usedTypes: Record<string, string[]>;
     now: string;
 };
 
@@ -96,7 +111,8 @@ export default function ResourceForm({
     chosen,
     locations,
     members,
-    types,
+    categories,
+    usedTypes,
     now,
 }: Props) {
     const errors = usePage().props.errors as Record<string, string>;
@@ -111,6 +127,7 @@ export default function ResourceForm({
         code: resource?.code ?? '',
         name: resource?.name ?? '',
         type: resource?.type ?? initialTemplate?.type ?? '',
+        category_id: resource?.categoryId ?? initialTemplate?.categoryId ?? '',
         kind: resource?.kind ?? initialTemplate?.kind ?? 'asset',
         status: resource?.status ?? 'active',
         description: resource?.description ?? '',
@@ -141,7 +158,11 @@ export default function ResourceForm({
         const next = templates.find((t) => t.key === key) ?? null;
         setTemplateKey(key);
         if (next) {
-            set({ type: next.type, kind: next.kind });
+            set({
+                type: next.type,
+                kind: next.kind,
+                category_id: next.categoryId ?? data.category_id,
+            });
             setDetails(detailsOf(next));
             if (next.fuel) {
                 setFuel({
@@ -157,6 +178,7 @@ export default function ResourceForm({
         e.preventDefault();
         const payload = {
             ...data,
+            category_id: data.category_id || null,
             location_id: data.location_id || null,
             responsible_id: data.responsible_id || null,
             metadata: details.filter((d) => d.label.trim() !== ''),
@@ -180,11 +202,19 @@ export default function ResourceForm({
     const title = resource
         ? `Change ${resource.code}`
         : 'Register an asset or monitored location';
+    const category = categories.find((c) => c.value === data.category_id);
+    // The category's suggested types and those already used in it.
+    const typeChoices = [
+        ...new Set([
+            ...(category?.types ?? []),
+            ...(usedTypes[data.category_id] ?? []),
+        ]),
+    ];
     const showFuel =
         resource === null &&
         data.kind === 'asset' &&
         (template?.fuel != null ||
-            ['Generator', 'Vehicle'].includes(data.type));
+            ['vehicles', 'generators'].includes(category?.key ?? ''));
 
     return (
         <>
@@ -291,24 +321,47 @@ export default function ResourceForm({
                             placeholder="Main generator"
                             required
                         />
+                        <SelectField
+                            label="Category"
+                            value={data.category_id}
+                            onChange={(category_id) => set({ category_id })}
+                            options={categories
+                                .filter(
+                                    (c) =>
+                                        c.active ||
+                                        c.value === data.category_id,
+                                )
+                                .map((c) => ({
+                                    value: c.value,
+                                    label: c.label,
+                                }))}
+                            empty="From the type"
+                            error={errors.category_id}
+                            hint="The broad group: Vehicles, Generators, Cooling…"
+                        />
                         <div className="grid gap-1.5">
                             <TextField
-                                label="Category"
+                                label="Type"
                                 value={data.type}
                                 onChange={(type) => set({ type })}
                                 error={errors.type}
-                                placeholder="Generator"
-                                hint="Log sheets that ask for this category offer it."
+                                placeholder={category?.types[0] ?? 'Car'}
+                                hint="What it is within its category. Log sheets that ask for this type, or for its category, offer it."
                                 required
                             />
-                            {types.length > 0 && (
+                            {typeChoices.length > 0 && (
                                 <div className="flex flex-wrap gap-1">
-                                    {types.map((t) => (
+                                    {typeChoices.map((t) => (
                                         <button
                                             key={t}
                                             type="button"
                                             onClick={() => set({ type: t })}
-                                            className="rounded border px-1.5 py-0.5 text-xs hover:bg-muted"
+                                            aria-pressed={data.type === t}
+                                            className={`rounded border px-1.5 py-0.5 text-xs hover:bg-muted ${
+                                                data.type === t
+                                                    ? 'border-[#0f766e] bg-[#e6f4f2]'
+                                                    : ''
+                                            }`}
                                         >
                                             {t}
                                         </button>

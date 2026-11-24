@@ -41,7 +41,7 @@ final class AssetReports
     {
         return LogResource::query()
             ->when($filters['resource'] ?? null, fn (Builder $q, $id) => $q->whereKey($id))
-            ->when($filters['category'] ?? null, fn (Builder $q, $type) => $q->whereRaw('lower(type) = ?', [mb_strtolower((string) $type)]))
+            ->when($filters['category'] ?? null, fn (Builder $q, $category) => ResourceCategories::filter($q, (string) $category))
             ->when($filters['kind'] ?? null, fn (Builder $q, $kind) => $q->where('kind', $kind))
             ->when($filters['location'] ?? null, fn (Builder $q, $id) => $q->whereIn('location_id', self::placesIn((string) $id)))
             // Retired assets only when asked for by name: their history stays reachable.
@@ -95,7 +95,7 @@ final class AssetReports
         $tz = Workspace::current()->timezone ?? 'UTC';
 
         return ['truncated' => $truncated, 'rows' => $assets->map(fn (LogResource $r) => [
-            'id' => $r->id, 'label' => $r->label(), 'type' => $r->type, 'kind' => $r->kind, 'status' => $r->status, 'location' => $r->location?->path(),
+            'id' => $r->id, 'label' => $r->label(), 'type' => $r->type, 'category' => $r->category?->name, 'kind' => $r->kind, 'status' => $r->status, 'location' => $r->location?->path(),
             'records' => $stats[$r->id]['records'],
             'lastAt' => $stats[$r->id]['last']?->setTimezone($tz)->format('Y-m-d H:i'),
             'outOfRange' => $stats[$r->id]['outOfRange'],
