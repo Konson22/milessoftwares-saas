@@ -30,7 +30,7 @@ export function RequestHistory({ requests }: { requests: PlanRequestRow[] }) {
         <Panel>
             <PanelHeader
                 title="Your requests"
-                description="Miles Softwares reviews each request, usually within one working day."
+                description="Miles Global Softwares reviews each request, usually within one working day."
             />
             <ul className="divide-y text-sm">
                 {requests.map((request) => (

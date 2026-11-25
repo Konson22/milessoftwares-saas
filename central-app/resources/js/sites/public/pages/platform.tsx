@@ -11,17 +11,17 @@ import {
     cloudSteps,
     platformGroups,
 } from '@/sites/public/components/content';
-import { Accent, DarkHero } from '@/sites/public/components/page-hero';
+import { Accent } from '@/sites/public/components/page-hero';
 import SectionHeading from '@/sites/public/components/section-heading';
 import Seo from '@/sites/public/components/seo';
-import { button, display } from '@/sites/public/components/styles';
+import { button, container, display } from '@/sites/public/components/styles';
 
 type Props = {
     canonical: string;
 };
 
 /**
- * Miles Workspace: what every Miles Softwares product shares (sign-in, the
+ * Miles Workspace: what every Miles Global Softwares product shares (sign-in, the
  * organization, application access, subscriptions, roles), then its security.
  */
 export default function Platform({ canonical }: Props) {
@@ -29,28 +29,53 @@ export default function Platform({ canonical }: Props) {
         <>
             <Seo
                 title="Miles Workspace: one place for every app"
-                description="One Miles Softwares account for every application: subscribe only to the apps you need, with roles per branch and an audit log across your organization."
+                description="One Miles Global Softwares account for every application: subscribe only to the apps you need, with roles per branch and an audit log across your organization."
                 canonical={canonical}
             />
 
-            <DarkHero
-                title={
-                    <>
-                        Your business applications.{' '}
-                        <Accent>One connected workspace.</Accent>
-                    </>
-                }
-                intro="One account, one team and one set of permissions for every Miles Softwares application you use."
-                aside={<WorkspacePicture />}
-            >
-                <Link href="/start" className={button.light}>
-                    Get Started
-                    <ArrowRight className="size-4" aria-hidden />
-                </Link>
-                <Link href="/pricing" className={button.outlineDark}>
-                    See plans and pricing
-                </Link>
-            </DarkHero>
+            {/*
+              The navy hero: the copy and actions on the left; the
+              workspace picture on the right from `lg`.
+            */}
+            <section className="site-dark relative isolate overflow-hidden bg-site-navy text-slate-200">
+                <div
+                    aria-hidden
+                    className="pointer-events-none absolute -top-24 -right-24 -z-10 hidden size-[28rem] rounded-full border-[28px] border-site-navy-light lg:block"
+                />
+                <div
+                    className={`${container} grid items-center gap-12 pt-28 pb-16 sm:pt-32 lg:grid-cols-[1.05fr_1fr] lg:pb-20`}
+                >
+                    <div className="site-rise min-w-0">
+                        <h1
+                            className={`max-w-2xl text-[2rem] leading-[1.1] sm:text-[2.75rem] xl:text-[3.25rem] ${display}`}
+                        >
+                            Your business applications.{' '}
+                            <span className="text-site-highlight">
+                                One connected workspace.
+                            </span>
+                        </h1>
+                        <p className="mt-5 max-w-xl text-base leading-relaxed text-pretty text-slate-200 sm:text-lg">
+                            One account, one team and one set of permissions for
+                            every Miles Global Softwares application you use.
+                        </p>
+                        <div className="mt-8 flex flex-wrap items-center gap-3">
+                            <Link href="/start" className={button.light}>
+                                Get Started
+                                <ArrowRight className="size-4" aria-hidden />
+                            </Link>
+                            <Link
+                                href="/pricing"
+                                className={button.outlineDark}
+                            >
+                                See plans and pricing
+                            </Link>
+                        </div>
+                    </div>
+                    <div className="hidden lg:block">
+                        <WorkspacePicture />
+                    </div>
+                </div>
+            </section>
 
             <section
                 id="how-it-works"
@@ -61,7 +86,7 @@ export default function Platform({ canonical }: Props) {
                     <SectionHeading
                         id="how-it-works-heading"
                         title="Everything your applications share, set up once"
-                        lead="Each Miles Softwares product does its own job. Your workspace holds what they have in common, so adding an application never means a new account, a new staff list or a new set of books."
+                        lead="Each Miles Global Softwares product does its own job. Your workspace holds what they have in common, so adding an application never means a new account, a new staff list or a new set of books."
                         align="left"
                     />
                     <div className="mt-12">
@@ -186,7 +211,7 @@ const roles = ['Owner', 'Cashier · Main branch', 'Accountant'];
 function WorkspacePicture() {
     return (
         <div aria-hidden className="relative mx-auto max-w-md py-8">
-            <div className="relative rotate-[-2deg] rounded-xl bg-white shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] ring-1 ring-site-navy-line">
+            <div className="relative rotate-[-2deg] rounded-xl bg-white shadow-2xl ring-1 ring-site-navy-line">
                 <div className="flex items-center gap-3 rounded-t-xl bg-site-accent-deep px-6 py-4">
                     <span className="aspect-square w-4 bg-site-highlight [clip-path:polygon(0_0,100%_0,58%_50%,58%_100%,26%_100%,26%_50%,0_50%)]" />
                     <span className="font-semibold text-white">

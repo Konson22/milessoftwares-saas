@@ -99,7 +99,7 @@ export default function Products({ catalog, trialDays, canonical }: Props) {
                 jsonLd={{
                     '@context': 'https://schema.org',
                     '@type': 'ItemList',
-                    name: 'Miles Softwares products',
+                    name: 'Miles Global Softwares products',
                     itemListElement: categories
                         .flatMap(byCategory)
                         .map((entry, i) => ({
@@ -247,7 +247,7 @@ export default function Products({ catalog, trialDays, canonical }: Props) {
                         Run your business. <Accent>All connected.</Accent>
                     </>
                 }
-                body={`Every Miles Softwares product shares one sign-in, one organization and one set of books. Start a ${trialDays}-day free trial of the one you need first.`}
+                body={`Every Miles Global Softwares product shares one sign-in, one organization and one set of books. Start a ${trialDays}-day free trial of the one you need first.`}
             >
                 <Link href="/start" className={button.light}>
                     Start Your {trialDays}-Day Free Trial

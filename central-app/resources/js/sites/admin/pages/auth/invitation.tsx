@@ -98,7 +98,7 @@ function Account({
                     <p className="text-sm text-muted-foreground">
                         Step 1 of 2:{' '}
                         {hasAccount
-                            ? 'you already have a Miles Softwares account with this email. Choose a new password for it; you will use it to sign in everywhere.'
+                            ? 'you already have a Miles Global Softwares account with this email. Choose a new password for it; you will use it to sign in everywhere.'
                             : 'choose your name and a password.'}
                     </p>
                     <div className="grid gap-2">
@@ -267,5 +267,5 @@ function CodeForm({ token }: { token: string }) {
 
 StaffInvitation.layout = {
     title: 'Set up your admin access',
-    description: 'Miles Softwares staff',
+    description: 'Miles Global Softwares staff',
 };

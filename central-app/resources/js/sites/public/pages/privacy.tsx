@@ -21,11 +21,12 @@ const sections: LegalSection[] = [
         body: (
             <>
                 <p>
-                    Miles Softwares is a product of Miles Global Link Co. Ltd
-                    ("Miles Global Link", "we", "us"). This policy explains what
-                    personal information we collect through milesoftwares.com, our
-                    applications and our desktop and mobile apps, why we collect
-                    it and what you can ask us to do with it.
+                    Miles Global Softwares is a product of Miles Global Link Co.
+                    Ltd ("Miles Global Link", "we", "us"). This policy explains
+                    what personal information we collect through
+                    milesoftwares.com, our applications and our desktop and
+                    mobile apps, why we collect it and what you can ask us to do
+                    with it.
                 </p>
                 <p>
                     For anything in this policy, write to {email} or message us
@@ -71,8 +72,8 @@ const sections: LegalSection[] = [
                     <li>
                         <strong>Business data you enter:</strong> sales, stock,
                         customers, staff, accounts and anything else you record
-                        in a Miles Softwares application. This belongs to your
-                        organization; we process it on your behalf.
+                        in a Miles Global Softwares application. This belongs to
+                        your organization; we process it on your behalf.
                     </li>
                 </ul>
             </>
@@ -163,8 +164,8 @@ const sections: LegalSection[] = [
             <>
                 <p>
                     We do not sell personal information. We share it only with
-                    the service providers that help us run Miles Softwares, and
-                    only what each one needs:
+                    the service providers that help us run Miles Global
+                    Softwares, and only what each one needs:
                 </p>
                 <ul>
                     <li>
@@ -253,7 +254,7 @@ const sections: LegalSection[] = [
         title: 'Children',
         body: (
             <p>
-                Miles Softwares is business software. It is not meant for
+                Miles Global Softwares is business software. It is not meant for
                 children, and we do not knowingly collect information from
                 anyone under 16.
             </p>
@@ -266,8 +267,8 @@ const sections: LegalSection[] = [
             <p>
                 When we change this policy we update the date at the top of this
                 page, and for important changes we email account owners before
-                they take effect. Using Miles Softwares is also covered by our{' '}
-                <Link href="/terms">terms of service</Link>.
+                they take effect. Using Miles Global Softwares is also covered
+                by our <Link href="/terms">terms of service</Link>.
             </p>
         ),
     },
@@ -279,7 +280,7 @@ export default function Privacy({ canonical }: Props) {
         <>
             <Seo
                 title="Privacy policy"
-                description="How Miles Softwares collects, uses and protects personal information on milesoftwares.com and in Miles Softwares applications."
+                description="How Miles Global Softwares collects, uses and protects personal information on milesoftwares.com and in Miles Global Softwares applications."
                 canonical={canonical}
             />
 

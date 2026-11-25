@@ -4,46 +4,79 @@ import { getStarted, trial } from '@/routes';
  * Buttons shared by links across the public site. Links, not <Button>,
  * because most of them navigate (some to another host).
  *
- * Clean and light, in the logo's colours: white surfaces, charcoal type,
- * the logo cyan for shapes, and that cyan darkened for the main action
- * so the label stays readable. Squarer corners than pills, so they line
- * up with the rest of the layout.
+ * One height (44px, a full touch target), one radius and one weight for
+ * every variant; only the colours change. Green is the main action on
+ * white, lime (with dark text) the main action on the dark green hero and
+ * bands, and white with a hairline the secondary one. Focus rings come
+ * from the site-wide :focus-visible rule in app.css. `aria-disabled` dims
+ * a link that cannot be followed yet, without moving the layout.
  */
 const base =
-    'inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold transition-[color,background-color,border-color,box-shadow] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2';
+    'inline-flex h-11 items-center justify-center gap-2 rounded-lg px-5 text-sm font-semibold whitespace-nowrap transition-colors duration-150 aria-disabled:pointer-events-none aria-disabled:bg-slate-200 aria-disabled:text-slate-500 disabled:pointer-events-none disabled:bg-slate-200 disabled:text-slate-500';
 
 export const button = {
-    /** Main action: the logo cyan, darkened so white text clears 4.5:1. */
-    primary: `${base} bg-site-accent-ink text-white shadow-sm shadow-site-accent-ink/25 hover:bg-site-accent-deep focus-visible:outline-site-highlight`,
+    /** Main action on white: dark blue, white text (6.9:1). */
+    primary: `${base} bg-site-accent text-white shadow-sm hover:bg-site-accent-hover`,
+    /** Emphasised alternative on white (Request a demo). */
+    green: `${base} bg-site-green text-white shadow-sm hover:bg-site-green-hover`,
     /** Strong secondary action on light. */
-    dark: `${base} bg-site-navy text-white hover:bg-site-night focus-visible:outline-site-navy`,
-    /** Main action on a dark band. */
-    light: `${base} bg-site-accent-ink text-white hover:bg-site-accent-deep focus-visible:outline-white`,
-    /** Secondary action on a dark or gradient band. */
-    outlineDark: `${base} border border-slate-400 text-white hover:border-white hover:bg-site-navy-light focus-visible:outline-white`,
-    /** Secondary action on white or lavender. */
-    outline: `${base} border border-site-line bg-white text-site-ink hover:border-site-accent hover:text-site-accent-ink focus-visible:outline-site-highlight`,
+    dark: `${base} bg-site-navy text-white hover:bg-site-night`,
+    /** Main action on the navy hero or a band: bright blue, white text (5:1). */
+    light: `${base} bg-site-lime text-white hover:bg-site-lime-hover`,
+    /** Secondary action on navy: a white outline. */
+    outlineDark: `${base} border border-white text-white hover:bg-site-navy-light`,
+    /** Secondary action on white or silver: a blue outline. */
+    outline: `${base} border border-site-accent bg-white text-site-accent hover:bg-site-tint`,
 };
 
 export const textLink =
-    'font-semibold text-site-accent-ink underline-offset-4 hover:underline in-[.site-dark]:text-white';
+    'font-semibold text-site-accent underline-offset-4 hover:text-site-accent-hover hover:underline in-[.site-dark]:text-white';
 
-/** Heading type; size is set where it is used. */
+/** Heading type; size is set where it is used (see `type`). */
 export const display =
     'font-semibold tracking-tight text-balance text-site-ink in-[.site-dark]:text-white';
 
 /**
- * Interactive surface (product/plan cards, FAQ rows that open): a flat
- * hairline box whose border and shadow come up on hover.
+ * The type scale. Hero and section headings grow with the screen but stay
+ * modest on phones; body copy is 16–18px with a relaxed line height.
+ */
+export const type = {
+    hero: 'text-[2rem] leading-[1.1] sm:text-[2.5rem] lg:text-[3.25rem]',
+    section: 'text-[1.625rem] leading-tight sm:text-3xl lg:text-[2.25rem]',
+    subheading: 'text-lg leading-snug sm:text-xl',
+    lead: 'text-base leading-relaxed text-pretty text-site-muted sm:text-lg in-[.site-dark]:text-slate-300',
+    body: 'text-base leading-relaxed text-site-body',
+    caption: 'text-sm leading-normal text-site-muted',
+};
+
+/**
+ * Interactive surface (product/plan cards, FAQ rows that open): a hairline
+ * box with a faint shadow whose border turns blue on hover.
  */
 export const card =
-    'rounded-lg border border-site-line bg-white transition-[border-color,box-shadow] duration-200 hover:border-site-accent hover:shadow-lg hover:shadow-site-night/5';
+    'rounded-xl border border-site-line bg-white shadow-xs transition-[border-color,box-shadow] duration-200 hover:border-site-accent hover:shadow-md';
+
+/**
+ * The compact product card: a navy surface with a blue icon, a white name,
+ * a silver gray line and a light blue link. It lifts and takes a blue edge
+ * on hover or keyboard focus. Carries `site-dark`, so status pills and the
+ * focus ring inside switch to their forms for dark backgrounds.
+ */
+export const darkCard =
+    'site-dark group flex h-full flex-col rounded-xl bg-site-navy p-6 shadow-[0_1px_2px_rgb(8_15_31/0.12),0_12px_28px_-14px_rgb(8_15_31/0.5)] ring-1 ring-site-navy-line transition-[box-shadow,transform,--tw-ring-color] duration-200 hover:-translate-y-0.5 hover:ring-site-leaf focus-visible:ring-site-leaf';
+
+/** The blue icon square on a navy card. */
+export const darkIcon =
+    'inline-flex size-12 shrink-0 items-center justify-center rounded-xl bg-site-navy-light text-site-leaf ring-1 ring-site-navy-line transition-colors group-hover:bg-site-accent group-hover:text-white';
 
 /** Static surface (feature tiles, steps): same chrome, no hover. */
-export const panel = 'rounded-lg border border-site-line bg-white';
+export const panel = 'rounded-xl border border-site-line bg-white shadow-xs';
 
 /** The page width and gutter every section uses. */
 export const container = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
+
+/** Vertical rhythm of a page section. */
+export const section = 'py-16 sm:py-20 lg:py-24';
 
 /**
  * A row of cards that swipes sideways on small screens (the next card
@@ -57,22 +90,27 @@ export const rail =
 export const railItem =
     'w-[82%] max-w-sm shrink-0 snap-start sm:w-[calc(50%-0.75rem)] sm:max-w-none lg:w-auto';
 
-/** Solid blue square behind a white icon. */
+/** Pale blue square behind a blue icon. */
 export const iconChip =
-    'bg-site-accent-ink inline-flex shrink-0 items-center justify-center rounded-xl text-white';
+    'bg-site-tint text-site-accent inline-flex shrink-0 items-center justify-center rounded-lg in-[.site-dark]:bg-site-navy-light in-[.site-dark]:text-white';
 
-/** A solid charcoal band: headings, labels and links inside switch to their light forms. */
+/** A solid navy band: headings, labels and links inside switch to their light forms. */
 export const darkBand =
     'site-dark relative isolate overflow-hidden bg-site-navy text-slate-300';
 
 /**
- * Colour pairs for icon boxes, taken in turn by a row of features: the
- * logo cyan on a pale wash. The icon keeps 3:1 on it.
+ * Colour pairs for icon boxes, taken in turn by a row of features: dark
+ * blue on pale blue, then electric blue on the same, so a row is not all
+ * one shade. Icons keep 3:1 on their box.
  */
 export const tints = [
-    'bg-site-tint text-site-accent-ink in-[.site-dark]:bg-site-navy-light in-[.site-dark]:text-white',
-    'bg-site-wash text-site-accent-ink',
+    'bg-site-tint text-site-accent in-[.site-dark]:bg-site-navy-light in-[.site-dark]:text-white',
+    'bg-site-leaf-tint text-site-green in-[.site-dark]:bg-site-navy-light in-[.site-dark]:text-white',
 ] as const;
+
+/** A small status label (Early access, Coming soon). */
+export const badge =
+    'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold';
 
 /** "2-month" for 60 days, "14-day" otherwise. */
 export function trialLength(days: number): string {
@@ -102,7 +140,7 @@ export function trialUrl(code?: string, product?: string | null): string {
 
 /**
  * A plan's own call to action: its free trial, or asking for it (paid plans
- * are switched on by Miles Softwares once paid). Both keep the plan through signing
+ * are switched on by Miles Global Softwares once paid). Both keep the plan through signing
  * up and choosing the organization.
  */
 export function planUrl(code: string, action: 'trial' | 'subscribe'): string {

@@ -130,5 +130,5 @@ export default function Login({
 
 Login.layout = {
     title: 'Welcome back',
-    description: 'Sign in with your Miles Softwares account',
+    description: 'Sign in with your Miles Global Softwares account',
 };

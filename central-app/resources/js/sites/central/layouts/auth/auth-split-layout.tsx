@@ -15,10 +15,10 @@ function BrandLink({
     return (
         <Link
             href={home()}
-            aria-label="Miles Softwares home"
+            aria-label="Miles Global Softwares home"
             className={`flex items-center ${className ?? ''}`}
         >
-            <AppLogo inverted={inverted} className="h-11 w-auto sm:h-12" />
+            <AppLogo inverted={inverted} className="h-16 w-auto sm:h-20" />
         </Link>
     );
 }
@@ -45,13 +45,13 @@ export default function AuthSplitLayout({
                     </h2>
                     <p className="text-base text-pretty text-slate-300 xl:text-lg">
                         Pharmacy, retail, finance and HR, connected under one
-                        Miles Softwares account.
+                        Miles Global Softwares account.
                     </p>
                 </div>
 
                 <p className="relative z-10 text-sm text-slate-500">
-                    Miles Softwares is a product of Miles Global Link Co. Ltd ·
-                    © {year}
+                    Miles Global Softwares is a product of Miles Global Link Co.
+                    Ltd · © {year}
                 </p>
             </aside>
 

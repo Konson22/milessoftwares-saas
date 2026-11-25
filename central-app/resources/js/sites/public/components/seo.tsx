@@ -6,7 +6,7 @@ import {
     whatsappNumber,
 } from '@/sites/public/components/social';
 
-export const siteName = 'Miles Softwares';
+export const siteName = 'Miles Global Softwares';
 
 type Props = {
     title: string;
@@ -20,11 +20,11 @@ type Props = {
     noindex?: boolean;
 };
 
-/** The company that makes Miles Softwares. */
+/** The company that makes Miles Global Softwares. */
 export const companyName = 'Miles Global Link Co. Ltd';
 
 /**
- * Miles Softwares for structured data on any page: the brand, with Miles Global
+ * Miles Global Softwares for structured data on any page: the brand, with Miles Global
  * Link as the company behind it.
  */
 export function organization(origin: string): Record<string, unknown> {
@@ -34,18 +34,18 @@ export function organization(origin: string): Record<string, unknown> {
         '@type': 'Organization',
         '@id': `${origin}/#organization`,
         name: siteName,
-        // "Miles Softwares" alone reads as a misspelling of "tattoo" to search
+        // "Miles Global Softwares" alone reads as a misspelling of "tattoo" to search
         // engines; the alternate names tie it to business software.
         alternateName: ['Miles ERP', 'Miles Business Software'],
         legalName: companyName,
         url: `${origin}/`,
         logo: {
             '@type': 'ImageObject',
-            url: `${origin}/images/logo-icon.png?v=20261120`,
+            url: `${origin}/images/logo-icon.png?v=20261126c`,
         },
-        image: `${origin}/images/logo-with-text.png?v=20261120`,
+        image: `${origin}/images/logo-with-text.png?v=20261126c`,
         description:
-            'Miles Softwares is ERP and business software for pharmacies, shops, restaurants, schools and petrol stations, with accounting, HR and payroll, made by Miles Global Link Co. Ltd.',
+            'Miles Global Softwares is ERP and business software for pharmacies, shops, restaurants, schools and petrol stations, with accounting, HR and payroll, made by Miles Global Link Co. Ltd.',
         slogan: 'Bring it all together',
         email: supportEmail,
         telephone,
@@ -80,7 +80,7 @@ export function postalAddress(): Record<string, unknown> {
 }
 
 /**
- * Miles Softwares as software (the platform as a whole; each product page describes
+ * Miles Global Softwares as software (the platform as a whole; each product page describes
  * its own application).
  */
 export function softwareApplication(origin: string): Record<string, unknown> {
@@ -110,7 +110,7 @@ export function softwareApplication(origin: string): Record<string, unknown> {
     };
 }
 
-/** The browser and social title: "Page - Miles Softwares", or as given when it leads with the brand. */
+/** The browser and social title: "Page - Miles Global Softwares", or as given when it leads with the brand. */
 export function fullTitle(title: string): string {
     return title.startsWith(`${siteName} |`) ? title : `${title} - ${siteName}`;
 }

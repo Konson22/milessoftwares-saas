@@ -21,7 +21,7 @@ The code works only on that {{ $restaurant ? 'phone, for that restaurant' : 'PC,
 Questions? Email [{{ $supportEmail }}](mailto:{{ $supportEmail }}).
 
 Regards,<br>
-The Miles Softwares team
+The Miles Global Softwares team
 
 <x-slot:subcopy>
 You received this email because this address was entered on the activation page of {{ $website }} with a {{ $app }} licence key.

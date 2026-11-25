@@ -2,7 +2,7 @@ import { Plus } from 'lucide-react';
 
 export type Question = { question: string; answer: string };
 
-/** What people ask before choosing Miles Softwares, on the home page. */
+/** What people ask before choosing Miles Global Softwares, on the home page. */
 export function faq(trialDays: number): Question[] {
     return [
         {

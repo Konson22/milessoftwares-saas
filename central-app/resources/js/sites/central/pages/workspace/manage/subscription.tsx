@@ -63,7 +63,7 @@ type Props = {
 const sourceLabel: Record<string, string> = {
     subscription: 'Included in your plan',
     trial: 'Free trial',
-    manual: 'Granted by Miles Softwares',
+    manual: 'Granted by Miles Global Softwares',
 };
 
 export default function OrganizationSubscription({
@@ -81,7 +81,7 @@ export default function OrganizationSubscription({
 
             <PageHeader
                 title="Subscription"
-                description="Your plans and the applications they include. Changes are confirmed by Miles Softwares."
+                description="Your plans and the applications they include. Changes are confirmed by Miles Global Softwares."
                 actions={
                     <Button asChild>
                         <Link href={workspaceRoutes.plans}>

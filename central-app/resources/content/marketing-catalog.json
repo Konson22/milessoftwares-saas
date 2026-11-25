@@ -1,5 +1,5 @@
 {
-    "$comment": "Public-site wording for every Miles Softwares product. What is sold, its release status and whether it can be trialed come from the application registry and database/erp-products.json (registry.type + registry.code); an entry without a registry record is shown as coming soon. Features of a product that is not released describe what it is being built to do. offering says how each product runs today: platforms (web, desktop, android, ios), connectivity (online, offline_sync, offline), licensing (subscription, one_time, quotation), and what its desktop and mobile apps do; list only what is built. highlights are the short points on the home page.",
+    "$comment": "Public-site wording for every Miles Global Softwares product. What is sold, its release status and whether it can be trialed come from the application registry and database/erp-products.json (registry.type + registry.code); an entry without a registry record is shown as coming soon. Features of a product that is not released describe what it is being built to do. offering says how each product runs today: platforms (web, desktop, android, ios), connectivity (online, offline_sync, offline), licensing (subscription, one_time, quotation), and what its desktop and mobile apps do; list only what is built. highlights are the short points on the home page.",
     "products": [
         {
             "slug": "pharmacy",
@@ -44,7 +44,7 @@
             "headline": "Every medicine accounted for, from delivery to dispensing.",
             "subhead": "Batch and expiry tracking, a fast counter, prescriptions and a controlled-drugs register. Add Finance & Accounting and sales, stock and cash post to your books on their own.",
             "audience": "Retail pharmacies, medical stores and pharmaceutical wholesalers, from one branch to many.",
-            "seoTitle": "Pharmacy ERP with batch & expiry tracking",
+            "seoTitle": "Pharmacy ERP: batches and expiry",
             "seoDescription": "Pharmacy software with batch and expiry tracking, expiry-first selling, prescriptions, a controlled-drugs register and tills, with optional accounting.",
             "features": [
                 {
@@ -145,7 +145,7 @@
             "headline": "From the shop counter to the wholesale invoice.",
             "subhead": "A barcode till for walk-in customers, credit accounts and wholesale documents for trade customers, and stock that never disagrees with the till. Add Finance & Accounting for the books.",
             "audience": "Shops, supermarkets, hardware and electronics stores, wholesalers and trading companies.",
-            "seoTitle": "Retail ERP: POS, wholesale and stock",
+            "seoTitle": "Retail ERP: POS, wholesale, stock",
             "seoDescription": "Retail and wholesale software with barcode checkout, credit customers, price lists, quotations to invoices, stock and reports, with optional accounting.",
             "features": [
                 {
@@ -214,7 +214,7 @@
             "headline": "From the table to the kitchen to the bill.",
             "subhead": "Table orders, a kitchen screen, bills and tills, and drinks stock for restaurants, cafés and bars, on the web and on the floor staff's phones. Add Finance & Accounting for the books.",
             "audience": "Restaurants, cafés, bars and hotel kitchens.",
-            "seoTitle": "Restaurant ERP: tables, kitchen and bills",
+            "seoTitle": "Restaurant ERP: tables and kitchen",
             "seoDescription": "Restaurant software for table orders, kitchen tickets, billing and payments, menu and drinks stock, with optional Finance & Accounting.",
             "highlights": [
                 "Restaurant orders",
@@ -308,7 +308,7 @@
             "headline": "Run the school, from admissions to fees.",
             "subhead": "School ERP for primary schools, institutes, colleges and universities, each run its own way, with optional Finance & Accounting for the books.",
             "audience": "Primary schools, technical and vocational institutes, colleges and universities.",
-            "seoTitle": "School ERP: admissions, attendance, fees",
+            "seoTitle": "School ERP: admissions and fees",
             "seoDescription": "School management software: admissions, classes, attendance, examinations and student fees, with optional Finance & Accounting.",
             "features": [
                 {
@@ -382,7 +382,7 @@
             },
             "summary": "Projects, grants, finance, procurement and verified results for NGOs, in one package with one sign-in.",
             "overview": [
-                "NGO Suite brings together the Miles Softwares applications an NGO runs on: Projects for programmes, partners and donors; Finance & Accounting for the books; Procurement for purchasing; and Monitoring & Evaluation, with field data collection, for results. One subscription switches them all on for your organization, and your team signs in once.",
+                "NGO Suite brings together the Miles Global Softwares applications an NGO runs on: Projects for programmes, partners and donors; Finance & Accounting for the books; Procurement for purchasing; and Monitoring & Evaluation, with field data collection, for results. One subscription switches them all on for your organization, and your team signs in once.",
                 "Projects can be your own or run for a donor. Donors and implementing partners work on the same project from their own organizations, each seeing only what is shared with them. Grant agreements record what is approved, and disbursement requests move through approval between the parties.",
                 "Each application keeps its own records and rules. Payments and expenditure are recorded in Finance, purchases go through Procurement's approvals, and results count only once they are verified in Monitoring & Evaluation.",
                 "Applications you already subscribe to stay as they are: the suite adds what is missing and never removes what you have."
@@ -390,7 +390,7 @@
             "headline": "Run your programmes, grants and results in one place.",
             "subhead": "Projects with partners and donors, grant agreements, Finance & Accounting, Procurement and Monitoring & Evaluation, switched on together with one subscription.",
             "audience": "NGOs, implementing partners, community organizations and donor-funded institutions.",
-            "seoTitle": "NGO software: grants, finance and M&E",
+            "seoTitle": "NGO software: grants and M&E",
             "seoDescription": "NGO software with projects, grant agreements, disbursement requests, fund accounting, procurement and M&E with field data collection, in one package.",
             "features": [
                 {
@@ -532,7 +532,7 @@
                 "code": "finance"
             },
             "connections": {
-                "intro": "Finance & Accounting connects to the other Miles Softwares apps in your workspace, with nothing to export or import.",
+                "intro": "Finance & Accounting connects to the other Miles Global Softwares apps in your workspace, with nothing to export or import.",
                 "links": [
                     {
                         "slug": "pharmacy",
@@ -724,7 +724,7 @@
             "headline": "Every litre, from the tank to the receipt.",
             "subhead": "Pumps and nozzles, attendant shifts, meter readings and fuel sales, with credit, deliveries and a cash count at closing. Add Finance & Accounting and sales, deliveries and shortages post to your books.",
             "audience": "Petrol stations, from one station to several.",
-            "seoTitle": "Petrol station software: tanks and shifts",
+            "seoTitle": "Fuel station ERP: tanks and shifts",
             "seoDescription": "Petrol station software for tanks, pumps, shifts, meter readings, fuel sales, credit and deliveries, with optional Finance & Accounting.",
             "features": [
                 {
@@ -793,7 +793,7 @@
                 "code": "projects"
             },
             "connections": {
-                "intro": "Project Management works with the other Miles Softwares apps in your workspace, with nothing to export or import.",
+                "intro": "Project Management works with the other Miles Global Softwares apps in your workspace, with nothing to export or import.",
                 "links": [
                     {
                         "slug": "monitoring-evaluation",
@@ -852,7 +852,7 @@
             "faqs": [
                 {
                     "question": "Can I use Project Management today?",
-                    "answer": "Yes. It is in early access: start a free trial in your Miles Softwares workspace, or ask us for a demo."
+                    "answer": "Yes. It is in early access: start a free trial in your Miles Global Softwares workspace, or ask us for a demo."
                 },
                 {
                     "question": "Do I need Monitoring & Evaluation too?",
@@ -870,7 +870,7 @@
                 "code": "projects"
             },
             "connections": {
-                "intro": "Monitoring & Evaluation works with the other Miles Softwares apps in your workspace, with nothing to export or import.",
+                "intro": "Monitoring & Evaluation works with the other Miles Global Softwares apps in your workspace, with nothing to export or import.",
                 "links": [
                     {
                         "slug": "projects",
@@ -929,7 +929,7 @@
             "faqs": [
                 {
                     "question": "Can I use Monitoring & Evaluation today?",
-                    "answer": "Yes. It is in early access: start a free trial in your Miles Softwares workspace, or ask us for a demo."
+                    "answer": "Yes. It is in early access: start a free trial in your Miles Global Softwares workspace, or ask us for a demo."
                 },
                 {
                     "question": "Does it work with Project Management?",
@@ -960,7 +960,7 @@
             "headline": "Your people, on record and in order.",
             "subhead": "Staff profiles, employment history, contracts and documents with expiry reminders. Add Payroll and the people you hire and let go are kept in step there. Leave and attendance are being built.",
             "audience": "Any organization with staff to keep records for.",
-            "seoTitle": "HR software: staff records and contracts",
+            "seoTitle": "HR software: staff and contracts",
             "seoDescription": "HR software for staff profiles, employment history, contracts and documents with expiry reminders, kept in step with Payroll.",
             "features": [
                 {

@@ -33,7 +33,7 @@ export default function ProductPage({
     const summary =
         product.tagline ??
         product.description ??
-        `${product.name} by Miles Softwares.`;
+        `${product.name} by Miles Global Softwares.`;
     const trialable = product.status !== 'planned';
 
     return (

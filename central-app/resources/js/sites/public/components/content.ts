@@ -29,7 +29,7 @@ import type { LucideIcon } from 'lucide-react';
 
 export type Feature = { icon: LucideIcon; title: string; body: string };
 
-/** Why Miles Softwares, on the home page. */
+/** Why Miles Global Softwares, on the home page. */
 export const whyMiles: (Feature & { points: string[] })[] = [
     {
         icon: Store,
@@ -52,7 +52,7 @@ export const whyMiles: (Feature & { points: string[] })[] = [
     {
         icon: KeyRound,
         title: 'One connected workspace',
-        body: 'One sign-in, one organization and one set of books across every Miles Softwares application you use.',
+        body: 'One sign-in, one organization and one set of books across every Miles Global Softwares application you use.',
         points: [
             'Shared team and permissions',
             'Add the next application as you grow',
@@ -138,7 +138,7 @@ export const cloudPillars: Feature[] = [
     {
         icon: KeyRound,
         title: 'One account',
-        body: 'One sign-in for every Miles Softwares application you use, with Google, passkeys and two-step verification.',
+        body: 'One sign-in for every Miles Global Softwares application you use, with Google, passkeys and two-step verification.',
     },
     {
         icon: Building2,
@@ -182,7 +182,7 @@ export const cloudSteps: { title: string; body: string }[] = [
     },
 ];
 
-/** The platform page: what every Miles Softwares product stands on. */
+/** The platform page: what every Miles Global Softwares product stands on. */
 export const platformGroups: {
     id: string;
     title: string;
@@ -219,7 +219,7 @@ export const platformGroups: {
             {
                 icon: KeyRound,
                 title: 'Single sign-on',
-                body: 'One account across every Miles Softwares application.',
+                body: 'One account across every Miles Global Softwares application.',
             },
             {
                 icon: Fingerprint,

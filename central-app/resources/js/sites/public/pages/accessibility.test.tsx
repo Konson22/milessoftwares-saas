@@ -129,7 +129,7 @@ const entry = {
     subhead: 'Expiry-first selling and books that keep themselves.',
     audience: 'Pharmacies and wholesalers',
     seoTitle: 'Pharmacy ERP',
-    seoDescription: 'Pharmacy ERP by Miles Softwares.',
+    seoDescription: 'Pharmacy ERP by Miles Global Softwares.',
     features: [{ icon: 'pill', title: 'Expiry first', body: 'Sells oldest.' }],
     workflow: [{ title: 'Receive', body: 'Batches in.' }],
     faqs: [{ question: 'Is there a trial?', answer: 'Yes.' }],
@@ -415,7 +415,7 @@ const pages: [string, ReactNode][] = [
                     platform: 'android',
                     name: 'Miles Retail',
                     summary: 'The shop counter on a phone.',
-                    needs: 'A Miles Softwares workspace',
+                    needs: 'A Miles Global Softwares workspace',
                     version: '1.0.0',
                     product: 'erp/retail',
                     url: null,
@@ -500,10 +500,10 @@ describe('search metadata', () => {
             const description = typeof content === 'string' ? content : '';
             const canonical = tags.find((tag) => tag.rel === 'canonical')?.href;
 
-            // Google shows about 60 characters of a title, " - Miles Softwares" included;
+            // Google shows about 60 characters of a title, " - Miles Global Softwares" included;
             // the home page leads with the brand and may run a few over.
             expect(fullTitle(title).length).toBeLessThanOrEqual(
-                title.startsWith('Miles Softwares |') ? 70 : 65,
+                title.startsWith('Miles Global Softwares |') ? 70 : 65,
             );
             expect(title.length).toBeGreaterThan(3);
             // And up to about 160 of a description.
@@ -531,13 +531,13 @@ describe('search metadata', () => {
 });
 
 describe('brand entity', () => {
-    it('ties Miles Softwares to Miles Global Link and business software on the home page', () => {
+    it('ties Miles Global Softwares to Miles Global Link and business software on the home page', () => {
         heads.length = 0;
         render(pages.find(([name]) => name === 'home')![1]);
 
         const title = heads.find((head) => head.title)?.title ?? '';
         expect(fullTitle(title)).toBe(
-            'Miles Softwares | ERP Software for Pharmacy, Retail, Finance & HR',
+            'Miles Global Softwares | ERP for Pharmacy, Retail, Finance & HR',
         );
 
         const jsonLd = headTags().find(
@@ -553,7 +553,7 @@ describe('brand entity', () => {
         )['@graph'];
         const org = graph.find((node) => node['@type'] === 'Organization')!;
         expect(org).toMatchObject({
-            name: 'Miles Softwares',
+            name: 'Miles Global Softwares',
             legalName: 'Miles Global Link Co. Ltd',
             email: 'support@milessoftwares.com',
             telephone: '+211920079070',
@@ -588,7 +588,7 @@ describe('brand entity', () => {
             'https://www.facebook.com/profile.php?id=61596215291990',
         );
         expect(container.textContent).toContain(
-            'Miles Softwares is a product of Miles Global Link Co. Ltd',
+            'Miles Global Softwares is a product of Miles Global Link Co. Ltd',
         );
     });
 });

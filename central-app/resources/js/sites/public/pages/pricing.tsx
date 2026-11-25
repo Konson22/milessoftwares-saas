@@ -41,7 +41,7 @@ const purchasePaths = [
         cta: 'See the plans',
     },
     {
-        title: 'Customizing a Miles Softwares product',
+        title: 'Customizing a Miles Global Softwares product',
         points: [
             'The product licence',
             'A setup or customization charge where applicable',
@@ -84,7 +84,7 @@ export default function Pricing({
         <>
             <Seo
                 title="Pricing for ERP and business software"
-                description={`Subscriptions for ready-made Miles Softwares software, one-time licences where offered, and quotations for customization and custom software. ${trial} free trial.`}
+                description={`Subscriptions for Miles Global Softwares software, one-time licences where offered, and quotations for customization and custom software. ${trial} free trial.`}
                 canonical={canonical}
             />
 

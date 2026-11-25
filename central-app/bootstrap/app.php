@@ -56,6 +56,11 @@ return Application::configure(basePath: dirname(__DIR__))
             default => in_array('create', explode(' ', (string) $request->query('prompt')), true) ? route('register') : route('login'),
         });
 
+        // Signed-in people opening a guest page (sign in, register) go on to
+        // their workspaces, where a fresh sign-in lands. Laravel's default is
+        // the route named "home", which is the public site's front page here.
+        $middleware->redirectUsersTo(fn () => PlatformHosts::url(PlatformHosts::auth(), ltrim((string) config('fortify.home'), '/')));
+
         $middleware->alias([
             'tenant' => ResolveTenant::class,
             'workspace.access' => EnsureWorkspaceAccess::class,

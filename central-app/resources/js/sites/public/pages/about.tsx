@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { CtaBand, FeatureCards } from '@/sites/public/components/blocks';
 import { aboutValues } from '@/sites/public/components/content';
-import { Accent, DarkHero } from '@/sites/public/components/page-hero';
+import { Accent, BrandHero } from '@/sites/public/components/page-hero';
 import SectionHeading from '@/sites/public/components/section-heading';
 import Seo, { organization } from '@/sites/public/components/seo';
 import { button } from '@/sites/public/components/styles';
@@ -47,7 +47,7 @@ export default function About({ canonical }: Props) {
         <>
             <Seo
                 title="About us"
-                description="Miles Softwares develops ERP solutions, business applications and custom software for pharmacies, shops, restaurants and growing organizations."
+                description="Miles Global Softwares develops ERP solutions, business applications and custom software for pharmacies, shops, restaurants and growing organizations."
                 canonical={canonical}
                 jsonLd={{
                     '@context': 'https://schema.org',
@@ -57,29 +57,29 @@ export default function About({ canonical }: Props) {
                 }}
             />
 
-            <DarkHero
+            <BrandHero
                 title={
                     <>
                         Software for the businesses that{' '}
                         <Accent>keep things running</Accent>
                     </>
                 }
-                intro="Miles Softwares is a product of Miles Global Link Co. Ltd."
+                intro="Miles Global Softwares is a product of Miles Global Link Co. Ltd."
                 asideClassName=""
                 aside={
                     <ul className="grid gap-3 sm:grid-cols-2">
                         {facts.map(({ icon: Icon, title, body }, i) => (
                             <li
                                 key={title}
-                                className={`rounded-xl bg-site-navy-light p-5 ring-1 ring-site-navy-line transition-colors hover:bg-site-navy-line ${i % 2 === 1 ? 'sm:translate-y-6' : ''}`}
+                                className={`rounded-xl bg-white p-5 shadow-xs ring-1 ring-site-line ${i % 2 === 1 ? 'sm:translate-y-6' : ''}`}
                             >
-                                <span className="inline-flex size-10 items-center justify-center rounded-xl bg-site-highlight text-site-night">
+                                <span className="inline-flex size-10 items-center justify-center rounded-lg bg-site-tint text-site-accent">
                                     <Icon className="size-5" aria-hidden />
                                 </span>
-                                <p className="mt-4 font-semibold text-white">
+                                <p className="mt-4 font-semibold text-site-ink">
                                     {title}
                                 </p>
-                                <p className="mt-1 text-sm leading-relaxed text-slate-300">
+                                <p className="mt-1 text-sm leading-relaxed text-site-muted">
                                     {body}
                                 </p>
                             </li>
@@ -87,14 +87,14 @@ export default function About({ canonical }: Props) {
                     </ul>
                 }
             >
-                <Link href="/contact" className={button.light}>
+                <Link href="/contact" className={button.primary}>
                     Contact us
                     <ArrowRight className="size-4" aria-hidden />
                 </Link>
-                <Link href="/products" className={button.outlineDark}>
+                <Link href="/products" className={button.outline}>
                     See our products
                 </Link>
-            </DarkHero>
+            </BrandHero>
 
             <section aria-labelledby="story-heading" className="bg-white">
                 <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:px-8">
@@ -139,9 +139,10 @@ export default function About({ canonical }: Props) {
                             a single branch with no internet at all.
                         </p>
                         <p className="border-l-4 border-site-accent-ink pl-5">
-                            Every Miles Softwares product shares one platform,
-                            so a business can begin with one application and add
-                            the next when it is ready, without starting again.
+                            Every Miles Global Softwares product shares one
+                            platform, so a business can begin with one
+                            application and add the next when it is ready,
+                            without starting again.
                         </p>
                     </div>
                 </div>
@@ -171,7 +172,7 @@ export default function About({ canonical }: Props) {
                             Let's <Accent>talk</Accent>
                         </>
                     }
-                    body="Tell us about your business: what you sell, how many branches you run and where the work slows down today. We will suggest the Miles Softwares product that fits, show you how it works, or scope a custom system with you. There is no cost and no obligation, and we reply within one working day by email or WhatsApp."
+                    body="Tell us about your business: what you sell, how many branches you run and where the work slows down today. We will suggest the Miles Global Softwares product that fits, show you how it works, or scope a custom system with you. There is no cost and no obligation, and we reply within one working day by email or WhatsApp."
                 >
                     <Link href="/contact" className={button.light}>
                         Contact us

@@ -2,7 +2,7 @@ import { Link } from '@inertiajs/react';
 import { ArrowRight, Check } from 'lucide-react';
 import { erpCallToAction } from '@/sites/public/components/erp-product';
 import type { ErpProduct } from '@/sites/public/components/erp-product';
-import { button, card, planUrl } from '@/sites/public/components/styles';
+import { badge, button, card, planUrl } from '@/sites/public/components/styles';
 
 export type Plan = {
     code: string;
@@ -47,20 +47,16 @@ export default function PlanCard({
 
     return (
         <li
-            className={`${card} relative flex flex-col overflow-hidden p-8 ${featured ? 'site-dark isolate border-transparent bg-site-navy text-slate-300 lg:-my-4 lg:py-12' : ''}`}
+            className={`${card} relative flex flex-col p-8 ${featured ? 'border-site-accent ring-1 ring-site-accent' : ''}`}
         >
-            {featured && (
-                <span
-                    aria-hidden
-                    className="absolute inset-x-0 top-0 h-1.5 bg-site-highlight"
-                />
-            )}
             <div className="flex items-start justify-between gap-4">
                 <Heading className="text-xl font-semibold tracking-tight in-[.site-dark]:text-white">
                     {plan.name}
                 </Heading>
                 {featured && (
-                    <span className="rounded-full bg-white px-3 py-1 text-xs font-bold tracking-wide text-site-accent-ink uppercase">
+                    <span
+                        className={`${badge} border-transparent bg-site-tint text-site-accent-hover`}
+                    >
                         Bundle
                     </span>
                 )}
@@ -69,7 +65,7 @@ export default function PlanCard({
                 <p className="mt-2 text-sm font-semibold">
                     <Link
                         href={`/erp/${plan.product.code}`}
-                        className="text-site-accent-ink hover:underline in-[.site-dark]:text-white in-[.site-dark]:underline"
+                        className="text-site-accent hover:underline in-[.site-dark]:text-white in-[.site-dark]:underline"
                     >
                         {plan.product.name}
                     </Link>
@@ -82,7 +78,7 @@ export default function PlanCard({
                 </p>
             )}
             <p className="mt-8 flex flex-wrap items-baseline gap-x-2">
-                <span className="font-public-display text-4xl font-bold tracking-tight tabular-nums in-[.site-dark]:text-white">
+                <span className="text-4xl font-semibold tracking-tight text-site-ink tabular-nums">
                     {plan.price}
                 </span>
                 {plan.price !== 'Free' && (
@@ -98,7 +94,7 @@ export default function PlanCard({
                         plan.code,
                         plan.trialDays > 0 ? 'trial' : 'subscribe',
                     )}
-                    className={`mt-7 ${featured ? button.light : button.outline}`}
+                    className={`mt-7 ${featured ? button.primary : button.outline}`}
                 >
                     {plan.trialDays > 0 ? 'Start free trial' : 'Choose plan'}
                     <span className="sr-only">
@@ -109,7 +105,7 @@ export default function PlanCard({
             ) : plan.product ? (
                 <Link
                     href="/contact"
-                    className={`mt-7 ${featured ? button.light : button.outline}`}
+                    className={`mt-7 ${featured ? button.primary : button.outline}`}
                 >
                     {erpCallToAction[plan.product.status]}
                     <span className="sr-only"> about {plan.name}</span>
@@ -123,7 +119,7 @@ export default function PlanCard({
                 <ul className="mt-4 space-y-3 text-sm">
                     {plan.applications.map((application) => (
                         <li key={application} className="flex gap-2.5">
-                            <span className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-site-accent-ink text-white">
+                            <span className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-site-leaf text-white">
                                 <Check className="size-3" aria-hidden />
                             </span>
                             {application}

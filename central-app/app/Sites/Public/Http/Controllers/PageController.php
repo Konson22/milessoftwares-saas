@@ -105,7 +105,7 @@ class PageController extends Controller
         ]);
     }
 
-    /** Custom Solutions: custom development and customizing a Miles Softwares product. */
+    /** Custom Solutions: custom development and customizing a Miles Global Softwares product. */
     public function services(): Response
     {
         return Inertia::render('public/services', [

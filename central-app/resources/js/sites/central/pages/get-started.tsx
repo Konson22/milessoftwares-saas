@@ -65,7 +65,7 @@ export function startingLine(selection: Selection, trialDays: number): string {
     if (selection.plan) {
         return selection.action === 'trial'
             ? `${selection.plan.trialDays}-day free trial of the ${selection.plan.name} plan`
-            : `${selection.plan.name} plan, ${selection.plan.price}${selection.plan.price === 'Free' ? '' : ` ${selection.plan.interval}`}. Miles Softwares switches it on once it is paid.`;
+            : `${selection.plan.name} plan, ${selection.plan.price}${selection.plan.price === 'Free' ? '' : ` ${selection.plan.interval}`}. Miles Global Softwares switches it on once it is paid.`;
     }
 
     return `${trialDays}-day free trial. Nothing is charged unless you choose a plan.`;
@@ -75,7 +75,7 @@ const outcomes: Record<string, string> = {
     trial_started: 'Your free trial has started.',
     already_active: 'This organization already had it, so nothing changed.',
     requested:
-        'Your request was sent. Miles Softwares confirms it and sends the invoice; it switches on once paid.',
+        'Your request was sent. Miles Global Softwares confirms it and sends the invoice; it switches on once paid.',
 };
 
 /**

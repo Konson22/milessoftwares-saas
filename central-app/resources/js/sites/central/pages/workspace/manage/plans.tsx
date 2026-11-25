@@ -56,7 +56,7 @@ export default function OrganizationPlans({
 
             <PageHeader
                 title="Plans"
-                description="Choose what your organization needs. Send a request and Miles Softwares will set it up and send you an invoice."
+                description="Choose what your organization needs. Send a request and Miles Global Softwares will set it up and send you an invoice."
             />
 
             <div className="space-y-3">
@@ -65,7 +65,7 @@ export default function OrganizationPlans({
                         <EmptyState icon={Package} title="No plans on offer">
                             {salesEmail
                                 ? `Write to ${salesEmail} and we will put together a plan for you.`
-                                : 'Contact Miles Softwares and we will put together a plan for you.'}
+                                : 'Contact Miles Global Softwares and we will put together a plan for you.'}
                         </EmptyState>
                     </Panel>
                 ) : (

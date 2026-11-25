@@ -41,7 +41,7 @@ class ActivationCodeSent extends Notification implements ShouldQueue
 
         return (new MailMessage)
             ->subject("Your {$app} activation code")
-            ->replyTo($support, 'Miles Softwares')
+            ->replyTo($support, 'Miles Global Softwares')
             ->markdown('mail.activation-code', [
                 'code' => $this->code,
                 'device' => $this->device,

@@ -4,6 +4,7 @@ import InputError from '@/shared/components/input-error';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
+import { button } from '@/sites/public/components/styles';
 
 type Props = {
     action: string;
@@ -81,13 +82,18 @@ export default function LeadForm({
                     {children?.(errors)}
 
                     <div className="grid gap-2">
-                        <Label htmlFor="message">How can we help?</Label>
+                        <Label
+                            htmlFor="message"
+                            className="text-sm font-medium text-site-ink"
+                        >
+                            How can we help?
+                        </Label>
                         <textarea
                             id="message"
                             name="message"
                             rows={5}
                             maxLength={5000}
-                            className="rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                            className="rounded-lg border border-site-line bg-white px-3 py-2 text-base text-site-body focus-visible:border-site-accent"
                         />
                         <InputError message={errors.message} />
                     </div>
@@ -103,7 +109,8 @@ export default function LeadForm({
                     <Button
                         type="submit"
                         disabled={processing}
-                        className="h-12 rounded-full bg-site-accent-ink px-7 font-bold text-white transition-colors hover:bg-site-accent-deep"
+                        aria-busy={processing}
+                        className={button.primary}
                     >
                         {submitLabel}
                     </Button>
@@ -132,7 +139,7 @@ export function Field({
 }) {
     return (
         <div className="grid gap-2">
-            <Label htmlFor={name}>
+            <Label htmlFor={name} className="text-sm font-medium text-site-ink">
                 {label}
                 {required && <span aria-hidden="true"> *</span>}
             </Label>
@@ -145,6 +152,7 @@ export function Field({
                 defaultValue={defaultValue}
                 aria-invalid={error ? true : undefined}
                 aria-describedby={error ? `${name}-error` : undefined}
+                className="h-11 rounded-lg border-site-line bg-white text-base text-site-body focus-visible:border-site-accent"
             />
             {error && (
                 <p

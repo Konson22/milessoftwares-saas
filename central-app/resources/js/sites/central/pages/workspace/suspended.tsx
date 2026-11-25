@@ -15,7 +15,7 @@ export default function WorkspaceSuspended({ organization }: Props) {
                     </h1>
                     <p className="mt-3 text-muted-foreground">
                         This workspace is temporarily unavailable. Please
-                        contact your organization owner or Miles Softwares
+                        contact your organization owner or Miles Global Softwares
                         support.
                     </p>
                 </div>

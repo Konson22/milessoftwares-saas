@@ -111,7 +111,7 @@ const navigation: { title: string; items: AdminItem[] }[] = [
 ];
 
 /**
- * The staff console (admin.<root>) in the shell every Miles Softwares app shares,
+ * The staff console (admin.<root>) in the shell every Miles Global Softwares app shares,
  * marked with an amber tile so it is never mistaken for a customer
  * workspace.
  */
@@ -160,7 +160,7 @@ export default function AdminLayout({ children }: PropsWithChildren) {
                     label="Administration"
                     brand={{
                         title: 'Administration',
-                        subtitle: 'Miles Softwares staff',
+                        subtitle: 'Miles Global Softwares staff',
                         icon: ShieldHalf,
                         href: '/',
                         tone: 'amber',

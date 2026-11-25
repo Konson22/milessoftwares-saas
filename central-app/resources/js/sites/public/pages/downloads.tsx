@@ -13,7 +13,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { CtaBand, cardSurface } from '@/sites/public/components/blocks';
-import { Accent, DarkHero } from '@/sites/public/components/page-hero';
+import { Accent, BrandHero } from '@/sites/public/components/page-hero';
 import SectionHeading from '@/sites/public/components/section-heading';
 import Seo from '@/sites/public/components/seo';
 import { button, container, textLink } from '@/sites/public/components/styles';
@@ -66,7 +66,7 @@ const platforms: {
     {
         id: 'android',
         title: 'Android',
-        lead: 'Counter apps for Android phones and tablets. They sign in to your Miles Softwares workspace.',
+        lead: 'Counter apps for Android phones and tablets. They sign in to your Miles Global Softwares workspace.',
         icon: Smartphone,
     },
 ];
@@ -102,36 +102,36 @@ export default function Downloads({ apps, canonical }: Props) {
     return (
         <>
             <Seo
-                title="Download the Miles Softwares apps"
-                description="Download Miles Softwares for Windows and Android: pharmacy and shop counters that work online or fully offline, the restaurant app and mobile counters."
+                title="Download the Miles Global Softwares apps"
+                description="Download Miles Global Softwares for Windows and Android: pharmacy and shop counters that work online or fully offline, the restaurant app and mobile counters."
                 canonical={canonical}
             />
 
-            <DarkHero
+            <BrandHero
                 title={
                     <>
-                        Get the Miles Softwares apps.{' '}
+                        Get the Miles Global Softwares apps.{' '}
                         <Accent>For Windows and Android.</Accent>
                     </>
                 }
                 intro="Install the counter apps on your PCs, phones and tablets. Everything you need to set them up is on this page."
                 aside={<DevicesPicture />}
             >
-                <a href="#windows" className={button.light}>
+                <a href="#windows" className={button.primary}>
                     <Monitor className="size-4" aria-hidden />
                     Windows apps
                 </a>
-                <a href="#android" className={button.outlineDark}>
+                <a href="#android" className={button.outline}>
                     <Smartphone className="size-4" aria-hidden />
                     Android apps
                 </a>
                 <a
                     href="#setup"
-                    className="ml-1 text-sm font-semibold text-site-highlight underline-offset-4 hover:underline"
+                    className="ml-1 text-sm font-semibold text-site-accent underline-offset-4 hover:underline"
                 >
                     Setup help
                 </a>
-            </DarkHero>
+            </BrandHero>
 
             {platforms.map((platform, i) => (
                 <section
@@ -183,7 +183,7 @@ export default function Downloads({ apps, canonical }: Props) {
                             <Accent>Start with a free trial.</Accent>
                         </>
                     }
-                    body="The workspace apps sign in to your Miles Softwares workspace. Create one in a few minutes, then install the app on your counter. The offline pharmacy needs no workspace at all."
+                    body="The workspace apps sign in to your Miles Global Softwares workspace. Create one in a few minutes, then install the app on your counter. The offline pharmacy needs no workspace at all."
                 >
                     <Link href="/start" className={button.light}>
                         Get Started
@@ -354,7 +354,7 @@ const topics: {
                     </li>
                 </ol>
                 <p className="mt-3">
-                    Only install Miles Softwares apps downloaded from
+                    Only install Miles Global Softwares apps downloaded from
                     milesoftwares.com.
                 </p>
             </>
@@ -378,11 +378,13 @@ const topics: {
                         licence key. Back it up from Settings, Backups.
                     </li>
                     <li>
-                        <strong>With my Miles Softwares workspace:</strong> sign
-                        in with your Miles Softwares account and choose the
-                        workspace and branch. Sales made while the internet is
-                        down are sent once it is back. Shops sign in to Miles
-                        Retail the same way.
+                        <strong>
+                            With my Miles Global Softwares workspace:
+                        </strong>{' '}
+                        sign in with your Miles Global Softwares account and
+                        choose the workspace and branch. Sales made while the
+                        internet is down are sent once it is back. Shops sign in
+                        to Miles Retail the same way.
                     </li>
                 </ul>
             </>
@@ -466,8 +468,9 @@ const topics: {
                     browser to install apps, then go back and choose Install.
                 </li>
                 <li>
-                    Open the app and sign in with your Miles Softwares account.
-                    Apps from Google Play, when listed, update by themselves.
+                    Open the app and sign in with your Miles Global Softwares
+                    account. Apps from Google Play, when listed, update by
+                    themselves.
                 </li>
             </ol>
         ),
@@ -521,7 +524,7 @@ function SetupHelp() {
                             key={topic.id}
                             id={topic.id}
                             aria-labelledby={`${topic.id}-heading`}
-                            className="scroll-mt-24 rounded-xl bg-white p-6 shadow-[0_1px_2px_rgb(0_27_72/0.06),0_10px_30px_-12px_rgb(0_27_72/0.18)] ring-1 ring-site-line sm:p-8"
+                            className="scroll-mt-24 rounded-xl bg-white p-6 shadow-xs ring-1 ring-site-line sm:p-8"
                         >
                             <div className="flex items-center gap-3">
                                 <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-site-navy text-site-highlight">
@@ -687,7 +690,7 @@ function DevicesPicture() {
     return (
         <div aria-hidden className="relative mx-auto max-w-lg py-6">
             {/* The PC: a window with the counter. */}
-            <div className="relative overflow-hidden rounded-lg bg-white shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] ring-1 ring-site-navy-line">
+            <div className="relative overflow-hidden rounded-lg bg-white shadow-2xl ring-1 ring-site-navy-line">
                 <div className="flex items-center gap-2 bg-site-night px-4 py-2.5">
                     <span className="aspect-square w-3 bg-site-highlight [clip-path:polygon(0_0,100%_0,58%_50%,58%_100%,26%_100%,26%_50%,0_50%)]" />
                     <span className="text-xs font-semibold text-white">
@@ -730,7 +733,7 @@ function DevicesPicture() {
             </div>
 
             {/* The phone, in front. */}
-            <div className="absolute -right-2 -bottom-4 w-32 rotate-[6deg] rounded-[1.75rem] bg-site-ink p-1.5 shadow-[0_24px_48px_-12px_rgb(0_0_0/0.7)] ring-1 ring-site-navy-line xl:-right-6">
+            <div className="absolute -right-2 -bottom-4 w-32 rotate-[6deg] rounded-[1.75rem] bg-site-ink p-1.5 shadow-2xl ring-1 ring-site-navy-line xl:-right-6">
                 <div className="overflow-hidden rounded-[1.4rem] bg-site-soft">
                     <div className="bg-site-night px-3 pt-3 pb-2">
                         <i className="mx-auto block h-1 w-8 rounded-full bg-site-navy-line" />

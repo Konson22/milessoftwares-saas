@@ -4,11 +4,8 @@
 @import '../../node_modules/@miles/ui/theme.css';
 
 /* The public site's type, self-hosted (the CSP allows fonts from 'self'
-   only): Poppins for headings, Nunito for text. */
-@import '@fontsource/poppins/500.css';
-@import '@fontsource/poppins/600.css';
-@import '@fontsource/poppins/700.css';
-@import '@fontsource-variable/nunito/wght.css';
+   only): Inter, one variable family for headings and text. */
+@import '@fontsource-variable/inter/wght.css';
 
 @source '../views';
 @source '../../node_modules/@miles/ui';
@@ -20,48 +17,68 @@
  * public site's palette and font.
  */
 @theme {
-    /* Brand colours, sampled from the Miles Softwares logo: the navy of
-       "Miles" (#001b48), the blue of "Softwares" (#0353ff), the green of
-       the swoosh (#28b401) and the cyan of the panel (#01c5fd).
+    /* Brand colours, sampled from the Miles Global Softwares logo: the navy of
+       "MILES GLOBAL" (#021546), the blue of the "SOFTWARES" pill (#0a68d6,
+       deepening to #013d81), the green of the swoosh and "ERP" badge
+       (#26a506) and the light blue of the globe (#22a8f5).
        Blue leads; green is a small second accent only. The token names
        (navy, blue, cyan) are kept from earlier palettes. */
-    --color-brand-ink: #00122f;
-    --color-brand-navy: #001b48;
+    --color-brand-ink: #010d2e;
+    --color-brand-navy: #021546;
     --color-brand-navy-light: #0a2d66;
-    --color-brand-blue: #0353ff;
-    --color-brand-blue-dark: #013089;
-    --color-brand-cyan: #01c5fd;
-    --color-brand-teal: #013089;
-    --color-brand-green: #28b401;
+    --color-brand-blue: #0a68d6;
+    --color-brand-blue-dark: #013d81;
+    --color-brand-cyan: #22a8f5;
+    --color-brand-teal: #013d81;
+    --color-brand-green: #26a506;
 
-    /* Public site: blue for buttons, shapes and links, navy for type and
-       dark bands, deep blue for the page heroes, cyan for highlights on
-       dark, and the logo green (site-leaf) for small touches only.
-       Everything is solid: tint and tint-strong are the pale blues that
-       stand in for see-through blue on white; navy-light and navy-line
-       do the same on navy. site-soft is the white page ground; site-black
-       is the app sidebar in product art. */
-    --color-site-ink: #001b48;
-    --color-site-wash: #eef3ff;
-    --color-site-tint: #e3ecff;
-    --color-site-tint-strong: #c4d6ff;
+    /* Public site (marketing pages only; the signed-in hosts keep the
+       brand-* colours above), in the green of the Miles Global logo.
+       Green is the brand and every interactive element; lime marks the
+       main action and accent words on the dark green hero; white and pale
+       green carry most of the page. All solid, no gradients.
+
+       ink       headings (deep green)    body     body text
+       muted     secondary text           wash     pale green sections
+       line      borders and dividers     tint     pale green behind icons
+       accent    buttons, links, active   accent-hover / -deep  hover
+       highlight lime that reads on the dark green (accent words)
+       lime      main action on dark green (dark text), lime-hover
+       leaf      bright logo green for small marks
+       green     emphasis button (white text) and its hover
+       navy, night, navy-light, navy-line: the dark green hero, bands and
+       footer (token names kept from earlier palettes). */
+    --color-site-ink: #071a3d;
+    --color-site-body: #1e2433;
+    --color-site-muted: #4f5470;
+    --color-site-wash: #f3f4f7;
+    --color-site-tint: #e6effd;
+    --color-site-tint-strong: #c7dcfb;
     --color-site-soft: #ffffff;
-    --color-site-line: #d3def3;
-    --color-site-black: #070707;
-    --color-site-navy: #001b48;
-    --color-site-navy-light: #0a2d66;
-    --color-site-navy-line: #1d3f7a;
-    --color-site-night: #00122f;
-    --color-site-accent: #0353ff;
-    --color-site-accent-ink: #0353ff;
-    --color-site-accent-deep: #013089;
-    --color-site-highlight: #01c5fd;
-    --color-site-leaf: #28b401;
-    --color-site-slate: #5a6a85;
+    --color-site-line: #e4e6ec;
+    --color-site-black: #080f1f;
+    --color-site-navy: #071a3d;
+    --color-site-navy-light: #0c2552;
+    --color-site-navy-line: #1d3566;
+    --color-site-night: #080f1f;
+    --color-site-accent: #0756b8;
+    --color-site-accent-ink: #0756b8;
+    --color-site-accent-hover: #06479a;
+    --color-site-accent-deep: #06479a;
+    --color-site-highlight: #5aa9ff;
+    --color-site-lime: #0a6cdb;
+    --color-site-lime-hover: #0756b8;
+    --color-site-leaf: #087bf5;
+    --color-site-leaf-tint: #e6effd;
+    --color-site-green: #0756b8;
+    --color-site-green-hover: #06479a;
+    --color-site-silver: #82869e;
+    --color-site-silver-light: #e4e6ec;
+    --color-site-slate: #475569;
     --font-public:
-        'Nunito Variable', 'Nunito', ui-sans-serif, system-ui, sans-serif;
+        'Inter Variable', 'Inter', ui-sans-serif, system-ui, sans-serif;
     --font-public-display:
-        'Poppins', 'Nunito Variable', ui-sans-serif, system-ui, sans-serif;
+        'Inter Variable', 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
 
 /*
@@ -71,31 +88,31 @@
  * apps keep their own.
  */
 :root {
-    --primary: #0353ff;
-    --ring: #0353ff;
-    --chart-1: #0353ff;
-    --chart-2: #001b48;
-    --chart-3: #01c5fd;
-    --chart-4: #28b401;
+    --primary: #0a68d6;
+    --ring: #0a68d6;
+    --chart-1: #0a68d6;
+    --chart-2: #021546;
+    --chart-3: #22a8f5;
+    --chart-4: #26a506;
     --chart-5: #8f9bb3;
-    --sidebar: #001b48;
-    --sidebar-primary: #0353ff;
+    --sidebar: #021546;
+    --sidebar-primary: #0a68d6;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-ring: #01c5fd;
+    --sidebar-ring: #22a8f5;
 }
 
 .dark {
-    --primary: #01c5fd;
-    --ring: #01c5fd;
-    --chart-1: #01c5fd;
+    --primary: #22a8f5;
+    --ring: #22a8f5;
+    --chart-1: #22a8f5;
     --chart-2: #86dcff;
-    --chart-3: #28b401;
+    --chart-3: #26a506;
     --chart-4: #d6f4ff;
     --chart-5: #8f9bb3;
-    --sidebar: #00122f;
-    --sidebar-primary: #0353ff;
+    --sidebar: #010d2e;
+    --sidebar-primary: #0a68d6;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-ring: #01c5fd;
+    --sidebar-ring: #22a8f5;
 }
 
 @layer utilities {
@@ -131,23 +148,35 @@
     --text-sm: 0.875rem;
     --text-sm--line-height: 1.25rem;
 
-    /* Greys with a touch of the logo's navy, so body text sits in the
-       brand too. 500 and darker keep 4.5:1 on white. */
-    --color-slate-50: #f4f6fa;
-    --color-slate-100: #e6ebf3;
-    --color-slate-200: #cbd5e4;
-    --color-slate-300: #afbdd2;
-    --color-slate-400: #7c8ca6;
-    --color-slate-500: #5a6a85;
-    --color-slate-600: #45546d;
-    --color-slate-700: #2f3d55;
-    --color-slate-800: #222e44;
-    --color-slate-900: #151e30;
+    /* Tailwind's slate: 600 is the secondary text (#475569), 800 the
+       body (#1e293b), 200 the borders (#e2e8f0). 500 and darker keep
+       4.5:1 on white. */
+    --color-slate-50: #f8fafc;
+    --color-slate-100: #f1f5f9;
+    --color-slate-200: #e2e8f0;
+    --color-slate-300: #cbd5e1;
+    --color-slate-400: #94a3b8;
+    --color-slate-500: #64748b;
+    --color-slate-600: #475569;
+    --color-slate-700: #334155;
+    --color-slate-800: #1e293b;
+    --color-slate-900: #0f172a;
 }
 
-/* Headings in the display face; everything else in the text face. */
+/* One family; headings are navy, set tight. */
 .site-public :is(h1, h2, h3, h4) {
     font-family: var(--font-public-display);
+    letter-spacing: -0.02em;
+}
+
+/* Visible, high-contrast keyboard focus on every public control. */
+.site-public :is(a, button, input, select, textarea, summary):focus-visible {
+    outline: 2px solid var(--color-site-accent);
+    outline-offset: 2px;
+}
+
+.site-public .site-dark :is(a, button, summary):focus-visible {
+    outline-color: #ffffff;
 }
 
 /* The hero dashboard, turned slightly towards the copy on wide screens. */

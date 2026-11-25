@@ -15,7 +15,7 @@ enum SecurityAlertType: string
     public function subject(): string
     {
         return match ($this) {
-            self::NewSignIn => 'New sign-in to your Miles Softwares account',
+            self::NewSignIn => 'New sign-in to your Miles Global Softwares account',
             self::PasswordChanged => 'Your password was changed',
             self::MfaEnabled => 'Two-factor authentication was turned on',
             self::MfaDisabled => 'Two-factor authentication was turned off',

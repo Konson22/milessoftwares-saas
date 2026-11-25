@@ -22,12 +22,12 @@ final class LicenceDenied extends RuntimeException
 
     public static function revoked(): self
     {
-        return new self('revoked', 'key', 'This licence key has been cancelled. Contact Miles Softwares.');
+        return new self('revoked', 'key', 'This licence key has been cancelled. Contact Miles Global Softwares.');
     }
 
     public static function inUse(): self
     {
-        return new self('in_use', 'key', 'This licence key is already in use on another PC. To move it to this one, contact Miles Softwares.');
+        return new self('in_use', 'key', 'This licence key is already in use on another PC. To move it to this one, contact Miles Global Softwares.');
     }
 
     public static function wrongProduct(string $product): self
@@ -49,6 +49,6 @@ final class LicenceDenied extends RuntimeException
 
     public static function notConfigured(): self
     {
-        return new self('not_configured', 'key', 'Activation is not available right now. Contact Miles Softwares.');
+        return new self('not_configured', 'key', 'Activation is not available right now. Contact Miles Global Softwares.');
     }
 }

@@ -44,7 +44,7 @@ class OrganizationInvitation extends Notification implements ShouldQueue
     {
         return (new MailMessage)
             ->subject("{$this->inviterName} invited you to {$this->organizationName}")
-            ->line("{$this->inviterName} invited you to join {$this->organizationName} on Miles Softwares.")
+            ->line("{$this->inviterName} invited you to join {$this->organizationName} on Miles Global Softwares.")
             ->action('View invitation', $this->acceptUrl())
             ->line('The invitation can be used once and expires on '.$this->expiresAt->utc()->toFormattedDayDateString().'.')
             ->line('If you were not expecting it, you can ignore this email.');

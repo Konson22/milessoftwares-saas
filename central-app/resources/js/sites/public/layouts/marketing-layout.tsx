@@ -1,5 +1,16 @@
 import { Link, usePage } from '@inertiajs/react';
-import { ArrowRight, ChevronDown, Menu, X } from 'lucide-react';
+import {
+    ArrowRight,
+    Building2,
+    Code2,
+    Download,
+    KeyRound,
+    Layers,
+    Mail,
+    Menu,
+    ChevronDown,
+    X,
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { PropsWithChildren } from 'react';
@@ -35,16 +46,64 @@ type NavEntry =
 
 const nav: NavEntry[] = [
     { title: 'Home', href: '/' },
-    { title: 'Miles Workspace', href: '/platform' },
     {
         title: 'Products',
         href: '/products',
         section: ['/products', '/erp', '/apps'],
     },
-    { title: 'Custom Solutions', href: '/services' },
-    { title: 'Downloads', href: '/downloads' },
-    { title: 'About Us', href: '/about' },
-    { title: 'Contact', href: '/contact' },
+    {
+        title: 'Solutions',
+        id: 'solutions',
+        items: [
+            {
+                title: 'Miles Workspace',
+                body: 'One account, team and permissions for every application.',
+                href: '/platform',
+                icon: Layers,
+            },
+            {
+                title: 'Custom Solutions',
+                body: 'Software built or adapted around how you work.',
+                href: '/services',
+                icon: Code2,
+            },
+        ],
+    },
+    { title: 'Pricing', href: '/pricing' },
+    {
+        title: 'Resources',
+        id: 'resources',
+        items: [
+            {
+                title: 'Downloads',
+                body: 'Windows and Android apps, with setup help.',
+                href: '/downloads',
+                icon: Download,
+            },
+            {
+                title: 'Activate a licence',
+                body: 'Get the activation code for an offline install.',
+                href: '/activate',
+                icon: KeyRound,
+            },
+        ],
+    },
+    {
+        title: 'Company',
+        id: 'company',
+        items: [
+            {
+                title: 'About Us',
+                href: '/about',
+                icon: Building2,
+            },
+            {
+                title: 'Contact',
+                href: '/contact',
+                icon: Mail,
+            },
+        ],
+    },
 ];
 
 /** A menu link without its fragment, for the current-page check. */
@@ -74,19 +133,19 @@ function Brand({ light = false }: { light?: boolean }) {
     return (
         <Link
             href="/"
-            aria-label="Miles Softwares home"
+            aria-label="Miles Global Softwares home"
             className="flex shrink-0 items-center"
         >
             <img
                 src={
                     light
-                        ? '/images/logo-site-light.webp?v=20261120'
-                        : '/images/logo-site.webp?v=20261120'
+                        ? '/images/logo-site-light.webp?v=20261126c'
+                        : '/images/logo-site.webp?v=20261126c'
                 }
-                alt="Miles Softwares"
-                width={429}
-                height={128}
-                className="h-10 w-auto sm:h-11"
+                alt="Miles Global Softwares"
+                width={320}
+                height={160}
+                className="h-12 w-auto sm:h-14"
             />
         </Link>
     );
@@ -154,7 +213,7 @@ function NavMenu({
                 aria-expanded={open}
                 aria-controls={`${id}-menu`}
                 onClick={() => setOpen((value) => !value)}
-                className={`inline-flex items-center gap-1 px-2.5 py-2 transition-colors hover:text-site-ink xl:px-3 ${current ? 'text-site-ink' : ''}`}
+                className={`inline-flex items-center gap-1 px-2.5 py-2 transition-colors hover:text-site-accent xl:px-3 ${current ? 'font-semibold text-site-accent' : ''}`}
             >
                 {title}
                 <ChevronDown
@@ -165,7 +224,7 @@ function NavMenu({
             <div
                 id={`${id}-menu`}
                 hidden={!open}
-                className="absolute top-full left-1/2 mt-3 max-h-[calc(100svh-6rem)] w-80 -translate-x-1/2 overflow-y-auto rounded-xl border border-site-line bg-white p-2 text-site-ink shadow-xl shadow-site-night/10"
+                className="absolute top-full left-1/2 mt-3 max-h-[calc(100svh-6rem)] w-80 -translate-x-1/2 overflow-y-auto rounded-xl border border-site-line bg-white p-2 text-site-ink shadow-lg"
             >
                 <ul>
                     {items.map(({ icon: Icon, ...item }) => (
@@ -178,7 +237,7 @@ function NavMenu({
                                 }
                                 className={`flex gap-3 rounded-xl whitespace-normal transition-colors hover:bg-slate-50 aria-[current=page]:bg-site-tint ${item.body ? 'items-start p-3' : 'items-center px-3 py-2'}`}
                             >
-                                <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-site-tint text-site-accent-ink">
+                                <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-site-tint text-site-accent">
                                     <Icon className="size-4" aria-hidden />
                                 </span>
                                 <span>
@@ -243,7 +302,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
     }, []);
 
     return (
-        <div className="site-public relative flex min-h-screen flex-col overflow-x-clip bg-white font-public text-site-ink">
+        <div className="site-public relative flex min-h-screen flex-col overflow-x-clip bg-white font-public text-site-body antialiased">
             <div
                 ref={topMarker}
                 aria-hidden
@@ -258,15 +317,15 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                 Skip to content
             </a>
             <header
-                className={`fixed inset-x-0 top-0 z-40 border-b bg-white transition-[border-color,box-shadow] duration-300 ${scrolled ? 'border-site-line shadow-[0_6px_20px_-14px_rgb(48_64_72/0.35)]' : 'border-transparent'}`}
+                className={`fixed inset-x-0 top-0 z-40 border-b bg-white transition-[border-color,box-shadow] duration-300 ${scrolled ? 'border-site-line shadow-sm' : 'border-transparent'}`}
             >
                 <nav
                     aria-label="Main"
-                    className={`${container} flex h-16 items-center gap-4 xl:gap-6`}
+                    className={`${container} flex h-[4.5rem] items-center gap-4 xl:gap-6`}
                 >
                     <Brand />
                     <ul
-                        className={`mx-auto hidden items-center text-sm font-medium whitespace-nowrap text-slate-600 lg:flex xl:gap-1 xl:text-[15px]`}
+                        className={`mx-auto hidden items-center text-sm font-medium whitespace-nowrap text-site-ink lg:flex xl:gap-1 xl:text-[15px]`}
                     >
                         {nav.map((item) =>
                             'items' in item ? (
@@ -282,7 +341,7 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                                     <Link
                                         href={item.href}
                                         aria-current={currentOf(item, path)}
-                                        className={`relative block px-2.5 py-2 transition-colors after:absolute after:inset-x-2.5 after:-bottom-[1.0625rem] after:h-0.5 after:scale-x-0 after:bg-site-highlight after:transition-transform hover:text-site-ink aria-[current=page]:font-semibold aria-[current=page]:text-site-ink aria-[current=page]:after:scale-x-100 aria-[current=true]:font-semibold aria-[current=true]:text-site-ink aria-[current=true]:after:scale-x-100 xl:px-3 xl:after:inset-x-3`}
+                                        className={`relative block px-2.5 py-2 transition-colors after:absolute after:inset-x-2.5 after:-bottom-[1.4rem] after:h-0.5 after:scale-x-0 after:bg-site-accent after:transition-transform hover:text-site-accent aria-[current=page]:font-semibold aria-[current=page]:text-site-accent aria-[current=page]:after:scale-x-100 aria-[current=true]:font-semibold aria-[current=true]:text-site-accent aria-[current=true]:after:scale-x-100 xl:px-3 xl:after:inset-x-3`}
                                     >
                                         {item.title}
                                     </Link>
@@ -290,19 +349,24 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                             ),
                         )}
                     </ul>
-                    <div className="ml-auto hidden items-center gap-4 whitespace-nowrap lg:ml-0 lg:flex xl:gap-5">
+                    <div className="ml-auto hidden items-center gap-3 whitespace-nowrap lg:ml-0 lg:flex">
+                        <Link
+                            href="/contact"
+                            className="hidden px-2 text-sm font-medium text-site-ink transition-colors hover:text-site-accent xl:inline xl:text-[15px]"
+                        >
+                            Contact
+                        </Link>
                         <a
                             href={login.url()}
-                            className={`text-sm font-medium text-slate-600 transition-colors hover:text-site-ink xl:text-[15px]`}
+                            className={`${button.outline} lg:px-4`}
                         >
-                            Sign in
+                            Login
                         </a>
                         <Link
                             href="/start"
-                            className={`${button.primary} py-2.5 lg:px-4`}
+                            className={`${button.primary} lg:px-4`}
                         >
                             Get Started
-                            <ArrowRight className="size-4" aria-hidden />
                         </Link>
                     </div>
                     <button
@@ -323,13 +387,13 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                 <div
                     id="mobile-menu"
                     hidden={!menuOpen}
-                    className="max-h-[calc(100svh-4rem)] overflow-y-auto border-t border-site-line bg-white lg:hidden"
+                    className="max-h-[calc(100svh-4.5rem)] overflow-y-auto border-t border-site-line bg-white lg:hidden"
                 >
                     <ul className="mx-auto max-w-7xl space-y-1 px-4 py-3 sm:px-6">
                         {nav.map((item) =>
                             'items' in item ? (
                                 <li key={item.id}>
-                                    <p className="px-3 pt-2 pb-1 text-xs font-bold tracking-wider text-slate-500 uppercase">
+                                    <p className="px-3 pt-2 pb-1 text-sm font-semibold text-slate-500">
                                         {item.title}
                                     </p>
                                     <ul className="space-y-1">
@@ -366,15 +430,12 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                         <Link
                             href="/start"
                             onClick={() => setMenuOpen(false)}
-                            className={`${button.primary} py-2.5`}
+                            className={button.primary}
                         >
                             Get Started: {trialDays}-day free trial
                         </Link>
-                        <a
-                            href={login.url()}
-                            className={`${button.outline} py-2.5`}
-                        >
-                            Sign in
+                        <a href={login.url()} className={button.outline}>
+                            Login
                         </a>
                     </div>
                 </div>
@@ -389,9 +450,9 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                     <div className="col-span-2 md:col-span-3 lg:col-span-1">
                         <Brand light />
                         <p className="mt-5 max-w-xs leading-relaxed">
-                            Bring it all together: Miles Softwares products in
-                            one workspace, and custom software for web, desktop
-                            and mobile.
+                            Bring it all together: Miles Global Softwares
+                            products in one workspace, and custom software for
+                            web, desktop and mobile.
                         </p>
                         <Link
                             href="/contact"
@@ -498,8 +559,8 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                         className={`${container} flex flex-wrap items-center justify-between gap-x-6 gap-y-3 py-6`}
                     >
                         <p className="text-slate-400">
-                            Miles Softwares is a product of Miles Global Link
-                            Co. Ltd · © {new Date().getFullYear()}
+                            Miles Global Softwares is a product of Miles Global
+                            Link Co. Ltd · © {new Date().getFullYear()}
                         </p>
                         <div className="flex flex-wrap gap-x-6 gap-y-2">
                             <Link
@@ -570,7 +631,7 @@ function MobileLink({
             href={href}
             aria-current={currentOf({ href, section }, path)}
             onClick={onClick}
-            className="block rounded-lg px-3 py-2.5 font-semibold text-slate-700 hover:bg-slate-50 aria-[current=page]:bg-site-tint aria-[current=page]:text-site-accent-ink aria-[current=true]:bg-site-tint aria-[current=true]:text-site-accent-ink"
+            className="block rounded-lg px-3 py-2.5 font-semibold text-slate-700 hover:bg-slate-50 aria-[current=page]:bg-site-tint aria-[current=page]:text-site-accent aria-[current=true]:bg-site-tint aria-[current=true]:text-site-accent"
         >
             {children}
         </Link>

@@ -20,6 +20,14 @@ class AuthenticationTest extends TestCase
         $response->assertOk();
     }
 
+    public function test_signed_in_users_opening_the_login_screen_go_on_to_their_workspaces()
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get(route('login'))
+            ->assertRedirect(PlatformHosts::url(PlatformHosts::auth(), 'workspaces/continue'));
+    }
+
     public function test_users_can_authenticate_using_the_login_screen()
     {
         $user = User::factory()->create();

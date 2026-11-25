@@ -99,7 +99,7 @@ export const services: Service[] = [
         id: 'system-integration',
         icon: Cable,
         title: 'System Integration',
-        body: 'Connect the systems you already use with each other or with Miles Softwares, so information is entered once and flows where it is needed.',
+        body: 'Connect the systems you already use with each other or with Miles Global Softwares, so information is entered once and flows where it is needed.',
         href: quoteUrl('Project: System integration'),
         cta: 'Discuss your project',
         points: [
@@ -141,7 +141,7 @@ const hasMobile = (entry: CatalogEntry) =>
         (platform) => platform === 'android' || platform === 'ios',
     );
 
-/** The ways a Miles Softwares product can run. Not every product offers each one. */
+/** The ways a Miles Global Softwares product can run. Not every product offers each one. */
 export function deployments(trialDays: number): Deployment[] {
     return [
         {
@@ -233,8 +233,8 @@ function DeploymentSeal({ option }: { option: Deployment }) {
             >
                 <path
                     d={seal}
-                    fill="#001b48"
-                    stroke="#01c5fd"
+                    fill="#071a3d"
+                    stroke="#087bf5"
                     strokeWidth="3"
                     strokeLinejoin="round"
                 />
@@ -243,7 +243,7 @@ function DeploymentSeal({ option }: { option: Deployment }) {
                     cy="100"
                     r="78"
                     fill="none"
-                    stroke="#0a64c4"
+                    stroke="#1d3566"
                     strokeWidth="2"
                     strokeDasharray="1 6"
                     strokeLinecap="round"
@@ -253,7 +253,7 @@ function DeploymentSeal({ option }: { option: Deployment }) {
                     cy="100"
                     r="70"
                     fill="none"
-                    stroke="#0a2d66"
+                    stroke="#0c2552"
                     strokeWidth="1"
                 />
             </svg>
@@ -288,7 +288,7 @@ function DeploymentSeal({ option }: { option: Deployment }) {
 }
 
 /**
- * The ways to run Miles Softwares software, each naming the released products that
+ * The ways to run Miles Global Softwares software, each naming the released products that
  * offer it, so no option reads as available for everything. Each card leads
  * with a seal-and-ribbon badge.
  */
@@ -333,7 +333,7 @@ export function DeploymentOptions({
                             >
                                 <path
                                     d="M0 18 C 90 2, 170 34, 260 16 S 370 6, 400 12 V40 H0 Z"
-                                    fill="#0164b2"
+                                    fill="#0756b8"
                                 />
                                 <path
                                     d="M0 28 C 100 12, 190 42, 280 24 S 370 16, 400 22 V40 H0 Z"
@@ -454,7 +454,7 @@ const serviceGroups: Omit<Service, 'href' | 'cta'>[] = [
     {
         id: 'erp-customization',
         icon: Settings2,
-        title: 'Customize a Miles Softwares product',
+        title: 'Customize a Miles Global Softwares product',
         body: 'Start from one of our ERPs and have it adapted: extra fields, documents, print layouts, reports and approval steps.',
         points: [
             'Your product licence plus a setup charge',
@@ -475,9 +475,9 @@ const bannerThemes: {
     ink: string;
     soft: string;
 }[] = [
-    { fill: '#0353ff', onFill: '#ffffff', ink: '#0353ff', soft: '#1f68ff' },
-    { fill: '#001b48', onFill: '#ffffff', ink: '#001b48', soft: '#0a2d66' },
-    { fill: '#01c5fd', onFill: '#00122f', ink: '#006a8e', soft: '#3dd3fd' },
+    { fill: '#0756b8', onFill: '#ffffff', ink: '#0756b8', soft: '#087bf5' },
+    { fill: '#071a3d', onFill: '#ffffff', ink: '#071a3d', soft: '#0c2552' },
+    { fill: '#087bf5', onFill: '#080f1f', ink: '#0756b8', soft: '#e4e6ec' },
 ];
 
 /**

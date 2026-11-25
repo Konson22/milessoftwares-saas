@@ -163,7 +163,8 @@ export default function Activate({
                                     <button
                                         type="submit"
                                         disabled={processing}
-                                        className="h-12 rounded-full bg-site-accent-ink px-7 font-bold text-white transition-colors hover:bg-site-accent-deep disabled:opacity-60"
+                                        aria-busy={processing}
+                                        className={button.primary}
                                     >
                                         Get the activation code
                                     </button>

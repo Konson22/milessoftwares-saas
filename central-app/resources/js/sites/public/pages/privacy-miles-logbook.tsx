@@ -24,17 +24,17 @@ const sections: LegalSection[] = [
                     Miles Logbook is an app for phones and tablets that staff
                     use to fill in their organization's logbooks, such as shift
                     logs, checklists, readings and incident records, and that
-                    reviewers use to check them. It is part of Miles Softwares,
-                    a product of Miles Global Link Co. Ltd ("Miles Global Link",
-                    "we", "us"). The logbooks, their sheets and who can use them
-                    are set up by the organization on the web.
+                    reviewers use to check them. It is part of Miles Global
+                    Softwares, a product of Miles Global Link Co. Ltd ("Miles
+                    Global Link", "we", "us"). The logbooks, their sheets and
+                    who can use them are set up by the organization on the web.
                 </p>
                 <p>
                     This policy explains what the app collects, where it keeps
                     it and who can see it. It adds to our main{' '}
                     <Link href="/privacy">privacy policy</Link>, which covers
-                    Miles Softwares accounts and workspaces. For anything in it,
-                    write to {email} or message us on WhatsApp at{' '}
+                    Miles Global Softwares accounts and workspaces. For anything
+                    in it, write to {email} or message us on WhatsApp at{' '}
                     {whatsappNumber}.
                 </p>
             </>
@@ -94,16 +94,17 @@ const sections: LegalSection[] = [
     },
     {
         id: 'workspace',
-        title: 'Where it is kept: your Miles Softwares workspace',
+        title: 'Where it is kept: your Miles Global Softwares workspace',
         body: (
             <>
                 <p>
-                    You sign in with your Miles Softwares account: an email
-                    address or username with a password, two-step sign-in if
-                    your account has it, or Google. Entries, attachments and
+                    You sign in with your Miles Global Softwares account: an
+                    email address or username with a password, two-step sign-in
+                    if your account has it, or Google. Entries, attachments and
                     reviews are sent over encrypted connections to your
-                    organization's Miles Softwares workspace. There, they can be
-                    seen by the reviewers and other staff whose roles allow it.
+                    organization's Miles Global Softwares workspace. There, they
+                    can be seen by the reviewers and other staff whose roles
+                    allow it.
                 </p>
                 <p>
                     The workspace belongs to your organization, which decides
@@ -181,8 +182,8 @@ const sections: LegalSection[] = [
                         storage.
                     </li>
                     <li>
-                        <strong>Internet:</strong> to reach your Miles Softwares
-                        workspace.
+                        <strong>Internet:</strong> to reach your Miles Global
+                        Softwares workspace.
                     </li>
                 </ul>
                 <p>
@@ -213,13 +214,13 @@ const sections: LegalSection[] = [
         title: 'Security',
         body: (
             <p>
-                Connections to Miles Softwares are encrypted. On the device,
-                sign-in tokens and the database key are kept in secure storage,
-                and entries are kept in an encrypted database. In the workspace,
-                each person sees only what their role allows, and changes to
-                entries and reviews are recorded. No system is perfectly secure,
-                so tell us at {email} straight away if you think an account or
-                device has been compromised.
+                Connections to Miles Global Softwares are encrypted. On the
+                device, sign-in tokens and the database key are kept in secure
+                storage, and entries are kept in an encrypted database. In the
+                workspace, each person sees only what their role allows, and
+                changes to entries and reviews are recorded. No system is
+                perfectly secure, so tell us at {email} straight away if you
+                think an account or device has been compromised.
             </p>
         ),
     },
@@ -273,8 +274,8 @@ const sections: LegalSection[] = [
             <p>
                 When we change this policy we update the date at the top of this
                 page, and for important changes we tell users in the app or by
-                email before they take effect. Using Miles Softwares is also
-                covered by our <Link href="/terms">terms of service</Link>.
+                email before they take effect. Using Miles Global Softwares is
+                also covered by our <Link href="/terms">terms of service</Link>.
             </p>
         ),
     },
@@ -286,7 +287,7 @@ export default function PrivacyMilesLogbook({ canonical }: Props) {
         <>
             <Seo
                 title="Miles Logbook privacy policy"
-                description="What the Miles Logbook app collects, where it keeps it and who can see it, on the device and in a Miles Softwares workspace."
+                description="What the Miles Logbook app collects, where it keeps it and who can see it, on the device and in a Miles Global Softwares workspace."
                 canonical={canonical}
             />
 

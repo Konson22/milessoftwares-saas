@@ -1,6 +1,11 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { container, display, tints } from '@/sites/public/components/styles';
+import {
+    container,
+    display,
+    tints,
+    type,
+} from '@/sites/public/components/styles';
 
 /**
  * The short band every page but home opens with: white under the
@@ -30,15 +35,11 @@ export default function PageHero({
                 <div className="min-w-0">
                     {above && <div className="mb-4">{above}</div>}
                     <SpeedMark className="mb-4" />
-                    <h1
-                        className={`max-w-4xl text-[2rem] leading-[1.1] sm:text-[2.75rem] lg:text-5xl ${display}`}
-                    >
+                    <h1 className={`max-w-4xl ${type.hero} ${display}`}>
                         {title}
                     </h1>
                     {intro && (
-                        <p className="mt-4 max-w-2xl text-base leading-relaxed text-pretty text-slate-600 sm:text-lg">
-                            {intro}
-                        </p>
+                        <p className={`mt-4 max-w-2xl ${type.lead}`}>{intro}</p>
                     )}
                 </div>
                 {children && (
@@ -52,12 +53,12 @@ export default function PageHero({
 }
 
 /**
- * The deep blue opening band of the main pages: the title, the intro and
- * up to a few actions, with `aside` beside them from `lg` (a picture, or
- * links). `asideClassName` decides where the aside shows; by default only
- * from `lg`, as pictures are decorative.
+ * The opening band of the main pages, on soft grey: the title, the intro
+ * and up to a few actions, with `aside` beside them from `lg` (a picture,
+ * or links). `asideClassName` decides where the aside shows; by default
+ * only from `lg`, as pictures are decorative.
  */
-export function DarkHero({
+export function BrandHero({
     title,
     intro,
     children,
@@ -71,22 +72,17 @@ export function DarkHero({
     asideClassName?: string;
 }) {
     return (
-        <section className="site-dark relative isolate overflow-hidden bg-site-accent-deep">
-            <HeroBackdrop />
+        <section className="relative isolate overflow-hidden border-b border-site-line bg-site-wash">
             <div
-                className={`${container} grid items-center gap-10 pt-24 pb-12 sm:pt-28 sm:pb-14 ${aside ? 'lg:grid-cols-[1.05fr_1fr]' : ''}`}
+                className={`${container} grid items-center gap-10 pt-24 pb-14 sm:pt-28 sm:pb-16 ${aside ? 'lg:grid-cols-[1.05fr_1fr]' : ''}`}
             >
                 <div className="site-rise min-w-0">
                     <SpeedMark className="mb-5" />
-                    <h1
-                        className={`max-w-2xl text-[2.25rem] leading-[1.08] sm:text-5xl lg:text-[3.25rem] ${display}`}
-                    >
+                    <h1 className={`max-w-2xl ${type.hero} ${display}`}>
                         {title}
                     </h1>
                     {intro && (
-                        <p className="mt-5 max-w-xl text-base leading-relaxed text-pretty text-slate-200 sm:text-lg">
-                            {intro}
-                        </p>
+                        <p className={`mt-5 max-w-xl ${type.lead}`}>{intro}</p>
                     )}
                     {children && (
                         <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -186,7 +182,7 @@ function Constellation() {
         <svg
             viewBox="0 0 1200 600"
             preserveAspectRatio="xMidYMid slice"
-            className="absolute inset-0 size-full text-[#1d4cb0]"
+            className="absolute inset-0 size-full text-site-accent-hover"
         >
             <g stroke="currentColor" strokeWidth="1">
                 {links.map(([x1, y1, x2, y2]) => (
@@ -205,7 +201,7 @@ function Constellation() {
                     cx={x}
                     cy={y}
                     r={i % 4 === 0 ? 2.6 : 1.6}
-                    fill={i % 4 === 0 ? '#01c5fd' : '#3d6fd6'}
+                    fill={i % 4 === 0 ? '#5aa9ff' : '#087bf5'}
                 />
             ))}
         </svg>
@@ -218,7 +214,7 @@ function Constellation() {
  */
 export function Accent({ children }: { children: ReactNode }) {
     return (
-        <span className="text-site-accent-ink in-[.site-dark]:text-site-highlight">
+        <span className="text-site-accent in-[.site-dark]:text-site-highlight">
             {children}
         </span>
     );
@@ -239,7 +235,7 @@ export function IconBox({
 
     return (
         <span
-            className={`inline-flex size-11 shrink-0 items-center justify-center rounded-xl ${tint}`}
+            className={`inline-flex size-11 shrink-0 items-center justify-center rounded-lg ${tint}`}
         >
             <Icon className="size-5" aria-hidden />
         </span>
@@ -247,15 +243,15 @@ export function IconBox({
 }
 
 /**
- * The logo's two shapes, as a small rule over a heading: a charcoal dash
- * and two cyans. Decorative only.
+ * The logo's colours as a small rule over a heading: navy, blue, then the
+ * emerald green of "ERP". Decorative only.
  */
 export function SpeedMark({ className = '' }: { className?: string }) {
     return (
         <span aria-hidden className={`flex items-center gap-1.5 ${className}`}>
-            <span className="h-1.5 w-3 rounded-full bg-site-navy in-[.site-dark]:bg-site-highlight" />
-            <span className="h-1.5 w-6 rounded-full bg-site-accent-ink in-[.site-dark]:bg-site-highlight" />
-            <span className="h-1.5 w-10 rounded-full bg-site-accent" />
+            <span className="h-1.5 w-3 rounded-full bg-site-navy in-[.site-dark]:bg-white" />
+            <span className="h-1.5 w-6 rounded-full bg-site-accent in-[.site-dark]:bg-site-highlight" />
+            <span className="h-1.5 w-10 rounded-full bg-site-lime" />
         </span>
     );
 }

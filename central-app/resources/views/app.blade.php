@@ -30,10 +30,10 @@
             }
         </style>
 
-        <link rel="icon" href="/favicon.ico?v=20261120" sizes="any">
-        <link rel="icon" href="/favicon-96x96.png?v=20261120" type="image/png" sizes="96x96">
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20261120">
-        <meta name="theme-color" content="#001b48">
+        <link rel="icon" href="/favicon.ico?v=20261126c" sizes="any">
+        <link rel="icon" href="/favicon-96x96.png?v=20261126c" type="image/png" sizes="96x96">
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20261126c">
+        <meta name="theme-color" content="#071a3d">
 
         @php
             // Public site pages only: never the signed-in hosts.
@@ -114,12 +114,11 @@
         @if ($inlineCss)
             <style>{!! Vite::content('resources/css/app.css') !!}</style>
             {{--
-                The public site's first text: headings in Poppins 600, body in
-                Nunito (Latin). Fetched with the page rather than once the
-                stylesheet has been parsed. Signed-in hosts use system fonts.
+                The public site's text face, Inter (Latin, variable). Fetched
+                with the page rather than once the stylesheet has been parsed.
+                Signed-in hosts use system fonts.
             --}}
-            <link rel="preload" as="font" type="font/woff2" crossorigin href="{{ Vite::asset('node_modules/@fontsource/poppins/files/poppins-latin-600-normal.woff2') }}">
-            <link rel="preload" as="font" type="font/woff2" crossorigin href="{{ Vite::asset('node_modules/@fontsource-variable/nunito/files/nunito-latin-wght-normal.woff2') }}">
+            <link rel="preload" as="font" type="font/woff2" crossorigin href="{{ Vite::asset('node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') }}">
         @endif
         @vite([...($inlineCss ? [] : ['resources/css/app.css']), 'resources/js/app.tsx', \App\Support\Inertia\SitePages::sitePath($page['component']), \App\Support\Inertia\SitePages::path($page['component'])])
         <x-inertia::head>

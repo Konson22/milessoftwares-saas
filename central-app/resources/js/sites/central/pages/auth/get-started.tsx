@@ -34,7 +34,7 @@ export default function GuestGetStarted({
     return (
         <>
             <Head
-                title={`Get started with ${selection.name ?? 'Miles Softwares'}`}
+                title={`Get started with ${selection.name ?? 'Miles Global Softwares'}`}
             />
             <div className="space-y-6">
                 <div className="rounded-lg border bg-card p-4">

@@ -7,8 +7,8 @@ import { button, container, display } from '@/sites/public/components/styles';
 type Reason = (typeof whyMiles)[number];
 
 /**
- * Why Miles Softwares, on the home page: the four reasons around a
- * picture of the Miles Softwares workspace on every screen, with dashed connectors
+ * Why Miles Global Softwares, on the home page: the four reasons around a
+ * picture of the Miles Global Softwares workspace on every screen, with dashed connectors
  * from each card to it. On small screens the picture sits between the
  * cards. Pale blue band, white
  * cards, the logo blue for icons and accents; no navy backgrounds.
@@ -31,7 +31,7 @@ export default function WhyMiles() {
                         id="why-heading"
                         className={`${display} text-3xl sm:text-4xl lg:text-5xl`}
                     >
-                        Why <Accent>Miles Softwares</Accent>
+                        Why <Accent>Miles Global Softwares</Accent>
                     </h2>
                     <p className="mt-5 text-base leading-relaxed text-slate-600 sm:text-lg">
                         Software made for the trade you run, on the screens you
@@ -134,7 +134,7 @@ function ReasonCard({
 }
 
 /**
- * The Miles Softwares workspace on a laptop, tablet and phone with the trades around
+ * The Miles Global Softwares workspace on a laptop, tablet and phone with the trades around
  * it. Its white background multiplies into the band and the edges fade, so
  * it sits on the section with no frame.
  */
@@ -145,7 +145,7 @@ function Hub() {
                 src="/images/home/miles-ecosystem.webp"
                 srcSet="/images/home/miles-ecosystem-700.webp 700w, /images/home/miles-ecosystem.webp 1190w"
                 sizes="(min-width: 1280px) 32rem, (min-width: 1024px) 24rem, 28rem"
-                alt="Miles Softwares on a laptop, tablet and phone, joined to shop, team, device and cloud icons"
+                alt="Miles Global Softwares on a laptop, tablet and phone, joined to shop, team, device and cloud icons"
                 width={1190}
                 height={800}
                 loading="lazy"

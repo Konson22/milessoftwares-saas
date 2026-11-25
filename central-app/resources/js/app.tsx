@@ -4,10 +4,10 @@ import { TooltipProvider } from '@/shared/components/ui/tooltip';
 import { initializeTheme } from '@/shared/hooks/use-appearance';
 import { resolveLayout, resolvePage } from '@/sites';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Miles Softwares';
+const appName = import.meta.env.VITE_APP_NAME || 'Miles Global Softwares';
 
 void createInertiaApp({
-    // "Page - Miles Softwares"; a title that already leads with the brand ("Miles Softwares | …",
+    // "Page - Miles Global Softwares"; a title that already leads with the brand ("Miles Global Softwares | …",
     // the home page) is used as it is.
     title: (title) =>
         !title

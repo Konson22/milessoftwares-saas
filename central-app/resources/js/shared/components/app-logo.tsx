@@ -1,11 +1,11 @@
 /**
- * The full Miles Softwares logo: the mark and the name. `inverted`
+ * The full Miles Global Softwares logo: the globe and the name. `inverted`
  * is the version with light lettering, for dark backgrounds.
  */
 export default function AppLogo({
     inverted = false,
-    className = 'h-10 w-auto',
-    alt = 'Miles Softwares',
+    className = 'h-14 w-auto',
+    alt = 'Miles Global Softwares',
 }: {
     inverted?: boolean;
     className?: string;
@@ -15,12 +15,12 @@ export default function AppLogo({
         <img
             src={
                 inverted
-                    ? '/images/logo-with-text-light.png?v=20261120'
-                    : '/images/logo-with-text.png?v=20261120'
+                    ? '/images/logo-with-text-light.png?v=20261126c'
+                    : '/images/logo-with-text.png?v=20261126c'
             }
             alt={alt}
-            width={771}
-            height={230}
+            width={640}
+            height={320}
             className={className}
         />
     );

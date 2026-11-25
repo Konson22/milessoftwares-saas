@@ -13,7 +13,7 @@ import {
     cardSurface,
 } from '@/sites/public/components/blocks';
 import { quoteUrl, services } from '@/sites/public/components/offerings';
-import { Accent, DarkHero } from '@/sites/public/components/page-hero';
+import { Accent, BrandHero } from '@/sites/public/components/page-hero';
 import SectionHeading from '@/sites/public/components/section-heading';
 import Seo, { organization } from '@/sites/public/components/seo';
 import { socialLinks } from '@/sites/public/components/social';
@@ -67,10 +67,10 @@ const steps = [
     },
 ];
 
-/** Changing a Miles Softwares product versus building something new. */
+/** Changing a Miles Global Softwares product versus building something new. */
 const choices = [
     {
-        title: 'Customize a Miles Softwares product',
+        title: 'Customize a Miles Global Softwares product',
         body: 'You run one of our ready-made ERPs, adapted to you: fields, documents, reports, print layouts and approval steps.',
         points: [
             'Product licence: subscription, or one-time where offered',
@@ -95,7 +95,7 @@ const choices = [
 
 /**
  * Custom development: new systems built for one customer, and changes to a
- * Miles Softwares product. The ready-made products are in the catalog.
+ * Miles Global Softwares product. The ready-made products are in the catalog.
  */
 export default function Services({ canonical }: Props) {
     const origin = new URL(canonical).origin;
@@ -119,27 +119,27 @@ export default function Services({ canonical }: Props) {
                 }}
             />
 
-            <DarkHero
+            <BrandHero
                 title={
                     <>
                         Custom software{' '}
                         <Accent>built around your business</Accent>
                     </>
                 }
-                intro="We adapt a Miles Softwares product or build a new system around how you work."
+                intro="We adapt a Miles Global Softwares product or build a new system around how you work."
                 asideClassName=""
                 aside={
-                    <ul className="grid gap-4 rounded-xl bg-site-navy-light p-5 ring-1 ring-site-navy-line sm:grid-cols-2 sm:p-6">
+                    <ul className="grid gap-4 rounded-xl bg-white p-5 shadow-xs ring-1 ring-site-line sm:grid-cols-2 sm:p-6">
                         {heroFacts.map(({ icon: Icon, title, body }) => (
                             <li key={title} className="flex items-start gap-3">
-                                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-site-highlight text-site-night">
+                                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-site-tint text-site-accent">
                                     <Icon className="size-5" aria-hidden />
                                 </span>
                                 <span>
-                                    <span className="block text-sm font-semibold text-white">
+                                    <span className="block text-sm font-semibold text-site-ink">
                                         {title}
                                     </span>
-                                    <span className="mt-0.5 block text-sm leading-snug text-slate-300">
+                                    <span className="mt-0.5 block text-sm leading-snug text-site-muted">
                                         {body}
                                     </span>
                                 </span>
@@ -150,18 +150,18 @@ export default function Services({ canonical }: Props) {
             >
                 <Link
                     href={quoteUrl('Project: Custom software')}
-                    className={button.light}
+                    className={button.primary}
                 >
                     Discuss your project
                     <ArrowRight className="size-4" aria-hidden />
                 </Link>
                 <Link
                     href={quoteUrl('Quote: Custom software')}
-                    className={button.outlineDark}
+                    className={button.outline}
                 >
                     Request a quotation
                 </Link>
-            </DarkHero>
+            </BrandHero>
 
             <section
                 id="what-we-build"

@@ -114,9 +114,8 @@ export default function ProductProfile({
     ].filter((app) => app.points.length > 0);
 
     const heading = 'text-2xl font-semibold tracking-tight text-slate-900';
-    // The hero's main action: white on the navy band.
-    const onDark =
-        'inline-flex items-center justify-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white';
+    // The hero's main action: lime on the dark green band.
+    const onDark = button.light;
 
     return (
         <>
@@ -185,7 +184,7 @@ export default function ProductProfile({
             <section className="site-dark bg-site-night">
                 <div className={`${container} pt-24 pb-10 sm:pt-28 sm:pb-14`}>
                     <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
-                        <span className="inline-flex size-16 shrink-0 items-center justify-center rounded-2xl bg-white text-site-accent-ink sm:size-20">
+                        <span className="inline-flex size-16 shrink-0 items-center justify-center rounded-xl bg-white text-site-accent sm:size-20">
                             <ProductIcon
                                 className="size-8 sm:size-10"
                                 aria-hidden

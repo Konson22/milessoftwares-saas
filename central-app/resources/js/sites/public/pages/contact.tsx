@@ -23,7 +23,7 @@ export default function Contact({ formToken, subject, canonical }: Props) {
         <>
             <Seo
                 title="Contact us"
-                description="Contact Miles Softwares about ERP, accounting, HR or custom software: pricing, free trials, partnerships and support. Send us a message or chat on WhatsApp."
+                description="Contact Miles Global Softwares about ERP, accounting, HR or custom software: pricing, free trials, partnerships and support. Send us a message or chat on WhatsApp."
                 canonical={canonical}
             />
 

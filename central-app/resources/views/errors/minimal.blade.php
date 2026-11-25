@@ -43,28 +43,28 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noindex">
-        <title>@yield('title') · Miles Softwares</title>
-        <link rel="icon" href="/favicon.ico?v=20261120" sizes="any">
+        <title>@yield('title') · Miles Global Softwares</title>
+        <link rel="icon" href="/favicon.ico?v=20261126c" sizes="any">
         <style>
             :root {
                 --bg: #ffffff;
                 --card: #ffffff;
-                --ink: #001b48;
+                --ink: #021546;
                 --muted: #45546d;
                 --line: #d3def3;
-                --accent: #0353ff;
-                --accent-hover: #013089;
+                --accent: #0a68d6;
+                --accent-hover: #013d81;
                 color-scheme: light;
             }
 
             @media (prefers-color-scheme: dark) {
                 :root {
-                    --bg: #00122f;
-                    --card: #001b48;
+                    --bg: #010d2e;
+                    --card: #021546;
                     --ink: #f4f6fa;
                     --muted: #afbdd2;
                     --line: #0a2d66;
-                    --accent: #01c5fd;
+                    --accent: #22a8f5;
                     --accent-hover: #86dcff;
                     color-scheme: dark;
                 }
@@ -183,8 +183,8 @@
         <main>
             <a class="brand" href="{{ PlatformHosts::url(PlatformHosts::root()) }}">
                 <picture>
-                    <source srcset="/images/logo-with-text-light.png?v=20261120" media="(prefers-color-scheme: dark)">
-                    <img src="/images/logo-with-text.png?v=20261120" alt="Miles Softwares">
+                    <source srcset="/images/logo-with-text-light.png?v=20261126c" media="(prefers-color-scheme: dark)">
+                    <img src="/images/logo-with-text.png?v=20261126c" alt="Miles Global Softwares">
                 </picture>
             </a>
 

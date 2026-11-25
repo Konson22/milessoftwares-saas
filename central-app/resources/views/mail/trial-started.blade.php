@@ -1,7 +1,7 @@
 <x-mail::message>
 # Your free trial has started
 
-Thank you for choosing Miles Softwares. Your **{{ $days }}-day {{ $application }} trial** is running, and your invoice is attached. There is nothing to pay.
+Thank you for choosing Miles Global Softwares. Your **{{ $days }}-day {{ $application }} trial** is running, and your invoice is attached. There is nothing to pay.
 
 <x-mail::table>
 | Invoice {{ $number }} | |

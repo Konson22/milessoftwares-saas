@@ -51,7 +51,12 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { waitlistUrl } from '@/sites/public/components/blocks';
-import { display, trialUrl } from '@/sites/public/components/styles';
+import {
+    darkCard,
+    darkIcon,
+    display,
+    trialUrl,
+} from '@/sites/public/components/styles';
 
 /** One product of the public catalog (MarketingCatalog::catalog()). */
 export type CatalogEntry = {
@@ -208,11 +213,11 @@ export const statusLabels: Record<CatalogEntry['status'], string | null> = {
 export function CatalogStatus({ status }: { status: CatalogEntry['status'] }) {
     const tone = {
         available:
-            'bg-site-tint text-site-navy in-[.site-dark]:bg-site-navy-light in-[.site-dark]:text-white',
+            'bg-site-tint text-site-navy in-[.site-dark]:bg-site-night in-[.site-dark]:text-white in-[.site-dark]:ring-1 in-[.site-dark]:ring-site-navy-line',
         early_access:
-            'bg-site-tint text-site-accent-ink in-[.site-dark]:bg-site-navy-light in-[.site-dark]:text-white',
+            'bg-site-tint text-site-accent-ink in-[.site-dark]:bg-site-night in-[.site-dark]:text-site-highlight in-[.site-dark]:ring-1 in-[.site-dark]:ring-site-navy-line',
         coming_soon:
-            'bg-site-soft text-slate-700 ring-1 ring-site-line in-[.site-dark]:bg-site-navy-light in-[.site-dark]:text-white in-[.site-dark]:ring-site-navy-line',
+            'bg-site-soft text-slate-700 ring-1 ring-site-line in-[.site-dark]:bg-site-night in-[.site-dark]:text-site-silver-light in-[.site-dark]:ring-site-navy-line',
     }[status];
 
     return (
@@ -286,7 +291,7 @@ export function StatusBadge({
                 <svg
                     aria-hidden
                     viewBox="0 0 100 100"
-                    className="absolute inset-0 size-full drop-shadow-[0_6px_10px_rgb(0_12_34/0.35)]"
+                    className="absolute inset-0 size-full drop-shadow-[0_6px_10px_rgb(8_15_31/0.35)]"
                 >
                     <polygon points={burst} className="fill-site-highlight" />
                     <circle
@@ -312,7 +317,7 @@ export function StatusBadge({
     if (status === 'early_access') {
         return (
             <span className="absolute top-0 right-0 z-10 size-28 overflow-hidden rounded-tr-xl">
-                <span className="absolute top-[1.6rem] -right-[2.6rem] w-44 rotate-45 bg-site-highlight py-1.5 text-center text-[0.6875rem] font-extrabold tracking-[0.14em] text-site-night uppercase shadow-[0_4px_10px_rgb(0_12_34/0.3)] ring-1 ring-site-night/10">
+                <span className="absolute top-[1.6rem] -right-[2.6rem] w-44 rotate-45 bg-site-highlight py-1.5 text-center text-[0.6875rem] font-extrabold tracking-[0.14em] text-site-night uppercase shadow-[0_4px_10px_rgb(8_15_31/0.3)] ring-1 ring-site-night/10">
                     Early access
                 </span>
             </span>
@@ -324,7 +329,7 @@ export function StatusBadge({
             <span className="absolute -top-1 right-6 z-10 flex flex-col items-center group-hover:rotate-[6deg] motion-safe:origin-top motion-safe:transition-transform motion-safe:duration-500">
                 {/* The string. */}
                 <span aria-hidden className="h-5 w-px bg-slate-300" />
-                <span className="relative flex flex-col items-center rounded-b-lg bg-site-highlight px-3 pt-4 pb-2 leading-none font-extrabold text-site-night uppercase shadow-[0_8px_16px_rgb(0_12_34/0.35)] [clip-path:polygon(50%_0,100%_14%,100%_100%,0_100%,0_14%)]">
+                <span className="relative flex flex-col items-center rounded-b-lg bg-site-highlight px-3 pt-4 pb-2 leading-none font-extrabold text-site-night uppercase shadow-[0_8px_16px_rgb(8_15_31/0.35)] [clip-path:polygon(50%_0,100%_14%,100%_100%,0_100%,0_14%)]">
                     <span
                         aria-hidden
                         className="absolute top-1.5 left-1/2 size-2 -translate-x-1/2 rounded-full bg-site-night"
@@ -339,19 +344,72 @@ export function StatusBadge({
     }
 
     return (
-        <span className="absolute top-4 right-0 z-10 bg-site-highlight py-1.5 pr-4 pl-5 text-[0.6875rem] font-extrabold tracking-[0.14em] text-site-night uppercase shadow-[0_4px_10px_rgb(0_12_34/0.3)] [clip-path:polygon(0_0,100%_0,100%_100%,0_100%,0.6rem_50%)]">
+        <span className="absolute top-4 right-0 z-10 bg-site-highlight py-1.5 pr-4 pl-5 text-[0.6875rem] font-extrabold tracking-[0.14em] text-site-night uppercase shadow-[0_4px_10px_rgb(8_15_31/0.3)] [clip-path:polygon(0_0,100%_0,100%_100%,0_100%,0.6rem_50%)]">
             {statusLabels[status]}
         </span>
     );
 }
 
 /**
- * A product card: what it is, where it stands, and the next step. A navy
- * header carries the product's name and its promotion badge (StatusBadge).
+ * The compact product card (home page suite and ERPs): a navy card with
+ * the product's blue icon, its real status, name, one line and a link.
+ */
+export function CompactCard({
+    href,
+    icon: Icon,
+    title,
+    body,
+    status,
+}: {
+    href: string;
+    icon: LucideIcon;
+    title: string;
+    body: string;
+    status?: CatalogEntry['status'];
+}) {
+    return (
+        <li>
+            <Link href={href} className={darkCard}>
+                <span className="flex items-start justify-between gap-3">
+                    <span className={darkIcon}>
+                        <Icon
+                            className="size-6"
+                            strokeWidth={1.75}
+                            aria-hidden
+                        />
+                    </span>
+                    {status && status !== 'available' && (
+                        <CatalogStatus status={status} />
+                    )}
+                </span>
+                <span className="mt-5 block text-lg leading-snug font-semibold text-white">
+                    {title}
+                </span>
+                <span className="mt-1.5 block flex-1 text-sm leading-relaxed text-site-silver">
+                    {body}
+                </span>
+                <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-site-highlight">
+                    Learn more
+                    <span className="sr-only"> about {title}</span>
+                    <ArrowRight
+                        className="size-4 transition-transform group-hover:translate-x-1"
+                        aria-hidden
+                    />
+                </span>
+            </Link>
+        </li>
+    );
+}
+
+/**
+ * The featured product card, in three bands cut on the diagonal: near
+ * black at the top with the product's icon, name and summary (and its
+ * promotion badge, StatusBadge); dark blue in the middle with its main
+ * points; light silver at the foot with where it runs and the next step.
  * Only a product open for trials offers one; the others lead to their
- * page or the waitlist. `highlights` adds the product's main points under
- * its summary (the home page's Miles Products); `title` is the name to
- * show (Miles Pharmacy) when it is not the catalog's.
+ * page or the waitlist. `highlights` shows the product's highlights
+ * instead of its first features; `title` is the name to show (Miles
+ * Pharmacy) when it is not the catalog's.
  */
 export function ProductCard({
     product,
@@ -367,6 +425,7 @@ export function ProductCard({
     title?: string;
 }) {
     const name = title ?? product.name;
+    const Icon = catalogIcon(product.icon);
     // The product's main points: its highlights where asked for, otherwise
     // the first few features from its page.
     const points =
@@ -374,22 +433,23 @@ export function ProductCard({
             ? product.highlights
             : product.features.slice(0, 4).map((feature) => feature.title);
     const action =
-        'inline-flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold whitespace-nowrap transition-[background-color,color,border-color,transform] hover:-translate-y-0.5';
+        'inline-flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors';
+    // The diagonal seams: each lower band rises 1.25rem over the one above.
+    const seam = '-mt-5 pt-10';
 
     return (
-        <article className="group relative flex h-full flex-col rounded-xl bg-white shadow-[0_1px_2px_rgb(0_27_72/0.06),0_10px_30px_-12px_rgb(0_27_72/0.18)] ring-1 ring-site-line transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgb(0_27_72/0.08),0_24px_48px_-16px_rgb(0_27_72/0.32)] hover:ring-site-accent">
-            {/* The header: the product's name on a solid navy panel. */}
-            <div className="site-dark relative flex min-h-32 items-end overflow-hidden rounded-t-xl bg-site-navy px-6 pt-12 pr-28 pb-5 sm:px-7 sm:pr-28">
+        <article className="group relative flex h-full flex-col rounded-xl bg-site-silver-light shadow-[0_1px_2px_rgb(7_26_61/0.08),0_14px_32px_-14px_rgb(7_26_61/0.35)] ring-1 ring-site-line transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgb(7_26_61/0.1),0_24px_48px_-16px_rgb(7_26_61/0.45)] hover:ring-site-leaf">
+            {/* Top: near black, the product's icon, name and summary. */}
+            <div className="site-dark relative overflow-hidden rounded-t-xl bg-site-night px-6 pt-6 pb-9 sm:px-7">
                 <span
                     aria-hidden
-                    className="absolute -right-10 -bottom-14 size-40 rounded-full border-[14px] border-site-navy-light group-hover:-translate-x-4 motion-safe:transition-transform motion-safe:duration-500"
+                    className="absolute -right-12 -bottom-16 size-44 rounded-full border-[14px] border-site-navy group-hover:-translate-x-4 motion-safe:transition-transform motion-safe:duration-500"
                 />
-                <span
-                    aria-hidden
-                    className="absolute bottom-0 left-6 h-1 w-10 origin-left rounded-t-full bg-site-highlight group-hover:scale-x-[2.5] motion-safe:transition-transform motion-safe:duration-300 sm:left-7"
-                />
+                <span className={`relative ${darkIcon}`}>
+                    <Icon className="size-6" strokeWidth={1.75} aria-hidden />
+                </span>
                 <Heading
-                    className={`relative text-xl leading-snug sm:text-[1.375rem] ${display}`}
+                    className={`relative mt-4 pr-20 text-xl leading-snug sm:text-[1.375rem] ${display}`}
                 >
                     <Link
                         href={`/${product.url}`}
@@ -398,6 +458,9 @@ export function ProductCard({
                         {name}
                     </Link>
                 </Heading>
+                <p className="relative mt-2 text-sm leading-relaxed text-site-silver">
+                    {product.subhead || product.summary}
+                </p>
             </div>
 
             <StatusBadge
@@ -405,18 +468,18 @@ export function ProductCard({
                 trialDays={product.trial ? trialDays : undefined}
             />
 
-            <div className="flex flex-1 flex-col px-6 pb-6 sm:px-7 sm:pb-7">
-                <p className="mt-5 text-sm leading-relaxed text-slate-600">
-                    {product.subhead || product.summary}
-                </p>
-                {points.length > 0 && (
-                    <ul className="mt-4 flex flex-1 flex-wrap content-start gap-2 text-[0.8125rem] font-semibold text-site-ink">
+            {/* Middle: dark blue, the main points. */}
+            {points.length > 0 && (
+                <div
+                    className={`relative flex-1 bg-site-accent px-6 pb-9 sm:px-7 ${seam} [clip-path:polygon(0_1.25rem,100%_0,100%_100%,0_100%)]`}
+                >
+                    <ul className="grid gap-2.5 text-sm font-medium text-white">
                         {points.map((point) => (
                             <li
                                 key={point}
-                                className="inline-flex items-center gap-1.5 rounded-full bg-site-wash py-1 pr-3 pl-1.5 ring-1 ring-site-line"
+                                className="flex items-start gap-2.5"
                             >
-                                <span className="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-site-accent-ink text-white">
+                                <span className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-white text-site-accent">
                                     <Check
                                         className="size-3"
                                         strokeWidth={3}
@@ -427,18 +490,22 @@ export function ProductCard({
                             </li>
                         ))}
                     </ul>
-                )}
-                {points.length === 0 && <span className="flex-1" />}
+                </div>
+            )}
+
+            {/* Foot: light silver, where it runs and the next step. */}
+            <div
+                className={`relative rounded-b-xl bg-site-silver-light px-6 pb-6 sm:px-7 sm:pb-7 ${seam} ${points.length === 0 ? 'flex-1' : ''} [clip-path:polygon(0_0,100%_1.25rem,100%_100%,0_100%)]`}
+            >
                 <PlatformList
                     platforms={product.offering.platforms}
                     planned={product.status === 'coming_soon'}
-                    className="mt-5 border-t border-dashed border-site-line pt-4"
                 />
                 <div className="mt-5 flex items-center gap-3">
                     {product.trial ? (
                         <a
                             href={trialUrl(product.trial, product.trialProduct)}
-                            className={`${action} bg-site-accent-ink text-white shadow-sm shadow-site-accent-ink/25 hover:bg-site-accent-deep`}
+                            className={`${action} bg-site-accent text-white shadow-sm hover:bg-site-accent-hover`}
                         >
                             Start {trialDays}-day free trial
                             <span className="sr-only"> of {name}</span>
@@ -446,7 +513,7 @@ export function ProductCard({
                     ) : product.status === 'coming_soon' ? (
                         <Link
                             href={waitlistUrl(product.name)}
-                            className={`${action} bg-site-ink text-white hover:bg-site-night`}
+                            className={`${action} bg-site-navy text-white hover:bg-site-night`}
                         >
                             Join the waitlist
                             <span className="sr-only"> for {name}</span>
@@ -458,7 +525,7 @@ export function ProductCard({
                     ) : (
                         <Link
                             href={`/contact?subject=${encodeURIComponent(`Demo: ${product.name}`)}`}
-                            className={`${action} border border-site-line text-site-ink hover:border-site-accent-ink hover:text-site-accent-ink`}
+                            className={`${action} bg-site-accent text-white shadow-sm hover:bg-site-accent-hover`}
                         >
                             Request a demo
                             <span className="sr-only"> of {name}</span>
@@ -467,7 +534,7 @@ export function ProductCard({
                     )}
                     <Link
                         href={`/${product.url}`}
-                        className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-2.5 text-sm font-semibold text-slate-600 hover:text-site-accent-ink"
+                        className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-2.5 text-sm font-semibold text-site-ink hover:text-site-accent"
                     >
                         Learn more
                         <span className="sr-only"> about {name}</span>
@@ -496,13 +563,13 @@ export function PlatformList({
         <p
             className={`flex flex-wrap items-center gap-1.5 text-xs ${className}`}
         >
-            <span className="mr-0.5 font-semibold text-slate-500">
+            <span className="mr-0.5 font-semibold text-site-muted">
                 {planned ? 'Planned for' : 'Runs on'}
             </span>
             {platforms.map((platform) => (
                 <span
                     key={platform}
-                    className="rounded-full bg-site-soft px-2.5 py-1 font-semibold text-slate-700 ring-1 ring-site-line"
+                    className="rounded-full bg-white px-2.5 py-1 font-semibold text-site-ink ring-1 ring-site-line"
                 >
                     {platformLabels[platform]}
                 </span>

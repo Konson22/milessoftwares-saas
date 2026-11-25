@@ -1,12 +1,12 @@
 {
     "application": {
         "code": "platform",
-        "name": "Miles Softwares platform",
+        "name": "Miles Global Softwares platform",
         "category": "platform",
         "kind": "platform",
         "status": "available"
     },
-    "version": "1.0.2",
+    "version": "1.0.3",
     "permissions": [
         {
             "key": "platform.access.manage",
