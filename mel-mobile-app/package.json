@@ -57,8 +57,8 @@
   },
   "scripts": {
     "start": "expo start",
-    "usb": "adb reverse tcp:80 tcp:80 && adb reverse tcp:8081 tcp:8081 && expo start",
-    "usb:reverse": "adb reverse tcp:80 tcp:80 && adb reverse tcp:8081 tcp:8081",
+    "usb": "adb reverse tcp:8080 tcp:80 && adb reverse tcp:8081 tcp:8081 && expo start",
+    "usb:reverse": "adb reverse tcp:8080 tcp:80 && adb reverse tcp:8081 tcp:8081",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "lint": "expo lint",

@@ -1,20 +1,57 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
- * This phone's printing choice: a kitchen ticket printed each time lines go
- * to the kitchen (on by default). Kept per phone, in either mode.
+ * This phone's printing choices, kept per phone in either mode:
+ * - a kitchen ticket printed each time lines go to the kitchen (on by default);
+ * - after a payment, the customer's receipt asked for, printed straight away, or left.
  */
 
-const KITCHEN_KEY = 'miles-restaurant.print-kitchen';
+export type ReceiptAfterPay = 'ask' | 'print' | 'none';
 
-let printKitchen: boolean | null = null;
+export interface PrintChoices {
+  kitchenTickets: boolean;
+  receiptAfterPay: ReceiptAfterPay;
+}
+
+const KITCHEN_KEY = 'miles-restaurant.print-kitchen';
+const RECEIPT_KEY = 'miles-restaurant.print-receipt';
+
+let choices: PrintChoices = { kitchenTickets: true, receiptAfterPay: 'ask' };
+const listeners = new Set<() => void>();
+
+const loaded = Promise.all([AsyncStorage.getItem(KITCHEN_KEY), AsyncStorage.getItem(RECEIPT_KEY)])
+  .then(([kitchen, receipt]) => {
+    choices = {
+      kitchenTickets: kitchen !== 'off',
+      receiptAfterPay: receipt === 'print' || receipt === 'none' ? receipt : 'ask',
+    };
+    listeners.forEach((l) => l());
+  })
+  .catch(() => {});
+
+export const getPrintChoices = () => choices;
+
+export function subscribePrintChoices(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+export function updatePrintChoices(patch: Partial<PrintChoices>) {
+  choices = { ...choices, ...patch };
+  if (patch.kitchenTickets !== undefined) AsyncStorage.setItem(KITCHEN_KEY, patch.kitchenTickets ? 'on' : 'off').catch(() => {});
+  if (patch.receiptAfterPay !== undefined) AsyncStorage.setItem(RECEIPT_KEY, patch.receiptAfterPay).catch(() => {});
+  listeners.forEach((l) => l());
+}
 
 export async function printsKitchenTickets(): Promise<boolean> {
-  if (printKitchen === null) printKitchen = (await AsyncStorage.getItem(KITCHEN_KEY)) !== 'off';
-  return printKitchen;
+  await loaded;
+  return choices.kitchenTickets;
 }
 
-export async function setPrintsKitchenTickets(on: boolean) {
-  printKitchen = on;
-  await AsyncStorage.setItem(KITCHEN_KEY, on ? 'on' : 'off');
+export async function receiptAfterPay(): Promise<ReceiptAfterPay> {
+  await loaded;
+  return choices.receiptAfterPay;
 }
+
+/** Kept for older call sites. */
+export const setPrintsKitchenTickets = async (on: boolean) => updatePrintChoices({ kitchenTickets: on });

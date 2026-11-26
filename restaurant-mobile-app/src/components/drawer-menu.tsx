@@ -74,6 +74,16 @@ export function DrawerMenu({ navigation }: DrawerContentComponentProps) {
           accessibilityRole="button"
           onPress={() => {
             navigation.closeDrawer();
+            router.push('/printer');
+          }}
+          className="min-h-12 flex-row items-center gap-3 px-3 active:bg-slate-100">
+          <Ionicons name="print-outline" size={21} color={colors.muted} />
+          <Text className="flex-1 text-base font-medium text-slate-800">Printer</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            navigation.closeDrawer();
             router.push('/account');
           }}
           className="min-h-12 flex-row items-center gap-3 px-3 active:bg-slate-100">

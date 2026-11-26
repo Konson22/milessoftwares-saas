@@ -10,10 +10,10 @@ import { Badge, Banner } from '@/components/ui/misc';
 import { Sheet } from '@/components/ui/sheet';
 import { useBusiness } from '@/hooks/use-business';
 import { openPage, useAction } from '@/hooks/use-page';
-import { amountInput, money, time, toMinor } from '@/lib/format';
+import { amountInput, cashSuggestions, money, plural, time, toMinor } from '@/lib/format';
 import { errorMessage } from '@/lib/api/client';
 import { getPage } from '@/lib/pages';
-import { printsKitchenTickets } from '@/lib/printing';
+import { printsKitchenTickets, receiptAfterPay } from '@/lib/printing';
 import { printBill, printKitchenTicket, printPaidBill } from '@/lib/receipt';
 import { colors, webNoOutline } from '@/lib/theme';
 import { useUser } from '@/store/auth';
@@ -160,14 +160,20 @@ export function OrderScreen({ page, path, reload }: ScreenProps<Props>) {
       : mode === 'shares'
         ? shareMinor
         : bill.total_minor;
-  const discountMinor = !discounting
-    ? 0
-    : discountType === 'percent'
-      ? Math.round((partMinor * Math.min(Number.parseInt(discount, 10) || 0, 100)) / 100)
-      : Math.min(toMinor(discount) ?? 0, partMinor);
+  // The restaurant takes a whole percentage (1 to 100), or an amount up to the part being paid.
+  const percent = /^\d{1,3}$/.test(discount.trim()) ? Number(discount.trim()) : null;
+  const discountBad =
+    discounting && discount.trim() !== '' && (discountType === 'percent' ? percent === null || percent < 1 || percent > 100 : toMinor(discount) === null);
+  const discountMinor =
+    !discounting || discountBad
+      ? 0
+      : discountType === 'percent'
+        ? Math.round((partMinor * (percent ?? 0)) / 100)
+        : Math.min(toMinor(discount) ?? 0, partMinor);
   const dueMinor = Math.max(partMinor - discountMinor, 0);
   const tenderedMinor = tendered.trim() === '' ? null : toMinor(tendered);
   const change = tenderedMinor !== null ? tenderedMinor - dueMinor : null;
+  const quickCash = cashSuggestions(dueMinor);
 
   const pick = (item: MenuItem) => {
     const same = drafts.find((draft) => draft.item.id === item.id && draft.note === '');
@@ -242,29 +248,36 @@ export function OrderScreen({ page, path, reload }: ScreenProps<Props>) {
         ? { discount_type: discountType, discount: discountType === 'amount' ? amountInput(discount.trim()) : discount.trim(), discount_reason: discountReason.trim() }
         : {}),
     });
-    if (ok) {
-      setPaying(false);
-      setJustPaid(true);
-      setPicked([]);
-      setDiscounting(false);
-      setDiscount('');
-      setDiscountReason('');
-      setTendered('');
-    }
+    if (!ok) return;
+    setPaying(false);
+    if (!canSeeBills) return;
+    // This phone's choice (Printer settings): ask, print straight away, or no receipt.
+    const after = await receiptAfterPay();
+    if (after === 'ask') setJustPaid(true);
+    else if (after === 'print') await printReceipt(true);
   };
 
+  /** A fresh sheet for each payment: nothing typed for the last customer carries over. */
   const startPaying = () => {
     setMode(running ? 'shares' : 'whole');
     setPicked([]);
+    setDiscounting(false);
+    setDiscount('');
+    setDiscountReason('');
+    setTendered('');
+    setReference('');
+    setMethod(paymentMethods[0]?.value ?? 'cash');
     setPaying(true);
   };
 
   /** The customer's receipt once the order is paid. */
-  const printReceipt = async () => {
-    if (!order.bill) return;
+  const printReceipt = async (latest = false) => {
     try {
-      const page = await getPage<BillProps>(`bills/${order.bill.id}`);
-      await printPaidBill(page.props.bill, business);
+      // Just paid: the order shown here is from before the payment, so ask which bill it was.
+      const billId = latest ? (await getPage<Props>(path)).props.order.bill?.id : order.bill?.id;
+      if (!billId) return;
+      const page = await getPage<BillProps>(`bills/${billId}`);
+      await printPaidBill(page.props.bill, business, page.props.receipt);
     } catch (e) {
       toast(errorMessage(e), 'error');
     }
@@ -564,7 +577,7 @@ export function OrderScreen({ page, path, reload }: ScreenProps<Props>) {
           />
         ) : null}
         {mode === 'items' ? (
-          <View className="overflow-hidden rounded-xl border border-slate-200">
+          <View className="border border-slate-200">
             {openLines.map((line) => {
               const on = picked.includes(line.id);
               return (
@@ -601,22 +614,27 @@ export function OrderScreen({ page, path, reload }: ScreenProps<Props>) {
         {errors.parts ? <Banner tone="error">{errors.parts}</Banner> : null}
         {can.discount ? (
           discounting ? (
-            <View className="gap-2 rounded-xl border border-slate-200 p-3">
+            <View className="gap-2 border border-slate-200 p-3">
               <Chips
                 options={[
                   { value: 'percent', label: '% off' },
                   { value: 'amount', label: 'Amount off' },
                 ]}
                 value={discountType}
-                onChange={(value) => setDiscountType(value as 'percent' | 'amount')}
+                onChange={(value) => {
+                  setDiscountType(value as 'percent' | 'amount');
+                  setDiscount('');
+                }}
               />
               <Field
-                label="Discount"
+                label={discountType === 'percent' ? 'Percent off' : 'Amount off'}
                 value={discount}
-                onChangeText={setDiscount}
-                keyboardType="decimal-pad"
+                onChangeText={(text) => setDiscount(discountType === 'percent' ? text.replace(/[^\d]/g, '') : amountInput(text))}
+                keyboardType={discountType === 'percent' ? 'number-pad' : 'decimal-pad'}
+                prefix={discountType === 'percent' ? undefined : money(0).split(' ')[0]}
                 placeholder={discountType === 'percent' ? '10' : money(0, false)}
-                error={errors.discount}
+                maxLength={discountType === 'percent' ? 3 : 16}
+                error={errors.discount ?? (discountBad ? (discountType === 'percent' ? 'A whole percentage, from 1 to 100.' : 'Not an amount.') : null)}
                 hint={discountMinor > 0 ? `${money(discountMinor)} off ${money(partMinor)}` : undefined}
               />
               <Field label="Why" value={discountReason} onChangeText={setDiscountReason} placeholder="Regular, complaint…" maxLength={255} error={errors.discount_reason} />
@@ -633,30 +651,84 @@ export function OrderScreen({ page, path, reload }: ScreenProps<Props>) {
             <Button title="Give a discount" icon="pricetag-outline" variant="outline" onPress={() => setDiscounting(true)} />
           )
         ) : null}
+        {discountMinor > 0 || mode !== 'whole' || keptBills.length > 0 ? (
+          <View className="border border-slate-200 bg-slate-50 px-4 py-2">
+            {mode !== 'whole' || keptBills.length > 0 ? (
+              <View className="flex-row justify-between py-0.5">
+                <Text className="text-sm text-slate-600">Left on the order</Text>
+                <Text className="text-sm text-slate-700">{money(bill.total_minor)}</Text>
+              </View>
+            ) : null}
+            {mode !== 'whole' ? (
+              <View className="flex-row justify-between py-0.5">
+                <Text className="text-sm text-slate-600">
+                  {mode === 'items' ? `${plural(picked.length, 'line')} picked` : running ? `Share ${running.paid + 1} of ${running.parts}` : `One of ${parts} shares`}
+                </Text>
+                <Text className="text-sm text-slate-700">{money(partMinor)}</Text>
+              </View>
+            ) : null}
+            {discountMinor > 0 ? (
+              <View className="flex-row justify-between py-0.5">
+                <Text className="text-sm text-slate-600">Discount</Text>
+                <Text className="text-sm text-slate-700">− {money(discountMinor)}</Text>
+              </View>
+            ) : null}
+            <View className="mt-1 flex-row justify-between border-t border-slate-200 pt-1.5">
+              <Text className="text-base font-semibold text-slate-900">To take now</Text>
+              <Text className="text-lg font-bold text-brand-900">{money(dueMinor)}</Text>
+            </View>
+          </View>
+        ) : null}
         <Text className="text-sm font-medium text-slate-700">Paid by</Text>
         <Chips options={paymentMethods} value={method} onChange={setMethod} />
         {errors.payment_method ? <Banner tone="error">{errors.payment_method}</Banner> : null}
+        {method === 'cash' && dueMinor > 0 ? (
+          <View className="flex-row flex-wrap gap-2">
+            {[dueMinor, ...quickCash].map((minor, i) => {
+              const on = tenderedMinor === minor;
+              return (
+                <Pressable
+                  key={minor}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
+                  accessibilityLabel={i === 0 ? `Exact amount, ${money(minor)}` : `Given ${money(minor)}`}
+                  onPress={() => setTendered(on ? '' : amountInput(money(minor, false)))}
+                  className={`min-h-11 min-w-[22%] flex-grow items-center justify-center border px-2 ${on ? 'border-brand-600 bg-brand-600' : 'border-slate-300 bg-white active:bg-brand-50'}`}>
+                  <Text className={`text-sm font-semibold ${on ? 'text-white' : 'text-slate-800'}`} numberOfLines={1}>
+                    {i === 0 ? 'Exact' : money(minor, false)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
         {method === 'cash' ? (
           <Field
             label="Cash given"
             prefix={money(0).split(' ')[0]}
             value={tendered}
-            onChangeText={setTendered}
+            onChangeText={(text) => setTendered(amountInput(text))}
             keyboardType="decimal-pad"
             placeholder={money(dueMinor, false)}
-            error={errors.amount_tendered}
-            hint={change !== null && change >= 0 ? `Change ${money(change)}` : change !== null ? 'Less than the bill' : 'Optional: for the change.'}
+            error={errors.amount_tendered ?? (change !== null && change < 0 ? `${money(-change)} short of the bill.` : null)}
+            hint={change !== null ? undefined : 'Optional: for the change.'}
           />
         ) : (
           <Field label="Reference" hint="Optional: the transaction number." value={reference} onChangeText={setReference} maxLength={64} error={errors.payment_reference} />
         )}
+        {method === 'cash' && change !== null && change > 0 ? (
+          <View className="flex-row items-center justify-between border border-accent-300 bg-accent-50 px-4 py-3">
+            <Text className="text-base font-semibold text-brand-950">Change to give</Text>
+            <Text className="text-2xl font-bold text-brand-950">{money(change)}</Text>
+          </View>
+        ) : null}
         <Button
           title={`Take ${money(dueMinor)}`}
           icon="checkmark-circle-outline"
           variant="accent"
           size="lg"
           loading={busy}
-          disabled={(change !== null && change < 0) || (mode === 'items' && picked.length === 0) || (discounting && discount.trim() !== '' && discountReason.trim() === '')}
+          disabled={(change !== null && change < 0) || (mode === 'items' && picked.length === 0) || discountBad || (discounting && discount.trim() !== '' && discountReason.trim() === '')}
           onPress={pay}
         />
       </Sheet>

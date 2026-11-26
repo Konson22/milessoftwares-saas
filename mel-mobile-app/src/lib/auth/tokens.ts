@@ -303,7 +303,7 @@ async function timedFetch(url: string, init: RequestInit): Promise<Response> {
 function unreachable(): string {
   if (__DEV__ && DEV_SERVER) {
     return DEV_SERVER.includes('127.0.0.1') || DEV_SERVER.includes('localhost')
-      ? `Cannot reach the sign-in service at ${DEV_SERVER}. On the computer, run: adb reverse tcp:80 tcp:80`
+      ? `Cannot reach the sign-in service at ${DEV_SERVER}. On the computer, run: npm run usb:reverse (adb reverse tcp:8080 tcp:80)`
       : `Cannot reach the sign-in service at ${DEV_SERVER}. Check that the phone and the computer are on the same network.`;
   }
   return 'Cannot reach the sign-in service. Check the connection.';

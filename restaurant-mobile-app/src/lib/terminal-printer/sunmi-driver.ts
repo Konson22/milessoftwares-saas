@@ -126,6 +126,7 @@ export class SunmiDriver implements PrinterDriver {
     const state = describeSunmiState(raw.stateCode);
     const technical = [
       raw.message,
+      raw.mode === 'direct' ? 'printed line by line' : null,
       raw.stateCode != null ? `state ${raw.stateCode} (${state.label})` : null,
       ...raw.commandErrors.map((e) => `command error ${e}`),
     ]

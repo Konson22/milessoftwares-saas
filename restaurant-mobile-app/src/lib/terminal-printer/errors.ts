@@ -17,6 +17,12 @@ export type PrinterErrorCode =
   | 'PRINT_TIMEOUT'
   | 'INVALID_DATA'
   | 'SDK_ERROR'
+  | 'BLUETOOTH_OFF'
+  | 'BLUETOOTH_PERMISSION'
+  | 'BLUETOOTH_NO_PRINTER'
+  | 'BLUETOOTH_NOT_PAIRED'
+  | 'BLUETOOTH_CONNECT_FAILED'
+  | 'BLUETOOTH_WRITE_FAILED'
   | 'UNKNOWN';
 
 export const PRINTER_ERROR_MESSAGES: Record<PrinterErrorCode, string> = {
@@ -38,6 +44,12 @@ export const PRINTER_ERROR_MESSAGES: Record<PrinterErrorCode, string> = {
     'The printer did not confirm the job. Check whether the receipt came out before printing again.',
   INVALID_DATA: 'The receipt data is invalid and was not sent to the printer.',
   SDK_ERROR: 'The printer service returned an error.',
+  BLUETOOTH_OFF: 'Bluetooth is off. Turn it on to print.',
+  BLUETOOTH_PERMISSION: 'Allow this app to use nearby devices (Bluetooth) to print: Android settings, Apps, Bewe Miles Resto, Permissions.',
+  BLUETOOTH_NO_PRINTER: 'No Bluetooth printer chosen. Pick one under Printer.',
+  BLUETOOTH_NOT_PAIRED: 'The Bluetooth printer is not paired with this phone. Pair it in Bluetooth settings, then pick it under Printer.',
+  BLUETOOTH_CONNECT_FAILED: 'Could not connect to the Bluetooth printer. Check that it is on and close by, then try again.',
+  BLUETOOTH_WRITE_FAILED: 'The connection to the printer broke off. Check whether anything printed before printing again.',
   UNKNOWN: 'An unexpected printer error occurred.',
 };
 
@@ -70,6 +82,18 @@ export function fromNativeError(error: unknown): PrinterError {
       return new PrinterError('SERVICE_DISCONNECTED', message);
     case 'NATIVE_ERROR':
       return new PrinterError('SDK_ERROR', message);
+    case 'BT_UNAVAILABLE':
+      return new PrinterError('NOT_SUPPORTED_PLATFORM', message);
+    case 'BT_OFF':
+      return new PrinterError('BLUETOOTH_OFF', message);
+    case 'BT_PERMISSION':
+      return new PrinterError('BLUETOOTH_PERMISSION', message);
+    case 'BT_NOT_PAIRED':
+      return new PrinterError('BLUETOOTH_NOT_PAIRED', message);
+    case 'BT_CONNECT_FAILED':
+      return new PrinterError('BLUETOOTH_CONNECT_FAILED', message);
+    case 'BT_WRITE_FAILED':
+      return new PrinterError('BLUETOOTH_WRITE_FAILED', message);
     default:
       return new PrinterError('UNKNOWN', message);
   }
@@ -105,6 +129,7 @@ export function describeSunmiState(code: number | null): SunmiStateInfo {
     case null:
       return { state: 'unknown', label: 'Unknown' };
     default:
-      return { state: 'unknown', errorCode: 'UNKNOWN', label: `Unknown state (${code})` };
+      // A compatible (non-SUNMI) service's own code: not a known fault, so printing still goes ahead.
+      return { state: 'unknown', label: `State ${code}` };
   }
 }

@@ -21,7 +21,11 @@ import java.util.concurrent.TimeUnit
 
 private const val CONNECT_TIMEOUT_MS = 5_000L
 private const val STATUS_CONNECT_TIMEOUT_MS = 3_000L
-private const val STATE_READY = 1
+// updatePrinterState() codes that mean paper cannot come out now (SUNMI's docs): busy, comms error,
+// paper out, overheated, cover open, cutter error, black mark, no printer, firmware failed. Any other
+// code (a compatible service on another brand may answer 0, or its own numbers) is let through: the
+// job's own result says whether it printed.
+private val STATES_NOT_PRINTING = setOf(2, 3, 4, 5, 6, 7, 9, 505, 507)
 // 80 mm paper is 576 dots wide; wider bitmaps are clipped or refused by the service.
 private const val MAX_IMAGE_WIDTH = 576
 
@@ -43,6 +47,7 @@ class SunmiPrinterModule : Module() {
     Thread(runnable, "SunmiPrinter").apply { isDaemon = true }
   }
   private var connection: SunmiPrinterConnection? = null
+  private var bluetooth: BluetoothPrinter? = null
 
   private val context: Context
     get() = appContext.reactContext?.applicationContext ?: throw Exceptions.ReactContextLost()
@@ -79,10 +84,38 @@ class SunmiPrinterModule : Module() {
       onWorker(promise) { print(commands, timeoutMs.toLong()) }
     }
 
+    // A Bluetooth ESC/POS printer (external, or a terminal's built-in one paired as "InnerPrinter").
+    Function("bluetoothState") { bluetooth().state() }
+
+    AsyncFunction("bluetoothPrinters") { promise: Promise ->
+      onWorker(promise) { bluetooth().pairedDevices() }
+    }
+
+    AsyncFunction("bluetoothPrint") { address: String, base64: String, settleMs: Int, promise: Promise ->
+      onWorker(promise) {
+        val bytes = try {
+          Base64.decode(base64, Base64.DEFAULT)
+        } catch (e: IllegalArgumentException) {
+          throw PrinterException("INVALID_COMMAND", "The job is not valid base64.", e)
+        }
+        bluetooth().print(address, bytes, settleMs.toLong().coerceIn(0, 10_000))
+        null
+      }
+    }
+
+    AsyncFunction("bluetoothDisconnect") { promise: Promise ->
+      onWorker(promise) {
+        bluetooth?.close()
+        null
+      }
+    }
+
     OnDestroy {
       worker.shutdownNow()
       connection?.release()
       connection = null
+      bluetooth?.close()
+      bluetooth = null
     }
   }
 
@@ -92,6 +125,9 @@ class SunmiPrinterModule : Module() {
         sendEvent("onConnectionChange", mapOf("connected" to connected))
       }.also { connection = it }
     }
+
+  private fun bluetooth(): BluetoothPrinter =
+    bluetooth ?: synchronized(this) { bluetooth ?: BluetoothPrinter(context).also { bluetooth = it } }
 
   private fun onWorker(promise: Promise, block: () -> Any?) {
     worker.execute {
@@ -140,17 +176,28 @@ class SunmiPrinterModule : Module() {
     commands.forEach(::validate)
     val service = connection().ensureConnected(CONNECT_TIMEOUT_MS)
 
-    val stateBefore = service.updatePrinterState()
-    if (stateBefore != STATE_READY) {
-      return mapOf("outcome" to "rejected", "stateCode" to stateBefore, "message" to null, "commandErrors" to emptyList<String>())
+    // Some compatible services do not implement the state call: then the job's result decides.
+    val stateBefore = attempt { service.updatePrinterState() }
+    if (stateBefore != null && stateBefore in STATES_NOT_PRINTING) {
+      return mapOf("outcome" to "rejected", "stateCode" to stateBefore, "message" to null, "commandErrors" to emptyList<String>(), "mode" to null)
     }
 
     val commandErrors = Collections.synchronizedList(mutableListOf<String>())
     val step = StepCallback(commandErrors)
-    val result = TransactionCallback()
+    attempt { service.printerInit(step) }
 
-    service.printerInit(step)
-    service.enterPrinterBuffer(true)
+    // Transaction mode first (the real print result). A service that refuses to open the buffer
+    // has received nothing yet, so the same job goes line by line instead: never printed twice.
+    val buffered = try {
+      service.enterPrinterBuffer(true)
+      true
+    } catch (e: Throwable) {
+      commandErrors.add("buffer: ${e.message ?: e.javaClass.simpleName}")
+      false
+    }
+    if (!buffered) return printDirect(service, commands, step, commandErrors, stateBefore)
+
+    val result = TransactionCallback()
     try {
       commands.forEach { apply(service, it, step) }
       service.exitPrinterBufferWithCallback(true, result)
@@ -170,7 +217,35 @@ class SunmiPrinterModule : Module() {
       "outcome" to outcome,
       "stateCode" to stateAfter,
       "message" to result.message,
-      "commandErrors" to commandErrors.toList()
+      "commandErrors" to commandErrors.toList(),
+      "mode" to "buffered"
+    )
+  }
+
+  /**
+   * Each command straight to the printer, for services without transaction mode. There is no
+   * printed result to wait for: a job every command of which was accepted counts as printed.
+   */
+  private fun printDirect(
+    service: SunmiPrinterService,
+    commands: List<PrintCommand>,
+    step: StepCallback,
+    commandErrors: MutableList<String>,
+    stateBefore: Int?
+  ): Map<String, Any?> {
+    val before = commandErrors.size
+    try {
+      commands.forEach { apply(service, it, step) }
+    } catch (e: RemoteException) {
+      throw PrinterException("REMOTE_ERROR", "The printer service failed while printing: ${e.message}", e)
+    }
+    val failed = commandErrors.size > before
+    return mapOf(
+      "outcome" to if (failed) "failed" else "completed",
+      "stateCode" to (attempt { service.updatePrinterState() } ?: stateBefore),
+      "message" to if (failed) commandErrors.drop(before).joinToString("; ") else null,
+      "commandErrors" to commandErrors.toList(),
+      "mode" to "direct"
     )
   }
 
@@ -238,9 +313,10 @@ class SunmiPrinterModule : Module() {
     BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
   }
 
+  // Throwable, not Exception: a compatible service's unimplemented method can surface as an Error.
   private inline fun <T> attempt(block: () -> T): T? = try {
     block()
-  } catch (_: Exception) {
+  } catch (_: Throwable) {
     null
   }
 }

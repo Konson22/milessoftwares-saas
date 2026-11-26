@@ -1,15 +1,12 @@
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Chips, Detail, Panel, Toggle } from '@/components/pages/kit';
+import { Chips, Detail, ListRow, Panel } from '@/components/pages/kit';
 import { ScreenHeader } from '@/components/screen-header';
-import { TerminalPrinterSettings } from '@/components/terminal-printer-settings';
 import { Button } from '@/components/ui/button';
 import { errorMessage } from '@/lib/api/client';
 import { confirm } from '@/lib/feedback';
-import { printsKitchenTickets, setPrintsKitchenTickets } from '@/lib/printing';
 import { queuedFor, useOutbox } from '@/offline/outbox';
 import { scope } from '@/offline/cache';
 import { useAuth, useBranches } from '@/store/auth';
@@ -27,16 +24,6 @@ export default function AccountScreen() {
   const signOut = useAuth((s) => s.signOut);
   const branches = useBranches();
   const insets = useSafeAreaInsets();
-  const [printKitchen, setPrintKitchen] = useState(true);
-
-  useEffect(() => {
-    void printsKitchenTickets().then(setPrintKitchen);
-  }, []);
-
-  const changePrintKitchen = (on: boolean) => {
-    setPrintKitchen(on);
-    void setPrintsKitchenTickets(on);
-  };
 
   const leave = async () => {
     const waiting = queuedFor(useOutbox.getState().entries, scope()).all.length;
@@ -87,18 +74,9 @@ export default function AccountScreen() {
           </Panel>
         ) : null}
 
-        <Panel title="Printing">
-          <View className="p-4">
-            <Toggle
-              label="Print a kitchen ticket on send"
-              hint="Each time lines go to the kitchen, this phone prints their ticket. Tickets can always be printed again from the order or the kitchen."
-              value={printKitchen}
-              onChange={changePrintKitchen}
-            />
-          </View>
+        <Panel title="This phone">
+          <ListRow icon="print-outline" title="Printer" subtitle="Where bills and tickets print, what prints by itself, test pages" onPress={() => router.push('/printer')} />
         </Panel>
-
-        <TerminalPrinterSettings />
 
         <Button title="Sign out" icon="log-out-outline" variant="danger" size="lg" onPress={leave} />
       </ScrollView>

@@ -1,5 +1,7 @@
 import { PRINTER_ERROR_MESSAGES, PrinterError } from './errors';
-import { getPrinterSettings } from './settings';
+import SunmiPrinter from '../../../modules/sunmi-printer';
+import { getPrinterSettings, printerSettingsLoaded, updatePrinterSettings } from './settings';
+import { askBluetoothPermission, BluetoothDriver } from './bluetooth-driver';
 import { SunmiDriver } from './sunmi-driver';
 import { divider } from './text-layout';
 import type { PrintDocument, PrinterDriver, PrinterResult, PrinterStatus, PrintLine } from './types';
@@ -101,7 +103,7 @@ export class PrinterService {
           t('PRINTER TEST', { align: 'center', bold: true }),
           t(divider(width)),
           t(`Device: ${this.deviceLabel() ?? 'Unknown device'}`),
-          t('Printer: Built-in'),
+          t(`Printer: ${this.driver.label}`),
           t(`Time: ${new Date().toLocaleString()}`),
           t(''),
           t(appName, { align: 'center' }),
@@ -176,7 +178,10 @@ export class PrinterService {
   }
 
   private fail(jobId: string, code: PrinterError['code'], technical?: string, outcome: PrinterResult['outcome'] = 'not_printed'): PrinterResult {
-    const result: PrinterResult = { success: false, jobId, outcome, errorCode: code, message: PRINTER_ERROR_MESSAGES[code], technical };
+    // A generic message is no help at the counter: add what the printer itself reported.
+    const generic = code === 'UNKNOWN' || code === 'SDK_ERROR' || code === 'PRINT_FAILED';
+    const message = generic && technical ? `${PRINTER_ERROR_MESSAGES[code]} (${technical})` : PRINTER_ERROR_MESSAGES[code];
+    const result: PrinterResult = { success: false, jobId, outcome, errorCode: code, message, technical };
     this.set({ lastResult: result });
     this.log({ kind: 'error', summary: `Job ${jobId} ${outcome}: ${code}`, technical });
     return result;
@@ -201,20 +206,79 @@ export class PrinterService {
   }
 }
 
+/** The SUNMI printer service (a SUNMI terminal's printer, or a compatible service). */
 export const printerService = new PrinterService(new SunmiDriver());
 
+/** A paired Bluetooth ESC/POS printer. */
+export const bluetoothPrinterService = new PrinterService(new BluetoothDriver());
+
+/** The printer the settings send paper to (when they send it to one at all: see printsOnTerminal). */
+export function activePrinter(): PrinterService {
+  return getPrinterSettings().connection === 'bluetooth' ? bluetoothPrinterService : printerService;
+}
+
 /**
- * Whether paper goes to the terminal's own printer: when chosen in the
- * settings, or, not chosen yet, on a terminal that has one.
+ * Whether paper goes straight to a printer rather than the print dialog:
+ * a Bluetooth printer once one is chosen; the built-in one when chosen, or,
+ * not chosen yet, on a terminal that has one.
  */
 export function printsOnTerminal(): boolean {
+  const { use, connection, bluetoothAddress } = getPrinterSettings();
+  if (use === false) return false;
+  if (connection === 'bluetooth') return bluetoothPrinterService.isDriverAvailable() && bluetoothAddress !== null;
   if (!printerService.isDriverAvailable()) return false;
-  const use = getPrinterSettings().use;
   return use ?? printerService.isTerminal();
 }
 
-/** Prints on the terminal; a job the printer did not confirm comes back as an error, with what to do. */
+/** A POS terminal's built-in printer as Android lists it among paired Bluetooth devices. */
+const INNER_PRINTER = /inner\s*printer/i;
+
+/** Failures that mean the built-in printer service cannot be reached at all (nothing printed). */
+const SERVICE_UNREACHABLE = new Set(['SERVICE_NOT_INSTALLED', 'CONNECT_TIMEOUT', 'NO_PRINTER']);
+
+/**
+ * The terminal's built-in printer over Bluetooth ("InnerPrinter", paired by the maker): how
+ * terminals print whose printer service is not SUNMI's own. Chosen for good once found.
+ */
+async function adoptInnerPrinter(): Promise<boolean> {
+  if (!bluetoothPrinterService.isDriverAvailable() || SunmiPrinter == null) return false;
+  if (!SunmiPrinter.bluetoothState().enabled) return false;
+  if (!(await askBluetoothPermission())) return false;
+  const devices = await SunmiPrinter.bluetoothPrinters().catch(() => []);
+  const inner = devices.find((d) => INNER_PRINTER.test(d.name));
+  if (!inner) return false;
+  updatePrinterSettings({ use: true, connection: 'bluetooth', bluetoothAddress: inner.address, bluetoothName: inner.name });
+  return true;
+}
+
+/**
+ * Whether this device prints straight to a printer, finding one when nothing is chosen yet:
+ * the built-in printer service, else a terminal's paired "InnerPrinter". The print dialog is
+ * left for phones with neither, or when it was chosen under Printer.
+ */
+export async function hasDirectPrinter(): Promise<boolean> {
+  await printerSettingsLoaded;
+  if (printsOnTerminal()) return true;
+  if (getPrinterSettings().use !== null) return false;
+  return adoptInnerPrinter().catch(() => false);
+}
+
+/** Prints on the chosen printer; a job the printer did not confirm comes back as an error, with what to do. */
 export async function printOnTerminal(document: PrintDocument, purpose: PrintPurpose): Promise<void> {
-  const result = await printerService.printDocument(document, purpose);
+  await printerSettingsLoaded;
+  const auto = getPrinterSettings().use === null;
+  let result = await activePrinter().printDocument(document, purpose);
+  // Not chosen yet and the built-in service could not be reached, so nothing came out: a
+  // terminal whose printer is paired over Bluetooth prints there instead (and keeps it).
+  if (
+    !result.success &&
+    auto &&
+    result.outcome === 'not_printed' &&
+    getPrinterSettings().connection === 'builtin' &&
+    SERVICE_UNREACHABLE.has(result.errorCode ?? '') &&
+    (await adoptInnerPrinter().catch(() => false))
+  ) {
+    result = await bluetoothPrinterService.printDocument(document, purpose);
+  }
   if (!result.success) throw new Error(result.message);
 }

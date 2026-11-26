@@ -2,7 +2,7 @@ import * as Print from 'expo-print';
 
 import { dateTime, money, time } from './format';
 import { TerminalDocument } from './terminal-printer/builder';
-import { printOnTerminal, printsOnTerminal } from './terminal-printer/service';
+import { hasDirectPrinter, printOnTerminal } from './terminal-printer/service';
 import type { PrintDocument } from './terminal-printer/types';
 
 /**
@@ -14,6 +14,8 @@ import type { PrintDocument } from './terminal-printer/types';
 export interface PrintedBill {
   business: string;
   branch: string | null;
+  /** The branch's own lines under its name (receipt header, phone). */
+  header?: string[];
   title: string;
   /** Under the title: the order or bill number, the table, the time. */
   details: string[];
@@ -43,6 +45,7 @@ export function billHtml(bill: PrintedBill): string {
   </style></head><body>
     <h1>${escape(bill.business)}</h1>
     ${bill.branch && bill.branch !== bill.business ? `<p class="c">${escape(bill.branch)}</p>` : ''}
+    ${(bill.header ?? []).map((h) => `<p class="c">${escape(h)}</p>`).join('')}
     <p class="c"><strong>${escape(bill.title)}</strong></p>
     ${bill.details.map((d) => `<p class="c">${escape(d)}</p>`).join('')}
     <table>${rows}</table>
@@ -57,6 +60,7 @@ export function billDocument(bill: PrintedBill): PrintDocument {
   const d = new TerminalDocument();
   d.text(bill.business, { align: 'center', bold: true });
   if (bill.branch && bill.branch !== bill.business) d.text(bill.branch, { align: 'center' });
+  for (const header of bill.header ?? []) d.text(header, { align: 'center' });
   d.text(bill.title, { align: 'center', bold: true });
   for (const detail of bill.details) d.text(detail, { align: 'center' });
   d.rule();
@@ -72,9 +76,9 @@ export function billDocument(bill: PrintedBill): PrintDocument {
   return d.build();
 }
 
-/** The terminal's printer, or the system print dialog (a Wi-Fi or Bluetooth printer the phone knows, or a PDF). */
+/** The terminal's printer or a chosen Bluetooth one; the system print dialog only on a phone with neither, or by choice. */
 export async function printBill(bill: PrintedBill): Promise<void> {
-  if (printsOnTerminal()) return printOnTerminal(billDocument(bill), 'receipt');
+  if (await hasDirectPrinter()) return printOnTerminal(billDocument(bill), 'receipt');
   await Print.printAsync({ html: billHtml(bill) });
 }
 
@@ -84,6 +88,20 @@ export interface Business {
   branch: string | null;
   footer: string | null;
 }
+
+/** The branch's own lines on its receipts (its settings), as the bill page sends them. */
+export interface ReceiptLines {
+  header: string | null;
+  footer: string | null;
+  phone: string | null;
+}
+
+/** Text typed over several lines, as printed lines. */
+const linesOf = (text: string | null | undefined) =>
+  (text ?? '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== '');
 
 /** A paid bill as the bill page has it. */
 export interface PaidBill {
@@ -108,11 +126,13 @@ export interface PaidBill {
 }
 
 /** The customer's receipt for a paid bill. */
-export function printPaidBill(bill: PaidBill, business: Business): Promise<void> {
+export function printPaidBill(bill: PaidBill, business: Business, receipt?: ReceiptLines | null): Promise<void> {
   const where = bill.order.table ? `Table ${bill.order.table}` : (bill.customerName ?? 'Takeaway');
+  const footer = linesOf(receipt?.footer ?? business.footer);
   return printBill({
     business: business.name,
     branch: business.branch,
+    header: [...linesOf(receipt?.header), ...(receipt?.phone ? [`Tel ${receipt.phone}`] : [])],
     title: `Bill ${bill.number}${bill.status === 'voided' ? ' (voided)' : ''}`,
     details: [`${where} · ${bill.order.number}`, ...(bill.parts ? [`Share ${bill.part} of ${bill.parts}`] : []), dateTime(bill.paidAt)],
     lines: bill.lines,
@@ -127,7 +147,7 @@ export function printPaidBill(bill: PaidBill, business: Business): Promise<void>
       `Paid by ${bill.paymentMethod}${bill.paymentReference ? ` (${bill.paymentReference})` : ''}`,
       ...(bill.tenderedMinor !== null ? [`Given ${money(bill.tenderedMinor)} · change ${money(bill.changeMinor ?? 0)}`] : []),
       `Served by ${bill.paidBy}.`,
-      business.footer ?? 'Thank you!',
+      ...(footer.length > 0 ? footer : ['Thank you!']),
     ],
   });
 }
@@ -182,6 +202,6 @@ export function kitchenTicketDocument(ticket: KitchenTicket): PrintDocument {
 }
 
 export async function printKitchenTicket(ticket: KitchenTicket): Promise<void> {
-  if (printsOnTerminal()) return printOnTerminal(kitchenTicketDocument(ticket), 'ticket');
+  if (await hasDirectPrinter()) return printOnTerminal(kitchenTicketDocument(ticket), 'ticket');
   await Print.printAsync({ html: kitchenTicketHtml(ticket) });
 }

@@ -4,6 +4,11 @@
     Declared in the library manifest so it is merged into the app manifest on every prebuild,
     without a config plugin. No permissions are needed to bind to the service.
   -->
+  <!-- Bluetooth receipt printers (paired devices only: no scanning, so no location permission). -->
+  <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+  <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+  <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
   <queries>
     <package android:name="woyou.aidlservice.jiuiv5" />
   </queries>

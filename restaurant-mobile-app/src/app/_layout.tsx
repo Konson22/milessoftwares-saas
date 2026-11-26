@@ -69,6 +69,7 @@ export default function RootLayout() {
             <Stack.Screen name="page/[...path]" />
             <Stack.Screen name="account" options={{ presentation: 'modal' }} />
             <Stack.Screen name="outbox" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="printer" options={{ presentation: 'modal' }} />
           </Stack.Protected>
         </Stack>
         <Toast />

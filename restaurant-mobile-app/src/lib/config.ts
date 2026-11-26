@@ -49,7 +49,8 @@ const DEV_SERVER = ((raw) => (raw === '' || /^https?:\/\//.test(raw) ? raw : `ht
 export function reach(url: string): { url: string; headers: Record<string, string> } {
   if (!DEV_SERVER) return { url, headers: {} };
   const match = url.match(/^https?:\/\/([^/]+)(.*)$/);
-  if (!match) return { url, headers: {} };
+  // Only local hosts: a DEV_SERVER that reached a build never sends real domains to it.
+  if (!match || !/\.localhost(:\d+)?$/i.test(match[1])) return { url, headers: {} };
   return { url: `${DEV_SERVER}${match[2]}`, headers: { Host: match[1] } };
 }
 

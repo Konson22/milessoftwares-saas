@@ -39,9 +39,11 @@ export function webUrl(workspace: string, path = ''): string {
 
 /**
  * Local development on a phone: it cannot resolve *.tatook.localhost,
- * so the app's own calls go to this address (e.g. http://127.0.0.1 with
- * `adb reverse tcp:80 tcp:80`) and name the host in the Host header. The
- * sign-in browser needs nothing: it sends *.localhost to loopback itself.
+ * so the app's own calls go to this address (http://127.0.0.1:8080 with
+ * `adb reverse tcp:8080 tcp:80`: Android refuses ports below 1024 on the
+ * phone side) and name the host in the Host header. The sign-in browser
+ * sends *.localhost to the phone's own port 80, so over USB only the in-app
+ * email and password sign-in reaches the local platform.
  */
 export const DEV_SERVER = (process.env.EXPO_PUBLIC_DEV_SERVER ?? '').replace(/\/$/, '');
 
@@ -49,7 +51,8 @@ export const DEV_SERVER = (process.env.EXPO_PUBLIC_DEV_SERVER ?? '').replace(/\/
 export function reach(url: string): { url: string; headers: Record<string, string> } {
   if (!DEV_SERVER) return { url, headers: {} };
   const match = url.match(/^https?:\/\/([^/]+)(.*)$/);
-  if (!match) return { url, headers: {} };
+  // Only local hosts: a DEV_SERVER that reached a build never sends real domains to it.
+  if (!match || !/\.localhost(:\d+)?$/i.test(match[1])) return { url, headers: {} };
   return { url: `${DEV_SERVER}${match[2]}`, headers: { Host: match[1] } };
 }
 

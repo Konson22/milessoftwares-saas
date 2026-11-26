@@ -76,3 +76,20 @@ export function initials(name: string) {
 }
 
 export const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+/**
+ * Cash a customer is likely to hand over for a bill: the next round amounts
+ * above it (in the currency's notes), so the cashier taps rather than types.
+ */
+export function cashSuggestions(dueMinor: number, count = 3): number[] {
+  if (dueMinor <= 0) return [];
+  const unit = 10 ** decimals;
+  const steps = [1, 5, 10, 20, 50, 100, 500, 1000, 5000, 10000, 50000];
+  const out: number[] = [];
+  for (const step of steps) {
+    const minor = Math.ceil(dueMinor / (step * unit)) * step * unit;
+    // A round amount above the bill, and not so far above it that nobody would hand it over.
+    if (minor > dueMinor && minor <= dueMinor * 5 + unit && !out.includes(minor)) out.push(minor);
+  }
+  return out.sort((a, b) => a - b).slice(0, count);
+}

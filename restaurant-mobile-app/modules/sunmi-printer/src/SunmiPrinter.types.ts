@@ -5,7 +5,29 @@ export type SunmiNativeErrorCode =
   | 'CONNECT_TIMEOUT'
   | 'INVALID_COMMAND'
   | 'REMOTE_ERROR'
-  | 'NATIVE_ERROR';
+  | 'NATIVE_ERROR'
+  | 'BT_UNAVAILABLE'
+  | 'BT_OFF'
+  | 'BT_PERMISSION'
+  | 'BT_NOT_PAIRED'
+  | 'BT_CONNECT_FAILED'
+  | 'BT_WRITE_FAILED';
+
+export type BluetoothState = {
+  /** The phone has Bluetooth. */
+  available: boolean;
+  enabled: boolean;
+  /** Android 12+: the "nearby devices" permission was given. */
+  permitted: boolean;
+  connectedAddress: string | null;
+};
+
+export type BluetoothDevice = {
+  name: string;
+  address: string;
+  /** By its Bluetooth class or name: probably a printer. */
+  isPrinter: boolean;
+};
 
 export type SunmiDeviceInfo = {
   manufacturer: string;
@@ -76,6 +98,8 @@ export type SunmiRawPrintResult = {
   stateCode: number | null;
   message: string | null;
   commandErrors: string[];
+  /** How the job went: SUNMI transaction mode, or line by line on a service without it. */
+  mode?: 'buffered' | 'direct' | null;
 };
 
 export type SunmiPrinterEvents = {

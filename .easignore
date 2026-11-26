@@ -25,5 +25,12 @@ restaurant-electron-app/
 **/node_modules/
 **/.expo/
 **/dist/
-**/android/
-**/ios/
+# Each app's generated native folders (EAS runs prebuild). Only an app's own
+# android/ and ios/: a local Expo module's android/ (modules/*/android, such as
+# the SUNMI printer) is source and must be uploaded, or the build leaves the
+# module out and the app falls back to the print dialog.
+/*/android/
+/*/ios/
+**/android/build/
+**/android/.gradle/
+**/android/.cxx/
