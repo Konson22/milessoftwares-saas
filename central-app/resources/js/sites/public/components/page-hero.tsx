@@ -34,7 +34,6 @@ export default function PageHero({
             >
                 <div className="min-w-0">
                     {above && <div className="mb-4">{above}</div>}
-                    <SpeedMark className="mb-4" />
                     <h1 className={`max-w-4xl ${type.hero} ${display}`}>
                         {title}
                     </h1>
@@ -77,7 +76,6 @@ export function BrandHero({
                 className={`${container} grid items-center gap-10 pt-24 pb-14 sm:pt-28 sm:pb-16 ${aside ? 'lg:grid-cols-[1.05fr_1fr]' : ''}`}
             >
                 <div className="site-rise min-w-0">
-                    <SpeedMark className="mb-5" />
                     <h1 className={`max-w-2xl ${type.hero} ${display}`}>
                         {title}
                     </h1>
@@ -238,20 +236,6 @@ export function IconBox({
             className={`inline-flex size-11 shrink-0 items-center justify-center rounded-lg ${tint}`}
         >
             <Icon className="size-5" aria-hidden />
-        </span>
-    );
-}
-
-/**
- * The logo's colours as a small rule over a heading: navy, blue, then the
- * emerald green of "ERP". Decorative only.
- */
-export function SpeedMark({ className = '' }: { className?: string }) {
-    return (
-        <span aria-hidden className={`flex items-center gap-1.5 ${className}`}>
-            <span className="h-1.5 w-3 rounded-full bg-site-navy in-[.site-dark]:bg-white" />
-            <span className="h-1.5 w-6 rounded-full bg-site-accent in-[.site-dark]:bg-site-highlight" />
-            <span className="h-1.5 w-10 rounded-full bg-site-lime" />
         </span>
     );
 }

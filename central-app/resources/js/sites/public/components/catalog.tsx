@@ -31,6 +31,7 @@ import {
     LayoutGrid,
     Lock,
     MapPin,
+    Monitor,
     Package,
     PackageSearch,
     Pill,
@@ -39,6 +40,7 @@ import {
     ScrollText,
     ShieldAlert,
     ShoppingCart,
+    Smartphone,
     Tags,
     Truck,
     UserCheck,
@@ -402,14 +404,13 @@ export function CompactCard({
 }
 
 /**
- * The featured product card, in three bands cut on the diagonal: near
- * black at the top with the product's icon, name and summary (and its
- * promotion badge, StatusBadge); dark blue in the middle with its main
- * points; light silver at the foot with where it runs and the next step.
- * Only a product open for trials offers one; the others lead to their
- * page or the waitlist. `highlights` shows the product's highlights
- * instead of its first features; `title` is the name to show (Miles
- * Pharmacy) when it is not the catalog's.
+ * The featured product card: a navy head with the product's icon, name and
+ * summary (and its promotion badge, StatusBadge); a white body with its
+ * main points; a light foot with where it runs and the next step. Only a
+ * product open for trials offers one; the others lead to their page or the
+ * waitlist. `highlights` shows the product's highlights instead of its
+ * first features; `title` is the name to show (Miles Pharmacy) when it is
+ * not the catalog's.
  */
 export function ProductCard({
     product,
@@ -434,22 +435,25 @@ export function ProductCard({
             : product.features.slice(0, 4).map((feature) => feature.title);
     const action =
         'inline-flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors';
-    // The diagonal seams: each lower band rises 1.25rem over the one above.
-    const seam = '-mt-5 pt-10';
 
     return (
-        <article className="group relative flex h-full flex-col rounded-xl bg-site-silver-light shadow-[0_1px_2px_rgb(7_26_61/0.08),0_14px_32px_-14px_rgb(7_26_61/0.35)] ring-1 ring-site-line transition-[box-shadow,transform] duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgb(7_26_61/0.1),0_24px_48px_-16px_rgb(7_26_61/0.45)] hover:ring-site-leaf">
-            {/* Top: near black, the product's icon, name and summary. */}
-            <div className="site-dark relative overflow-hidden rounded-t-xl bg-site-night px-6 pt-6 pb-9 sm:px-7">
+        <article className="group relative flex h-full flex-col rounded-2xl bg-white shadow-[0_1px_2px_rgb(7_26_61/0.06),0_12px_28px_-16px_rgb(7_26_61/0.3)] ring-1 ring-site-line transition-[box-shadow,transform,--tw-ring-color] duration-300 hover:-translate-y-1 hover:shadow-[0_2px_4px_rgb(7_26_61/0.08),0_24px_44px_-18px_rgb(7_26_61/0.4)] hover:ring-site-leaf">
+            {/* Head: navy, the product's icon, name and summary. */}
+            <div className="site-dark relative overflow-hidden rounded-t-2xl bg-site-navy px-6 pt-6 pb-7 sm:px-7">
+                {/* Two solid rings in the corner, drifting on hover. */}
                 <span
                     aria-hidden
-                    className="absolute -right-12 -bottom-16 size-44 rounded-full border-[14px] border-site-navy group-hover:-translate-x-4 motion-safe:transition-transform motion-safe:duration-500"
+                    className="absolute -right-14 -bottom-20 size-48 rounded-full border-[18px] border-site-navy-light group-hover:-translate-x-3 motion-safe:transition-transform motion-safe:duration-500"
                 />
-                <span className={`relative ${darkIcon}`}>
+                <span
+                    aria-hidden
+                    className="absolute -right-4 -bottom-10 size-24 rounded-full border-[10px] border-site-navy-line group-hover:-translate-y-2 motion-safe:transition-transform motion-safe:duration-500"
+                />
+                <span className="relative inline-flex size-12 items-center justify-center rounded-xl bg-site-accent text-white ring-4 ring-site-navy-light transition-colors group-hover:bg-site-leaf">
                     <Icon className="size-6" strokeWidth={1.75} aria-hidden />
                 </span>
                 <Heading
-                    className={`relative mt-4 pr-20 text-xl leading-snug sm:text-[1.375rem] ${display}`}
+                    className={`relative mt-5 pr-20 text-xl leading-snug sm:text-[1.375rem] ${display}`}
                 >
                     <Link
                         href={`/${product.url}`}
@@ -458,9 +462,13 @@ export function ProductCard({
                         {name}
                     </Link>
                 </Heading>
-                <p className="relative mt-2 text-sm leading-relaxed text-site-silver">
+                <p className="relative mt-2 text-sm leading-relaxed text-site-silver-light">
                     {product.subhead || product.summary}
                 </p>
+                <span
+                    aria-hidden
+                    className="absolute bottom-0 left-6 h-1 w-10 rounded-t-full bg-site-leaf transition-[width] duration-500 group-hover:w-20 sm:left-7"
+                />
             </div>
 
             <StatusBadge
@@ -468,18 +476,13 @@ export function ProductCard({
                 trialDays={product.trial ? trialDays : undefined}
             />
 
-            {/* Middle: dark blue, the main points. */}
-            {points.length > 0 && (
-                <div
-                    className={`relative flex-1 bg-site-accent px-6 pb-9 sm:px-7 ${seam} [clip-path:polygon(0_1.25rem,100%_0,100%_100%,0_100%)]`}
-                >
-                    <ul className="grid gap-2.5 text-sm font-medium text-white">
+            {/* Body: white, the main points. */}
+            <div className="flex-1 px-6 py-6 sm:px-7">
+                {points.length > 0 && (
+                    <ul className="grid gap-3 text-sm font-medium text-site-body">
                         {points.map((point) => (
-                            <li
-                                key={point}
-                                className="flex items-start gap-2.5"
-                            >
-                                <span className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-white text-site-accent">
+                            <li key={point} className="flex items-start gap-3">
+                                <span className="mt-px inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-site-tint text-site-accent">
                                     <Check
                                         className="size-3"
                                         strokeWidth={3}
@@ -490,18 +493,16 @@ export function ProductCard({
                             </li>
                         ))}
                     </ul>
-                </div>
-            )}
+                )}
+            </div>
 
-            {/* Foot: light silver, where it runs and the next step. */}
-            <div
-                className={`relative rounded-b-xl bg-site-silver-light px-6 pb-6 sm:px-7 sm:pb-7 ${seam} ${points.length === 0 ? 'flex-1' : ''} [clip-path:polygon(0_0,100%_1.25rem,100%_100%,0_100%)]`}
-            >
+            {/* Foot: where it runs and the next step. */}
+            <div className="rounded-b-2xl border-t border-site-line bg-site-wash px-6 pt-5 pb-6 sm:px-7">
                 <PlatformList
                     platforms={product.offering.platforms}
                     planned={product.status === 'coming_soon'}
                 />
-                <div className="mt-5 flex items-center gap-3">
+                <div className="mt-4 flex flex-wrap items-center gap-3">
                     {product.trial ? (
                         <a
                             href={trialUrl(product.trial, product.trialProduct)}
@@ -534,9 +535,9 @@ export function ProductCard({
                     )}
                     <Link
                         href={`/${product.url}`}
-                        className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-2.5 text-sm font-semibold text-site-ink hover:text-site-accent"
+                        className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-white px-3 py-2.5 text-sm font-semibold text-site-ink ring-1 ring-site-line transition-colors hover:text-site-accent hover:ring-site-leaf"
                     >
-                        Learn more
+                        Details
                         <span className="sr-only"> about {name}</span>
                         <ArrowUpRight className="size-4" aria-hidden />
                     </Link>
@@ -546,9 +547,16 @@ export function ProductCard({
     );
 }
 
+const platformIcons: Record<Platform, LucideIcon> = {
+    web: Globe,
+    desktop: Monitor,
+    android: Smartphone,
+    ios: Smartphone,
+};
+
 /**
- * The platforms a product runs on, as small labels. A product not yet
- * released says they are planned.
+ * The platforms a product runs on, as small labels with icons. A product
+ * not yet released says they are planned.
  */
 export function PlatformList({
     platforms,
@@ -566,14 +574,22 @@ export function PlatformList({
             <span className="mr-0.5 font-semibold text-site-muted">
                 {planned ? 'Planned for' : 'Runs on'}
             </span>
-            {platforms.map((platform) => (
-                <span
-                    key={platform}
-                    className="rounded-full bg-white px-2.5 py-1 font-semibold text-site-ink ring-1 ring-site-line"
-                >
-                    {platformLabels[platform]}
-                </span>
-            ))}
+            {platforms.map((platform) => {
+                const PlatformIcon = platformIcons[platform];
+
+                return (
+                    <span
+                        key={platform}
+                        className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-1 font-semibold text-site-ink ring-1 ring-site-line"
+                    >
+                        <PlatformIcon
+                            className="size-3.5 text-site-accent"
+                            aria-hidden
+                        />
+                        {platformLabels[platform]}
+                    </span>
+                );
+            })}
         </p>
     );
 }

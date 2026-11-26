@@ -252,6 +252,7 @@ class PageController extends Controller
             match (true) {
                 $category === 'application' && $slug === 'finance' => 'public/finance',
                 $category === 'erp' && $slug === 'pharmacy' => 'public/pharmacy',
+                $category === 'erp' && $slug === 'restaurant' => 'public/restaurant',
                 default => 'public/landing',
             },
             [

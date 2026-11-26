@@ -213,7 +213,7 @@ describe('public site', function () {
 
     it('offers no plans on a solution that is coming soon', function () {
         $this->get(apex('erp/restaurant'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('public/landing')
+            ->component('public/restaurant')
             ->where('product.status', 'coming_soon')
             ->where('product.trial', null)
             ->where('plans', []));

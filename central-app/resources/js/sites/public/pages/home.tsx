@@ -190,30 +190,30 @@ export default function MarketingHome({
             />
 
             {/*
-              The dark green hero: the copy and actions on the left, the
-              laptop and phone on the right from `lg` (under the copy on
-              smaller screens).
+              The dark hero: the copy and actions on the left, the laptop
+              and phone on the right from `lg`. On smaller screens the image
+              comes first and the copy sits centred under it.
             */}
             <section className="site-dark relative overflow-hidden bg-site-navy text-slate-200">
                 <div
-                    className={`${container} grid items-center gap-10 pt-28 pb-14 sm:pt-32 lg:grid-cols-[1fr_1.2fr] lg:gap-6 lg:pt-32 lg:pb-16`}
+                    className={`${container} grid items-center gap-8 pt-24 pb-14 sm:gap-10 sm:pt-28 lg:grid-cols-[1fr_1.2fr] lg:gap-6 lg:pt-32 lg:pb-16`}
                 >
-                    <div>
+                    <div className="text-center lg:text-left">
                         <h1
-                            className={`max-w-2xl text-[2rem] leading-[1.1] sm:text-[2.75rem] xl:text-[3.25rem] ${display}`}
+                            className={`mx-auto max-w-2xl text-[2rem] lg:mx-0 leading-[1.1] sm:text-[2.75rem] xl:text-[3.25rem] ${display}`}
                         >
                             Business Software and ERP Solutions for{' '}
                             <span className="text-site-highlight">
                                 Modern Organizations
                             </span>
                         </h1>
-                        <p className="mt-5 max-w-xl text-base leading-relaxed text-pretty text-slate-100 sm:text-lg">
+                        <p className="mx-auto mt-5 max-w-xl lg:mx-0 text-base leading-relaxed text-pretty text-slate-100 sm:text-lg">
                             Manage finance, inventory, projects, people and
                             daily operations with connected applications for
                             businesses, NGOs, government institutions and
                             service organizations.
                         </p>
-                        <div className="mt-8 flex flex-wrap items-center gap-3">
+                        <div className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
                             <a href="#products" className={button.light}>
                                 Explore Products
                                 <ArrowRight className="size-4" aria-hidden />
@@ -224,7 +224,7 @@ export default function MarketingHome({
                             </Link>
                         </div>
                     </div>
-                    <figure className="mx-auto w-full max-w-xl lg:-mr-4 lg:max-w-none xl:-mr-10">
+                    <figure className="order-first mx-auto w-full max-w-xl lg:order-none lg:-mr-4 lg:max-w-none xl:-mr-10">
                         <img
                             src="/images/home/hero-devices.webp?v=20261126c"
                             srcSet="/images/home/hero-devices-800.webp?v=20261126c 800w, /images/home/hero-devices.webp?v=20261126c 1462w"

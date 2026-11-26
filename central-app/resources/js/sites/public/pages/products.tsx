@@ -1,22 +1,14 @@
 import { Link } from '@inertiajs/react';
-import { ArrowRight, Download, MonitorSmartphone } from 'lucide-react';
+import { ArrowRight, Check, Download, MonitorSmartphone } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { CtaBand } from '@/sites/public/components/blocks';
-import {
-    ProductCard,
-    StatusBadge,
-    categoryLabels,
-} from '@/sites/public/components/catalog';
+import { ProductCard, categoryLabels } from '@/sites/public/components/catalog';
 import type { CatalogEntry } from '@/sites/public/components/catalog';
-import {
-    Accent,
-    HeroBackdrop,
-    SpeedMark,
-} from '@/sites/public/components/page-hero';
+import { Accent } from '@/sites/public/components/page-hero';
 import SectionHeading from '@/sites/public/components/section-heading';
 import Seo from '@/sites/public/components/seo';
-import { button, container, display } from '@/sites/public/components/styles';
+import { button, container } from '@/sites/public/components/styles';
 
 type Props = {
     catalog: CatalogEntry[];
@@ -53,6 +45,11 @@ const sections: Record<
 
 const categories: Category[] = ['erp', 'application'];
 
+const shortLabels: Record<Category, string> = {
+    erp: 'ERP',
+    application: 'Apps',
+};
+
 /** Available products first, then early access, then coming soon. */
 const order = { available: 0, early_access: 1, coming_soon: 2 };
 
@@ -69,15 +66,26 @@ export default function Products({ catalog, trialDays, canonical }: Props) {
             .filter((entry) => entry.category === category)
             .sort((a, b) => order[a.status] - order[b.status]);
 
-    const choices: { value: Category | 'all'; label: string; count: number }[] =
-        [
-            { value: 'all', label: 'All products', count: catalog.length },
-            ...categories.map((category) => ({
-                value: category,
-                label: categoryLabels[category],
-                count: byCategory(category).length,
-            })),
-        ];
+    const choices: {
+        value: Category | 'all';
+        label: string;
+        /** The label on a phone, where all three sit side by side. */
+        short: string;
+        count: number;
+    }[] = [
+        {
+            value: 'all',
+            label: 'All products',
+            short: 'All',
+            count: catalog.length,
+        },
+        ...categories.map((category) => ({
+            value: category,
+            label: categoryLabels[category],
+            short: shortLabels[category],
+            count: byCategory(category).length,
+        })),
+    ];
 
     const choose = (value: Category | 'all') => {
         setFilter(value);
@@ -111,40 +119,37 @@ export default function Products({ catalog, trialDays, canonical }: Props) {
                 }}
             />
 
-            <ProductsHero
-                erp={byCategory('erp')}
-                applications={byCategory('application')}
-                trialDays={trialDays}
-            />
+            <ProductsHero trialDays={trialDays} count={catalog.length} />
 
             {/* The filter: stays under the fixed header while the list scrolls. */}
             <div className="sticky top-14 z-30 border-b border-site-line bg-white sm:top-16">
-                <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6 lg:px-8">
+                <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-2.5 sm:px-6 sm:py-3 lg:px-8">
                     <div
                         role="group"
                         aria-label="Show products"
-                        className="flex min-w-0 flex-1 overflow-x-auto"
+                        className="grid w-full grid-cols-3 gap-1 rounded-xl bg-site-wash p-1 ring-1 ring-site-line sm:inline-grid sm:w-auto sm:auto-cols-max sm:grid-flow-col sm:grid-cols-none sm:rounded-full"
                     >
-                        <div className="inline-flex gap-1 rounded-full bg-site-wash p-1 ring-1 ring-site-line">
-                            {choices.map(({ value, label, count }) => (
-                                <button
-                                    key={value}
-                                    type="button"
-                                    aria-pressed={filter === value}
-                                    onClick={() => choose(value)}
-                                    className="group/choice inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap text-slate-600 transition-colors hover:text-site-accent-ink aria-pressed:bg-site-ink aria-pressed:text-white aria-pressed:shadow-md aria-pressed:shadow-site-night/20"
-                                >
+                        {choices.map(({ value, label, short, count }) => (
+                            <button
+                                key={value}
+                                type="button"
+                                aria-pressed={filter === value}
+                                onClick={() => choose(value)}
+                                className="group/choice inline-flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-sm font-semibold whitespace-nowrap text-slate-600 transition-colors hover:text-site-accent-ink aria-pressed:bg-site-ink aria-pressed:text-white aria-pressed:shadow-md aria-pressed:shadow-site-night/20 sm:gap-2 sm:rounded-full sm:px-4"
+                            >
+                                <span className="sm:hidden">{short}</span>
+                                <span className="hidden sm:inline">
                                     {label}
-                                    <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-site-accent-ink ring-1 ring-site-line group-aria-pressed/choice:bg-site-highlight group-aria-pressed/choice:text-site-night group-aria-pressed/choice:ring-0">
-                                        {count}
-                                    </span>
-                                </button>
-                            ))}
-                        </div>
+                                </span>
+                                <span className="rounded-full bg-white px-1.5 py-0.5 text-xs font-bold text-site-accent-ink ring-1 ring-site-line group-aria-pressed/choice:bg-site-highlight group-aria-pressed/choice:text-site-night group-aria-pressed/choice:ring-0 sm:px-2">
+                                    {count}
+                                </span>
+                            </button>
+                        ))}
                     </div>
                     <Link
                         href="/downloads"
-                        className="hidden shrink-0 items-center gap-1.5 text-sm font-semibold text-site-accent-ink hover:underline md:inline-flex"
+                        className="ml-auto hidden shrink-0 items-center gap-1.5 text-sm font-semibold text-site-accent-ink hover:underline md:inline-flex"
                     >
                         <Download className="size-4" aria-hidden />
                         Desktop downloads
@@ -160,6 +165,7 @@ export default function Products({ catalog, trialDays, canonical }: Props) {
                     .map((category, i) => {
                         const section = sections[category];
                         const headingId = `${section.id}-heading`;
+                        const entries = byCategory(category);
 
                         return (
                             <section
@@ -168,15 +174,15 @@ export default function Products({ catalog, trialDays, canonical }: Props) {
                                 aria-labelledby={headingId}
                                 className={`scroll-mt-32 ${i % 2 === 1 ? 'border-t border-site-line bg-site-wash' : 'bg-white'}`}
                             >
-                                <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 sm:py-20">
+                                <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
                                     <SectionHeading
                                         id={headingId}
                                         title={section.title}
                                         lead={section.lead}
                                         align="left"
                                     />
-                                    <ul className="mt-12 grid gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
-                                        {byCategory(category).map((entry) => (
+                                    <ul className="mt-10 grid gap-x-6 gap-y-10 sm:mt-12 md:grid-cols-2 xl:grid-cols-3">
+                                        {entries.map((entry) => (
                                             <li key={entry.slug}>
                                                 <ProductCard
                                                     product={entry}
@@ -262,104 +268,90 @@ export default function Products({ catalog, trialDays, canonical }: Props) {
 }
 
 /**
- * The page's opening band: deep blue, the title and intro, and beside
- * them a fan of three product cards with their promotion badges, as on the
- * cards below. The fan is decorative and shows from `lg`; with reduced
- * motion it stays still.
+ * The page's opening band, solid navy: the title, intro, actions and
+ * three facts on the left, and the dashboards-and-globe picture framed on
+ * the right from `lg` (under the copy below it). The picture's own dark
+ * backdrop sits in a rounded frame, as its glow reaches the edges and
+ * would not blend into a flat colour. White title, light cyan accent,
+ * near-white body.
  */
 function ProductsHero({
-    erp,
-    applications,
     trialDays,
+    count,
 }: {
-    erp: CatalogEntry[];
-    applications: CatalogEntry[];
     trialDays: number;
+    count: number;
 }) {
-    const fan = [
-        {
-            product: erp[0],
-            place: 'top-6 left-0 -rotate-[7deg]',
-            float: 'site-float-slow',
-        },
-        {
-            product: erp[1],
-            place: 'top-2 right-0 rotate-[6deg]',
-            float: 'site-float-slow',
-        },
-        {
-            product: applications[0],
-            place: 'top-[9rem] left-1/2 z-10 -translate-x-1/2 -rotate-[2deg]',
-            float: 'site-float',
-        },
-    ].filter((card) => card.product);
+    const facts = [
+        `${count} products, one sign-in`,
+        'Web, Windows desktop and mobile',
+        'Works offline where you need it',
+    ];
 
     return (
-        <section className="site-dark relative isolate overflow-hidden bg-site-accent-deep">
-            <HeroBackdrop />
+        <section className="site-dark relative isolate overflow-hidden bg-site-navy">
             <div
-                className={`${container} grid items-center gap-10 pt-24 pb-10 sm:pt-28 sm:pb-12 lg:grid-cols-[1.05fr_1fr]`}
+                className={`${container} grid items-center gap-10 pt-24 pb-14 sm:pt-28 sm:pb-16 lg:grid-cols-[1fr_1.05fr] lg:gap-12 lg:pb-20`}
             >
-                <div className="site-rise">
-                    <SpeedMark className="mb-5" />
-                    <h1
-                        className={`max-w-2xl text-[2.25rem] leading-[1.08] sm:text-5xl lg:text-[3.5rem] ${display}`}
-                    >
-                        Software for every part of{' '}
-                        <Accent>your business.</Accent>
+                <div className="site-rise min-w-0 max-w-xl">
+                    <h1 className="text-[2.25rem] leading-[1.08] font-semibold tracking-tight text-balance text-white sm:text-5xl lg:text-[3.5rem]">
+                        One platform for{' '}
+                        <span className="text-[#9fe0ff]">
+                            every part of your business.
+                        </span>
                     </h1>
-                    <p className="mt-5 max-w-xl text-base leading-relaxed text-pretty text-slate-200 sm:text-lg">
-                        ERP solutions and business applications on one platform:
-                        one sign-in, one organization, one set of books.
+                    <p className="mt-5 max-w-lg text-base leading-relaxed text-pretty text-[#dce8ff] sm:text-lg">
+                        Ready-made ERPs for pharmacies, shops and more, plus
+                        accounting, HR, payroll, inventory and project apps.
+                        Everything shares your sign-in, your organization and
+                        your books.
                     </p>
+                    <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                        <Link
+                            href="/start"
+                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-site-navy transition-colors hover:bg-[#e6f6ff]"
+                        >
+                            Start your {trialDays}-day free trial
+                            <ArrowRight className="size-4" aria-hidden />
+                        </Link>
+                        <Link
+                            href="/contact"
+                            className="inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold text-white ring-1 ring-[#9fe0ff] transition-colors hover:bg-site-navy-light"
+                        >
+                            Talk to us
+                        </Link>
+                    </div>
+                    <ul className="mt-8 grid gap-2.5 text-sm font-medium text-white sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                        {facts.map((fact) => (
+                            <li
+                                key={fact}
+                                className="flex items-center gap-2.5"
+                            >
+                                <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-[#9fe0ff] text-site-navy">
+                                    <Check
+                                        className="size-3"
+                                        strokeWidth={3}
+                                        aria-hidden
+                                    />
+                                </span>
+                                {fact}
+                            </li>
+                        ))}
+                    </ul>
                 </div>
-
-                <div aria-hidden className="relative hidden h-[22rem] lg:block">
-                    {fan.map(({ product, place, float }) => (
-                        <div key={product.slug} className={`absolute ${place}`}>
-                            <div className={float}>
-                                <FanCard
-                                    product={product}
-                                    trialDays={trialDays}
-                                />
-                            </div>
-                        </div>
-                    ))}
+                <div className="site-rise">
+                    <img
+                        src="/images/hero/products-hero.webp"
+                        srcSet="/images/hero/products-hero-900.webp 900w, /images/hero/products-hero.webp 1536w"
+                        sizes="(min-width: 1024px) 50vw, 100vw"
+                        width={1536}
+                        height={1024}
+                        alt="Pharmacy, retail and project dashboards in front of a globe"
+                        fetchPriority="high"
+                        className="w-full rounded-2xl ring-1 ring-site-navy-line"
+                    />
                 </div>
             </div>
         </section>
-    );
-}
-
-/** A small likeness of a product card, for the hero's fan. */
-function FanCard({
-    product,
-    trialDays,
-}: {
-    product: CatalogEntry;
-    trialDays: number;
-}) {
-    return (
-        <div className="relative w-60 rounded-xl bg-white shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] ring-1 ring-site-navy-line xl:w-64">
-            <div className="relative flex h-24 items-end overflow-hidden rounded-t-xl bg-site-accent-deep px-5 pr-24 pb-4">
-                <span className="relative text-lg leading-tight font-semibold text-white">
-                    {product.name}
-                </span>
-                <span className="absolute bottom-0 left-5 h-1 w-8 rounded-t-full bg-site-highlight" />
-            </div>
-            <StatusBadge
-                status={product.status}
-                trialDays={product.trial ? trialDays : undefined}
-            />
-            <div className="space-y-2 p-5">
-                <i className="block h-2 w-full rounded-full bg-site-line" />
-                <i className="block h-2 w-4/5 rounded-full bg-site-line" />
-                <i className="block h-2 w-3/5 rounded-full bg-site-line" />
-                <span className="mt-5 flex items-center gap-2">
-                    <b className="block h-8 w-32 rounded-full bg-site-ink" />
-                    <b className="block h-2 w-14 rounded-full bg-site-line" />
-                </span>
-            </div>
-        </div>
     );
 }

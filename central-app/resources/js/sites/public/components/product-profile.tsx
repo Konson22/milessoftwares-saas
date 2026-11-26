@@ -11,6 +11,11 @@ import {
 } from '@/sites/public/components/catalog';
 import type { CatalogEntry, Platform } from '@/sites/public/components/catalog';
 import FaqList from '@/sites/public/components/faq';
+import ImageHero, {
+    onBlue,
+    outlineOnBlue,
+} from '@/sites/public/components/image-hero';
+import type { HeroPicture } from '@/sites/public/components/image-hero';
 import PlanCard from '@/sites/public/components/plan-card';
 import type { Plan } from '@/sites/public/components/plan-card';
 import Seo, { organization } from '@/sites/public/components/seo';
@@ -34,6 +39,8 @@ type Props = ProductProfileProps & {
     customer?: string;
     /** A plan's card; the shared PlanCard unless the page has its own. */
     renderPlan?: (plan: Plan) => ReactNode;
+    /** A wide picture for the hero (see ImageHero); the navy band without. */
+    hero?: HeroPicture;
 };
 
 const operatingSystems: Record<Platform, string> = {
@@ -57,32 +64,18 @@ export default function ProductProfile({
     canonical,
     customer = 'business',
     renderPlan = (plan) => <PlanCard key={plan.code} plan={plan} />,
+    hero,
 }: Props) {
-    const origin = new URL(canonical).origin;
     const comingSoon = product.status === 'coming_soon';
-    const demoUrl = `/contact?subject=${encodeURIComponent(`Demo: ${product.name}`)}`;
     const ProductIcon = catalogIcon(product.icon);
 
-    const primary = (style: string) =>
-        product.trial ? (
-            <a
-                href={trialUrl(product.trial, product.trialProduct)}
-                className={style}
-            >
-                Start Your {trialDays}-Day Free Trial
-                <ArrowRight className="size-4" aria-hidden />
-            </a>
-        ) : comingSoon ? (
-            <Link href={waitlistUrl(product.name)} className={style}>
-                Join the waitlist
-                <ArrowRight className="size-4" aria-hidden />
-            </Link>
-        ) : (
-            <Link href={demoUrl} className={style}>
-                Request a Demo
-                <ArrowRight className="size-4" aria-hidden />
-            </Link>
-        );
+    const primary = (style: string) => (
+        <PrimaryAction
+            product={product}
+            trialDays={trialDays}
+            className={style}
+        />
+    );
 
     const glance = [
         { term: "Who it's for", values: [product.audience] },
@@ -119,100 +112,59 @@ export default function ProductProfile({
 
     return (
         <>
-            <Seo
-                title={product.seoTitle}
-                description={product.seoDescription}
-                canonical={canonical}
-                jsonLd={{
-                    '@context': 'https://schema.org',
-                    '@graph': [
-                        {
-                            '@type': 'SoftwareApplication',
-                            name: product.name,
-                            applicationCategory: 'BusinessApplication',
-                            operatingSystem: product.offering.platforms
-                                .map((platform) => operatingSystems[platform])
-                                .join(', '),
-                            description: product.seoDescription,
-                            url: canonical,
-                            publisher: organization(origin),
-                        },
-                        {
-                            '@type': 'BreadcrumbList',
-                            itemListElement: [
-                                {
-                                    '@type': 'ListItem',
-                                    position: 1,
-                                    name: 'Home',
-                                    item: `${origin}/`,
-                                },
-                                {
-                                    '@type': 'ListItem',
-                                    position: 2,
-                                    name: 'Products',
-                                    item: `${origin}/products`,
-                                },
-                                {
-                                    '@type': 'ListItem',
-                                    position: 3,
-                                    name: product.name,
-                                    item: canonical,
-                                },
-                            ],
-                        },
-                        ...(product.faqs.length > 0
-                            ? [
-                                  {
-                                      '@type': 'FAQPage',
-                                      mainEntity: product.faqs.map((faq) => ({
-                                          '@type': 'Question',
-                                          name: faq.question,
-                                          acceptedAnswer: {
-                                              '@type': 'Answer',
-                                              text: faq.answer,
-                                          },
-                                      })),
-                                  },
-                              ]
-                            : []),
-                    ],
-                }}
-            />
+            <ProductSeo product={product} canonical={canonical} />
 
-            {/* Profile header */}
-            {/* White and light grey type on the brand's navy. */}
-            <section className="site-dark bg-site-night">
-                <div className={`${container} pt-24 pb-10 sm:pt-28 sm:pb-14`}>
-                    <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
-                        <span className="inline-flex size-16 shrink-0 items-center justify-center rounded-xl bg-white text-site-accent sm:size-20">
-                            <ProductIcon
-                                className="size-8 sm:size-10"
-                                aria-hidden
-                            />
-                        </span>
-                        <div className="flex-1">
-                            <div className="flex flex-wrap items-center gap-3">
-                                <h1 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
-                                    {product.name}
-                                </h1>
-                                <CatalogStatus status={product.status} />
-                            </div>
-                            <p className="mt-2 text-lg font-semibold text-white">
-                                {product.headline}
-                            </p>
-                            <p className="mt-3 max-w-3xl leading-relaxed text-pretty text-slate-300">
-                                {product.subhead}
-                            </p>
-                            <div className="mt-6 flex flex-wrap gap-3">
-                                {primary(onDark)}
-                                <a href="#plans" className={button.outlineDark}>
-                                    See plans
-                                </a>
+            {/* Profile header: on the page's picture, or white and light grey type on the brand's navy. */}
+            {hero ? (
+                <ImageHero
+                    picture={hero}
+                    title={product.headline}
+                    intro={product.subhead}
+                >
+                    {primary(onBlue)}
+                    <a href="#plans" className={outlineOnBlue}>
+                        See plans
+                    </a>
+                </ImageHero>
+            ) : (
+                <section className="site-dark bg-site-night">
+                    <div
+                        className={`${container} pt-24 pb-10 sm:pt-28 sm:pb-14`}
+                    >
+                        <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+                            <span className="inline-flex size-16 shrink-0 items-center justify-center rounded-xl bg-white text-site-accent sm:size-20">
+                                <ProductIcon
+                                    className="size-8 sm:size-10"
+                                    aria-hidden
+                                />
+                            </span>
+                            <div className="flex-1">
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <h1 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
+                                        {product.name}
+                                    </h1>
+                                    <CatalogStatus status={product.status} />
+                                </div>
+                                <p className="mt-2 text-lg font-semibold text-white">
+                                    {product.headline}
+                                </p>
+                                <p className="mt-3 max-w-3xl leading-relaxed text-pretty text-slate-300">
+                                    {product.subhead}
+                                </p>
+                                <div className="mt-6 flex flex-wrap gap-3">
+                                    {primary(onDark)}
+                                    <a
+                                        href="#plans"
+                                        className={button.outlineDark}
+                                    >
+                                        See plans
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </section>
+                </section>
+            )}
 
             {/* Details beside "at a glance" */}
             <div
@@ -481,5 +433,123 @@ export default function ProductProfile({
                 </section>
             )}
         </>
+    );
+}
+
+/**
+ * The head tags of a product page: title, description, canonical, and the
+ * product, breadcrumb and (when it has them) questions as structured data.
+ */
+export function ProductSeo({
+    product,
+    canonical,
+}: {
+    product: CatalogEntry;
+    canonical: string;
+}) {
+    const origin = new URL(canonical).origin;
+
+    return (
+        <Seo
+            title={product.seoTitle}
+            description={product.seoDescription}
+            canonical={canonical}
+            jsonLd={{
+                '@context': 'https://schema.org',
+                '@graph': [
+                    {
+                        '@type': 'SoftwareApplication',
+                        name: product.name,
+                        applicationCategory: 'BusinessApplication',
+                        operatingSystem: product.offering.platforms
+                            .map((platform) => operatingSystems[platform])
+                            .join(', '),
+                        description: product.seoDescription,
+                        url: canonical,
+                        publisher: organization(origin),
+                    },
+                    {
+                        '@type': 'BreadcrumbList',
+                        itemListElement: [
+                            {
+                                '@type': 'ListItem',
+                                position: 1,
+                                name: 'Home',
+                                item: `${origin}/`,
+                            },
+                            {
+                                '@type': 'ListItem',
+                                position: 2,
+                                name: 'Products',
+                                item: `${origin}/products`,
+                            },
+                            {
+                                '@type': 'ListItem',
+                                position: 3,
+                                name: product.name,
+                                item: canonical,
+                            },
+                        ],
+                    },
+                    ...(product.faqs.length > 0
+                        ? [
+                              {
+                                  '@type': 'FAQPage',
+                                  mainEntity: product.faqs.map((faq) => ({
+                                      '@type': 'Question',
+                                      name: faq.question,
+                                      acceptedAnswer: {
+                                          '@type': 'Answer',
+                                          text: faq.answer,
+                                      },
+                                  })),
+                              },
+                          ]
+                        : []),
+                ],
+            }}
+        />
+    );
+}
+
+/**
+ * A product page's main action: its free trial when one is open, the
+ * waitlist while it is coming soon, and a demo request otherwise.
+ */
+export function PrimaryAction({
+    product,
+    trialDays,
+    className,
+}: {
+    product: CatalogEntry;
+    trialDays: number;
+    className: string;
+}) {
+    if (product.trial) {
+        return (
+            <a
+                href={trialUrl(product.trial, product.trialProduct)}
+                className={className}
+            >
+                Start Your {trialDays}-Day Free Trial
+                <ArrowRight className="size-4" aria-hidden />
+            </a>
+        );
+    }
+
+    const comingSoon = product.status === 'coming_soon';
+
+    return (
+        <Link
+            href={
+                comingSoon
+                    ? waitlistUrl(product.name)
+                    : `/contact?subject=${encodeURIComponent(`Demo: ${product.name}`)}`
+            }
+            className={className}
+        >
+            {comingSoon ? 'Join the waitlist' : 'Request a Demo'}
+            <ArrowRight className="size-4" aria-hidden />
+        </Link>
     );
 }

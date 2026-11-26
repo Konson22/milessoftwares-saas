@@ -395,7 +395,7 @@ it('says how every catalog product runs and is licensed', function () {
 
 it('shows the restaurant ERP as coming soon until the registry releases it', function () {
     $this->get(site('erp/restaurant'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
-        ->component('public/landing')
+        ->component('public/restaurant')
         ->where('product.status', 'coming_soon')
         ->where('product.trial', null)
         ->where('plans', []));

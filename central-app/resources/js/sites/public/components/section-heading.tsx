@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { SpeedMark } from '@/sites/public/components/page-hero';
 import { display, type } from '@/sites/public/components/styles';
 
 /**
@@ -26,7 +25,6 @@ export default function SectionHeading({
                     : ''
             }
         >
-            <SpeedMark className="mb-4" />
             <h2 id={id} className={`${type.section} ${display}`}>
                 {title}
             </h2>
