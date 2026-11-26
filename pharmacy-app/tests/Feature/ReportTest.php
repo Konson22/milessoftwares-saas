@@ -4,10 +4,12 @@ use App\Models\User;
 use App\Models\Workspace;
 use App\Modules\Inventory\Actions\Stock;
 use App\Modules\Pharmacy\Models\Medicine;
+use App\Modules\Sales\Actions\ReturnSale;
 use App\Modules\Sales\Actions\Sell;
 use App\Modules\Sales\Actions\Tills;
 use App\Modules\Sales\Actions\VoidSale;
 use App\Modules\Sales\Enums\PaymentMethod;
+use App\Modules\Sales\Models\Sale;
 use Carbon\CarbonImmutable;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -83,6 +85,36 @@ it('reports the month so far: takings, profit, payments, days and best sellers',
                 'expiredCostMinor' => 320,
                 'heldUnits' => 0,
                 'heldCostMinor' => 0,
+            ]));
+});
+
+it('takes refunds off every table, so the tables add up to the takings', function () {
+    $this->asTenant('acme', function () {
+        $this->travelTo(CarbonImmutable::parse('2026-10-12 11:00'));
+        $clerk = User::factory()->create();
+        app(Tills::class)->open($clerk, $this->juba, 0);
+        // One of the four sold on 1 October comes back, paid back in cash, onto the shelf.
+        $sale = Sale::query()->where('branch_id', $this->juba)->where('total_minor', 1000)->sole();
+        app(ReturnSale::class)->handle($sale, $clerk, [['sale_line_id' => $sale->lines()->value('id'), 'quantity' => 1, 'restock' => true]], 'Not needed');
+    });
+    $this->actingAsMember('acme', ['pharmacy.reports.view'], branch: $this->juba);
+
+    $this->get($this->workspaceUrl('acme', 'reports'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('summary.revenueMinor', 1250)
+            ->where('summary.costMinor', 500)
+            ->where('summary.returnedMinor', 250)
+            ->where('byMethod', [
+                ['method' => 'Cash', 'count' => 1, 'totalMinor' => 750],
+                ['method' => 'Mobile money', 'count' => 1, 'totalMinor' => 500],
+            ])
+            // The sale stays on its own day; the refund comes off the day it was given.
+            ->where('byDay', [
+                ['day' => '2026-10-01', 'count' => 1, 'totalMinor' => 1000],
+                ['day' => '2026-10-12', 'count' => 1, 'totalMinor' => 250],
+            ])
+            ->where('topItems', [
+                ['id' => $this->para->id, 'item' => $this->para->label(), 'quantity' => 5, 'revenueMinor' => 1250, 'costMinor' => 500],
             ]));
 });
 

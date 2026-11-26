@@ -84,7 +84,7 @@ class SerialController extends Controller
         $user = $request->user();
         abort_unless($user instanceof User, 401);
 
-        $item = Item::query()->findOrFail($validated['item_id']);
+        $item = Item::query()->findOrFail((string) $validated['item_id']);
         $recorded = $serials->record($item, preg_split('/[\r\n,]+/', $validated['serials']) ?: [], $user);
 
         return back()->with('success', "{$recorded} serial ".($recorded === 1 ? 'number' : 'numbers')." of {$item->name} recorded.");

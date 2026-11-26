@@ -161,9 +161,7 @@ export default function Reports({
                                 ) : (
                                     topMedicines.map((row) => (
                                         <TableRow key={row.id}>
-                                            <TableCell>
-                                                {row.item}
-                                            </TableCell>
+                                            <TableCell>{row.item}</TableCell>
                                             <TableCell className="text-right tabular-nums">
                                                 {row.quantity}
                                             </TableCell>

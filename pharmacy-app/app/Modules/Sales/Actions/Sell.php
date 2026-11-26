@@ -356,12 +356,12 @@ class Sell
      */
     private function spread(array $priced, int $amount, int $total): array
     {
-        if ($amount === 0 || $total === 0) {
+        if ($amount === 0 || $total === 0 || $priced === []) {
             return $priced;
         }
 
         $nets = array_map(fn (array $line) => $line[2] - $line[3], $priced);
-        $dearest = array_search(max($nets), $nets, true);
+        $dearest = array_keys($nets, max($nets), true)[0];
         $left = $amount;
         foreach ($priced as $i => $line) {
             if ($i === $dearest) {

@@ -142,11 +142,11 @@ class ProductController extends Controller
                 'active' => (bool) ($validated['active'] ?? true),
             ])->save();
 
-            $packs->sync($product, array_values(array_map(fn (array $pack, int|string $index) => [
+            $packs->sync($product, array_map(fn (array $pack, int|string $index) => [
                 'name' => (string) $pack['name'],
                 'units' => (int) $pack['units'],
                 'sell_price_minor' => isset($pack['sell_price']) && $pack['sell_price'] !== '' ? Money::enter($pack['sell_price'], $validated['sell_price_currency'] ?? null, "packs.{$index}.sell_price")->baseMinor : null,
-            ], $validated['packs'] ?? [], array_keys($validated['packs'] ?? []))));
+            ], $validated['packs'] ?? [], array_keys($validated['packs'] ?? [])));
         });
     }
 

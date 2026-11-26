@@ -192,7 +192,7 @@ class SalesOrderController extends Controller
                     'itemId' => $line->item_id,
                     // Lines keep the pack's name and size; find it again (gone: by the unit).
                     'packId' => $line->pack_name === null ? '' : ($line->item->packs
-                        ->first(fn (ItemPack $pack) => $pack->name === $line->pack_name && $pack->units === $line->units_per_pack)?->id ?? ''),
+                        ->first(fn (ItemPack $pack) => $pack->name === $line->pack_name && $pack->units === $line->units_per_pack)->id ?? ''),
                     'quantity' => (string) $line->quantity,
                     'discount' => $line->discount_percent === 0 ? '' : (string) $line->discount_percent,
                 ])->values(),

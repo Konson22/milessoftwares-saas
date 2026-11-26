@@ -1,6 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import { ModalRoot, ModalStackProvider } from '@inertiaui/modal-react';
-import { ArrowLeft, Bell, BookOpen, Building2 } from 'lucide-react';
+import { ArrowLeft, Bell, BookOpen } from 'lucide-react';
 import type { PropsWithChildren } from 'react';
 import { AppShell } from '@miles/ui/shell/app-shell';
 import { activeItem, crumbsFor } from '@miles/ui/shell/navigation';
@@ -39,21 +39,6 @@ export default function ProductLayout({ children }: PropsWithChildren) {
                 actions={
                     <>
                         <QuickSearch groups={groups} />
-                        {workspace && (
-                            <a
-                                href={workspace.url}
-                                title={`Back to ${workspace.name}`}
-                                className="hidden h-9 max-w-56 items-center gap-2 rounded border bg-card px-3 text-sm font-medium hover:bg-accent md:inline-flex"
-                            >
-                                <Building2
-                                    className="size-4 shrink-0 text-muted-foreground"
-                                    aria-hidden
-                                />
-                                <span className="truncate">
-                                    {workspace.name}
-                                </span>
-                            </a>
-                        )}
                         {user && (
                             <Link
                                 href={notifications()}
@@ -75,7 +60,6 @@ export default function ProductLayout({ children }: PropsWithChildren) {
                         {user && (
                             <UserMenu
                                 user={user}
-                                subtitle={workspace?.name}
                                 links={
                                     workspace
                                         ? [
@@ -99,14 +83,6 @@ export default function ProductLayout({ children }: PropsWithChildren) {
                 sidebar={(onNavigate) => (
                     <ShellSidebar
                         label={product.name}
-                        back={
-                            workspace
-                                ? {
-                                      label: `${workspace.name} home`,
-                                      href: workspace.url,
-                                  }
-                                : undefined
-                        }
                         brand={{
                             title: product.name,
                             icon: BookOpen,

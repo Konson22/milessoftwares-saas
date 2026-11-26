@@ -31,7 +31,11 @@ type Props = {
 /**
  * The places stock is kept in this branch, and how much each holds.
  */
-export default function RetailLocations({ locations, notPutAway, canManage }: Props) {
+export default function RetailLocations({
+    locations,
+    notPutAway,
+    canManage,
+}: Props) {
     const { branch } = usePage().props;
 
     return (

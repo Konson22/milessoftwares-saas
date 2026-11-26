@@ -86,12 +86,12 @@ class PurchaseOrderController extends Controller
             by: $this->user($request),
             branchId: $this->branch->id(),
             supplier: Supplier::query()->findOrFail((string) $validated['supplier_id']),
-            lines: array_values(array_map(fn (array $line, int $index) => [
+            lines: array_map(fn (array $line, int $index) => [
                 'item_id' => $line['item_id'],
                 'pack_id' => $line['pack_id'] ?? null,
                 'quantity' => (int) $line['quantity'],
                 'unit_cost_minor' => $costs[$index]->baseMinor,
-            ], $validated['lines'], array_keys($validated['lines']))),
+            ], $validated['lines'], array_keys($validated['lines'])),
             expectedOn: isset($validated['expected_on']) ? CarbonImmutable::parse($validated['expected_on']) : null,
             notes: $validated['notes'] ?? null,
         ), fn ($order) => Money::rememberLines($order, 'unit_cost', $costs, $this->user($request)->id)));

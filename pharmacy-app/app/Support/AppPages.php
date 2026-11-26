@@ -65,6 +65,10 @@ final class AppPages
                 ...array_values(array_diff($middleware, [...self::REPLACED, ...$select])),
             ];
             $action['as'] = $prefix.'api.app.'.substr((string) $route->getName(), strlen($prefix));
+            // The controller as the web route has it: an invokable one stays
+            // "Controller" (not "Controller@__invoke"), so the mirror is
+            // invokable too and generated route helpers match the web's.
+            $action['uses'] = $action['controller'];
             unset($action['prefix']);
 
             $router->addRoute($route->methods(), trim("{$path}/".self::PREFIX."/{$uri}", '/'), $action)

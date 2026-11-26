@@ -129,11 +129,11 @@ class PriceListController extends Controller
             'currency' => Money::currencyRule(),
         ]);
 
-        $prices->set($priceList, array_values(array_map(fn (array $line, int|string $index) => [
+        $prices->set($priceList, array_map(fn (array $line, int|string $index) => [
             'item_id' => $line['item_id'],
             'pack_id' => $line['pack_id'] ?? null,
             'price_minor' => ($line['price'] ?? '') === '' ? null : Money::enter($line['price'], $validated['currency'] ?? null, "prices.{$index}.price")->baseMinor,
-        ], $validated['prices'], array_keys($validated['prices']))));
+        ], $validated['prices'], array_keys($validated['prices'])));
 
         return back()->with('success', "Prices of {$priceList->name} saved.");
     }

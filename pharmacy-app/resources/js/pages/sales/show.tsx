@@ -224,8 +224,7 @@ export default function ShowSale({ sale, canVoid, canReturn }: Props) {
                                     <ul className="mt-1">
                                         {ret.lines.map((line) => (
                                             <li key={line.id}>
-                                                {line.quantity} ×{' '}
-                                                {line.item}
+                                                {line.quantity} × {line.item}
                                                 {line.restocked
                                                     ? ' (back in stock)'
                                                     : ' (not resold)'}

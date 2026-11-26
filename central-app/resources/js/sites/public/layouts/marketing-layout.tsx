@@ -1,12 +1,10 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
     ArrowRight,
-    Building2,
     Code2,
     Download,
     KeyRound,
     Layers,
-    Mail,
     Menu,
     ChevronDown,
     X,
@@ -88,22 +86,8 @@ const nav: NavEntry[] = [
             },
         ],
     },
-    {
-        title: 'Company',
-        id: 'company',
-        items: [
-            {
-                title: 'About Us',
-                href: '/about',
-                icon: Building2,
-            },
-            {
-                title: 'Contact',
-                href: '/contact',
-                icon: Mail,
-            },
-        ],
-    },
+    { title: 'About Us', href: '/about' },
+    { title: 'Contact', href: '/contact' },
 ];
 
 /** A menu link without its fragment, for the current-page check. */
@@ -350,12 +334,6 @@ export default function MarketingLayout({ children }: PropsWithChildren) {
                         )}
                     </ul>
                     <div className="ml-auto hidden items-center gap-3 whitespace-nowrap lg:ml-0 lg:flex">
-                        <Link
-                            href="/contact"
-                            className="hidden px-2 text-sm font-medium text-site-ink transition-colors hover:text-site-accent xl:inline xl:text-[15px]"
-                        >
-                            Contact
-                        </Link>
                         <a
                             href={login.url()}
                             className={`${button.outline} lg:px-4`}

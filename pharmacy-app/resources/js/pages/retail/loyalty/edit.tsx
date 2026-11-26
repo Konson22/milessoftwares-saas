@@ -4,7 +4,6 @@ import { EmptyState } from '@miles/ui/components/empty-state';
 import { PageHeader } from '@miles/ui/components/page-header';
 import { Panel, PanelBody, PanelHeader } from '@miles/ui/components/panel';
 import { Button } from '@miles/ui/components/ui/button';
-import { Input } from '@miles/ui/components/ui/input';
 import { MoneyInput } from '@miles/ui/components/money-input';
 import { Label } from '@miles/ui/components/ui/label';
 import {

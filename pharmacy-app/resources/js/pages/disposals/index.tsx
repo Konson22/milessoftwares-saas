@@ -99,8 +99,7 @@ export default function Disposals({ status, disposals, canDecide }: Props) {
                                         href={stockShow(disposal.itemId)}
                                         className="hover:underline"
                                     >
-                                        {disposal.quantity} ×{' '}
-                                        {disposal.item}
+                                        {disposal.quantity} × {disposal.item}
                                     </Link>
                                     <span className="text-sm text-muted-foreground">
                                         batch {disposal.batchNumber}, exp{' '}

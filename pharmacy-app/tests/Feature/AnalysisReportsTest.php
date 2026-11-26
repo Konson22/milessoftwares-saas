@@ -135,7 +135,8 @@ it('downloads each report table as CSV, amounts in major units', function () {
     $this->get($this->workspaceUrl('acme', 'reports/profitability?from=2026-10-01&to=2026-10-31&export=medicines'))
         ->assertHeader('content-disposition', 'attachment; filename=profitability-2026-10-01-to-2026-10-31.csv');
     expect($csv('reports/purchases?from=2026-10-01&to=2026-10-31&export=deliveries'))->toContain('INV-77')
-        ->and($csv('reports?from=2026-10-01&to=2026-10-31&export=methods'))->toContain('Cash,1,22.50');
+        // Net of the 4.50 paid back in cash.
+        ->and($csv('reports?from=2026-10-01&to=2026-10-31&export=methods'))->toContain('Cash,1,18.00');
 
     $this->get($this->workspaceUrl('acme', 'reports/purchases?export=nonsense'))->assertNotFound();
 });

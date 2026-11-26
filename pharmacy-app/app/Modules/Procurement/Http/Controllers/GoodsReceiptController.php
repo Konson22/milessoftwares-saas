@@ -135,7 +135,7 @@ class GoodsReceiptController extends Controller
             order: $order,
             supplierReference: $validated['supplier_reference'] ?? null,
             receivedOn: CarbonImmutable::parse($validated['received_on']),
-            lines: array_values(array_map(fn (array $line, int $index) => [
+            lines: array_map(fn (array $line, int $index) => [
                 'item_id' => $line['item_id'],
                 'purchase_order_line_id' => $line['purchase_order_line_id'] ?? null,
                 'pack_id' => $line['pack_id'] ?? null,
@@ -144,7 +144,7 @@ class GoodsReceiptController extends Controller
                 'expires_on' => $line['expires_on'] ?? null,
                 'quantity' => (int) $line['quantity'],
                 'unit_cost_minor' => $costs[$index]->baseMinor,
-            ], $validated['lines'], array_keys($validated['lines']))),
+            ], $validated['lines'], array_keys($validated['lines'])),
         ), fn ($receipt) => Money::rememberLines($receipt, 'unit_cost', $costs, $user->id)));
 
         return to_route($this->industry->route('receipts.show'), $receipt)->with('success', "{$receipt->number} received into stock.");

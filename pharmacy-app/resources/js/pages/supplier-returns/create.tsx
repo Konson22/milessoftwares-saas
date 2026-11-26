@@ -82,9 +82,7 @@ export default function CreateSupplierReturn({ receipt, today }: Props) {
                                 <TableBody>
                                     {receipt.lines.map((line) => (
                                         <TableRow key={line.id}>
-                                            <TableCell>
-                                                {line.item}
-                                            </TableCell>
+                                            <TableCell>{line.item}</TableCell>
                                             <TableCell>
                                                 {line.batchNumber}
                                             </TableCell>

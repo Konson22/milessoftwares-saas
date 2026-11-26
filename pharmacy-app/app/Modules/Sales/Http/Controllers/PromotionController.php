@@ -45,7 +45,7 @@ class PromotionController extends Controller
                     'id' => $promotion->id,
                     'name' => $promotion->name,
                     'percentOff' => $promotion->percent_off,
-                    'on' => $promotion->item?->name ?? "Everything in {$promotion->category}",
+                    'on' => $promotion->item->name ?? "Everything in {$promotion->category}",
                     'branch' => $promotion->branch_id === null ? 'Every branch' : ($names[$promotion->branch_id] ?? 'A closed branch'),
                     'startsOn' => $promotion->starts_on->toDateString(),
                     'endsOn' => $promotion->ends_on?->toDateString(),
@@ -69,10 +69,10 @@ class PromotionController extends Controller
                 ->distinct()
                 ->orderBy('category')
                 ->pluck('category'),
-            'branches' => array_values(array_map(
+            'branches' => array_map(
                 fn (Branch $branch) => ['id' => $branch->id, 'name' => $branch->name],
                 $this->branches->allActive(),
-            )),
+            ),
             'today' => $today->toDateString(),
         ]);
     }
@@ -93,7 +93,7 @@ class PromotionController extends Controller
             by: $this->user($request),
             name: trim($validated['name']),
             percentOff: (int) $validated['percent_off'],
-            item: ($validated['item_id'] ?? null) === null ? null : Item::query()->findOrFail($validated['item_id']),
+            item: ($validated['item_id'] ?? null) === null ? null : Item::query()->findOrFail((string) $validated['item_id']),
             category: ($validated['category'] ?? null) === null ? null : trim($validated['category']),
             branchId: $validated['branch_id'] ?? null,
             startsOn: CarbonImmutable::parse($validated['starts_on']),

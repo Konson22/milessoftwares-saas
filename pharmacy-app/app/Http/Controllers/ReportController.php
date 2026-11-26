@@ -15,9 +15,11 @@ use App\Support\Industry;
 use App\Support\ReportPeriod;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use stdClass;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -64,14 +66,47 @@ class ReportController extends Controller
         $count = $sales(Sale::COMPLETED)->count();
         $cost = (int) $lines()->sum(DB::raw('sale_lines.quantity * batches.unit_cost_minor')) - $restockedCost;
 
+        // Every table below is net of the period's returns, as the takings
+        // are, so the tables add up to the summary.
+        $returnedLines = fn () => SaleReturnLine::query()->whereIn('sale_return_id', $returns()->select('id'));
+        $returnedByItem = $returnedLines()
+            ->groupBy('item_id')
+            ->selectRaw('item_id, SUM(quantity) AS quantity, SUM(amount_minor) AS amount, SUM(CASE WHEN restocked THEN cost_minor ELSE 0 END) AS cost')
+            ->toBase()
+            ->get()
+            ->keyBy('item_id');
+
         $top = $lines()
             ->groupBy('sale_lines.item_id')
             ->selectRaw('sale_lines.item_id, SUM(sale_lines.quantity) AS quantity, SUM(sale_lines.line_total_minor) AS revenue, SUM(sale_lines.quantity * batches.unit_cost_minor) AS cost')
-            ->orderByDesc('revenue')
-            ->limit(self::TOP_MEDICINES)
             ->toBase()
-            ->get();
+            ->get()
+            ->map(function (object $row) use ($returnedByItem) {
+                $back = $returnedByItem->get((string) $row->item_id);
+
+                return (object) [
+                    'item_id' => (string) $row->item_id,
+                    'quantity' => (int) $row->quantity - (int) ($back->quantity ?? 0),
+                    'revenue' => (int) $row->revenue - (int) ($back->amount ?? 0),
+                    'cost' => (int) $row->cost - (int) ($back->cost ?? 0),
+                ];
+            })
+            ->sortByDesc('revenue')
+            ->take(self::TOP_MEDICINES)
+            ->values();
         $items = Item::query()->whereIn('id', $top->pluck('item_id'))->get()->keyBy('id');
+
+        $refundsByMethod = $returns()
+            ->groupBy('refund_method')
+            ->selectRaw('refund_method, SUM(total_minor) AS total')
+            ->toBase()
+            ->pluck('total', 'refund_method');
+        $refundsByDay = $returns()
+            ->groupBy(DB::raw('DATE(returned_at)'))
+            ->selectRaw('DATE(returned_at) AS day, SUM(total_minor) AS total')
+            ->toBase()
+            ->get()
+            ->mapWithKeys(fn (object $row) => [substr((string) $row->day, 0, 10) => (int) $row->total]);
 
         $props = [
             'from' => $from->toDateString(),
@@ -87,27 +122,38 @@ class ReportController extends Controller
                 'returnedCount' => $returns()->count(),
                 'returnedMinor' => $returnedMinor,
             ],
-            'byMethod' => $sales(Sale::COMPLETED)
-                ->groupBy('payment_method')
-                ->selectRaw('payment_method, COUNT(*) AS count, SUM(total_minor) AS total')
-                ->orderByDesc('total')
-                ->toBase()
-                ->get()
-                ->map(fn (object $row) => [
-                    'method' => PaymentMethod::from((string) $row->payment_method)->label(),
-                    'count' => (int) $row->count,
-                    'totalMinor' => (int) $row->total,
+            // Refunds come off the method they were paid back by.
+            'byMethod' => $this->net(
+                $sales(Sale::COMPLETED)
+                    ->groupBy('payment_method')
+                    ->selectRaw('payment_method AS bucket, COUNT(*) AS count, SUM(total_minor) AS total')
+                    ->toBase()
+                    ->get(),
+                $refundsByMethod,
+            )
+                ->sortByDesc('totalMinor')
+                ->values()
+                ->map(fn (array $row) => [
+                    'method' => PaymentMethod::from($row['bucket'])->label(),
+                    'count' => $row['count'],
+                    'totalMinor' => $row['totalMinor'],
                 ]),
-            'byDay' => $sales(Sale::COMPLETED)
-                ->groupBy(DB::raw('DATE(sold_at)'))
-                ->selectRaw('DATE(sold_at) AS day, COUNT(*) AS count, SUM(total_minor) AS total')
-                ->orderBy('day')
-                ->toBase()
-                ->get()
-                ->map(fn (object $row) => [
-                    'day' => substr((string) $row->day, 0, 10),
-                    'count' => (int) $row->count,
-                    'totalMinor' => (int) $row->total,
+            // Refunds come off the day they were given.
+            'byDay' => $this->net(
+                $sales(Sale::COMPLETED)
+                    ->groupBy(DB::raw('DATE(sold_at)'))
+                    ->selectRaw('DATE(sold_at) AS bucket, COUNT(*) AS count, SUM(total_minor) AS total')
+                    ->toBase()
+                    ->get(),
+                $refundsByDay,
+                fn (string $day) => substr($day, 0, 10),
+            )
+                ->sortBy('bucket')
+                ->values()
+                ->map(fn (array $row) => [
+                    'day' => $row['bucket'],
+                    'count' => $row['count'],
+                    'totalMinor' => $row['totalMinor'],
                 ]),
             'topItems' => $top->map(fn (object $row) => [
                 'id' => (string) $row->item_id,
@@ -127,6 +173,35 @@ class ReportController extends Controller
             'top' => CsvExport::download("top-items-{$name}", [$industry->itemLabel() => 'item', 'Quantity' => 'quantity', 'Revenue' => 'revenueMinor', 'Cost' => 'costMinor'], $props['topItems']),
             default => abort(404),
         };
+    }
+
+    /**
+     * Sales grouped by a bucket (a day, a payment method), less the refunds
+     * in the same bucket. A bucket with refunds but no sales still shows,
+     * with no sales and a negative total.
+     *
+     * @param  Collection<int, stdClass>  $sales  rows of bucket, count, total
+     * @param  Collection<array-key, mixed>  $refunds  refunded total by bucket
+     * @param  (callable(string): string)|null  $key  normalises a bucket read from the database
+     * @return Collection<string, array{bucket: string, count: int, totalMinor: int}>
+     */
+    private function net(Collection $sales, Collection $refunds, ?callable $key = null): Collection
+    {
+        $key ??= fn (string $bucket) => $bucket;
+        $rows = $sales->mapWithKeys(fn (stdClass $row) => [$key((string) $row->bucket) => [
+            'bucket' => $key((string) $row->bucket),
+            'count' => (int) $row->count,
+            'totalMinor' => (int) $row->total,
+        ]]);
+
+        foreach ($refunds as $bucket => $refunded) {
+            $bucket = $key((string) $bucket);
+            $row = $rows->get($bucket, ['bucket' => $bucket, 'count' => 0, 'totalMinor' => 0]);
+            $row['totalMinor'] -= (int) $refunded;
+            $rows->put($bucket, $row);
+        }
+
+        return $rows;
     }
 
     /**

@@ -46,7 +46,7 @@ class RoyalRestSeeder extends Seeder
     private const DAYS = 30;
 
     /** Branch code => [tables as [name, area, seats], usual orders a day]. */
-    private const BRANCHES = [
+    public const BRANCHES = [
         'MAIN' => [[
             ['T1', 'Main hall', 4], ['T2', 'Main hall', 4], ['T3', 'Main hall', 4], ['T4', 'Main hall', 6], ['T5', 'Main hall', 6],
             ['G1', 'Garden', 4], ['G2', 'Garden', 4], ['G3', 'Garden', 8], ['VIP', 'VIP room', 10], ['Bar 1', 'Bar', 2],
@@ -62,7 +62,7 @@ class RoyalRestSeeder extends Seeder
     ];
 
     /** [name, section, price in SSP, how often it is ordered]. */
-    private const DISHES = [
+    public const DISHES = [
         ['Ful medames with bread', 'Breakfast', 8000, 4],
         ['Chapati and eggs', 'Breakfast', 6000, 5],
         ['Tea and mandazi', 'Breakfast', 4000, 5],
@@ -82,7 +82,7 @@ class RoyalRestSeeder extends Seeder
     ];
 
     /** [name, unit, price, cost, reorder level, how often, barcode]. */
-    private const DRINKS = [
+    public const DRINKS = [
         ['Bottled water 500 ml', 'bottle', 2000, 1100, 48, 9, 'RR-W500'],
         ['Coca-Cola 300 ml', 'bottle', 3000, 1800, 48, 8, 'RR-COKE'],
         ['Fanta orange 300 ml', 'bottle', 3000, 1800, 36, 5, 'RR-FANTA'],
