@@ -1,10 +1,14 @@
 import { Link } from '@inertiajs/react';
-import { ArrowRight, Check, Download, MonitorSmartphone } from 'lucide-react';
+import { ArrowRight, Download, MonitorSmartphone } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { CtaBand } from '@/sites/public/components/blocks';
 import { ProductCard, categoryLabels } from '@/sites/public/components/catalog';
 import type { CatalogEntry } from '@/sites/public/components/catalog';
+import ImageHero, {
+    onBlue,
+    outlineOnBlue,
+} from '@/sites/public/components/image-hero';
 import { Accent } from '@/sites/public/components/page-hero';
 import SectionHeading from '@/sites/public/components/section-heading';
 import Seo from '@/sites/public/components/seo';
@@ -268,12 +272,10 @@ export default function Products({ catalog, trialDays, canonical }: Props) {
 }
 
 /**
- * The page's opening band, solid navy: the title, intro, actions and
- * three facts on the left, and the dashboards-and-globe picture framed on
- * the right from `lg` (under the copy below it). The picture's own dark
- * backdrop sits in a rounded frame, as its glow reaches the edges and
- * would not blend into a flat colour. White title, light cyan accent,
- * near-white body.
+ * The page's opening band on the workspace picture (devices and app icons
+ * on its right): the title, intro and actions over its plain left side
+ * from `lg`, under the picture below it. The three facts follow in a white
+ * strip, so the band stays short enough for the devices to clear the copy.
  */
 function ProductsHero({
     trialDays,
@@ -289,69 +291,48 @@ function ProductsHero({
     ];
 
     return (
-        <section className="site-dark relative isolate overflow-hidden bg-site-navy">
-            <div
-                className={`${container} grid items-center gap-10 pt-24 pb-14 sm:pt-28 sm:pb-16 lg:grid-cols-[1fr_1.05fr] lg:gap-12 lg:pb-20`}
-            >
-                <div className="site-rise min-w-0 max-w-xl">
-                    <h1 className="text-[2.25rem] leading-[1.08] font-semibold tracking-tight text-balance text-white sm:text-5xl lg:text-[3.5rem]">
+        <>
+            <ImageHero
+                picture={{
+                    src: '/images/hero/products-hero-wide.webp',
+                    small: '/images/hero/products-hero-wide-1280.webp',
+                    base: 'bg-[#012a7f]',
+                }}
+                title={
+                    <>
                         One platform for{' '}
                         <span className="text-[#9fe0ff]">
                             every part of your business.
                         </span>
-                    </h1>
-                    <p className="mt-5 max-w-lg text-base leading-relaxed text-pretty text-[#dce8ff] sm:text-lg">
-                        Ready-made ERPs for pharmacies, shops and more, plus
-                        accounting, HR, payroll, inventory and project apps.
-                        Everything shares your sign-in, your organization and
-                        your books.
-                    </p>
-                    <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                        <Link
-                            href="/start"
-                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-site-navy transition-colors hover:bg-[#e6f6ff]"
+                    </>
+                }
+                intro="Ready-made ERPs for pharmacies, shops and more, plus accounting, HR, payroll, inventory and project apps. Everything shares your sign-in, your organization and your books."
+            >
+                <Link href="/start" className={onBlue}>
+                    Start your {trialDays}-day free trial
+                    <ArrowRight className="size-4" aria-hidden />
+                </Link>
+                <Link href="/contact" className={outlineOnBlue}>
+                    Talk to us
+                </Link>
+            </ImageHero>
+            <section
+                aria-label="At a glance"
+                className="border-b border-site-line bg-white"
+            >
+                <ul
+                    className={`${container} grid gap-x-6 gap-y-4 py-6 sm:grid-cols-3 lg:py-8`}
+                >
+                    {facts.map((fact) => (
+                        <li
+                            key={fact}
+                            className="border-l-2 border-site-accent pl-3 text-sm font-semibold text-site-ink"
                         >
-                            Start your {trialDays}-day free trial
-                            <ArrowRight className="size-4" aria-hidden />
-                        </Link>
-                        <Link
-                            href="/contact"
-                            className="inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold text-white ring-1 ring-[#9fe0ff] transition-colors hover:bg-site-navy-light"
-                        >
-                            Talk to us
-                        </Link>
-                    </div>
-                    <ul className="mt-8 grid gap-2.5 text-sm font-medium text-white sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                        {facts.map((fact) => (
-                            <li
-                                key={fact}
-                                className="flex items-center gap-2.5"
-                            >
-                                <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-[#9fe0ff] text-site-navy">
-                                    <Check
-                                        className="size-3"
-                                        strokeWidth={3}
-                                        aria-hidden
-                                    />
-                                </span>
-                                {fact}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-                <div className="site-rise">
-                    <img
-                        src="/images/hero/products-hero.webp"
-                        srcSet="/images/hero/products-hero-900.webp 900w, /images/hero/products-hero.webp 1536w"
-                        sizes="(min-width: 1024px) 50vw, 100vw"
-                        width={1536}
-                        height={1024}
-                        alt="Pharmacy, retail and project dashboards in front of a globe"
-                        fetchPriority="high"
-                        className="w-full rounded-2xl ring-1 ring-site-navy-line"
-                    />
-                </div>
-            </div>
-        </section>
+                            {fact}
+                        </li>
+                    ))}
+                </ul>
+            </section>
+        </>
     );
 }
